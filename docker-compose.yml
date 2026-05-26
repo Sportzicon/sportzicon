@@ -1,0 +1,83 @@
+# Local development stack for Sportivox.
+# Spins up: Firestore emulator, fake-gcs-server (S3-like GCS), the API, and the web app.
+# Usage: docker compose up --build
+version: "3.9"
+
+services:
+  firestore:
+    image: mtlynch/firestore-emulator:latest
+    environment:
+      FIRESTORE_PROJECT_ID: sportivox-dev
+      PORT: 8081
+    ports:
+      - "8081:8081"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8081"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  gcs:
+    image: fsouza/fake-gcs-server:latest
+    command: ["-scheme", "http", "-public-host", "localhost:4443", "-port", "4443"]
+    ports:
+      - "4443:4443"
+    volumes:
+      - gcs-data:/storage
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: dev
+    environment:
+      NODE_ENV: development
+      PORT: 8080
+      FIRESTORE_EMULATOR_HOST: firestore:8081
+      STORAGE_EMULATOR_HOST: http://gcs:4443
+      GCP_PROJECT_ID: sportivox-dev
+      GCS_BUCKET_MEDIA: sportivox-media-dev
+      GCS_BUCKET_DOCS: sportivox-docs-dev
+      JWT_ACCESS_SECRET: dev-access-secret-change-me
+      JWT_REFRESH_SECRET: dev-refresh-secret-change-me
+      JWT_ACCESS_TTL: 15m
+      JWT_REFRESH_TTL: 30d
+      BCRYPT_ROUNDS: 12
+      CORS_ORIGINS: http://localhost:5173
+      WEB_APP_URL: http://localhost:5173
+      PUBLIC_API_URL: http://localhost:8080
+      RATE_LIMIT_WINDOW_MS: 900000
+      RATE_LIMIT_MAX: 1000
+      AUTH_RATE_LIMIT_MAX: 50
+      LOG_LEVEL: debug
+      BOOTSTRAP_ADMIN_EMAIL: admin@sportivox.local
+      BOOTSTRAP_ADMIN_PASSWORD: ChangeMe123!
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./backend/src:/app/src
+      - ./backend/tests:/app/tests
+    depends_on:
+      firestore:
+        condition: service_healthy
+      gcs:
+        condition: service_started
+
+  web:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: dev
+    environment:
+      VITE_API_BASE_URL: http://localhost:8080
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/public:/app/public
+      - ./frontend/index.html:/app/index.html
+    depends_on:
+      - api
+
+volumes:
+  gcs-data: {}

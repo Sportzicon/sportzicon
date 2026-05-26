@@ -1,0 +1,92 @@
+# Cloud Build pipeline for Sportivox.
+# Trigger off pushes to `main` from the GitHub repo. Builds both images
+# in parallel, pushes them to Artifact Registry, then rolls Cloud Run.
+#
+# Substitutions you must set on the trigger:
+#   _REGION       e.g. asia-south1
+#   _AR_REPO      e.g. sportivox
+#   _API_SERVICE  e.g. sportivox-api-prod
+#   _WEB_SERVICE  e.g. sportivox-web-prod
+#   _WEB_APP_URL  e.g. https://app.sportivox.com (passed into the web build as VITE_API_BASE_URL via env)
+#   _API_PUBLIC_URL the api base URL the web app should call
+
+steps:
+  # API image
+  - id: build-api
+    name: gcr.io/cloud-builders/docker
+    waitFor: ["-"]
+    args:
+      - build
+      - -t
+      - "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO}/api:$SHORT_SHA"
+      - -t
+      - "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO}/api:latest"
+      - --target
+      - runtime
+      - ./backend
+
+  # Web image
+  - id: build-web
+    name: gcr.io/cloud-builders/docker
+    waitFor: ["-"]
+    args:
+      - build
+      - -t
+      - "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO}/web:$SHORT_SHA"
+      - -t
+      - "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO}/web:latest"
+      - --target
+      - runtime
+      - --build-arg
+      - "VITE_API_BASE_URL=${_API_PUBLIC_URL}"
+      - ./frontend
+
+  # Push
+  - id: push-api
+    name: gcr.io/cloud-builders/docker
+    waitFor: ["build-api"]
+    args: ["push", "--all-tags", "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO}/api"]
+
+  - id: push-web
+    name: gcr.io/cloud-builders/docker
+    waitFor: ["build-web"]
+    args: ["push", "--all-tags", "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO}/web"]
+
+  # Deploy
+  - id: deploy-api
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    waitFor: ["push-api"]
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - "${_API_SERVICE}"
+      - --image
+      - "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO}/api:$SHORT_SHA"
+      - --region
+      - "${_REGION}"
+      - --quiet
+
+  - id: deploy-web
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    waitFor: ["push-web"]
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - "${_WEB_SERVICE}"
+      - --image
+      - "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO}/web:$SHORT_SHA"
+      - --region
+      - "${_REGION}"
+      - --quiet
+
+images:
+  - "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO}/api:$SHORT_SHA"
+  - "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO}/web:$SHORT_SHA"
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+  machineType: E2_HIGHCPU_8
+
+timeout: 1800s

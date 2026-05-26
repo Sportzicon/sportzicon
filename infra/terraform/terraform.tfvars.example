@@ -1,0 +1,20 @@
+project_id  = "your-gcp-project-id"
+region      = "asia-south1"
+env         = "prod"
+
+# Replace with real image refs after pushing to Artifact Registry.
+api_image   = "asia-south1-docker.pkg.dev/your-gcp-project-id/sportivox/api:latest"
+web_image   = "asia-south1-docker.pkg.dev/your-gcp-project-id/sportivox/web:latest"
+
+# Once you know the Cloud Run web URL, update this and re-apply for proper CORS.
+web_app_url = "https://your-web-app.example.com"
+
+openai_api_key           = ""    # leave blank to skip
+sendgrid_api_key         = ""    # leave blank to skip
+bootstrap_admin_email    = "admin@sportivox.example"
+bootstrap_admin_password = "RotateMeAfterFirstLogin!"
+
+min_instances_api = 0
+max_instances_api = 4
+min_instances_web = 0
+max_instances_web = 4
