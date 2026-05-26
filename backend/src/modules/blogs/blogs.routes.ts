@@ -34,7 +34,7 @@ router.post(
   requireAuth,
   validate(createSchema),
   asyncHandler(async (req, res) => {
-    const r = await svc.createBlog(req.user!.sub, req.body);
+    const r = await svc.createBlog(req.user!.sub, req.body, req.user!.name);
     res.status(201).json({ blog: r });
   })
 );
@@ -116,7 +116,7 @@ router.post(
   validate(z.object({ id: z.string().min(8) }), "params"),
   validate(z.object({ text: z.string().min(1).max(2000) })),
   asyncHandler(async (req, res) => {
-    const r = await addComment({ type: "blog", id: req.params.id }, req.user!.sub, req.body.text);
+    const r = await addComment({ type: "blog", id: req.params.id }, req.user!.sub, req.body.text, req.user!.name);
     res.status(201).json({ comment: r });
   })
 );

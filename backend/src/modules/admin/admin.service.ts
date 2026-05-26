@@ -126,3 +126,12 @@ export async function createReport(reporterId: string, input: any) {
   await db.collection(Collections.reports).doc(id).set(doc);
   return doc;
 }
+
+export async function deleteUser(actor: { id: string; role: Role }, userId: string) {
+  const ref = db.collection(Collections.users).doc(userId);
+  const snap = await ref.get();
+  if (!snap.exists) throw NotFound("User not found");
+  await ref.delete();
+  await audit({ actor, action: "user.deleted", target_type: "user", target_id: userId });
+  return { ok: true };
+}

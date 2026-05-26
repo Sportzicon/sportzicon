@@ -7,10 +7,9 @@ import { PageHeader, Spinner, Badge, StatusPill } from "../components/UI";
 import { Trash2, Pencil, MoreVertical } from "lucide-react";
 import type { Opportunity } from "../types";
 
-export default function Opportunities() {
+export default function Tournaments() {
   const user = useAuthStore((s) => s.user);
   const qc = useQueryClient();
-  const [type, setType] = useState<string>("");
   const [sport, setSport] = useState("");
   const [status, setStatus] = useState<string>("open");
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
@@ -27,44 +26,34 @@ export default function Opportunities() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const params: any = { status };
-  if (type) params.type = type;
+  const params: any = { status, type: "tournament" };
   if (sport) params.sport = sport;
 
   const q = useQuery({
-    queryKey: ["opportunities", params],
+    queryKey: ["tournaments", params],
     queryFn: async () => (await api.get<{ items: Opportunity[] }>("/opportunities", { params })).data.items
   });
 
   const deleteOpp = useMutation({
     mutationFn: async (id: string) => api.delete(`/opportunities/${id}`),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["opportunities"] });
+      qc.invalidateQueries({ queryKey: ["tournaments"] });
       setPendingDeleteId(null);
     }
-  });
-
-  const updateOpp = useMutation({
-    mutationFn: async (id: string) => api.put(`/opportunities/${id}`, {}),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["opportunities"] })
   });
 
   return (
     <div className="space-y-4">
       <PageHeader
-        title="Opportunities"
-        subtitle="Trials, scholarships, recruitment, tournaments and coaching jobs."
+        title="Tournaments"
+        subtitle="Competitive tournaments and sporting events."
         action={
           (user?.role === "club" || user?.role === "organizer" || user?.role === "admin") && (
-            <Link to="/opportunities/new" className="btn-primary">Post an opportunity</Link>
+            <Link to="/tournaments/new" className="btn-primary">Post a tournament</Link>
           )
         }
       />
-      <div className="card card-body grid gap-3 sm:grid-cols-3">
-        <select className="input" value={type} onChange={(e) => setType(e.target.value)}>
-          <option value="">All types</option>
-          {["trial", "recruitment", "scholarship", "tournament", "coaching_job"].map((t) => <option key={t}>{t}</option>)}
-        </select>
+      <div className="card card-body grid gap-3 sm:grid-cols-2">
         <input className="input" placeholder="Sport" value={sport} onChange={(e) => setSport(e.target.value)} />
         <select className="input" value={status} onChange={(e) => setStatus(e.target.value)}>
           {["open", "closed", "filled"].map((s) => <option key={s}>{s}</option>)}
@@ -84,7 +73,6 @@ export default function Opportunities() {
                   </div>
                   <div className="text-xs text-slate-500 mt-1">{o.org_name} · {o.city}, {o.country}</div>
                   <div className="mt-2 flex flex-wrap gap-2 text-xs">
-                    <Badge color="blue">{o.type}</Badge>
                     <Badge>{o.sport}</Badge>
                     <Badge>Age {o.age_min}-{o.age_max}</Badge>
                     <Badge>Deadline {o.application_deadline}</Badge>
@@ -102,7 +90,7 @@ export default function Opportunities() {
                     {menuOpenId === o.id && (
                       <div className="absolute right-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg z-10">
                         <Link
-                          to={`/opportunities/${o.id}/edit`}
+                          to={`/tournaments/${o.id}/edit`}
                           onClick={() => setMenuOpenId(null)}
                           className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2 border-b border-slate-100 rounded-t-lg"
                         >
@@ -123,7 +111,7 @@ export default function Opportunities() {
                 )}
                 {pendingDeleteId === o.id && (
                   <div className="mt-3 bg-red-50 p-2 rounded flex gap-2 items-center border border-red-200">
-                    <span className="text-xs text-red-900 flex-1">Delete this opportunity?</span>
+                    <span className="text-xs text-red-900 flex-1">Delete this tournament?</span>
                     <button
                       onClick={() => deleteOpp.mutate(o.id)}
                       disabled={deleteOpp.isPending}
@@ -139,7 +127,7 @@ export default function Opportunities() {
               </div>
             );
           })}
-          {!q.data?.length && <div className="card card-body text-sm text-slate-600">No opportunities match your filters.</div>}
+          {!q.data?.length && <div className="card card-body text-sm text-slate-600">No tournaments match your filters.</div>}
         </div>
       )}
     </div>

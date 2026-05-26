@@ -19,7 +19,6 @@ FROM deps AS dev
 ENV NODE_ENV=development
 COPY tsconfig.json ./
 COPY src ./src
-COPY tests ./tests
 EXPOSE 8080
 ENTRYPOINT ["/sbin/tini","--"]
 CMD ["npx","tsx","watch","src/server.ts"]

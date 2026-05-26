@@ -4,15 +4,23 @@ import { Forbidden, NotFound } from "../../utils/errors";
 import { newId, now } from "../../utils/ids";
 import type { ReelDoc, UserDoc } from "../../types/domain";
 
-export async function createReel(authorId: string, input: any) {
+export async function createReel(authorId: string, input: any, authorName?: string) {
+  let author: Partial<UserDoc> = { id: authorId };
   const userSnap = await db.collection(Collections.users).doc(authorId).get();
-  if (!userSnap.exists) throw NotFound("Author not found");
-  const author = userSnap.data() as UserDoc;
+  if (userSnap.exists) {
+    const userData = userSnap.data() as UserDoc;
+    author.full_name = userData.full_name;
+  } else if (authorName) {
+    author.full_name = authorName;
+  } else {
+    author.full_name = "Unknown";
+  }
+
   const id = newId();
   const doc: ReelDoc = {
     id,
-    author_id: author.id,
-    author_name: author.full_name,
+    author_id: author.id!,
+    author_name: author.full_name || "Unknown",
     caption: input.caption,
     video_url: input.video_url,
     thumbnail_url: input.thumbnail_url,
@@ -79,5 +87,18 @@ export async function unlikeReel(reelId: string, userId: string) {
     tx.delete(likeRef);
     tx.update(ref, { like_count: FieldValue.increment(-1) });
   });
+  return { ok: true };
+}
+
+export async function updateReel(reelId: string, actorId: string, isAdmin: boolean, input: { caption?: string; sport?: string }) {
+  const ref = db.collection(Collections.reels).doc(reelId);
+  const snap = await ref.get();
+  if (!snap.exists) throw NotFound("Reel not found");
+  const r = snap.data() as ReelDoc;
+  if (r.author_id !== actorId && !isAdmin) throw Forbidden("Cannot edit another user's reel");
+  const updates: any = {};
+  if (input.caption !== undefined) updates.caption = input.caption;
+  if (input.sport !== undefined) updates.sport = input.sport;
+  await ref.update(updates);
   return { ok: true };
 }

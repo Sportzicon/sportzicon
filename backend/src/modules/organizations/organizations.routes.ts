@@ -49,4 +49,14 @@ router.put(
   })
 );
 
+router.delete(
+  "/:id",
+  requireAuth,
+  validate(z.object({ id: z.string().min(8) }), "params"),
+  asyncHandler(async (req, res) => {
+    const r = await svc.deleteOrganization(req.params.id, req.user!.sub, req.user!.role === "admin");
+    res.json(r);
+  })
+);
+
 export default router;

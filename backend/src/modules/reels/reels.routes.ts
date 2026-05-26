@@ -16,6 +16,11 @@ const createSchema = z.object({
   sport: z.string().max(60).optional()
 });
 
+const updateSchema = z.object({
+  caption: z.string().max(2000).optional(),
+  sport: z.string().max(60).optional()
+});
+
 const listQuery = z.object({
   author_id: z.string().optional(),
   sport: z.string().optional(),
@@ -28,7 +33,7 @@ router.post(
   requireAuth,
   validate(createSchema),
   asyncHandler(async (req, res) => {
-    const r = await svc.createReel(req.user!.sub, req.body);
+    const r = await svc.createReel(req.user!.sub, req.body, req.user!.name);
     res.status(201).json({ reel: r });
   })
 );
@@ -39,6 +44,17 @@ router.get(
   validate(listQuery, "query"),
   asyncHandler(async (req, res) => {
     const r = await svc.listReels(req.query as any);
+    res.json(r);
+  })
+);
+
+router.put(
+  "/:id",
+  requireAuth,
+  validate(z.object({ id: z.string().min(8) }), "params"),
+  validate(updateSchema),
+  asyncHandler(async (req, res) => {
+    const r = await svc.updateReel(req.params.id, req.user!.sub, req.user!.role === "admin", req.body);
     res.json(r);
   })
 );
@@ -99,7 +115,7 @@ router.post(
   validate(z.object({ id: z.string().min(8) }), "params"),
   validate(z.object({ text: z.string().min(1).max(2000) })),
   asyncHandler(async (req, res) => {
-    const r = await addComment({ type: "reel", id: req.params.id }, req.user!.sub, req.body.text);
+    const r = await addComment({ type: "reel", id: req.params.id }, req.user!.sub, req.body.text, req.user!.name);
     res.status(201).json({ comment: r });
   })
 );

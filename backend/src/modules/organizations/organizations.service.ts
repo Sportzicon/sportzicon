@@ -68,3 +68,13 @@ export async function listOrganizationsForOwner(ownerId: string) {
     .get();
   return snap.docs.map((d) => d.data() as OrganizationDoc);
 }
+
+export async function deleteOrganization(orgId: string, actorId: string, isAdmin: boolean) {
+  const ref = db.collection(Collections.organizations).doc(orgId);
+  const snap = await ref.get();
+  if (!snap.exists) throw NotFound("Organization not found");
+  const org = snap.data() as OrganizationDoc;
+  if (org.owner_user_id !== actorId && !isAdmin) throw Forbidden("Only the org owner or an admin can delete this organization");
+  await ref.delete();
+  return { ok: true };
+}

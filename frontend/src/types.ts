@@ -146,3 +146,13 @@ export interface Notification {
   read: boolean;
   created_at: number;
 }
+
+export interface CommentDoc {
+  id: string;
+  parent_type: "post" | "reel" | "blog";
+  parent_id: string;
+  author_id: string;
+  author_name: string;
+  text: string;
+  created_at: number;
+}

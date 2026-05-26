@@ -49,6 +49,15 @@ router.patch(
   })
 );
 
+router.delete(
+  "/users/:id",
+  validate(z.object({ id: z.string().min(8) }), "params"),
+  asyncHandler(async (req, res) => {
+    const r = await svc.deleteUser({ id: req.user!.sub, role: req.user!.role }, req.params.id);
+    res.json(r);
+  })
+);
+
 router.get(
   "/reports",
   asyncHandler(async (req, res) => {

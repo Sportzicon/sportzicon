@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run *)",
+      "Bash(curl -s http://localhost:5173)",
+      "PowerShell(Stop-Process -Name node -Force -ErrorAction SilentlyContinue)",
+      "Bash(powershell -Command ' *)",
+      "Bash(curl -s http://localhost:5173/dashboard)",
+      "Bash(for f *)",
+      "Read(//f/My Project/sportivox-main/sportivox-main/backend/src/**)",
+      "Bash(Get-Content \"f:\\\\My Project\\\\sportivox-main\\\\sportivox-main\\\\backend\\\\src\\\\modules\\\\auth\\\\auth.routes.ts\")",
+      "Bash(Start-Sleep -Seconds 5)",
+      "Bash(Get-Content \"C:\\\\Users\\\\mahes\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\f--My-Project-sportivox-main-sportivox-main\\\\098ab53a-7c5b-435f-8573-70781dbccd04\\\\tasks\\\\b8eeei7hx.output\" -Tail 30)",
+      "Bash(curl -s http://localhost:3000)",
+      "Bash(curl -s http://localhost:3001/health)"
+    ]
+  }
+}

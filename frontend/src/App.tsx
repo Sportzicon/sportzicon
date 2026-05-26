@@ -14,8 +14,10 @@ import Profile from "./pages/Profile";
 import EditProfile from "./pages/EditProfile";
 import Search from "./pages/Search";
 import Opportunities from "./pages/Opportunities";
+import Tournaments from "./pages/Tournaments";
 import OpportunityDetail from "./pages/OpportunityDetail";
 import NewOpportunity from "./pages/NewOpportunity";
+import NewTournament from "./pages/NewTournament";
 import Applicants from "./pages/Applicants";
 import MyApplications from "./pages/MyApplications";
 import Feed from "./pages/Feed";
@@ -52,20 +54,26 @@ export default function App() {
         <Route path="/profile/edit" element={<ProtectedRoute><EditProfile /></ProtectedRoute>} />
         <Route path="/search" element={<ProtectedRoute><Search /></ProtectedRoute>} />
         <Route path="/opportunities" element={<ProtectedRoute><Opportunities /></ProtectedRoute>} />
-        <Route path="/opportunities/new" element={<ProtectedRoute roles={["club", "organizer"]}><NewOpportunity /></ProtectedRoute>} />
+        <Route path="/opportunities/new" element={<ProtectedRoute roles={["club", "organizer", "admin"]}><NewOpportunity /></ProtectedRoute>} />
+        <Route path="/opportunities/:id/edit" element={<ProtectedRoute roles={["club", "organizer", "admin"]}><NewOpportunity /></ProtectedRoute>} />
         <Route path="/opportunities/:id" element={<ProtectedRoute><OpportunityDetail /></ProtectedRoute>} />
         <Route path="/opportunities/:id/applicants" element={<ProtectedRoute roles={["club", "organizer", "admin"]}><Applicants /></ProtectedRoute>} />
+        <Route path="/tournaments" element={<ProtectedRoute><Tournaments /></ProtectedRoute>} />
+        <Route path="/tournaments/new" element={<ProtectedRoute roles={["club", "organizer", "admin"]}><NewTournament /></ProtectedRoute>} />
+        <Route path="/tournaments/:id/edit" element={<ProtectedRoute roles={["club", "organizer", "admin"]}><NewTournament /></ProtectedRoute>} />
         <Route path="/applications" element={<ProtectedRoute roles={["athlete"]}><MyApplications /></ProtectedRoute>} />
         <Route path="/feed" element={<ProtectedRoute><Feed /></ProtectedRoute>} />
         <Route path="/reels" element={<ProtectedRoute><Reels /></ProtectedRoute>} />
         <Route path="/blogs" element={<ProtectedRoute><Blogs /></ProtectedRoute>} />
         <Route path="/blogs/new" element={<ProtectedRoute><NewBlog /></ProtectedRoute>} />
+        <Route path="/blogs/:id/edit" element={<ProtectedRoute><NewBlog /></ProtectedRoute>} />
         <Route path="/blogs/:idOrSlug" element={<ProtectedRoute><BlogDetail /></ProtectedRoute>} />
         <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
         <Route path="/messages/:id" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
         <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
         <Route path="/my-organizations" element={<ProtectedRoute roles={["club", "organizer", "admin"]}><MyOrganizations /></ProtectedRoute>} />
         <Route path="/organizations/new" element={<ProtectedRoute roles={["club", "organizer"]}><NewOrganization /></ProtectedRoute>} />
+        <Route path="/organizations/:id/edit" element={<ProtectedRoute roles={["club", "organizer"]}><NewOrganization /></ProtectedRoute>} />
         <Route path="/ai-tips" element={<ProtectedRoute roles={["athlete"]}><AITips /></ProtectedRoute>} />
 
         <Route path="/admin" element={<ProtectedRoute roles={["admin"]}><Admin /></ProtectedRoute>} />

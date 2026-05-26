@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
-import { PageHeader, Spinner } from "../components/UI";
+import { PageHeader, Spinner, StatusPill } from "../components/UI";
 import type { Blog } from "../types";
 
 export default function Blogs() {
@@ -21,7 +21,10 @@ export default function Blogs() {
             <Link key={b.id} to={`/blogs/${b.slug ?? b.id}`} className="card hover:shadow">
               {b.cover_image_url && <img src={b.cover_image_url} alt="" className="h-40 w-full object-cover" />}
               <div className="card-body">
-                <h3 className="font-semibold">{b.title}</h3>
+                <div className="flex items-start justify-between gap-2">
+                  <h3 className="font-semibold">{b.title}</h3>
+                  <StatusPill status={b.status} />
+                </div>
                 <p className="mt-1 text-sm text-slate-600 line-clamp-3">{b.excerpt}</p>
                 <p className="mt-2 text-xs text-slate-500">By {b.author_name} · {new Date(b.published_at ?? b.created_at).toLocaleDateString()}</p>
               </div>

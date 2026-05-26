@@ -2,18 +2,28 @@ import { FieldValue } from "@google-cloud/firestore";
 import { db, Collections } from "../../config/firestore";
 import { Forbidden, NotFound } from "../../utils/errors";
 import { newId, now } from "../../utils/ids";
-import type { CommentDoc, PostDoc, UserDoc } from "../../types/domain";
+import type { CommentDoc, PostDoc, UserDoc, Role } from "../../types/domain";
 
-export async function createPost(authorId: string, input: any) {
+export async function createPost(authorId: string, input: any, authorName?: string, authorRole?: string) {
+  let author: Partial<UserDoc> = { id: authorId };
   const userSnap = await db.collection(Collections.users).doc(authorId).get();
-  if (!userSnap.exists) throw NotFound("Author not found");
-  const author = userSnap.data() as UserDoc;
+  if (userSnap.exists) {
+    const userData = userSnap.data() as UserDoc;
+    author.full_name = userData.full_name;
+    author.role = userData.role;
+  } else if (authorName && authorRole) {
+    author.full_name = authorName;
+    author.role = authorRole as Role;
+  } else {
+    throw NotFound("Author not found");
+  }
+
   const id = newId();
   const doc: PostDoc = {
     id,
-    author_id: author.id,
-    author_name: author.full_name,
-    author_role: author.role,
+    author_id: author.id!,
+    author_name: author.full_name || "Unknown",
+    author_role: author.role || "athlete",
     type: input.type ?? "post",
     text: input.text,
     media_urls: input.media_urls ?? [],
@@ -100,10 +110,18 @@ export async function unlikePost(postId: string, userId: string) {
   return { ok: true };
 }
 
-export async function addComment(parent: { type: "post" | "reel" | "blog"; id: string }, authorId: string, text: string) {
+export async function addComment(parent: { type: "post" | "reel" | "blog"; id: string }, authorId: string, text: string, authorName?: string) {
+  let author: Partial<UserDoc> = { id: authorId };
   const userSnap = await db.collection(Collections.users).doc(authorId).get();
-  if (!userSnap.exists) throw NotFound("Author not found");
-  const author = userSnap.data() as UserDoc;
+  if (userSnap.exists) {
+    const userData = userSnap.data() as UserDoc;
+    author.full_name = userData.full_name;
+  } else if (authorName) {
+    author.full_name = authorName;
+  } else {
+    author.full_name = "Unknown";
+  }
+
   const id = newId();
   const collection =
     parent.type === "post" ? Collections.posts : parent.type === "reel" ? Collections.reels : Collections.blogs;
@@ -115,8 +133,8 @@ export async function addComment(parent: { type: "post" | "reel" | "blog"; id: s
     id,
     parent_type: parent.type,
     parent_id: parent.id,
-    author_id: author.id,
-    author_name: author.full_name,
+    author_id: author.id!,
+    author_name: author.full_name || "Unknown",
     text,
     created_at: now()
   };
@@ -136,4 +154,44 @@ export async function listComments(parentType: "post" | "reel" | "blog", parentI
     .limit(limit)
     .get();
   return snap.docs.map((d) => d.data() as CommentDoc);
+}
+
+export async function updatePost(postId: string, actorId: string, isAdmin: boolean, input: { text?: string; tags?: string[] }) {
+  const ref = db.collection(Collections.posts).doc(postId);
+  const snap = await ref.get();
+  if (!snap.exists) throw NotFound("Post not found");
+  const p = snap.data() as PostDoc;
+  if (p.author_id !== actorId && !isAdmin) throw Forbidden("Cannot edit another user's post");
+  const updates: any = { updated_at: now() };
+  if (input.text !== undefined) updates.text = input.text;
+  if (input.tags !== undefined) updates.tags = input.tags;
+  await ref.update(updates);
+  return { ok: true };
+}
+
+export async function updateComment(commentId: string, actorId: string, isAdmin: boolean, text: string) {
+  const ref = db.collection(Collections.comments).doc(commentId);
+  const snap = await ref.get();
+  if (!snap.exists) throw NotFound("Comment not found");
+  const c = snap.data() as CommentDoc;
+  if (c.author_id !== actorId && !isAdmin) throw Forbidden("Cannot edit another user's comment");
+  await ref.update({ text, updated_at: now() });
+  return { ok: true };
+}
+
+export async function deleteComment(commentId: string, actorId: string, isAdmin: boolean) {
+  const ref = db.collection(Collections.comments).doc(commentId);
+  const snap = await ref.get();
+  if (!snap.exists) throw NotFound("Comment not found");
+  const c = snap.data() as CommentDoc;
+  if (c.author_id !== actorId && !isAdmin) throw Forbidden("Cannot delete another user's comment");
+
+  const collection = c.parent_type === "post" ? Collections.posts : c.parent_type === "reel" ? Collections.reels : Collections.blogs;
+  const parentRef = db.collection(collection).doc(c.parent_id);
+
+  await db.runTransaction(async (tx) => {
+    tx.delete(ref);
+    tx.update(parentRef, { comment_count: FieldValue.increment(-1) });
+  });
+  return { ok: true };
 }

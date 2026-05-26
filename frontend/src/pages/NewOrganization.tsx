@@ -1,10 +1,21 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, getApiError } from "../api/client";
-import { PageHeader } from "../components/UI";
+import { PageHeader, Spinner } from "../components/UI";
 
 export default function NewOrganization() {
   const navigate = useNavigate();
+  const qc = useQueryClient();
+  const { id } = useParams<{ id?: string }>();
+  const isEdit = !!id;
+
+  const orgQ = useQuery({
+    queryKey: ["org", id],
+    queryFn: async () => (await api.get(`/organizations/${id}`)).data.organization,
+    enabled: !!id
+  });
+
   const [form, setForm] = useState({
     org_name: "",
     org_type: "club" as "club" | "academy" | "both",
@@ -19,6 +30,23 @@ export default function NewOrganization() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (orgQ.data) {
+      const org = orgQ.data;
+      setForm({
+        org_name: org.org_name || "",
+        org_type: org.org_type || "club",
+        description: org.description || "",
+        country: org.country || "India",
+        state: org.state || "",
+        city: org.city || "",
+        contact_email: org.contact_email || "",
+        contact_phone: org.contact_phone || "",
+        sport_categories: (org.sport_categories || []).join(", ")
+      });
+    }
+  }, [orgQ.data]);
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
@@ -29,7 +57,13 @@ export default function NewOrganization() {
         sport_categories: form.sport_categories.split(",").map((s) => s.trim()).filter(Boolean)
       };
       Object.keys(payload).forEach((k) => payload[k] === "" && delete payload[k]);
-      await api.post("/organizations", payload);
+
+      isEdit ? await api.put(`/organizations/${id}`, payload) : await api.post("/organizations", payload);
+
+      // Invalidate organization queries to get fresh data
+      await qc.invalidateQueries({ queryKey: ["org"] });
+      await qc.invalidateQueries({ queryKey: ["my-orgs"] });
+
       navigate("/my-organizations");
     } catch (e) {
       setErr(getApiError(e).message);
@@ -38,9 +72,11 @@ export default function NewOrganization() {
     }
   }
 
+  if (isEdit && orgQ.isPending) return <Spinner />;
+
   return (
     <form onSubmit={submit} className="space-y-4 max-w-2xl">
-      <PageHeader title="Create an organization" subtitle="Build your club or academy presence on Sportivox." />
+      <PageHeader title={isEdit ? "Edit organization" : "Create an organization"} subtitle="Build your club or academy presence on Sportivox." />
       <section className="card card-body grid gap-3 sm:grid-cols-2">
         <label className="sm:col-span-2"><span className="label">Name</span><input className="input" value={form.org_name} onChange={(e) => setForm({ ...form, org_name: e.target.value })} required /></label>
         <label><span className="label">Type</span>
@@ -61,7 +97,9 @@ export default function NewOrganization() {
         <label><span className="label">Contact phone</span><input className="input" value={form.contact_phone} onChange={(e) => setForm({ ...form, contact_phone: e.target.value })} /></label>
       </section>
       {err && <div className="rounded-lg bg-red-50 p-3 text-sm text-red-800">{err}</div>}
-      <button className="btn-primary" disabled={busy}>{busy ? "Creating..." : "Create organization"}</button>
+      <button className="btn-primary" disabled={busy}>
+        {busy ? (isEdit ? "Saving..." : "Creating...") : isEdit ? "Save changes" : "Create organization"}
+      </button>
     </form>
   );
 }

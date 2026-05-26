@@ -14,17 +14,25 @@ async function uniqueSlug(base: string): Promise<string> {
   return `${root}-${Date.now().toString(36)}`;
 }
 
-export async function createBlog(authorId: string, input: any) {
+export async function createBlog(authorId: string, input: any, authorName?: string) {
+  let author: Partial<UserDoc> = { id: authorId };
   const userSnap = await db.collection(Collections.users).doc(authorId).get();
-  if (!userSnap.exists) throw NotFound("Author not found");
-  const author = userSnap.data() as UserDoc;
+  if (userSnap.exists) {
+    const userData = userSnap.data() as UserDoc;
+    author.full_name = userData.full_name;
+  } else if (authorName) {
+    author.full_name = authorName;
+  } else {
+    author.full_name = "Unknown";
+  }
+
   const id = newId();
   const slug = await uniqueSlug(input.title);
   const isPublished = input.status === "published";
   const doc: BlogDoc = {
     id,
-    author_id: author.id,
-    author_name: author.full_name,
+    author_id: author.id!,
+    author_name: author.full_name || "Unknown",
     title: input.title,
     title_lower: String(input.title).toLowerCase(),
     slug,
