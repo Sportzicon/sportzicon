@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, getApiError } from "../api/client";
 import { PageHeader, Spinner } from "../components/UI";
@@ -17,11 +17,11 @@ export default function Reels() {
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
   const [openCommentId, setOpenCommentId] = useState<string | null>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+      const target = event.target as HTMLElement;
+      if (!target.closest('[data-menu-button]') && !target.closest('[data-menu-content]')) {
         setMenuOpenId(null);
       }
     }
@@ -97,8 +97,9 @@ export default function Reels() {
               <div className="aspect-[9/16] bg-black relative">
                 <video src={r.video_url} poster={r.thumbnail_url} controls className="h-full w-full" />
                 {user?.id === r.author_id && (
-                  <div className="absolute top-2 right-2" ref={menuRef}>
+                  <div className="absolute top-2 right-2">
                     <button
+                      data-menu-button
                       onClick={() => setMenuOpenId(menuOpenId === r.id ? null : r.id)}
                       className="bg-slate-800 hover:bg-slate-900 text-white p-2 rounded transition"
                       title="More options"
@@ -106,7 +107,7 @@ export default function Reels() {
                       <MoreVertical className="h-4 w-4" />
                     </button>
                     {menuOpenId === r.id && (
-                      <div className="absolute right-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg z-10 min-w-40">
+                      <div data-menu-content className="absolute right-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg z-10 min-w-40">
                         <button
                           onClick={() => {
                             setEditingId(r.id);

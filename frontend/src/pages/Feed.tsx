@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import { useAuthStore } from "../store/auth";
@@ -16,7 +16,6 @@ export default function Feed() {
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
   const [openCommentId, setOpenCommentId] = useState<string | null>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
 
   const feed = useQuery({
     queryKey: ["feed-all"],
@@ -55,7 +54,8 @@ export default function Feed() {
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+      const target = event.target as HTMLElement;
+      if (!target.closest('[data-menu-button]') && !target.closest('[data-menu-content]')) {
         setMenuOpenId(null);
       }
     }
@@ -99,8 +99,9 @@ export default function Feed() {
                 <div className="flex items-center gap-2">
                   <div className="text-xs text-slate-500">{new Date(p.created_at).toLocaleString()}</div>
                   {user?.id === p.author_id && (
-                    <div className="relative" ref={menuRef}>
+                    <div className="relative">
                       <button
+                        data-menu-button
                         onClick={() => setMenuOpenId(menuOpenId === p.id ? null : p.id)}
                         className="p-1 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded"
                         title="More options"
@@ -108,7 +109,7 @@ export default function Feed() {
                         <MoreVertical className="h-4 w-4" />
                       </button>
                       {menuOpenId === p.id && (
-                        <div className="absolute right-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg z-10">
+                        <div data-menu-content className="absolute right-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg z-10">
                           <button
                             onClick={() => {
                               setEditingId(p.id);

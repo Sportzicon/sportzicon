@@ -3,17 +3,17 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import { PageHeader, Spinner, VerifiedBadge } from "../components/UI";
 import { Trash2, Pencil, MoreVertical } from "lucide-react";
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 
 export default function MyOrganizations() {
   const qc = useQueryClient();
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+      const target = event.target as HTMLElement;
+      if (!target.closest('[data-menu-button]') && !target.closest('[data-menu-content]')) {
         setMenuOpenId(null);
       }
     }
@@ -52,8 +52,9 @@ export default function MyOrganizations() {
               </div>
               <p className="text-xs text-slate-500">{o.org_type} · {o.city}, {o.country}</p>
               {o.description && <p className="text-sm mt-2">{o.description}</p>}
-              <div className="mt-3 border-t pt-3 flex justify-end relative" ref={menuRef}>
+              <div className="mt-3 border-t pt-3 flex justify-end relative">
                 <button
+                  data-menu-button
                   onClick={() => setMenuOpenId(menuOpenId === o.id ? null : o.id)}
                   className="p-1 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded"
                   title="More options"
@@ -61,7 +62,7 @@ export default function MyOrganizations() {
                   <MoreVertical className="h-4 w-4" />
                 </button>
                 {menuOpenId === o.id && (
-                  <div className="absolute right-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg z-10">
+                  <div data-menu-content className="absolute right-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg z-10">
                     <Link
                       to={`/organizations/${o.id}/edit`}
                       onClick={() => setMenuOpenId(null)}
