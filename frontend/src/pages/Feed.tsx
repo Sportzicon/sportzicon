@@ -99,7 +99,7 @@ export default function Feed() {
                 <div className="flex items-center gap-2">
                   <div className="text-xs text-slate-500">{new Date(p.created_at).toLocaleString()}</div>
                   {user?.id === p.author_id && (
-                    <div className="relative" ref={menuOpenId === p.id ? menuRef : undefined}>
+                    <div className="relative" ref={menuRef}>
                       <button
                         onClick={() => setMenuOpenId(menuOpenId === p.id ? null : p.id)}
                         className="p-1 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded"

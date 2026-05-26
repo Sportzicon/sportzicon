@@ -97,7 +97,7 @@ export default function Reels() {
               <div className="aspect-[9/16] bg-black relative">
                 <video src={r.video_url} poster={r.thumbnail_url} controls className="h-full w-full" />
                 {user?.id === r.author_id && (
-                  <div className="absolute top-2 right-2" ref={menuOpenId === r.id ? menuRef : undefined}>
+                  <div className="absolute top-2 right-2" ref={menuRef}>
                     <button
                       onClick={() => setMenuOpenId(menuOpenId === r.id ? null : r.id)}
                       className="bg-slate-800 hover:bg-slate-900 text-white p-2 rounded transition"

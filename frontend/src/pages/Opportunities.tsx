@@ -91,7 +91,7 @@ export default function Opportunities() {
                   </div>
                 </Link>
                 {isPoster && (
-                  <div className="mt-3 border-t pt-3 flex justify-end relative" ref={menuOpenId === o.id ? menuRef : undefined}>
+                  <div className="mt-3 border-t pt-3 flex justify-end relative" ref={menuRef}>
                     <button
                       onClick={() => setMenuOpenId(menuOpenId === o.id ? null : o.id)}
                       className="p-1 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded"
