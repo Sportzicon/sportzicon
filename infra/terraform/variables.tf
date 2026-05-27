@@ -34,7 +34,7 @@ variable "openai_api_key" {
   type        = string
   sensitive   = true
   default     = ""
-  description = "OpenAI API key. Stored in Secret Manager; leave blank to skip the secret (e.g. dev)."
+  description = "OpenAI API key. Stored in Secret Manager."
 }
 
 variable "sendgrid_api_key" {
@@ -55,6 +55,15 @@ variable "bootstrap_admin_password" {
   sensitive   = true
   default     = ""
   description = "Initial password for the bootstrapped admin. ROTATE IMMEDIATELY after first login."
+}
+
+# Non-sensitive list of which optional secrets to create.
+# This is used in for_each so it must NOT be sensitive.
+# Set to the names you have values for: ["OPENAI_API_KEY", "SENDGRID_API_KEY", ...]
+variable "optional_secrets" {
+  type        = set(string)
+  default     = []
+  description = "Names of optional secrets to create: OPENAI_API_KEY, SENDGRID_API_KEY, BOOTSTRAP_ADMIN_EMAIL, BOOTSTRAP_ADMIN_PASSWORD"
 }
 
 variable "min_instances_api" {

@@ -102,51 +102,12 @@ resource "google_cloud_run_v2_service" "api" {
       }
 
       dynamic "env" {
-        for_each = var.openai_api_key != "" ? { "openai" = true } : {}
+        for_each = var.optional_secrets
         content {
-          name = "OPENAI_API_KEY"
+          name = env.key
           value_source {
             secret_key_ref {
-              secret  = google_secret_manager_secret.this["OPENAI_API_KEY"].secret_id
-              version = "latest"
-            }
-          }
-        }
-      }
-
-      dynamic "env" {
-        for_each = var.sendgrid_api_key != "" ? { "sendgrid" = true } : {}
-        content {
-          name = "SENDGRID_API_KEY"
-          value_source {
-            secret_key_ref {
-              secret  = google_secret_manager_secret.this["SENDGRID_API_KEY"].secret_id
-              version = "latest"
-            }
-          }
-        }
-      }
-
-      dynamic "env" {
-        for_each = var.bootstrap_admin_email != "" ? { "admin_email" = true } : {}
-        content {
-          name = "BOOTSTRAP_ADMIN_EMAIL"
-          value_source {
-            secret_key_ref {
-              secret  = google_secret_manager_secret.this["BOOTSTRAP_ADMIN_EMAIL"].secret_id
-              version = "latest"
-            }
-          }
-        }
-      }
-
-      dynamic "env" {
-        for_each = var.bootstrap_admin_password != "" ? { "admin_password" = true } : {}
-        content {
-          name = "BOOTSTRAP_ADMIN_PASSWORD"
-          value_source {
-            secret_key_ref {
-              secret  = google_secret_manager_secret.this["BOOTSTRAP_ADMIN_PASSWORD"].secret_id
+              secret  = google_secret_manager_secret.this[env.key].secret_id
               version = "latest"
             }
           }

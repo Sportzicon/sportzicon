@@ -8,19 +8,19 @@ resource "random_password" "jwt_refresh" {
   special = false
 }
 
-# Build list of secret names to create (only non-empty)
+# Always-required secrets.
+# for_each keys must be non-sensitive strings — these are plain constant names.
 locals {
-  secret_names = toset(concat(
-    ["JWT_ACCESS_SECRET", "JWT_REFRESH_SECRET"],
-    var.openai_api_key != "" ? ["OPENAI_API_KEY"] : [],
-    var.sendgrid_api_key != "" ? ["SENDGRID_API_KEY"] : [],
-    var.bootstrap_admin_email != "" ? ["BOOTSTRAP_ADMIN_EMAIL"] : [],
-    var.bootstrap_admin_password != "" ? ["BOOTSTRAP_ADMIN_PASSWORD"] : []
+  required_secret_names = toset(["JWT_ACCESS_SECRET", "JWT_REFRESH_SECRET"])
+  # var.optional_secrets is a non-sensitive set(string) — safe for for_each
+  all_secret_names = toset(concat(
+    tolist(local.required_secret_names),
+    tolist(var.optional_secrets)
   ))
 }
 
 resource "google_secret_manager_secret" "this" {
-  for_each  = local.secret_names
+  for_each  = local.all_secret_names
   secret_id = "sportivox-${lower(replace(each.value, "_", "-"))}-${var.env}"
   replication {
     auto {}
@@ -29,14 +29,14 @@ resource "google_secret_manager_secret" "this" {
 }
 
 resource "google_secret_manager_secret_version" "this" {
-  for_each = local.secret_names
+  for_each = local.all_secret_names
   secret   = google_secret_manager_secret.this[each.value].id
   secret_data = (
-    each.value == "JWT_ACCESS_SECRET" ? random_password.jwt_access.result :
-    each.value == "JWT_REFRESH_SECRET" ? random_password.jwt_refresh.result :
-    each.value == "OPENAI_API_KEY" ? var.openai_api_key :
-    each.value == "SENDGRID_API_KEY" ? var.sendgrid_api_key :
-    each.value == "BOOTSTRAP_ADMIN_EMAIL" ? var.bootstrap_admin_email :
+    each.value == "JWT_ACCESS_SECRET"       ? random_password.jwt_access.result :
+    each.value == "JWT_REFRESH_SECRET"      ? random_password.jwt_refresh.result :
+    each.value == "OPENAI_API_KEY"          ? var.openai_api_key :
+    each.value == "SENDGRID_API_KEY"        ? var.sendgrid_api_key :
+    each.value == "BOOTSTRAP_ADMIN_EMAIL"   ? var.bootstrap_admin_email :
     each.value == "BOOTSTRAP_ADMIN_PASSWORD" ? var.bootstrap_admin_password :
     ""
   )

@@ -5,22 +5,18 @@
 
 project_id = "sportivox-prod"
 region     = "asia-south1"
-environment = "production"
+env        = "prod"
 
 # Docker image URLs (updated by CI/CD pipeline)
 api_image = "asia-south1-docker.pkg.dev/sportivox-prod/sportivox/api:v1.0.0"
 web_image = "asia-south1-docker.pkg.dev/sportivox-prod/sportivox/web:v1.0.0"
 
 # Cloud Run scaling (production - higher resources)
-api_min_instances     = 2
-api_max_instances     = 10
-api_memory            = "1Gi"
-api_cpu               = "2"
+min_instances_api = 2
+max_instances_api = 10
 
-web_min_instances     = 2
-web_max_instances     = 5
-web_memory            = "512Mi"
-web_cpu               = "1"
+min_instances_web = 2
+max_instances_web = 5
 
 # API Configuration
 api_port                = 8080
