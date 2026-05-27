@@ -1,7 +1,7 @@
 # Terraform Variables for Staging Environment
-# This file is committed to Git with safe, non-sensitive staging values
-# The CI/CD pipeline will update image URLs with actual deployed versions
-# DO NOT add secrets here - use GCP Secret Manager instead
+# Committed to Git — safe non-sensitive values only
+# CI/CD pipeline updates api_image and web_image automatically on each push
+# Secrets (JWT, API keys) live in GCP Secret Manager — never in this file
 
 project_id = "sportivox-main"
 region     = "asia-south1"
