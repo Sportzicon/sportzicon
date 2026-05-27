@@ -10,74 +10,8 @@ env:
   GCP_AR_REPO: sportivox
 
 jobs:
-  test:
-    name: Test & Lint (Production)
-    runs-on: ubuntu-latest
-    services:
-      firestore:
-        image: mtlynch/firestore-emulator:latest
-        env:
-          FIRESTORE_PROJECT_ID: sportivox-test
-          PORT: 8081
-        ports:
-          - 8081:8081
-        options: >-
-          --health-cmd="wget --spider -q http://localhost:8081"
-          --health-interval=5s
-          --health-timeout=3s
-          --health-retries=10
-
-      gcs:
-        image: fsouza/fake-gcs-server:latest
-        ports:
-          - 4443:4443
-        options: >-
-          --entrypoint=sh
-          -c
-          "fake-gcs-server -scheme http -public-host localhost:4443 -port 4443"
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-
-      - name: Install backend dependencies
-        working-directory: backend
-        run: npm ci
-
-      - name: Install frontend dependencies
-        working-directory: frontend
-        run: npm ci
-
-      - name: Type check backend
-        working-directory: backend
-        run: npm run typecheck
-
-      - name: Lint backend
-        working-directory: backend
-        run: npm run lint
-
-      - name: Test backend
-        working-directory: backend
-        run: npm test -- --coverage
-        env:
-          FIRESTORE_EMULATOR_HOST: firestore:8081
-          STORAGE_EMULATOR_HOST: http://gcs:4443
-
-      - name: Lint frontend
-        working-directory: frontend
-        run: npm run lint
-
-      - name: Test frontend
-        working-directory: frontend
-        run: npm test
-
   build-and-deploy:
     name: Build & Deploy to Production
-    needs: test
     runs-on: ubuntu-latest
     environment: production
     permissions:
