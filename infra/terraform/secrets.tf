@@ -18,10 +18,10 @@ locals {
 
   # Optional secrets - only add if variable is not empty
   optional_secret_names = concat(
-    var.openai_api_key != "" ? ["OPENAI_API_KEY"] : [],
-    var.sendgrid_api_key != "" ? ["SENDGRID_API_KEY"] : [],
-    var.bootstrap_admin_email != "" ? ["BOOTSTRAP_ADMIN_EMAIL"] : [],
-    var.bootstrap_admin_password != "" ? ["BOOTSTRAP_ADMIN_PASSWORD"] : []
+    nonsensitive(var.openai_api_key) != "" ? ["OPENAI_API_KEY"] : [],
+    nonsensitive(var.sendgrid_api_key) != "" ? ["SENDGRID_API_KEY"] : [],
+    nonsensitive(var.bootstrap_admin_email) != "" ? ["BOOTSTRAP_ADMIN_EMAIL"] : [],
+    nonsensitive(var.bootstrap_admin_password) != "" ? ["BOOTSTRAP_ADMIN_PASSWORD"] : []
   )
 
   # Combined list of secret names (all non-sensitive strings)

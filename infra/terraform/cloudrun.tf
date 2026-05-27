@@ -102,7 +102,7 @@ resource "google_cloud_run_v2_service" "api" {
       }
 
       dynamic "env" {
-        for_each = contains(keys(local.optional_secrets), "OPENAI_API_KEY") ? [1] : []
+        for_each = var.openai_api_key != "" ? [1] : []
         content {
           name = "OPENAI_API_KEY"
           value_source {
@@ -115,7 +115,7 @@ resource "google_cloud_run_v2_service" "api" {
       }
 
       dynamic "env" {
-        for_each = contains(keys(local.optional_secrets), "SENDGRID_API_KEY") ? [1] : []
+        for_each = var.sendgrid_api_key != "" ? [1] : []
         content {
           name = "SENDGRID_API_KEY"
           value_source {
@@ -128,7 +128,7 @@ resource "google_cloud_run_v2_service" "api" {
       }
 
       dynamic "env" {
-        for_each = contains(keys(local.optional_secrets), "BOOTSTRAP_ADMIN_EMAIL") ? [1] : []
+        for_each = var.bootstrap_admin_email != "" ? [1] : []
         content {
           name = "BOOTSTRAP_ADMIN_EMAIL"
           value_source {
@@ -141,7 +141,7 @@ resource "google_cloud_run_v2_service" "api" {
       }
 
       dynamic "env" {
-        for_each = contains(keys(local.optional_secrets), "BOOTSTRAP_ADMIN_PASSWORD") ? [1] : []
+        for_each = var.bootstrap_admin_password != "" ? [1] : []
         content {
           name = "BOOTSTRAP_ADMIN_PASSWORD"
           value_source {
