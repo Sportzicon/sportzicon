@@ -49,10 +49,6 @@ resource "google_cloud_run_v2_service" "api" {
         value = "production"
       }
       env {
-        name  = "PORT"
-        value = "8080"
-      }
-      env {
         name  = "GCP_PROJECT_ID"
         value = var.project_id
       }
