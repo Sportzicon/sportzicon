@@ -2,6 +2,8 @@
 
 A multi-role sports networking & recruitment platform. Athletes, clubs, academies, scouts and organizers in one verified ecosystem.
 
+> **Staging Deployment**: CI/CD pipeline ready for GCP Cloud Run deployment
+
 > Built from the SRS/FRS in `../Sportivox_SRS_FRS_v1.docx` (EASOPS Technologies). This repo deviates from the SRS in two intentional ways: it deploys to **GCP** (not AWS) and uses **Firestore** (not MongoDB) — both decisions documented in `docs/ARCHITECTURE.md`.
 
 ## What's inside
