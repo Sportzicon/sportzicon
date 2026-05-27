@@ -21,9 +21,9 @@ max_instances_web = 2
 
 # API Configuration
 api_port                = 8080
-api_public_url          = "https://api-staging.sportivox.com"
-web_app_url             = "https://staging.sportivox.com"
-cors_origins            = "https://staging.sportivox.com"
+api_public_url          = "https://sportivox-api-prod-v4otdm3i5a-el.a.run.app"
+web_app_url             = "https://sportivox-web-prod-v4otdm3i5a-el.a.run.app"
+cors_origins            = "https://sportivox-web-prod-v4otdm3i5a-el.a.run.app"
 
 # Rate limiting (staging - more relaxed)
 rate_limit_window_ms    = 900000
