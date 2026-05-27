@@ -8,7 +8,7 @@ resource "random_password" "jwt_refresh" {
   special = false
 }
 
-# All secrets that could be needed
+# Only create secrets with non-empty values
 locals {
   all_secrets = {
     JWT_ACCESS_SECRET       = random_password.jwt_access.result
@@ -18,10 +18,14 @@ locals {
     BOOTSTRAP_ADMIN_EMAIL   = var.bootstrap_admin_email
     BOOTSTRAP_ADMIN_PASSWORD = var.bootstrap_admin_password
   }
+  # Filter to only non-empty secrets
+  non_empty_secrets = {
+    for k, v in local.all_secrets : k => v if v != ""
+  }
 }
 
 resource "google_secret_manager_secret" "this" {
-  for_each  = local.all_secrets
+  for_each  = local.non_empty_secrets
   secret_id = "sportivox-${lower(replace(each.key, "_", "-"))}-${var.env}"
   replication {
     auto {}
@@ -30,7 +34,7 @@ resource "google_secret_manager_secret" "this" {
 }
 
 resource "google_secret_manager_secret_version" "this" {
-  for_each    = local.all_secrets
+  for_each    = local.non_empty_secrets
   secret      = google_secret_manager_secret.this[each.key].id
   secret_data = each.value
 }

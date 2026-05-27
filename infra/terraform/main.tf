@@ -31,11 +31,17 @@ resource "google_artifact_registry_repository" "containers" {
   depends_on    = [google_project_service.apis]
 }
 
-# Dedicated runtime service account for Cloud Run revisions.
-resource "google_service_account" "runtime" {
-  account_id   = "sportivox-run-${local.name_suffix}"
-  display_name = "Sportivox Cloud Run runtime (${var.env})"
+# Reference existing runtime service account (created outside Terraform or in previous run)
+data "google_service_account" "runtime" {
+  account_id = "sportivox-run-${local.name_suffix}"
+  project    = var.project_id
 }
+
+# To create service account (if doesn't exist), uncomment:
+# resource "google_service_account" "runtime" {
+#   account_id   = "sportivox-run-${local.name_suffix}"
+#   display_name = "Sportivox Cloud Run runtime (${var.env})"
+# }
 
 # Allow the runtime SA to read secrets, write to Firestore, and use GCS buckets.
 resource "google_project_iam_member" "runtime_datastore_user" {

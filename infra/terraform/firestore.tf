@@ -215,17 +215,4 @@ resource "google_firestore_index" "comments_parent" {
   }
 }
 
-resource "google_firestore_index" "audit_logs_created" {
-  project     = var.project_id
-  database    = google_firestore_database.default.name
-  collection  = "audit_logs"
-  query_scope = "COLLECTION"
-  fields {
-    field_path = "created_at"
-    order      = "DESCENDING"
-  }
-  fields {
-    field_path = "__name__"
-    order      = "DESCENDING"
-  }
-}
+# Removed: audit_logs_created - Firestore auto-manages single-field indexes
