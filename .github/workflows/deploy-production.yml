@@ -1,0 +1,185 @@
+name: Deploy to Production
+
+on:
+  push:
+    tags:
+      - "v*"
+
+env:
+  GCP_REGION: asia-south1
+  GCP_AR_REPO: sportivox
+
+jobs:
+  test:
+    name: Test & Lint (Production)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm install
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm install
+
+      - name: Type check backend
+        working-directory: backend
+        run: npm run typecheck
+
+      - name: Lint backend
+        working-directory: backend
+        run: npm run lint
+
+      - name: Test backend
+        working-directory: backend
+        run: npm test -- --coverage
+
+      - name: Lint frontend
+        working-directory: frontend
+        run: npm run lint
+
+      - name: Test frontend
+        working-directory: frontend
+        run: npm test
+
+  build-and-deploy:
+    name: Build & Deploy to Production
+    needs: test
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v1
+        with:
+          workload_identity_provider: ${{ secrets.GOOGLE_PROVIDER_NAME }}
+          service_account: ${{ secrets.GOOGLE_SERVICE_ACCOUNT }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Configure Docker for Artifact Registry
+        run: |
+          gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev
+
+      - name: Build API image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          target: runtime
+          push: false
+          load: true
+          tags: |
+            ${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.GCP_AR_REPO }}/api:${{ github.ref_name }}
+
+      - name: Build Web image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          target: runtime
+          build-args: |
+            VITE_API_BASE_URL=https://api.sportivox.com
+          push: false
+          load: true
+          tags: |
+            ${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.GCP_AR_REPO }}/web:${{ github.ref_name }}
+
+      - name: Push images to Artifact Registry
+        run: |
+          docker push ${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.GCP_AR_REPO }}/api:${{ github.ref_name }}
+          docker push ${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.GCP_AR_REPO }}/web:${{ github.ref_name }}
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: "1.6"
+
+      - name: Configure Terraform backend
+        working-directory: infra/terraform
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ env.GOOGLE_APPLICATION_CREDENTIALS }}
+        run: |
+          terraform init \
+            -backend-config="bucket=sportivox-terraform-state-${{ secrets.GCP_PROJECT_ID }}" \
+            -backend-config="prefix=production"
+
+      - name: Update Terraform variables
+        working-directory: infra/terraform
+        run: |
+          cat > terraform.tfvars.prod << EOF
+          project_id                = "${{ secrets.GCP_PROJECT_ID }}"
+          region                    = "${{ env.GCP_REGION }}"
+          environment                = "production"
+          api_image                  = "${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.GCP_AR_REPO }}/api:${{ github.ref_name }}"
+          web_image                  = "${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.GCP_AR_REPO }}/web:${{ github.ref_name }}"
+          EOF
+
+      - name: Terraform Plan
+        working-directory: infra/terraform
+        run: terraform plan -var-file=terraform.tfvars.prod -out=tfplan
+
+      - name: Terraform Apply
+        working-directory: infra/terraform
+        run: terraform apply -auto-approve tfplan
+
+      - name: Get deployment URLs
+        working-directory: infra/terraform
+        id: outputs
+        run: |
+          echo "api_url=$(terraform output -raw api_url 2>/dev/null || echo 'pending')" >> $GITHUB_OUTPUT
+          echo "web_url=$(terraform output -raw web_url 2>/dev/null || echo 'pending')" >> $GITHUB_OUTPUT
+
+      - name: Health check API
+        run: |
+          for i in {1..30}; do
+            if curl -s ${{ steps.outputs.outputs.api_url }}/health | grep -q "ok"; then
+              echo "✅ API is healthy"
+              exit 0
+            fi
+            echo "⏳ Waiting for API to be ready... ($i/30)"
+            sleep 2
+          done
+          echo "❌ API health check failed"
+          exit 1
+
+      - name: Create GitHub Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref_name }}
+          release_name: Release ${{ github.ref_name }}
+          body: |
+            ## 🚀 Production Deployment
+
+            **Version:** ${{ github.ref_name }}
+            **Commit:** ${{ github.sha }}
+
+            **Images:**
+            - API: `${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.GCP_AR_REPO }}/api:${{ github.ref_name }}`
+            - Web: `${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.GCP_AR_REPO }}/web:${{ github.ref_name }}`
+
+            **Deployment:**
+            - API URL: ${{ steps.outputs.outputs.api_url }}
+            - Web URL: ${{ steps.outputs.outputs.web_url }}
+            - Status: ✅ Deployed & Healthy
+          draft: false
+          prerelease: false

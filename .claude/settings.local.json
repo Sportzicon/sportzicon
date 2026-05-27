@@ -12,7 +12,19 @@
       "Bash(Start-Sleep -Seconds 5)",
       "Bash(Get-Content \"C:\\\\Users\\\\mahes\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\f--My-Project-sportivox-main-sportivox-main\\\\098ab53a-7c5b-435f-8573-70781dbccd04\\\\tasks\\\\b8eeei7hx.output\" -Tail 30)",
       "Bash(curl -s http://localhost:3000)",
-      "Bash(curl -s http://localhost:3001/health)"
+      "Bash(curl -s http://localhost:3001/health)",
+      "Bash(docker system *)",
+      "Bash(docker compose *)",
+      "Bash(docker rmi *)",
+      "Bash(Get-Process)",
+      "Bash(Select-String -Pattern \"docker|Docker\")",
+      "Bash(Out-String)",
+      "PowerShell(Start-Process \"C:\\\\Program Files\\\\Docker\\\\Docker\\\\Docker Desktop.exe\")",
+      "Bash(docker container *)",
+      "Bash(curl -s http://localhost:8080/health)",
+      "Bash(Get-ChildItem -Path \"F:\\\\My Project\\\\sportivox-main\\\\sportivox-main\" -Directory)",
+      "Bash(Select-Object Name)",
+      "Bash(xargs ls -la)"
     ]
   }
 }

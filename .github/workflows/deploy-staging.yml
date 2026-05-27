@@ -1,0 +1,184 @@
+name: Deploy to Staging
+
+on:
+  push:
+    branches: [main]
+
+env:
+  GCP_PROJECT_ID: sportivox-main
+  GCP_REGION: asia-south1
+  GCP_AR_REPO: sportivox
+
+jobs:
+  test:
+    name: Test & Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm install
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm install
+
+      - name: Type check backend
+        working-directory: backend
+        run: npm run typecheck
+
+      - name: Lint backend
+        working-directory: backend
+        run: npm run lint
+
+      - name: Test backend
+        working-directory: backend
+        run: npm test -- --coverage
+
+      - name: Lint frontend
+        working-directory: frontend
+        run: npm run lint
+
+      - name: Test frontend
+        working-directory: frontend
+        run: npm test
+
+  build-and-deploy:
+    name: Build & Deploy to Staging
+    needs: test
+    runs-on: ubuntu-latest
+    environment: staging
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v1
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Configure Docker for Artifact Registry
+        run: |
+          gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev
+
+      - name: Build API image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          target: runtime
+          push: false
+          load: true
+          tags: |
+            ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.GCP_AR_REPO }}/api:latest
+            ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.GCP_AR_REPO }}/api:main-${{ github.sha }}
+
+      - name: Build Web image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          target: runtime
+          build-args: |
+            VITE_API_BASE_URL=https://api-staging.sportivox.com
+          push: false
+          load: true
+          tags: |
+            ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.GCP_AR_REPO }}/web:latest
+            ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.GCP_AR_REPO }}/web:main-${{ github.sha }}
+
+      - name: Push images to Artifact Registry
+        run: |
+          docker push ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.GCP_AR_REPO }}/api:latest
+          docker push ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.GCP_AR_REPO }}/api:main-${{ github.sha }}
+          docker push ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.GCP_AR_REPO }}/web:latest
+          docker push ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.GCP_AR_REPO }}/web:main-${{ github.sha }}
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: "1.6"
+
+      - name: Configure Terraform backend
+        working-directory: infra/terraform
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ env.GOOGLE_APPLICATION_CREDENTIALS }}
+        run: |
+          terraform init \
+            -backend-config="bucket=sportivox-terraform-state-${{ env.GCP_PROJECT_ID }}" \
+            -backend-config="prefix=staging"
+
+      - name: Update Terraform variables
+        working-directory: infra/terraform
+        run: |
+          cat > terraform.tfvars.staging << EOF
+          project_id                = "${{ env.GCP_PROJECT_ID }}"
+          region                    = "${{ env.GCP_REGION }}"
+          environment                = "staging"
+          api_image                  = "${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.GCP_AR_REPO }}/api:main-${{ github.sha }}"
+          web_image                  = "${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.GCP_AR_REPO }}/web:main-${{ github.sha }}"
+          EOF
+
+      - name: Terraform Plan
+        working-directory: infra/terraform
+        run: terraform plan -var-file=terraform.tfvars.staging -out=tfplan
+
+      - name: Terraform Apply
+        working-directory: infra/terraform
+        run: terraform apply -auto-approve tfplan
+
+      - name: Get deployment URLs
+        working-directory: infra/terraform
+        id: outputs
+        run: |
+          echo "api_url=$(terraform output -raw api_url 2>/dev/null || echo 'pending')" >> $GITHUB_OUTPUT
+          echo "web_url=$(terraform output -raw web_url 2>/dev/null || echo 'pending')" >> $GITHUB_OUTPUT
+
+      - name: Health check API
+        run: |
+          for i in {1..30}; do
+            if curl -s ${{ steps.outputs.outputs.api_url }}/health | grep -q "ok"; then
+              echo "✅ API is healthy"
+              exit 0
+            fi
+            echo "⏳ Waiting for API to be ready... ($i/30)"
+            sleep 2
+          done
+          echo "❌ API health check failed"
+          exit 1
+
+      - name: Post deployment comment
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const status = '${{ job.status }}' === 'success' ? '✅' : '❌';
+            const message = `${status} **Staging Deployment**
+
+            - **Image tags:** main-${{ github.sha }}
+            - **API:** ${{ steps.outputs.outputs.api_url || 'deploying...' }}
+            - **Web:** ${{ steps.outputs.outputs.web_url || 'deploying...' }}
+            - **Commit:** ${{ github.sha }}`;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: message
+            });

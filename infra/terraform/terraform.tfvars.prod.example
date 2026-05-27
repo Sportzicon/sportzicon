@@ -1,0 +1,48 @@
+# Terraform Variables for Production Environment
+# Copy this file to terraform.tfvars.prod and update with your production values
+# This file is gitignored (not committed to repository)
+# ⚠️ SECURITY: Keep production values SECRET - never commit to git
+
+project_id = "sportivox-prod"
+region     = "asia-south1"
+environment = "production"
+
+# Docker image URLs (updated by CI/CD pipeline)
+api_image = "asia-south1-docker.pkg.dev/sportivox-prod/sportivox/api:v1.0.0"
+web_image = "asia-south1-docker.pkg.dev/sportivox-prod/sportivox/web:v1.0.0"
+
+# Cloud Run scaling (production - higher resources)
+api_min_instances     = 2
+api_max_instances     = 10
+api_memory            = "1Gi"
+api_cpu               = "2"
+
+web_min_instances     = 2
+web_max_instances     = 5
+web_memory            = "512Mi"
+web_cpu               = "1"
+
+# API Configuration
+api_port                = 8080
+api_public_url          = "https://api.sportivox.com"
+web_app_url             = "https://app.sportivox.com"
+cors_origins            = "https://app.sportivox.com"
+
+# Rate limiting (production - strict)
+rate_limit_window_ms    = 900000
+rate_limit_max          = 100
+auth_rate_limit_max     = 10
+
+# Logging (production - warnings only)
+log_level               = "warn"
+
+# Optional API keys (use GCP Secret Manager for actual values)
+openai_api_key          = ""
+sendgrid_api_key        = ""
+
+# Bootstrap admin (set to empty after first deployment)
+bootstrap_admin_email   = ""
+bootstrap_admin_password = ""
+
+# Optional GCP settings
+gcs_bucket_terraform_state = "sportivox-terraform-state-prod"

@@ -1,0 +1,47 @@
+# Terraform Variables for Staging Environment
+# Copy this file to terraform.tfvars.staging and update with your staging values
+# This file is gitignored (not committed to repository)
+
+project_id = "sportivox-main"
+region     = "asia-south1"
+environment = "staging"
+
+# Docker image URLs (updated by CI/CD pipeline)
+api_image = "asia-south1-docker.pkg.dev/sportivox-staging/sportivox/api:latest"
+web_image = "asia-south1-docker.pkg.dev/sportivox-staging/sportivox/web:latest"
+
+# Cloud Run scaling
+api_min_instances     = 1
+api_max_instances     = 5
+api_memory            = "512Mi"
+api_cpu               = "1"
+
+web_min_instances     = 1
+web_max_instances     = 3
+web_memory            = "256Mi"
+web_cpu               = "1"
+
+# API Configuration
+api_port                = 8080
+api_public_url          = "https://api-staging.sportivox.com"
+web_app_url             = "https://staging.sportivox.com"
+cors_origins            = "https://staging.sportivox.com,https://api-staging.sportivox.com"
+
+# Rate limiting (staging - more relaxed than production)
+rate_limit_window_ms    = 900000
+rate_limit_max          = 300
+auth_rate_limit_max     = 20
+
+# Logging
+log_level               = "info"
+
+# Optional API keys (leave empty if not needed)
+openai_api_key          = ""
+sendgrid_api_key        = ""
+
+# Bootstrap admin (set once, then leave empty)
+bootstrap_admin_email   = ""
+bootstrap_admin_password = ""
+
+# Optional GCP settings
+gcs_bucket_terraform_state = "sportivox-terraform-state-sportivox-main"

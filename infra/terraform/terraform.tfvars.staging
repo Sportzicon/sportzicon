@@ -1,0 +1,51 @@
+# Terraform Variables for Staging Environment
+# This file is committed to Git with safe, non-sensitive staging values
+# The CI/CD pipeline will update image URLs with actual deployed versions
+# DO NOT add secrets here - use GCP Secret Manager instead
+
+project_id  = "sportivox-main"
+region      = "asia-south1"
+environment = "staging"
+
+# Docker image URLs (updated by CI/CD pipeline)
+# These are placeholders - GitHub Actions will replace them with actual image tags
+api_image = "asia-south1-docker.pkg.dev/sportivox-main/sportivox/api:latest"
+web_image = "asia-south1-docker.pkg.dev/sportivox-main/sportivox/web:latest"
+
+# Cloud Run scaling for staging
+api_min_instances     = 1
+api_max_instances     = 3
+api_memory            = "512Mi"
+api_cpu               = "1"
+
+web_min_instances     = 1
+web_max_instances     = 2
+web_memory            = "256Mi"
+web_cpu               = "1"
+
+# API Configuration
+api_port                = 8080
+api_public_url          = "https://api-staging.sportivox.com"
+web_app_url             = "https://staging.sportivox.com"
+cors_origins            = "https://staging.sportivox.com"
+
+# Rate limiting (staging - more relaxed)
+rate_limit_window_ms    = 900000
+rate_limit_max          = 300
+auth_rate_limit_max     = 20
+
+# Logging level for staging
+log_level               = "info"
+
+# Optional API keys (leave empty if not needed)
+# These will be provided via GCP Secret Manager in production
+openai_api_key          = ""
+sendgrid_api_key        = ""
+
+# Bootstrap admin (only needed for first deployment)
+# Set to empty after initial setup
+bootstrap_admin_email   = ""
+bootstrap_admin_password = ""
+
+# GCP Terraform state bucket
+gcs_bucket_terraform_state = "sportivox-terraform-state-sportivox-main"
