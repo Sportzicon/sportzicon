@@ -83,16 +83,11 @@ jobs:
             -backend-config="bucket=sportivox-terraform-state-${{ env.GCP_PROJECT_ID }}" \
             -backend-config="prefix=staging"
 
-      - name: Update Terraform variables
+      - name: Update Terraform image variables
         working-directory: infra/terraform
         run: |
-          cat > terraform.tfvars.staging << EOF
-          project_id                = "${{ env.GCP_PROJECT_ID }}"
-          region                    = "${{ env.GCP_REGION }}"
-          environment                = "staging"
-          api_image                  = "${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.GCP_AR_REPO }}/api:main-${{ github.sha }}"
-          web_image                  = "${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.GCP_AR_REPO }}/web:main-${{ github.sha }}"
-          EOF
+          sed -i "s|api_image = .*|api_image = \"${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.GCP_AR_REPO }}/api:main-${{ github.sha }}\"|g" terraform.tfvars.staging
+          sed -i "s|web_image = .*|web_image = \"${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.GCP_AR_REPO }}/web:main-${{ github.sha }}\"|g" terraform.tfvars.staging
 
       - name: Terraform Plan
         working-directory: infra/terraform
