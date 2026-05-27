@@ -121,23 +121,3 @@ jobs:
           done
           echo "❌ API health check failed"
           exit 1
-
-      - name: Post deployment comment
-        if: always()
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const status = '${{ job.status }}' === 'success' ? '✅' : '❌';
-            const message = `${status} **Staging Deployment**
-
-            - **Image tags:** main-${{ github.sha }}
-            - **API:** ${{ steps.outputs.outputs.api_url || 'deploying...' }}
-            - **Web:** ${{ steps.outputs.outputs.web_url || 'deploying...' }}
-            - **Commit:** ${{ github.sha }}`;
-
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: message
-            });
