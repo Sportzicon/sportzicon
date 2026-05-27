@@ -102,7 +102,7 @@ resource "google_cloud_run_v2_service" "api" {
       }
 
       dynamic "env" {
-        for_each = var.openai_api_key != "" ? [1] : []
+        for_each = var.openai_api_key != "" ? { "enabled" = true } : {}
         content {
           name = "OPENAI_API_KEY"
           value_source {
@@ -115,7 +115,7 @@ resource "google_cloud_run_v2_service" "api" {
       }
 
       dynamic "env" {
-        for_each = var.sendgrid_api_key != "" ? [1] : []
+        for_each = var.sendgrid_api_key != "" ? { "enabled" = true } : {}
         content {
           name = "SENDGRID_API_KEY"
           value_source {
@@ -128,7 +128,7 @@ resource "google_cloud_run_v2_service" "api" {
       }
 
       dynamic "env" {
-        for_each = var.bootstrap_admin_email != "" ? [1] : []
+        for_each = var.bootstrap_admin_email != "" ? { "enabled" = true } : {}
         content {
           name = "BOOTSTRAP_ADMIN_EMAIL"
           value_source {
@@ -141,7 +141,7 @@ resource "google_cloud_run_v2_service" "api" {
       }
 
       dynamic "env" {
-        for_each = var.bootstrap_admin_password != "" ? [1] : []
+        for_each = var.bootstrap_admin_password != "" ? { "enabled" = true } : {}
         content {
           name = "BOOTSTRAP_ADMIN_PASSWORD"
           value_source {
