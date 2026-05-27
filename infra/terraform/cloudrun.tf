@@ -117,7 +117,8 @@ resource "google_cloud_run_v2_service" "api" {
     google_project_service.apis,
     google_firestore_database.default,
     google_storage_bucket.media,
-    google_storage_bucket.docs
+    google_storage_bucket.docs,
+    google_secret_manager_secret_version.this
   ]
 }
 
