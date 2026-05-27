@@ -25,7 +25,9 @@
       "Bash(Get-ChildItem -Path \"F:\\\\My Project\\\\sportivox-main\\\\sportivox-main\" -Directory)",
       "Bash(Select-Object Name)",
       "Bash(xargs ls -la)",
-      "Bash(grep -E \"\\\\.\\(example|js|tf\\)$\")"
+      "Bash(grep -E \"\\\\.\\(example|js|tf\\)$\")",
+      "Bash(terraform validate *)",
+      "Bash(terraform plan *)"
     ]
   }
 }
