@@ -101,42 +101,54 @@ resource "google_cloud_run_v2_service" "api" {
         }
       }
 
-      env {
-        name = "OPENAI_API_KEY"
-        value_source {
-          secret_key_ref {
-            secret  = google_secret_manager_secret.this["OPENAI_API_KEY"].secret_id
-            version = "latest"
+      dynamic "env" {
+        for_each = var.openai_api_key != "" ? [1] : []
+        content {
+          name = "OPENAI_API_KEY"
+          value_source {
+            secret_key_ref {
+              secret  = google_secret_manager_secret.this["OPENAI_API_KEY"].secret_id
+              version = "latest"
+            }
           }
         }
       }
 
-      env {
-        name = "SENDGRID_API_KEY"
-        value_source {
-          secret_key_ref {
-            secret  = google_secret_manager_secret.this["SENDGRID_API_KEY"].secret_id
-            version = "latest"
+      dynamic "env" {
+        for_each = var.sendgrid_api_key != "" ? [1] : []
+        content {
+          name = "SENDGRID_API_KEY"
+          value_source {
+            secret_key_ref {
+              secret  = google_secret_manager_secret.this["SENDGRID_API_KEY"].secret_id
+              version = "latest"
+            }
           }
         }
       }
 
-      env {
-        name = "BOOTSTRAP_ADMIN_EMAIL"
-        value_source {
-          secret_key_ref {
-            secret  = google_secret_manager_secret.this["BOOTSTRAP_ADMIN_EMAIL"].secret_id
-            version = "latest"
+      dynamic "env" {
+        for_each = var.bootstrap_admin_email != "" ? [1] : []
+        content {
+          name = "BOOTSTRAP_ADMIN_EMAIL"
+          value_source {
+            secret_key_ref {
+              secret  = google_secret_manager_secret.this["BOOTSTRAP_ADMIN_EMAIL"].secret_id
+              version = "latest"
+            }
           }
         }
       }
 
-      env {
-        name = "BOOTSTRAP_ADMIN_PASSWORD"
-        value_source {
-          secret_key_ref {
-            secret  = google_secret_manager_secret.this["BOOTSTRAP_ADMIN_PASSWORD"].secret_id
-            version = "latest"
+      dynamic "env" {
+        for_each = var.bootstrap_admin_password != "" ? [1] : []
+        content {
+          name = "BOOTSTRAP_ADMIN_PASSWORD"
+          value_source {
+            secret_key_ref {
+              secret  = google_secret_manager_secret.this["BOOTSTRAP_ADMIN_PASSWORD"].secret_id
+              version = "latest"
+            }
           }
         }
       }
