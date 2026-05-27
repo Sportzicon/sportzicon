@@ -73,6 +73,7 @@ jobs:
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: "1.6"
+          terraform_wrapper: false
 
       - name: Configure Terraform backend
         working-directory: infra/terraform
