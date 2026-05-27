@@ -57,10 +57,6 @@ resource "google_cloud_run_v2_service" "api" {
         value = var.web_app_url
       }
       env {
-        name  = "PUBLIC_API_URL"
-        value = ""
-      }
-      env {
         name  = "CORS_ORIGINS"
         value = var.web_app_url
       }

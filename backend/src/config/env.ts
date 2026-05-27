@@ -6,7 +6,7 @@ const schema = z.object({
   PORT: z.coerce.number().int().positive().default(8080),
   LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace"]).default("info"),
 
-  PUBLIC_API_URL: z.string().url().default("http://localhost:8080"),
+  PUBLIC_API_URL: z.string().url().optional(),
   WEB_APP_URL: z.string().url().default("http://localhost:5173"),
 
   JWT_ACCESS_SECRET: z.string().min(16, "JWT_ACCESS_SECRET must be at least 16 chars"),
