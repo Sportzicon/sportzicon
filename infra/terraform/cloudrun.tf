@@ -4,7 +4,7 @@ resource "google_cloud_run_v2_service" "api" {
   ingress  = "INGRESS_TRAFFIC_ALL"
 
   template {
-    service_account = google_service_account.runtime.email
+    service_account = data.google_service_account.runtime.email
 
     scaling {
       min_instance_count = var.min_instances_api

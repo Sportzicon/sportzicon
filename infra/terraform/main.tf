@@ -47,30 +47,30 @@ data "google_service_account" "runtime" {
 resource "google_project_iam_member" "runtime_datastore_user" {
   project = var.project_id
   role    = "roles/datastore.user"
-  member  = "serviceAccount:${google_service_account.runtime.email}"
+  member  = "serviceAccount:${data.google_service_account.runtime.email}"
 }
 
 resource "google_project_iam_member" "runtime_secret_accessor" {
   project = var.project_id
   role    = "roles/secretmanager.secretAccessor"
-  member  = "serviceAccount:${google_service_account.runtime.email}"
+  member  = "serviceAccount:${data.google_service_account.runtime.email}"
 }
 
 # Logs / monitoring
 resource "google_project_iam_member" "runtime_logs_writer" {
   project = var.project_id
   role    = "roles/logging.logWriter"
-  member  = "serviceAccount:${google_service_account.runtime.email}"
+  member  = "serviceAccount:${data.google_service_account.runtime.email}"
 }
 
 resource "google_project_iam_member" "runtime_metric_writer" {
   project = var.project_id
   role    = "roles/monitoring.metricWriter"
-  member  = "serviceAccount:${google_service_account.runtime.email}"
+  member  = "serviceAccount:${data.google_service_account.runtime.email}"
 }
 
 resource "google_project_iam_member" "runtime_trace_agent" {
   project = var.project_id
   role    = "roles/cloudtrace.agent"
-  member  = "serviceAccount:${google_service_account.runtime.email}"
+  member  = "serviceAccount:${data.google_service_account.runtime.email}"
 }

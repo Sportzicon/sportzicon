@@ -74,11 +74,11 @@ resource "google_storage_bucket" "docs" {
 resource "google_storage_bucket_iam_member" "runtime_media" {
   bucket = google_storage_bucket.media.name
   role   = "roles/storage.objectAdmin"
-  member = "serviceAccount:${google_service_account.runtime.email}"
+  member = "serviceAccount:${data.google_service_account.runtime.email}"
 }
 
 resource "google_storage_bucket_iam_member" "runtime_docs" {
   bucket = google_storage_bucket.docs.name
   role   = "roles/storage.objectAdmin"
-  member = "serviceAccount:${google_service_account.runtime.email}"
+  member = "serviceAccount:${data.google_service_account.runtime.email}"
 }
