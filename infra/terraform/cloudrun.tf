@@ -101,54 +101,42 @@ resource "google_cloud_run_v2_service" "api" {
         }
       }
 
-      dynamic "env" {
-        for_each = nonsensitive(var.openai_api_key) != "" ? toset(["OPENAI_API_KEY"]) : toset([])
-        content {
-          name = "OPENAI_API_KEY"
-          value_source {
-            secret_key_ref {
-              secret  = google_secret_manager_secret.this["OPENAI_API_KEY"].secret_id
-              version = "latest"
-            }
+      env {
+        name = "OPENAI_API_KEY"
+        value_source {
+          secret_key_ref {
+            secret  = google_secret_manager_secret.this["OPENAI_API_KEY"].secret_id
+            version = "latest"
           }
         }
       }
 
-      dynamic "env" {
-        for_each = nonsensitive(var.sendgrid_api_key) != "" ? toset(["SENDGRID_API_KEY"]) : toset([])
-        content {
-          name = "SENDGRID_API_KEY"
-          value_source {
-            secret_key_ref {
-              secret  = google_secret_manager_secret.this["SENDGRID_API_KEY"].secret_id
-              version = "latest"
-            }
+      env {
+        name = "SENDGRID_API_KEY"
+        value_source {
+          secret_key_ref {
+            secret  = google_secret_manager_secret.this["SENDGRID_API_KEY"].secret_id
+            version = "latest"
           }
         }
       }
 
-      dynamic "env" {
-        for_each = nonsensitive(var.bootstrap_admin_email) != "" ? toset(["BOOTSTRAP_ADMIN_EMAIL"]) : toset([])
-        content {
-          name = "BOOTSTRAP_ADMIN_EMAIL"
-          value_source {
-            secret_key_ref {
-              secret  = google_secret_manager_secret.this["BOOTSTRAP_ADMIN_EMAIL"].secret_id
-              version = "latest"
-            }
+      env {
+        name = "BOOTSTRAP_ADMIN_EMAIL"
+        value_source {
+          secret_key_ref {
+            secret  = google_secret_manager_secret.this["BOOTSTRAP_ADMIN_EMAIL"].secret_id
+            version = "latest"
           }
         }
       }
 
-      dynamic "env" {
-        for_each = nonsensitive(var.bootstrap_admin_password) != "" ? toset(["BOOTSTRAP_ADMIN_PASSWORD"]) : toset([])
-        content {
-          name = "BOOTSTRAP_ADMIN_PASSWORD"
-          value_source {
-            secret_key_ref {
-              secret  = google_secret_manager_secret.this["BOOTSTRAP_ADMIN_PASSWORD"].secret_id
-              version = "latest"
-            }
+      env {
+        name = "BOOTSTRAP_ADMIN_PASSWORD"
+        value_source {
+          secret_key_ref {
+            secret  = google_secret_manager_secret.this["BOOTSTRAP_ADMIN_PASSWORD"].secret_id
+            version = "latest"
           }
         }
       }
