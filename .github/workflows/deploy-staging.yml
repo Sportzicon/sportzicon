@@ -96,11 +96,11 @@ jobs:
 
       - name: Terraform Plan
         working-directory: infra/terraform
-        run: terraform plan -var-file=terraform.tfvars.staging -out=tfplan
+        run: terraform plan -lock=false -var-file=terraform.tfvars.staging -out=tfplan
 
       - name: Terraform Apply
         working-directory: infra/terraform
-        run: terraform apply -auto-approve tfplan
+        run: terraform apply -lock=false -auto-approve tfplan
 
       - name: Get deployment URLs
         working-directory: infra/terraform
