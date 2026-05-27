@@ -1,44 +1,45 @@
 # Terraform Variables for Production Environment
-# Copy this file to terraform.tfvars.prod and update with your production values
-# This file is gitignored (not committed to repository)
-# ⚠️ SECURITY: Keep production values SECRET - never commit to git
+# The CI/CD pipeline copies this file to terraform.tfvars.prod and updates image URLs
+# DO NOT add real secrets here — use GCP Secret Manager
 
-project_id = "sportivox-prod"
+project_id = "sportivox-main"
 region     = "asia-south1"
 env        = "prod"
 
-# Docker image URLs (updated by CI/CD pipeline)
-api_image = "asia-south1-docker.pkg.dev/sportivox-prod/sportivox/api:v1.0.0"
-web_image = "asia-south1-docker.pkg.dev/sportivox-prod/sportivox/web:v1.0.0"
+# Docker image URLs (updated by CI/CD pipeline on each tag)
+api_image = "asia-south1-docker.pkg.dev/sportivox-main/sportivox/api:latest"
+web_image = "asia-south1-docker.pkg.dev/sportivox-main/sportivox/web:latest"
 
-# Cloud Run scaling (production - higher resources)
-min_instances_api = 2
-max_instances_api = 10
+# Cloud Run scaling (production)
+min_instances_api = 1
+max_instances_api = 5
 
-min_instances_web = 2
-max_instances_web = 5
+min_instances_web = 1
+max_instances_web = 3
 
-# API Configuration
-api_port                = 8080
-api_public_url          = "https://api.sportivox.com"
-web_app_url             = "https://app.sportivox.com"
-cors_origins            = "https://app.sportivox.com"
+# API Configuration — real Cloud Run URLs
+api_port       = 8080
+api_public_url = "https://sportivox-api-prod-v4otdm3i5a-el.a.run.app"
+web_app_url    = "https://sportivox-web-prod-v4otdm3i5a-el.a.run.app"
+cors_origins   = "https://sportivox-web-prod-v4otdm3i5a-el.a.run.app"
 
-# Rate limiting (production - strict)
-rate_limit_window_ms    = 900000
-rate_limit_max          = 100
-auth_rate_limit_max     = 10
+# Rate limiting (production — strict)
+rate_limit_window_ms = 900000
+rate_limit_max       = 100
+auth_rate_limit_max  = 10
 
-# Logging (production - warnings only)
-log_level               = "warn"
+# Logging
+log_level = "warn"
 
-# Optional API keys (use GCP Secret Manager for actual values)
-openai_api_key          = ""
-sendgrid_api_key        = ""
+# Which optional secrets to create in Secret Manager
+# Add names here when you have real API keys: ["OPENAI_API_KEY", "SENDGRID_API_KEY"]
+optional_secrets = []
 
-# Bootstrap admin (set to empty after first deployment)
-bootstrap_admin_email   = ""
+# Secret values — only used when name is in optional_secrets above
+openai_api_key           = ""
+sendgrid_api_key         = ""
+bootstrap_admin_email    = ""
 bootstrap_admin_password = ""
 
-# Optional GCP settings
-gcs_bucket_terraform_state = "sportivox-terraform-state-prod"
+# GCP Terraform state bucket
+gcs_bucket_terraform_state = "sportivox-terraform-state-sportivox-main"
