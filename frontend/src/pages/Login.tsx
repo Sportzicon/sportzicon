@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { api, getApiError } from "../api/client";
 import { useAuthStore } from "../store/auth";
+import { CheckCircle } from "lucide-react";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -11,20 +12,37 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [emailUnverified, setEmailUnverified] = useState(false);
+  const [resendSent, setResendSent] = useState(false);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setSubmitting(true);
     setErr(null);
+    setEmailUnverified(false);
+    setResendSent(false);
     try {
       const r = await api.post("/auth/login", { email, password });
       setSession({ user: r.data.user, accessToken: r.data.access_token, refreshToken: r.data.refresh_token });
       const to = (loc.state as any)?.from?.pathname ?? "/dashboard";
       navigate(to, { replace: true });
     } catch (e) {
-      setErr(getApiError(e).message);
+      const msg = getApiError(e).message;
+      if (msg.toLowerCase().includes("not verified")) {
+        setEmailUnverified(true);
+      }
+      setErr(msg);
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function resendVerification() {
+    try {
+      await api.post("/auth/resend-verification", { email });
+      setResendSent(true);
+    } catch {
+      /* ignore */
     }
   }
 
@@ -52,6 +70,20 @@ export default function Login() {
               </div>
             </div>
             {err && <div className="rounded-lg bg-red-50 p-3 text-sm text-red-800">{err}</div>}
+            {emailUnverified && !resendSent && (
+              <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 text-sm text-amber-800">
+                Didn't receive the email?{" "}
+                <button type="button" onClick={resendVerification} className="font-medium underline hover:no-underline">
+                  Resend verification email
+                </button>
+              </div>
+            )}
+            {resendSent && (
+              <div className="rounded-lg bg-green-50 border border-green-200 p-3 text-sm text-green-800 flex items-center gap-2">
+                <CheckCircle className="h-4 w-4 flex-shrink-0" />
+                Verification email sent — check your inbox.
+              </div>
+            )}
             <button className="btn-primary w-full" disabled={submitting}>
               {submitting ? "Signing in..." : "Sign in"}
             </button>

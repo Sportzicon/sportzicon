@@ -64,9 +64,9 @@ export async function listOrganizationsForOwner(ownerId: string) {
   const snap = await db
     .collection(Collections.organizations)
     .where("owner_user_id", "==", ownerId)
-    .orderBy("created_at", "desc")
     .get();
-  return snap.docs.map((d) => d.data() as OrganizationDoc);
+  const docs = snap.docs.map((d) => d.data() as OrganizationDoc);
+  return docs.sort((a, b) => b.created_at - a.created_at);
 }
 
 export async function deleteOrganization(orgId: string, actorId: string, isAdmin: boolean) {

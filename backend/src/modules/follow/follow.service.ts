@@ -70,36 +70,28 @@ export async function isFollowing(followerId: string, followeeId: string) {
   return snap.exists;
 }
 
-export async function listFollowers(userId: string, limit = 50, cursor?: string) {
-  let q = db
+export async function listFollowers(userId: string, limit = 50, _cursor?: string) {
+  const snap = await db
     .collection(Collections.follows)
     .where("followee_id", "==", userId)
-    .orderBy("created_at", "desc")
-    .limit(limit);
-  if (cursor) q = q.startAfter(Number(cursor));
-  const snap = await q.get();
-  const ids = snap.docs.map((d) => d.get("follower_id"));
+    .limit(limit)
+    .get();
+  const docs = snap.docs.sort((a, b) => b.get("created_at") - a.get("created_at"));
+  const ids = docs.map((d) => d.get("follower_id"));
   const users = await fetchUsersByIds(ids as string[]);
-  return {
-    items: users,
-    next_cursor: snap.docs.length === limit ? String(snap.docs[snap.docs.length - 1].get("created_at")) : null
-  };
+  return { items: users, next_cursor: null };
 }
 
-export async function listFollowing(userId: string, limit = 50, cursor?: string) {
-  let q = db
+export async function listFollowing(userId: string, limit = 50, _cursor?: string) {
+  const snap = await db
     .collection(Collections.follows)
     .where("follower_id", "==", userId)
-    .orderBy("created_at", "desc")
-    .limit(limit);
-  if (cursor) q = q.startAfter(Number(cursor));
-  const snap = await q.get();
-  const ids = snap.docs.map((d) => d.get("followee_id"));
+    .limit(limit)
+    .get();
+  const docs = snap.docs.sort((a, b) => b.get("created_at") - a.get("created_at"));
+  const ids = docs.map((d) => d.get("followee_id"));
   const users = await fetchUsersByIds(ids as string[]);
-  return {
-    items: users,
-    next_cursor: snap.docs.length === limit ? String(snap.docs[snap.docs.length - 1].get("created_at")) : null
-  };
+  return { items: users, next_cursor: null };
 }
 
 async function fetchUsersByIds(ids: string[]) {

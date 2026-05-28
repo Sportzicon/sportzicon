@@ -7,6 +7,14 @@ import { PageHeader, Spinner, Badge, StatusPill } from "../components/UI";
 import { Trash2, Pencil, MoreVertical } from "lucide-react";
 import type { Opportunity } from "../types";
 
+const TYPE_LABELS: Record<string, string> = {
+  trial: "Trial",
+  recruitment: "Recruitment",
+  scholarship: "Scholarship",
+  tournament: "Tournament",
+  coaching_job: "Coaching Job"
+};
+
 export default function Opportunities() {
   const user = useAuthStore((s) => s.user);
   const qc = useQueryClient();
@@ -63,7 +71,11 @@ export default function Opportunities() {
       <div className="card card-body grid gap-3 sm:grid-cols-3">
         <select className="input" value={type} onChange={(e) => setType(e.target.value)}>
           <option value="">All types</option>
-          {["trial", "recruitment", "scholarship", "tournament", "coaching_job"].map((t) => <option key={t}>{t}</option>)}
+          <option value="trial">Trial</option>
+          <option value="recruitment">Recruitment</option>
+          <option value="scholarship">Scholarship</option>
+          <option value="tournament">Tournament</option>
+          <option value="coaching_job">Coaching Job</option>
         </select>
         <input className="input" placeholder="Sport" value={sport} onChange={(e) => setSport(e.target.value)} />
         <select className="input" value={status} onChange={(e) => setStatus(e.target.value)}>
@@ -84,7 +96,7 @@ export default function Opportunities() {
                   </div>
                   <div className="text-xs text-slate-500 mt-1">{o.org_name} · {o.city}, {o.country}</div>
                   <div className="mt-2 flex flex-wrap gap-2 text-xs">
-                    <Badge color="blue">{o.type}</Badge>
+                    <Badge color="blue">{TYPE_LABELS[o.type] ?? o.type}</Badge>
                     <Badge>{o.sport}</Badge>
                     <Badge>Age {o.age_min}-{o.age_max}</Badge>
                     <Badge>Deadline {o.application_deadline}</Badge>

@@ -6,15 +6,22 @@ import { PageHeader, Spinner, VerifiedBadge, Badge } from "../components/UI";
 
 type Mode = "players" | "clubs" | "opportunities";
 
+const UNIT_LABELS = { km: "km", miles: "miles" };
+
 export default function Search() {
   const [mode, setMode] = useState<Mode>("players");
   const [q, setQ] = useState("");
   const [sport, setSport] = useState("");
   const [city, setCity] = useState("");
   const [verified, setVerified] = useState(false);
+  const [radius, setRadius] = useState("");
+  const [unit, setUnit] = useState<"km" | "miles">("km");
+
+  const radiusKm = radius ? (unit === "miles" ? Math.round(Number(radius) * 1.60934) : Number(radius)) : undefined;
 
   const params: any = { q: q || undefined, sport: sport || undefined, city: city || undefined };
   if (mode === "players" && verified) params.verified = true;
+  if (radiusKm && city) params.radius_km = radiusKm;
 
   const res = useQuery({
     queryKey: ["search", mode, params],
@@ -36,6 +43,32 @@ export default function Search() {
           <input className="input sm:col-span-2" placeholder="Search keyword..." value={q} onChange={(e) => setQ(e.target.value)} />
           <input className="input" placeholder="Sport (e.g. Football)" value={sport} onChange={(e) => setSport(e.target.value)} />
           <input className="input" placeholder="City" value={city} onChange={(e) => setCity(e.target.value)} />
+          <div className="flex gap-2 items-center sm:col-span-4">
+            <input
+              className="input w-28"
+              type="number"
+              min="1"
+              max="10000"
+              placeholder="Radius"
+              value={radius}
+              onChange={(e) => setRadius(e.target.value)}
+              disabled={!city}
+              title={city ? undefined : "Enter a city first"}
+            />
+            <div className="flex rounded-lg border border-slate-200 overflow-hidden text-sm">
+              {(["km", "miles"] as const).map((u) => (
+                <button
+                  key={u}
+                  type="button"
+                  onClick={() => setUnit(u)}
+                  className={`px-3 py-2 transition ${unit === u ? "bg-brand-600 text-white" : "bg-white text-slate-700 hover:bg-slate-50"}`}
+                >
+                  {UNIT_LABELS[u]}
+                </button>
+              ))}
+            </div>
+            {!city && radius && <span className="text-xs text-slate-500">Enter a city to use radius filter</span>}
+          </div>
           {mode === "players" && (
             <label className="flex items-center gap-2 text-sm sm:col-span-4">
               <input type="checkbox" checked={verified} onChange={(e) => setVerified(e.target.checked)} /> Verified only

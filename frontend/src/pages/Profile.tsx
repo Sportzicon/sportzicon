@@ -1,9 +1,12 @@
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 import { api } from "../api/client";
 import { useAuthStore } from "../store/auth";
 import { PageHeader, Spinner, VerifiedBadge, Badge } from "../components/UI";
 import type { Post, User } from "../types";
+
+type Tab = "posts" | "followers" | "following";
 
 export default function Profile() {
   const { id = "" } = useParams();
@@ -11,6 +14,7 @@ export default function Profile() {
   const me = useAuthStore((s) => s.user);
   const qc = useQueryClient();
   const isMe = me?.id === id;
+  const [tab, setTab] = useState<Tab>("posts");
 
   const userQ = useQuery({
     queryKey: ["user", id],
@@ -24,6 +28,18 @@ export default function Profile() {
     queryKey: ["follow-status", id],
     queryFn: async () => (await api.get<{ following: boolean }>(`/follow/status/${id}`)).data.following,
     enabled: !isMe
+  });
+
+  const followersQ = useQuery({
+    queryKey: ["followers", id],
+    queryFn: async () => (await api.get<{ items: User[] }>(`/follow/${id}/followers`)).data.items,
+    enabled: tab === "followers"
+  });
+
+  const followingQ = useQuery({
+    queryKey: ["following", id],
+    queryFn: async () => (await api.get<{ items: User[] }>(`/follow/${id}/following`)).data.items,
+    enabled: tab === "following"
   });
 
   async function toggleFollow() {
@@ -91,18 +107,69 @@ export default function Profile() {
       </div>
 
       <div>
-        <PageHeader title="Posts" subtitle="Training logs and updates" />
-        {postsQ.data?.length ? (
-          <ul className="space-y-3">
-            {postsQ.data.map((p) => (
-              <li key={p.id} className="card card-body">
-                <div className="text-xs text-slate-500">{new Date(p.created_at).toLocaleString()}</div>
-                <p className="mt-1 whitespace-pre-wrap text-sm">{p.text}</p>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <div className="card card-body text-sm text-slate-600">No posts yet.</div>
+        <div className="flex gap-1 border-b mb-4">
+          {(["posts", "followers", "following"] as Tab[]).map((t) => (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              className={`px-4 py-2 text-sm font-medium border-b-2 transition -mb-px ${
+                tab === t ? "border-brand-600 text-brand-700" : "border-transparent text-slate-500 hover:text-slate-700"
+              }`}
+            >
+              {t === "followers" ? `Followers (${u.follower_count})` : t === "following" ? `Following (${u.following_count})` : "Posts"}
+            </button>
+          ))}
+        </div>
+
+        {tab === "posts" && (
+          postsQ.data?.length ? (
+            <ul className="space-y-3">
+              {postsQ.data.map((p) => (
+                <li key={p.id} className="card card-body">
+                  <div className="text-xs text-slate-500">{new Date(p.created_at).toLocaleString()}</div>
+                  <p className="mt-1 whitespace-pre-wrap text-sm">{p.text}</p>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div className="card card-body text-sm text-slate-600">No posts yet.</div>
+          )
+        )}
+
+        {tab === "followers" && (
+          followersQ.isLoading ? <Spinner /> : (
+            <div className="grid gap-3 sm:grid-cols-2">
+              {followersQ.data?.length ? followersQ.data.map((u) => (
+                <Link key={u.id} to={`/profile/${u.id}`} className="card card-body hover:shadow flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-full bg-slate-200 overflow-hidden flex-shrink-0">
+                    {u.profile_photo_url && <img src={u.profile_photo_url} alt={u.full_name} className="h-full w-full object-cover" />}
+                  </div>
+                  <div>
+                    <div className="font-medium text-sm">{u.full_name}</div>
+                    <div className="text-xs text-slate-500"><Badge color="blue">{u.role}</Badge></div>
+                  </div>
+                </Link>
+              )) : <div className="card card-body text-sm text-slate-600">No followers yet.</div>}
+            </div>
+          )
+        )}
+
+        {tab === "following" && (
+          followingQ.isLoading ? <Spinner /> : (
+            <div className="grid gap-3 sm:grid-cols-2">
+              {followingQ.data?.length ? followingQ.data.map((u) => (
+                <Link key={u.id} to={`/profile/${u.id}`} className="card card-body hover:shadow flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-full bg-slate-200 overflow-hidden flex-shrink-0">
+                    {u.profile_photo_url && <img src={u.profile_photo_url} alt={u.full_name} className="h-full w-full object-cover" />}
+                  </div>
+                  <div>
+                    <div className="font-medium text-sm">{u.full_name}</div>
+                    <div className="text-xs text-slate-500"><Badge color="blue">{u.role}</Badge></div>
+                  </div>
+                </Link>
+              )) : <div className="card card-body text-sm text-slate-600">Not following anyone yet.</div>}
+            </div>
+          )
         )}
       </div>
     </div>

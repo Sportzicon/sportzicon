@@ -3,7 +3,7 @@ import { useAuthStore } from "../store/auth";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import { Bell, Home, Search, Briefcase, FileText, Film, MessageCircle, ShieldCheck, LogOut, User as UserIcon, Menu, X, Trophy } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 function NavItem({ to, icon, label, onClick }: { to: string; icon: React.ReactNode; label: string; onClick?: () => void }) {
   return (
@@ -25,7 +25,15 @@ function NavItem({ to, icon, label, onClick }: { to: string; icon: React.ReactNo
 export function Layout() {
   const { user, clear } = useAuthStore();
   const navigate = useNavigate();
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(() => window.innerWidth >= 1024);
+
+  useEffect(() => {
+    const onResize = () => {
+      if (window.innerWidth >= 1024) setSidebarOpen(true);
+    };
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
   const { data: count } = useQuery({
     queryKey: ["notif-count"],
     queryFn: async () => (await api.get("/notifications/count")).data.unread as number,
@@ -109,7 +117,7 @@ export function Layout() {
                 icon={item.icon}
                 label={item.label}
                 onClick={() => {
-                  setSidebarOpen(false);
+                  if (window.innerWidth < 1024) setSidebarOpen(false);
                 }}
               />
             ))}

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { api, getApiError } from "../api/client";
+import { CheckCircle } from "lucide-react";
 
 const ROLES = [
   { value: "athlete", label: "Athlete / Player", hint: "Build a profile, apply to trials." },
@@ -21,19 +22,34 @@ export default function Signup() {
   const [submitting, setSubmitting] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [done, setDone] = useState(false);
+  const [emailExists, setEmailExists] = useState(false);
+  const [resendSent, setResendSent] = useState(false);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setSubmitting(true);
     setErr(null);
+    setEmailExists(false);
+    setResendSent(false);
     try {
       await api.post("/auth/signup", form);
       setDone(true);
     } catch (e: any) {
       const er = getApiError(e);
-      setErr(er.message + (er.details ? ` — ${JSON.stringify(er.details)}` : ""));
+      const msg = er.message + (er.details ? ` — ${JSON.stringify(er.details)}` : "");
+      if (msg.toLowerCase().includes("email already")) setEmailExists(true);
+      setErr(msg);
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function resendVerification() {
+    try {
+      await api.post("/auth/resend-verification", { email: form.email });
+      setResendSent(true);
+    } catch {
+      /* ignore */
     }
   }
 
@@ -103,6 +119,20 @@ export default function Signup() {
               <p className="text-xs text-slate-500 mt-1">Min 8 chars, 1 uppercase, 1 lowercase, 1 digit.</p>
             </div>
             {err && <div className="rounded-lg bg-red-50 p-3 text-sm text-red-800">{err}</div>}
+            {emailExists && !resendSent && (
+              <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 text-sm text-amber-800">
+                Already have an account but haven't verified your email?{" "}
+                <button type="button" onClick={resendVerification} className="font-medium underline hover:no-underline">
+                  Resend verification email
+                </button>
+              </div>
+            )}
+            {resendSent && (
+              <div className="rounded-lg bg-green-50 border border-green-200 p-3 text-sm text-green-800 flex items-center gap-2">
+                <CheckCircle className="h-4 w-4 flex-shrink-0" />
+                Verification email sent — check your inbox.
+              </div>
+            )}
             <button className="btn-primary w-full" disabled={submitting}>{submitting ? "Creating account..." : "Create account"}</button>
             <p className="text-xs text-slate-500 text-center">
               By signing up you agree to the Sportivox terms and privacy policy.

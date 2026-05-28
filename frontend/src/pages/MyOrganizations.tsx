@@ -35,6 +35,7 @@ export default function MyOrganizations() {
   });
 
   if (q.isLoading) return <Spinner />;
+  if (q.isError) return <div className="card card-body text-sm text-red-600">Failed to load organizations. Please try refreshing.</div>;
 
   return (
     <div className="space-y-4">
