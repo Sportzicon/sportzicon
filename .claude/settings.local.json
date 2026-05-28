@@ -32,7 +32,18 @@
       "PowerShell($tfdir = \"f:\\\\My Project\\\\sportivox-main\\\\sportivox-main\\\\infra\\\\terraform\"; terraform -chdir=\"$tfdir\" plan -lock=false \"-var-file=terraform.tfvars.staging\" 2>&1 | Select-Object -First 60)",
       "PowerShell($tfdir = \"f:\\\\My Project\\\\sportivox-main\\\\sportivox-main\\\\infra\\\\terraform\"; terraform -chdir=\"$tfdir\" plan -lock=false \"-var-file=terraform.tfvars.staging\" 2>&1 | Select-Object -Last 60)",
       "PowerShell($tfdir = \"f:\\\\My Project\\\\sportivox-main\\\\sportivox-main\\\\infra\\\\terraform\"; terraform -chdir=\"$tfdir\" plan -lock=false \"-var-file=terraform.tfvars.staging\" 2>&1 | Select-Object -Last 30)",
-      "PowerShell($tfdir = \"f:\\\\My Project\\\\sportivox-main\\\\sportivox-main\\\\infra\\\\terraform\"; terraform -chdir=\"$tfdir\" validate 2>&1)"
+      "PowerShell($tfdir = \"f:\\\\My Project\\\\sportivox-main\\\\sportivox-main\\\\infra\\\\terraform\"; terraform -chdir=\"$tfdir\" validate 2>&1)",
+      "PowerShell(Set-Location \"f:\\\\My Project\\\\sportivox-main\\\\sportivox-main\\\\backend\"; $env:GCP_PROJECT_ID = \"sportivox-main\"; $env:NODE_ENV = \"production\"; $env:JWT_ACCESS_SECRET = \"placeholder-not-needed-for-seed-xxxxxxxxxxxxxxxx\"; $env:JWT_REFRESH_SECRET = \"placeholder-not-needed-for-seed-xxxxxxxxxxxxxxxx\"; npm run seed 2>&1)",
+      "PowerShell(Set-Location \"f:\\\\My Project\\\\sportivox-main\\\\sportivox-main\\\\backend\"; $env:FIRESTORE_EMULATOR_HOST = $null; $env:GCP_PROJECT_ID = \"sportivox-main\"; $env:NODE_ENV = \"production\"; $env:JWT_ACCESS_SECRET = \"placeholder-not-needed-for-seed-xxxxxxxxxxxxxxxx\"; $env:JWT_REFRESH_SECRET = \"placeholder-not-needed-for-seed-xxxxxxxxxxxxxxxx\"; npm run seed 2>&1)",
+      "PowerShell(Set-Location \"f:\\\\My Project\\\\sportivox-main\\\\sportivox-main\\\\backend\"; $env:FIRESTORE_EMULATOR_HOST = \"\"; $env:STORAGE_EMULATOR_HOST = \"\"; $env:GCP_PROJECT_ID = \"sportivox-main\"; $env:NODE_ENV = \"production\"; $env:JWT_ACCESS_SECRET = \"placeholder-not-needed-for-seed-xxxxxxxxxxxxxxxx\"; $env:JWT_REFRESH_SECRET = \"placeholder-not-needed-for-seed-xxxxxxxxxxxxxxxx\"; npm run seed 2>&1)",
+      "PowerShell(Set-Location \"f:\\\\My Project\\\\sportivox-main\\\\sportivox-main\\\\backend\"; $env:DOTENV_CONFIG_PATH = \".env.seed\"; npm run seed 2>&1)",
+      "Bash(curl -I --max-time 10 \"https://sportivox-web-prod-v4otdm3i5a-el.a.run.app/\")",
+      "Bash(curl -s --max-time 10 \"https://sportivox-web-prod-v4otdm3i5a-el.a.run.app/\")",
+      "Bash(curl -I --max-time 10 \"https://sportivox-api-prod-v4otdm3i5a-el.a.run.app/healthz\")",
+      "Bash(curl -s --max-time 10 \"https://sportivox-api-prod-v4otdm3i5a-el.a.run.app/healthz\")",
+      "Bash(curl -s --max-time 10 \"https://sportivox-api-prod-v4otdm3i5a-el.a.run.app/readyz\")",
+      "Bash(git -C \"f:/My Project/sportivox-main/sportivox-main\" status --short)",
+      "Bash(git -C \"f:/My Project/sportivox-main/sportivox-main\" remote -v)"
     ]
   }
 }

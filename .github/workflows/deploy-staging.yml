@@ -55,7 +55,7 @@ jobs:
           file: ./frontend/Dockerfile
           target: runtime
           build-args: |
-            VITE_API_BASE_URL=https://placeholder.run.app
+            VITE_API_BASE_URL=https://sportivox-api-prod-qylxb4qeyq-el.a.run.app
           push: false
           load: true
           tags: |
