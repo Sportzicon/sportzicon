@@ -87,11 +87,7 @@ resource "google_cloud_run_v2_service" "api" {
       }
 
       env {
-        name  = "BREVO_SMTP_USER"
-        value = var.brevo_smtp_user
-      }
-      env {
-        name = "BREVO_SMTP_KEY"
+        name = "BREVO_API_KEY"
         value_source {
           secret_key_ref {
             secret  = data.google_secret_manager_secret.brevo_smtp_key.secret_id

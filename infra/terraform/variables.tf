@@ -49,11 +49,6 @@ variable "email_from_name" {
   description = "Display name for transactional emails."
 }
 
-variable "brevo_smtp_user" {
-  type        = string
-  default     = ""
-  description = "Brevo SMTP login (your Brevo account email)."
-}
 
 variable "bootstrap_admin_email" {
   type        = string
