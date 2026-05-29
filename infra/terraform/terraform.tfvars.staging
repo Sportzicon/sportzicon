@@ -33,8 +33,9 @@ auth_rate_limit_max     = 20
 # Logging level for staging
 log_level               = "info"
 
-# Email configuration (Brevo SMTP) — key is stored manually in Secret Manager
-email_from      = "no-reply@sportivox.com"
+# Email configuration (Gmail SMTP) — app password stored in Secret Manager
+gmail_user      = "singarimahesh0@gmail.com"
+email_from      = "singarimahesh0@gmail.com"
 email_from_name = "Sportivox"
 
 # Optional secrets managed by Terraform (JWT keys are always created)

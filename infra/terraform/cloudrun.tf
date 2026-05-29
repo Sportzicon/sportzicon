@@ -1,5 +1,5 @@
-data "google_secret_manager_secret" "brevo_smtp_key" {
-  secret_id = "sportivox-brevo-smtp-key-prod"
+data "google_secret_manager_secret" "gmail_app_password" {
+  secret_id = "sportivox-gmail-app-password-prod"
   project   = var.project_id
 }
 
@@ -87,10 +87,14 @@ resource "google_cloud_run_v2_service" "api" {
       }
 
       env {
-        name = "BREVO_API_KEY"
+        name  = "GMAIL_USER"
+        value = var.gmail_user
+      }
+      env {
+        name = "GMAIL_APP_PASSWORD"
         value_source {
           secret_key_ref {
-            secret  = data.google_secret_manager_secret.brevo_smtp_key.secret_id
+            secret  = data.google_secret_manager_secret.gmail_app_password.secret_id
             version = "latest"
           }
         }

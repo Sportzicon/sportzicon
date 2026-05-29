@@ -37,6 +37,12 @@ variable "openai_api_key" {
   description = "OpenAI API key. Stored in Secret Manager."
 }
 
+variable "gmail_user" {
+  type        = string
+  default     = ""
+  description = "Gmail address used to send transactional emails."
+}
+
 variable "email_from" {
   type        = string
   default     = "no-reply@sportivox.app"
