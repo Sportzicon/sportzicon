@@ -1,3 +1,8 @@
+data "google_secret_manager_secret" "brevo_smtp_key" {
+  secret_id = "sportivox-brevo-smtp-key-prod"
+  project   = var.project_id
+}
+
 resource "google_cloud_run_v2_service" "api" {
   name     = "sportivox-api-${var.env}"
   location = var.region
@@ -71,6 +76,28 @@ resource "google_cloud_run_v2_service" "api" {
       env {
         name  = "LOG_LEVEL"
         value = "info"
+      }
+      env {
+        name  = "EMAIL_FROM"
+        value = var.email_from
+      }
+      env {
+        name  = "EMAIL_FROM_NAME"
+        value = var.email_from_name
+      }
+
+      env {
+        name  = "BREVO_SMTP_USER"
+        value = var.brevo_smtp_user
+      }
+      env {
+        name = "BREVO_SMTP_KEY"
+        value_source {
+          secret_key_ref {
+            secret  = data.google_secret_manager_secret.brevo_smtp_key.secret_id
+            version = "latest"
+          }
+        }
       }
 
       env {

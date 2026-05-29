@@ -33,14 +33,14 @@ auth_rate_limit_max     = 20
 # Logging level for staging
 log_level               = "info"
 
-# Which optional secrets to create in Secret Manager.
-# Set to [] when you don't have API keys yet.
-# When you have keys, add their names: ["OPENAI_API_KEY", "SENDGRID_API_KEY"]
-optional_secrets = []
+# Email configuration (Brevo SMTP) — key is stored manually in Secret Manager
+email_from      = "no-reply@sportivox.com"
+email_from_name = "Sportivox"
+brevo_smtp_user = "singarimahesh0@gmail.com"
 
-# Actual secret values — only used when the name is in optional_secrets above
+# Optional secrets managed by Terraform (JWT keys are always created)
+optional_secrets         = []
 openai_api_key           = ""
-sendgrid_api_key         = ""
 bootstrap_admin_email    = ""
 bootstrap_admin_password = ""
 

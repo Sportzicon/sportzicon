@@ -37,11 +37,22 @@ variable "openai_api_key" {
   description = "OpenAI API key. Stored in Secret Manager."
 }
 
-variable "sendgrid_api_key" {
+variable "email_from" {
   type        = string
-  sensitive   = true
+  default     = "no-reply@sportivox.app"
+  description = "From address for transactional emails."
+}
+
+variable "email_from_name" {
+  type        = string
+  default     = "Sportivox"
+  description = "Display name for transactional emails."
+}
+
+variable "brevo_smtp_user" {
+  type        = string
   default     = ""
-  description = "SendGrid API key. Stored in Secret Manager."
+  description = "Brevo SMTP login (your Brevo account email)."
 }
 
 variable "bootstrap_admin_email" {

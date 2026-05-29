@@ -35,7 +35,6 @@ resource "google_secret_manager_secret_version" "this" {
     each.value == "JWT_ACCESS_SECRET"       ? random_password.jwt_access.result :
     each.value == "JWT_REFRESH_SECRET"      ? random_password.jwt_refresh.result :
     each.value == "OPENAI_API_KEY"          ? var.openai_api_key :
-    each.value == "SENDGRID_API_KEY"        ? var.sendgrid_api_key :
     each.value == "BOOTSTRAP_ADMIN_EMAIL"   ? var.bootstrap_admin_email :
     each.value == "BOOTSTRAP_ADMIN_PASSWORD" ? var.bootstrap_admin_password :
     ""

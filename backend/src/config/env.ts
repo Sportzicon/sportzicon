@@ -33,7 +33,8 @@ const schema = z.object({
   OPENAI_API_KEY: z.string().optional(),
   OPENAI_MODEL: z.string().default("gpt-4o-mini"),
 
-  SENDGRID_API_KEY: z.string().optional(),
+  BREVO_SMTP_USER: z.string().optional(),
+  BREVO_SMTP_KEY: z.string().optional(),
   EMAIL_FROM: z.string().email().default("no-reply@sportivox.local"),
   EMAIL_FROM_NAME: z.string().default("Sportivox"),
 
