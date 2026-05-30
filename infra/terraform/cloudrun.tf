@@ -54,6 +54,14 @@ resource "google_cloud_run_v2_service" "api" {
         value = "production"
       }
       env {
+        name  = "DATABASE_URL"
+        value = var.database_url
+      }
+      env {
+        name  = "DIRECT_URL"
+        value = var.direct_url
+      }
+      env {
         name  = "GCP_PROJECT_ID"
         value = var.project_id
       }
@@ -142,7 +150,6 @@ resource "google_cloud_run_v2_service" "api" {
 
   depends_on = [
     google_project_service.apis,
-    google_firestore_database.default,
     google_storage_bucket.media,
     google_storage_bucket.docs,
     google_secret_manager_secret_version.this

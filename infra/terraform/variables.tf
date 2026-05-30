@@ -3,6 +3,18 @@ variable "project_id" {
   description = "GCP project ID to deploy into."
 }
 
+variable "database_url" {
+  type        = string
+  sensitive   = true
+  description = "PostgreSQL connection URL (pooler, port 6543). Used by the API at runtime."
+}
+
+variable "direct_url" {
+  type        = string
+  sensitive   = true
+  description = "PostgreSQL direct connection URL (port 5432). Used by Prisma for migrations."
+}
+
 variable "region" {
   type        = string
   default     = "asia-south1"

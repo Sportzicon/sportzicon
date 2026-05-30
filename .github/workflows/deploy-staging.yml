@@ -109,7 +109,12 @@ jobs:
 
       - name: Terraform Plan
         working-directory: infra/terraform
-        run: terraform plan -lock=false -var-file=terraform.tfvars.staging -out=tfplan
+        run: |
+          terraform plan -lock=false \
+            -var-file=terraform.tfvars.staging \
+            -var="database_url=${{ secrets.DATABASE_URL }}" \
+            -var="direct_url=${{ secrets.DIRECT_URL }}" \
+            -out=tfplan
 
       - name: Terraform Apply
         working-directory: infra/terraform
