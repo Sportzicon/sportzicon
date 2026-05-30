@@ -35,7 +35,7 @@ router.get(
   validate(idParam, "params"),
   validate(paging, "query"),
   asyncHandler(async (req, res) => {
-    const r = await svc.listFollowers(req.params.id, Number(req.query.limit) || 50, req.query.cursor as string | undefined);
+    const r = await svc.listFollowers(req.params.id, Number(req.query.limit) || 50);
     res.json(r);
   })
 );
@@ -46,7 +46,7 @@ router.get(
   validate(idParam, "params"),
   validate(paging, "query"),
   asyncHandler(async (req, res) => {
-    const r = await svc.listFollowing(req.params.id, Number(req.query.limit) || 50, req.query.cursor as string | undefined);
+    const r = await svc.listFollowing(req.params.id, Number(req.query.limit) || 50);
     res.json(r);
   })
 );

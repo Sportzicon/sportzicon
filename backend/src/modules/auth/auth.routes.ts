@@ -4,6 +4,7 @@ import { validate } from "../../middleware/validate";
 import { authLimiter } from "../../middleware/rateLimit";
 import { requireAuth } from "../../middleware/auth";
 import * as svc from "./auth.service";
+import { getUserById } from "../users/users.service";
 import {
   signupSchema,
   loginSchema,
@@ -107,7 +108,7 @@ router.get(
   "/me",
   requireAuth,
   asyncHandler(async (req, res) => {
-    const user = await import("../../modules/users/users.service").then((m) => m.getUserById(req.user!.sub));
+    const user = await getUserById(req.user!.sub);
     res.json({ user });
   })
 );

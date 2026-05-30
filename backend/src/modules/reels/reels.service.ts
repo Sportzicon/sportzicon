@@ -30,7 +30,7 @@ export async function listReels(q: { author_id?: string; sport?: string; limit: 
   if (q.author_id) where.author_id = q.author_id;
   if (q.sport) where.sport = q.sport;
 
-  const items = await prisma.reel.findMany({
+  const rows = await prisma.reel.findMany({
     where,
     orderBy: { created_at: "desc" },
     take: q.limit + 1,
@@ -38,9 +38,13 @@ export async function listReels(q: { author_id?: string; sport?: string; limit: 
     include: { author: { select: { id: true, full_name: true, profile_photo_url: true } } }
   });
 
-  const hasMore = items.length > q.limit;
-  const page = hasMore ? items.slice(0, q.limit) : items;
-  return { items: page, next_cursor: hasMore ? page[page.length - 1].id : null };
+  const hasMore = rows.length > q.limit;
+  const page = hasMore ? rows.slice(0, q.limit) : rows;
+  const items = page.map(({ author, created_at, ...r }) => ({
+    ...r, author, author_name: author?.full_name ?? "Unknown",
+    created_at: created_at instanceof Date ? created_at.getTime() : created_at
+  }));
+  return { items, next_cursor: hasMore ? items[items.length - 1].id : null };
 }
 
 export async function viewReel(reelId: string) {

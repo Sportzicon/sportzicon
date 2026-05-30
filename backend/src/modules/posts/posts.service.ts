@@ -34,7 +34,7 @@ export async function listPosts(q: { author_id?: string; sport?: string; type?: 
   if (q.sport) where.sport = q.sport;
   if (q.type) where.type = q.type;
 
-  const items = await prisma.post.findMany({
+  const rows = await prisma.post.findMany({
     where,
     orderBy: { created_at: "desc" },
     take: q.limit + 1,
@@ -42,9 +42,10 @@ export async function listPosts(q: { author_id?: string; sport?: string; type?: 
     include: { author: { select: { id: true, full_name: true, role: true, profile_photo_url: true } } }
   });
 
-  const hasMore = items.length > q.limit;
-  const page = hasMore ? items.slice(0, q.limit) : items;
-  return { items: page, next_cursor: hasMore ? page[page.length - 1].id : null };
+  const hasMore = rows.length > q.limit;
+  const page = hasMore ? rows.slice(0, q.limit) : rows;
+  const items = page.map(flattenPost);
+  return { items, next_cursor: hasMore ? items[items.length - 1].id : null };
 }
 
 export async function feedForUser(userId: string, limit = 20) {
@@ -53,16 +54,14 @@ export async function feedForUser(userId: string, limit = 20) {
     select: { followee_id: true }
   }).then((rows) => rows.map((r) => r.followee_id));
 
-  const authorIds = [userId, ...followeeIds];
-
-  const items = await prisma.post.findMany({
-    where: { author_id: { in: authorIds } },
+  const rows = await prisma.post.findMany({
+    where: { author_id: { in: [userId, ...followeeIds] } },
     orderBy: { created_at: "desc" },
     take: limit,
     include: { author: { select: { id: true, full_name: true, role: true, profile_photo_url: true } } }
   });
 
-  return { items };
+  return { items: rows.map(flattenPost) };
 }
 
 export async function likePost(postId: string, userId: string) {
@@ -135,7 +134,11 @@ export async function addComment(
     parentUpdate
   ]);
 
-  return comment;
+  return {
+    ...comment,
+    author_name: (await prisma.user.findUnique({ where: { id: authorId }, select: { full_name: true } }))?.full_name ?? "Unknown",
+    created_at: comment.created_at.getTime()
+  };
 }
 
 export async function listComments(parentType: "post" | "reel" | "blog", parentId: string, limit = 50) {
@@ -144,12 +147,18 @@ export async function listComments(parentType: "post" | "reel" | "blog", parentI
   else if (parentType === "reel") where.reel_id = parentId;
   else where.blog_id = parentId;
 
-  return prisma.comment.findMany({
+  const rows = await prisma.comment.findMany({
     where,
     orderBy: { created_at: "desc" },
     take: limit,
     include: { author: { select: { id: true, full_name: true, profile_photo_url: true } } }
   });
+  return rows.map(({ author, ...c }) => ({
+    ...c,
+    author,
+    author_name: author?.full_name ?? "Unknown",
+    created_at: c.created_at.getTime()
+  }));
 }
 
 export async function updatePost(postId: string, actorId: string, isAdmin: boolean, input: { text?: string; tags?: string[] }) {
@@ -195,4 +204,17 @@ export async function deleteComment(commentId: string, actorId: string, isAdmin:
   await prisma.$transaction(ops);
 
   return { ok: true };
+}
+
+// Flattens the nested author include into backward-compatible flat fields.
+function flattenPost(row: any) {
+  const { author, created_at, updated_at, ...rest } = row;
+  return {
+    ...rest,
+    author,
+    author_name: author?.full_name ?? "Unknown",
+    author_role: author?.role,
+    created_at: created_at instanceof Date ? created_at.getTime() : created_at,
+    updated_at: updated_at instanceof Date ? updated_at.getTime() : updated_at
+  };
 }

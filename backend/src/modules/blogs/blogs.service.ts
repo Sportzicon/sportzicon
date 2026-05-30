@@ -76,7 +76,7 @@ export async function listBlogs(q: {
   if (q.sport) where.sport = q.sport;
   if (q.tag) where.tags = { has: q.tag };
 
-  const items = await prisma.blog.findMany({
+  const rows = await prisma.blog.findMany({
     where,
     orderBy: { created_at: "desc" },
     take: q.limit + 1,
@@ -84,9 +84,10 @@ export async function listBlogs(q: {
     include: { author: { select: { id: true, full_name: true, profile_photo_url: true } } }
   });
 
-  const hasMore = items.length > q.limit;
-  const page = hasMore ? items.slice(0, q.limit) : items;
-  return { items: page, next_cursor: hasMore ? page[page.length - 1].id : null };
+  const hasMore = rows.length > q.limit;
+  const page = hasMore ? rows.slice(0, q.limit) : rows;
+  const items = page.map(flattenBlog);
+  return { items, next_cursor: hasMore ? items[items.length - 1].id : null };
 }
 
 export async function getBlog(idOrSlug: string) {
@@ -95,9 +96,8 @@ export async function getBlog(idOrSlug: string) {
     include: { author: { select: { id: true, full_name: true, profile_photo_url: true } } }
   });
   if (!blog) throw NotFound("Blog not found");
-  // Fire-and-forget view count increment
   prisma.blog.update({ where: { id: blog.id }, data: { view_count: { increment: 1 } } }).catch(() => undefined);
-  return { ...blog, view_count: blog.view_count + 1 };
+  return { ...flattenBlog(blog), view_count: blog.view_count + 1 };
 }
 
 export async function likeBlog(id: string, userId: string) {
@@ -129,4 +129,16 @@ export async function unlikeBlog(id: string, userId: string) {
     prisma.blog.update({ where: { id }, data: { like_count: { decrement: 1 } } })
   ]);
   return { ok: true };
+}
+
+function flattenBlog(row: any) {
+  const { author, created_at, updated_at, published_at, ...rest } = row;
+  return {
+    ...rest,
+    author,
+    author_name: author?.full_name ?? "Unknown",
+    created_at: created_at instanceof Date ? created_at.getTime() : created_at,
+    updated_at: updated_at instanceof Date ? updated_at.getTime() : updated_at,
+    published_at: published_at instanceof Date ? published_at.getTime() : published_at
+  };
 }
