@@ -1,5 +1,5 @@
 import { api, signupAndLogin } from "../helpers/agent";
-import { resetFirestore } from "../helpers/setup";
+import { resetDatabase } from "../helpers/setup";
 
 async function setupClubAndOrg() {
   const club = await signupAndLogin({ email: "club@test.dev", role: "club" });
@@ -20,7 +20,7 @@ async function setupClubAndOrg() {
 
 describe("opportunities + applications", () => {
   beforeEach(async () => {
-    await resetFirestore();
+    await resetDatabase();
   });
 
   test("club posts an opportunity, athlete applies, club shortlists & selects", async () => {

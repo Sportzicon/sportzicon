@@ -2,111 +2,355 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
-import { PageHeader, Spinner, VerifiedBadge, Badge } from "../components/UI";
+import { PageHeader, Spinner, EmptyState, Avatar, StatusPill, SectionHead } from "../components/UI";
 
 type Mode = "players" | "clubs" | "opportunities";
+type ViewMode = "table" | "grid";
 
-const UNIT_LABELS = { km: "km", miles: "miles" };
+const SPORTS = ["All", "Cricket", "Football", "Athletics", "Basketball", "Hockey", "Tennis", "Badminton", "Kabaddi"];
+const ROLES = ["Any role", "Batter", "Bowler", "All-rounder", "Wicket-keeper", "Winger", "Goalkeeper", "Striker", "Sprinter", "Raider", "Point Guard"];
+const LEVELS = ["Any", "Beginner", "Amateur", "Academy", "Semi-professional", "State", "National", "Professional"];
+
+function Toggle({ on, onChange, label }: { on: boolean; onChange: (v: boolean) => void; label: string }) {
+  return (
+    <div className="flex items-center justify-between cursor-pointer py-1" onClick={() => onChange(!on)}>
+      <span className="text-[13px] text-ink">{label}</span>
+      <span className="relative inline-block w-[34px] h-[19px] rounded-full flex-shrink-0 transition-colors"
+        style={{ background: on ? "#FA4D14" : "rgba(20,17,13,0.15)" }}>
+        <span className="absolute top-[2px] w-[15px] h-[15px] rounded-full bg-white transition-all"
+          style={{ left: on ? 17 : 2 }} />
+      </span>
+    </div>
+  );
+}
+
+function FilterGroup({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="pb-4 mb-4 border-b border-hairsoft last:border-0 last:mb-0 last:pb-0">
+      <div className="lab mb-2">{label}</div>
+      {children}
+    </div>
+  );
+}
 
 export default function Search() {
   const [mode, setMode] = useState<Mode>("players");
+  const [view, setView] = useState<ViewMode>("table");
   const [q, setQ] = useState("");
-  const [sport, setSport] = useState("");
+  const [sport, setSport] = useState("Cricket");
+  const [playRole, setPlayRole] = useState("Any role");
+  const [level, setLevel] = useState("Any");
   const [city, setCity] = useState("");
-  const [verified, setVerified] = useState(false);
-  const [radius, setRadius] = useState("");
-  const [unit, setUnit] = useState<"km" | "miles">("km");
+  const [ageMax, setAgeMax] = useState(35);
+  const [verifiedOnly, setVerifiedOnly] = useState(false);
+  const [availOnly, setAvailOnly] = useState(false);
+  const [savedOnly, setSavedOnly] = useState(false);
+  const [shortlist, setShortlist] = useState<Set<string>>(new Set());
 
-  const radiusKm = radius ? (unit === "miles" ? Math.round(Number(radius) * 1.60934) : Number(radius)) : undefined;
+  function toggleShortlist(id: string) {
+    setShortlist((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }
 
-  const params: any = { q: q || undefined, sport: sport || undefined, city: city || undefined };
-  if (mode === "players" && verified) params.verified = true;
-  if (radiusKm && city) params.radius_km = radiusKm;
+  const params: any = {
+    q: q || undefined,
+    sport: (mode === "players" && sport !== "All") ? sport : undefined,
+    city: city || undefined,
+    verified: verifiedOnly || undefined,
+    available: availOnly || undefined,
+    role: (playRole !== "Any role") ? playRole : undefined,
+    experience_level: (level !== "Any") ? level.toLowerCase().replace(/-/g, "_") : undefined,
+    age_max: ageMax < 40 ? ageMax : undefined
+  };
 
   const res = useQuery({
     queryKey: ["search", mode, params],
-    queryFn: async () => (await api.get(`/search/${mode}`, { params })).data.items
+    queryFn: async () => (await api.get(`/search/${mode}`, { params })).data.items as any[],
+    placeholderData: (prev) => prev
   });
 
+  const results: any[] = savedOnly && mode === "players"
+    ? (res.data ?? []).filter((a: any) => shortlist.has(a.id))
+    : (res.data ?? []);
+
+  function resetFilters() {
+    setQ(""); setSport("Cricket"); setPlayRole("Any role"); setLevel("Any");
+    setCity(""); setAgeMax(35); setVerifiedOnly(false); setAvailOnly(false); setSavedOnly(false);
+  }
+
+  const savedCount = shortlist.size;
+
   return (
-    <div className="space-y-4">
-      <PageHeader title="Search" subtitle="Find athletes, clubs, and opportunities." />
-      <div className="card card-body">
-        <div className="flex gap-2">
-          {(["players", "clubs", "opportunities"] as Mode[]).map((m) => (
-            <button key={m} onClick={() => setMode(m)} className={`btn ${mode === m ? "btn-primary" : "btn-secondary"}`}>
-              {m[0].toUpperCase() + m.slice(1)}
-            </button>
-          ))}
-        </div>
-        <div className="mt-4 grid gap-3 sm:grid-cols-4">
-          <input className="input sm:col-span-2" placeholder="Search keyword..." value={q} onChange={(e) => setQ(e.target.value)} />
-          <input className="input" placeholder="Sport (e.g. Football)" value={sport} onChange={(e) => setSport(e.target.value)} />
-          <input className="input" placeholder="City" value={city} onChange={(e) => setCity(e.target.value)} />
-          <div className="flex gap-2 items-center sm:col-span-4">
-            <input
-              className="input w-28"
-              type="number"
-              min="1"
-              max="10000"
-              placeholder="Radius"
-              value={radius}
-              onChange={(e) => setRadius(e.target.value)}
-              disabled={!city}
-              title={city ? undefined : "Enter a city first"}
-            />
-            <div className="flex rounded-lg border border-slate-200 overflow-hidden text-sm">
-              {(["km", "miles"] as const).map((u) => (
+    <div className="space-y-5">
+      <PageHeader
+        title="Search players"
+        subtitle="Talent search"
+        action={
+          <div className="flex items-center gap-2">
+            {mode === "players" && (
+              <>
                 <button
-                  key={u}
-                  type="button"
-                  onClick={() => setUnit(u)}
-                  className={`px-3 py-2 transition ${unit === u ? "bg-brand-600 text-white" : "bg-white text-slate-700 hover:bg-slate-50"}`}
-                >
-                  {UNIT_LABELS[u]}
+                  onClick={() => setSavedOnly((s) => !s)}
+                  className={`font-mononum text-[10px] uppercase tracking-[0.08em] px-3 py-2 rounded border transition ${savedOnly ? "bg-ink text-paper border-ink" : "border-hair text-ink-sub hover:border-ink"}`}>
+                  ★ Shortlist · {savedCount}
                 </button>
+                <div className="flex border border-hair rounded overflow-hidden">
+                  {([["table", "≣"], ["grid", "▦"]] as const).map(([v, icon]) => (
+                    <button key={v} onClick={() => setView(v)}
+                      className="font-mononum px-3 py-2 text-[13px] transition"
+                      style={{ background: view === v ? "#14110D" : undefined, color: view === v ? "#F7F5EF" : "#726B60" }}>
+                      {icon}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        }
+      />
+
+      {/* Mode tabs */}
+      <div className="flex gap-0 border-b border-hair">
+        {(["players", "clubs", "opportunities"] as Mode[]).map((m) => (
+          <button key={m} onClick={() => setMode(m)}
+            className={`font-mononum capitalize text-[11.5px] tracking-[0.06em] px-4 py-2.5 border-b-2 -mb-px transition ${
+              mode === m ? "border-brand-500 text-ink font-semibold" : "border-transparent text-ink-sub hover:text-ink"
+            }`}>
+            {m}
+          </button>
+        ))}
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-[240px_1fr] items-start">
+        {/* ── filter rail ─────────────────────────────────────── */}
+        <div className="panel p-[18px] sticky top-20">
+          <SectionHead title="Filters" />
+
+          <FilterGroup label="Keyword">
+            <input className="input font-mononum" style={{ fontSize: 12, height: 34 }}
+              placeholder="Name or city…" value={q} onChange={(e) => setQ(e.target.value)} />
+          </FilterGroup>
+
+          {mode === "players" && (
+            <>
+              <FilterGroup label="Sport">
+                <select className="input font-mononum" style={{ fontSize: 12, height: 34 }}
+                  value={sport} onChange={(e) => setSport(e.target.value)}>
+                  {SPORTS.map((s) => <option key={s}>{s}</option>)}
+                </select>
+              </FilterGroup>
+              <FilterGroup label="Playing role / position">
+                <select className="input font-mononum" style={{ fontSize: 12, height: 34 }}
+                  value={playRole} onChange={(e) => setPlayRole(e.target.value)}>
+                  {ROLES.map((r) => <option key={r}>{r}</option>)}
+                </select>
+              </FilterGroup>
+              <FilterGroup label={`Max age — ${ageMax}`}>
+                <input type="range" min={16} max={40} value={ageMax}
+                  onChange={(e) => setAgeMax(Number(e.target.value))}
+                  className="w-full mt-1" style={{ accentColor: "#FA4D14" }} />
+                <div className="flex justify-between mt-1">
+                  <span className="lab">16</span><span className="lab">40</span>
+                </div>
+              </FilterGroup>
+              <FilterGroup label="Experience level">
+                <select className="input font-mononum" style={{ fontSize: 12, height: 34 }}
+                  value={level} onChange={(e) => setLevel(e.target.value)}>
+                  {LEVELS.map((l) => <option key={l}>{l}</option>)}
+                </select>
+              </FilterGroup>
+              <div className="flex flex-col gap-3">
+                <Toggle on={verifiedOnly} onChange={setVerifiedOnly} label="Verified only" />
+                <Toggle on={availOnly} onChange={setAvailOnly} label="Available / open to offers" />
+              </div>
+            </>
+          )}
+
+          {mode === "clubs" && (
+            <FilterGroup label="City">
+              <input className="input font-mononum" style={{ fontSize: 12, height: 34 }}
+                placeholder="e.g. Pune" value={city} onChange={(e) => setCity(e.target.value)} />
+            </FilterGroup>
+          )}
+
+          {mode === "opportunities" && (
+            <>
+              <FilterGroup label="Sport">
+                <select className="input font-mononum" style={{ fontSize: 12, height: 34 }}
+                  value={sport} onChange={(e) => setSport(e.target.value)}>
+                  {SPORTS.map((s) => <option key={s}>{s}</option>)}
+                </select>
+              </FilterGroup>
+              <FilterGroup label="City">
+                <input className="input font-mononum" style={{ fontSize: 12, height: 34 }}
+                  placeholder="e.g. Mumbai" value={city} onChange={(e) => setCity(e.target.value)} />
+              </FilterGroup>
+            </>
+          )}
+        </div>
+
+        {/* ── results ──────────────────────────────────────────── */}
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <span className="lab">
+              {res.isLoading ? "Searching…" : `${results.length} result${results.length !== 1 ? "s" : ""}`}
+              {savedOnly && " · shortlist"}
+              {verifiedOnly && " · verified only"}
+            </span>
+            {mode === "players" && <span className="lab">Verified ranked first</span>}
+          </div>
+
+          {res.isLoading ? (
+            <div className="panel p-8 flex justify-center"><Spinner className="text-brand-500" /></div>
+          ) : !results.length ? (
+            <EmptyState
+              title={savedOnly ? "Shortlist is empty" : "No results"}
+              hint={savedOnly ? "Star players in the table to add them here." : "Try different keywords, loosen filters, or reset."}
+              action={
+                <button onClick={resetFilters} className="btn-secondary">Reset filters</button>
+              }
+            />
+          ) : mode === "players" && view === "table" ? (
+            /* ── TABLE view ───────────────────────────────── */
+            <div className="panel overflow-hidden">
+              <table className="w-full text-[13px]">
+                <thead>
+                  <tr className="border-b border-hair">
+                    {["Player", "Role", "Level", "Age", "Key stat", "Avail.", ""].map((h, i) => (
+                      <th key={h} className={`lab px-[14px] py-[11px] font-normal ${i >= 2 && i <= 5 ? "text-right" : "text-left"}`}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {results.map((a: any) => {
+                    const saved = shortlist.has(a.id);
+                    const avail = a.athlete_data?.availability ?? a.availability;
+                    return (
+                      <tr key={a.id} className="border-b border-hairsoft hover:bg-fill transition">
+                        <td className="px-[14px] py-[10px]">
+                          <Link to={`/profile/${a.id}`} className="flex items-center gap-2.5">
+                            <Avatar name={a.full_name} size={32} />
+                            <div>
+                              <div className="font-semibold text-ink flex items-center gap-1.5">
+                                {a.full_name}
+                                {a.verification?.status === "approved" && <span className="text-brand-500 text-[10px]">✓</span>}
+                              </div>
+                              <div className="lab mt-0.5">{a.athlete_data?.primary_sport ?? a.sport} · {a.city}</div>
+                            </div>
+                          </Link>
+                        </td>
+                        <td className="px-[14px] py-[10px] text-ink-70">
+                          {a.athlete_data?.position ?? a.role ?? "—"}
+                        </td>
+                        <td className="px-[14px] py-[10px] text-right font-mononum text-[12px] text-ink-sub">
+                          {a.athlete_data?.experience_level?.replace(/_/g, " ") ?? "—"}
+                        </td>
+                        <td className="px-[14px] py-[10px] text-right font-mononum text-[12px]">
+                          {a.dob ? Math.floor((Date.now() - new Date(a.dob).getTime()) / (365.25 * 24 * 3600 * 1000)) : "—"}
+                        </td>
+                        <td className="px-[14px] py-[10px] text-right font-mononum text-[12px] text-ink-sub">
+                          {a.athlete_data?.primary_sport ?? "—"}
+                        </td>
+                        <td className="px-[14px] py-[10px] text-right">
+                          <span className="font-mononum text-[10px] uppercase tracking-[0.06em]"
+                            style={{ color: avail === "not_available" ? "#9A9286" : avail === "open_to_offers" ? "#2E7D52" : "#2B66C9" }}>
+                            {avail === "open_to_offers" ? "Open" : avail === "available" ? "Avail" : "—"}
+                          </span>
+                        </td>
+                        <td className="px-[14px] py-[10px] text-right">
+                          <button onClick={() => toggleShortlist(a.id)}
+                            className="text-[16px] transition hover:scale-110"
+                            style={{ color: saved ? "#FA4D14" : "#9A9286" }}
+                            title={saved ? "Remove from shortlist" : "Add to shortlist"}>
+                            {saved ? "★" : "☆"}
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          ) : mode === "players" && view === "grid" ? (
+            /* ── GRID view ────────────────────────────────── */
+            <div className="grid gap-3 sm:grid-cols-2">
+              {results.map((a: any) => {
+                const saved = shortlist.has(a.id);
+                const avail = a.athlete_data?.availability ?? a.availability;
+                return (
+                  <div key={a.id} className="panel p-4">
+                    <div className="flex gap-3">
+                      <Avatar name={a.full_name} size={48} />
+                      <div className="flex-1 min-w-0">
+                        <Link to={`/profile/${a.id}`} className="flex items-center gap-1.5">
+                          <span className="font-disp text-lg leading-tight">{a.full_name}</span>
+                          {a.verification?.status === "approved" && <span className="text-brand-500 text-[10px]">✓</span>}
+                        </Link>
+                        <div className="lab mt-1">{a.athlete_data?.position ?? "—"} · {a.athlete_data?.primary_sport ?? a.sport} · {a.city}</div>
+                      </div>
+                      <button onClick={() => toggleShortlist(a.id)}
+                        className="text-[17px] flex-shrink-0 transition hover:scale-110"
+                        style={{ color: saved ? "#FA4D14" : "#9A9286" }}>
+                        {saved ? "★" : "☆"}
+                      </button>
+                    </div>
+                    <div className="mt-4 pt-3 border-t border-hairsoft grid grid-cols-3 gap-2">
+                      <div>
+                        <div className="lab">Sport</div>
+                        <div className="font-mononum text-[12px] text-ink mt-0.5">{a.athlete_data?.primary_sport ?? "—"}</div>
+                      </div>
+                      <div>
+                        <div className="lab">Level</div>
+                        <div className="font-mononum text-[12px] text-ink mt-0.5 capitalize">{a.athlete_data?.experience_level?.replace(/_/g, " ") ?? "—"}</div>
+                      </div>
+                      <div>
+                        <div className="lab">Avail.</div>
+                        <div className="font-mononum text-[10px] mt-0.5 uppercase tracking-[0.06em]"
+                          style={{ color: avail === "not_available" ? "#9A9286" : avail === "open_to_offers" ? "#2E7D52" : "#2B66C9" }}>
+                          {avail === "open_to_offers" ? "Open" : avail === "available" ? "Avail" : "—"}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : mode === "opportunities" ? (
+            <div className="grid gap-3 sm:grid-cols-2">
+              {results.map((o: any) => (
+                <Link key={o.id} to={`/opportunities/${o.id}`} className="panel p-4 hover:bg-fill transition">
+                  <div className="kicker">{o.type} · {o.sport}</div>
+                  <div className="font-disp text-xl mt-1.5">{o.title}</div>
+                  <div className="lab mt-1">{o.org_name} · {o.city}, {o.country}</div>
+                  <div className="mt-3 pt-3 border-t border-hairsoft flex items-center gap-3">
+                    <StatusPill status={o.status} />
+                    <span className="lab">Deadline {o.application_deadline}</span>
+                  </div>
+                </Link>
               ))}
             </div>
-            {!city && radius && <span className="text-xs text-slate-500">Enter a city to use radius filter</span>}
-          </div>
-          {mode === "players" && (
-            <label className="flex items-center gap-2 text-sm sm:col-span-4">
-              <input type="checkbox" checked={verified} onChange={(e) => setVerified(e.target.checked)} /> Verified only
-            </label>
+          ) : (
+            /* clubs */
+            <div className="grid gap-3 sm:grid-cols-2">
+              {results.map((item: any) => (
+                <Link key={item.id} to={`/organizations/${item.id}`} className="panel p-4 hover:bg-fill transition flex items-center gap-3">
+                  <Avatar name={item.org_name} size={40} />
+                  <div>
+                    <div className="font-semibold text-ink flex items-center gap-1.5">
+                      {item.org_name}
+                      {item.verification_status === "approved" && <span className="text-brand-500 text-[10px]">✓</span>}
+                    </div>
+                    <div className="lab mt-1">{item.org_type} · {item.city}</div>
+                  </div>
+                </Link>
+              ))}
+            </div>
           )}
         </div>
       </div>
-
-      {res.isLoading ? (
-        <Spinner />
-      ) : (
-        <div className="grid gap-3 sm:grid-cols-2">
-          {res.data?.length ? (
-            res.data.map((item: any) =>
-              mode === "opportunities" ? (
-                <Link key={item.id} to={`/opportunities/${item.id}`} className="card card-body hover:shadow">
-                  <div className="font-medium">{item.title}</div>
-                  <div className="text-xs text-slate-500">{item.org_name} · {item.city}, {item.country}</div>
-                  <div className="mt-2 flex gap-2"><Badge color="blue">{item.type}</Badge><Badge>{item.sport}</Badge></div>
-                </Link>
-              ) : (
-                <Link key={item.id} to={mode === "players" ? `/profile/${item.id}` : `/organizations/${item.id}`} className="card card-body hover:shadow">
-                  <div className="flex items-center justify-between">
-                    <div className="font-medium">{item.full_name ?? item.org_name}</div>
-                    <VerifiedBadge verification={item.verification} />
-                  </div>
-                  <div className="text-xs text-slate-500">
-                    {item.city ?? ""}{item.city ? ", " : ""}{item.country ?? ""}
-                  </div>
-                  {item.athlete?.primary_sport && <div className="text-xs text-slate-600 mt-1">{item.athlete.primary_sport} · {item.athlete.position ?? "—"}</div>}
-                </Link>
-              )
-            )
-          ) : (
-            <div className="card card-body text-sm text-slate-600">No results.</div>
-          )}
-        </div>
-      )}
     </div>
   );
 }

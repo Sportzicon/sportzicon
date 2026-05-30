@@ -1,9 +1,8 @@
 import jwt, { type SignOptions } from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import { env } from "../../config/env";
-import { db, Collections } from "../../config/firestore";
-import { newId, now } from "../../utils/ids";
-import type { Role, UserDoc } from "../../types/domain";
+import { prisma } from "../../config/prisma";
+import type { Role } from "../../types/domain";
 
 export interface AccessTokenPayload {
   sub: string;
@@ -19,10 +18,10 @@ export interface RefreshTokenPayload {
   type: "refresh";
 }
 
-export function signAccessToken(user: Pick<UserDoc, "id" | "role" | "email" | "full_name">): string {
+export function signAccessToken(user: { id: string; role: Role; email: string; full_name: string }): string {
   const payload: AccessTokenPayload = {
     sub: user.id,
-    role: user.role,
+    role: user.role as Role,
     email: user.email,
     name: user.full_name,
     type: "access"
@@ -31,17 +30,14 @@ export function signAccessToken(user: Pick<UserDoc, "id" | "role" | "email" | "f
 }
 
 export async function issueRefreshToken(userId: string): Promise<string> {
-  const jti = newId();
+  const jti = crypto.randomUUID();
   const payload: RefreshTokenPayload = { sub: userId, jti, type: "refresh" };
   const token = jwt.sign(payload, env.JWT_REFRESH_SECRET, {
     expiresIn: env.JWT_REFRESH_TTL as SignOptions["expiresIn"]
   });
-  // Persist the jti so we can revoke (logout / password change) without giving up stateless access tokens.
-  await db.collection(Collections.refreshTokens).doc(jti).set({
-    jti,
-    user_id: userId,
-    issued_at: now(),
-    revoked: false
+  const expiresAt = new Date(Date.now() + parseTtlMs(env.JWT_REFRESH_TTL));
+  await prisma.refreshToken.create({
+    data: { token, user_id: userId, expires_at: expiresAt }
   });
   return token;
 }
@@ -49,38 +45,30 @@ export async function issueRefreshToken(userId: string): Promise<string> {
 export async function rotateRefreshToken(token: string): Promise<{ userId: string; newToken: string }> {
   const claims = jwt.verify(token, env.JWT_REFRESH_SECRET) as RefreshTokenPayload;
   if (claims.type !== "refresh") throw new Error("Invalid refresh token type");
-  const ref = db.collection(Collections.refreshTokens).doc(claims.jti);
-  const snap = await ref.get();
-  if (!snap.exists) throw new Error("Refresh token not recognised");
-  const data = snap.data() as { revoked: boolean };
-  if (data.revoked) throw new Error("Refresh token revoked");
-  // Single-use refresh — revoke old, issue new.
-  await ref.update({ revoked: true, revoked_at: now() });
+
+  const record = await prisma.refreshToken.findUnique({ where: { token } });
+  if (!record) throw new Error("Refresh token not recognised");
+  if (record.revoked) throw new Error("Refresh token revoked");
+
+  await prisma.refreshToken.update({ where: { token }, data: { revoked: true } });
   const newToken = await issueRefreshToken(claims.sub);
   return { userId: claims.sub, newToken };
 }
 
 export async function revokeRefreshToken(token: string): Promise<void> {
   try {
-    const claims = jwt.verify(token, env.JWT_REFRESH_SECRET) as RefreshTokenPayload;
-    await db.collection(Collections.refreshTokens).doc(claims.jti).set(
-      { revoked: true, revoked_at: now() },
-      { merge: true }
-    );
+    jwt.verify(token, env.JWT_REFRESH_SECRET);
+    await prisma.refreshToken.updateMany({ where: { token }, data: { revoked: true } });
   } catch {
-    // Invalid / expired tokens are effectively already revoked; swallow.
+    // Invalid or expired tokens are effectively revoked already.
   }
 }
 
 export async function revokeAllRefreshTokensForUser(userId: string): Promise<void> {
-  const snaps = await db
-    .collection(Collections.refreshTokens)
-    .where("user_id", "==", userId)
-    .where("revoked", "==", false)
-    .get();
-  const batch = db.batch();
-  snaps.docs.forEach((d) => batch.update(d.ref, { revoked: true, revoked_at: now() }));
-  await batch.commit();
+  await prisma.refreshToken.updateMany({
+    where: { user_id: userId, revoked: false },
+    data: { revoked: true }
+  });
 }
 
 export function hashPassword(plain: string): Promise<string> {
@@ -89,4 +77,12 @@ export function hashPassword(plain: string): Promise<string> {
 
 export function comparePassword(plain: string, hash: string): Promise<boolean> {
   return bcrypt.compare(plain, hash);
+}
+
+function parseTtlMs(ttl: string): number {
+  const match = ttl.match(/^(\d+)([smhd])$/);
+  if (!match) return 30 * 24 * 3600 * 1000;
+  const n = parseInt(match[1]);
+  const unit: Record<string, number> = { s: 1000, m: 60_000, h: 3_600_000, d: 86_400_000 };
+  return n * (unit[match[2]] ?? 86_400_000);
 }

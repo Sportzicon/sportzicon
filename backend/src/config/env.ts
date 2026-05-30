@@ -20,9 +20,11 @@ const schema = z.object({
   RATE_LIMIT_MAX: z.coerce.number().int().positive().default(300),
   AUTH_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(20),
 
+  DATABASE_URL: z.string().url(),
+  DIRECT_URL: z.string().url().optional(),
+
   GCP_PROJECT_ID: z.string().default("sportivox-dev"),
   GOOGLE_APPLICATION_CREDENTIALS: z.string().optional(),
-  FIRESTORE_EMULATOR_HOST: z.string().optional(),
   STORAGE_EMULATOR_HOST: z.string().optional(),
 
   GCS_BUCKET_MEDIA: z.string().default("sportivox-media-dev"),
@@ -57,5 +59,4 @@ export const corsOrigins = env.CORS_ORIGINS.split(",").map((s) => s.trim()).filt
 
 export const isProd = env.NODE_ENV === "production";
 export const isTest = env.NODE_ENV === "test";
-export const usingFirestoreEmulator = Boolean(env.FIRESTORE_EMULATOR_HOST);
 export const usingGcsEmulator = Boolean(env.STORAGE_EMULATOR_HOST);

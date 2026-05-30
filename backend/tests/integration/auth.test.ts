@@ -1,9 +1,9 @@
 import { api, signupAndLogin } from "../helpers/agent";
-import { resetFirestore } from "../helpers/setup";
+import { resetDatabase } from "../helpers/setup";
 
 describe("auth", () => {
   beforeEach(async () => {
-    await resetFirestore();
+    await resetDatabase();
   });
 
   test("signup rejects weak passwords", async () => {

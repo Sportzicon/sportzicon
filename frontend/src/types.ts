@@ -6,7 +6,7 @@ export interface User {
   id: string;
   email: string;
   full_name: string;
-  phone: string;
+  phone?: string;
   role: Role;
   status: "active" | "suspended" | "pending";
   email_verified: boolean;
@@ -18,36 +18,46 @@ export interface User {
   city?: string;
   dob?: string;
   gender?: string;
+  preferred_language?: string;
   verification: { status: string; badges: string[] };
-  athlete?: any;
-  coach?: any;
+  athlete?: Record<string, any>;
+  coach?: Record<string, any>;
   follower_count: number;
   following_count: number;
   created_at: number;
   updated_at: number;
+  last_active_at?: number;
 }
 
 export interface Organization {
   id: string;
   owner_user_id: string;
   org_name: string;
-  org_type: "club" | "academy" | "both";
+  org_type: string;
   description?: string;
   logo_url?: string;
+  cover_url?: string;
   sport_categories: string[];
+  year_established?: number;
   country?: string;
   state?: string;
   city?: string;
+  address?: string;
+  website?: string;
+  contact_name?: string;
   contact_email?: string;
   contact_phone?: string;
+  registration_doc_url?: string;
   verification: { status: string; badges: string[] };
+  subscription_plan?: string;
   created_at: number;
+  updated_at: number;
 }
 
 export interface Opportunity {
   id: string;
   org_id: string;
-  org_name: string;
+  org_name?: string;
   posted_by_user_id: string;
   title: string;
   type: string;
@@ -75,14 +85,15 @@ export interface Opportunity {
 export interface Application {
   id: string;
   opportunity_id: string;
-  opportunity_title: string;
-  org_id: string;
+  opportunity_title?: string;
+  org_id?: string;
   applicant_user_id: string;
-  applicant_name: string;
+  applicant_name?: string;
   cover_note?: string;
+  documents?: string[];
   status: "pending" | "shortlisted" | "selected" | "rejected" | "withdrawn";
   rejection_reason?: string;
-  history: { status: string; at: number; by: string; reason?: string }[];
+  history: { status: string; at: string | number; by: string; reason?: string }[];
   applied_at: number;
   updated_at: number;
 }
@@ -90,8 +101,9 @@ export interface Application {
 export interface Post {
   id: string;
   author_id: string;
-  author_name: string;
-  author_role: Role;
+  author?: { id: string; full_name: string; role: Role; profile_photo_url?: string };
+  author_name?: string;
+  author_role?: Role;
   type: "log" | "post";
   text: string;
   media_urls?: string[];
@@ -99,13 +111,14 @@ export interface Post {
   tags?: string[];
   like_count: number;
   comment_count: number;
-  created_at: number;
+  created_at: string | number;
 }
 
 export interface Reel {
   id: string;
   author_id: string;
-  author_name: string;
+  author?: { id: string; full_name: string; profile_photo_url?: string };
+  author_name?: string;
   caption?: string;
   video_url: string;
   thumbnail_url?: string;
@@ -114,7 +127,7 @@ export interface Reel {
   view_count: number;
   like_count: number;
   comment_count: number;
-  created_at: number;
+  created_at: string | number;
 }
 
 export interface Blog {

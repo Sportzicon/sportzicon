@@ -3,6 +3,7 @@ import { env } from "./config/env";
 import { logger } from "./config/logger";
 import { ensureBuckets } from "./config/storage";
 import { bootstrapAdminIfNeeded } from "./modules/auth/auth.service";
+import { prisma } from "./config/prisma";
 
 async function main() {
   const app = createApp();
@@ -25,7 +26,8 @@ async function main() {
   // Graceful shutdown — Cloud Run sends SIGTERM at the end of a revision's lifecycle.
   const shutdown = (signal: string) => {
     logger.info({ signal }, "shutting down");
-    server.close((err) => {
+    server.close(async (err) => {
+      await prisma.$disconnect().catch(() => undefined);
       if (err) {
         logger.error({ err }, "server close error");
         process.exit(1);

@@ -1,56 +1,52 @@
-import { FieldValue } from "@google-cloud/firestore";
-import { db, Collections } from "../../config/firestore";
+import { prisma } from "../../config/prisma";
 import { BadRequest, Forbidden, NotFound } from "../../utils/errors";
-import { newId, now, pairId } from "../../utils/ids";
 import { createNotification } from "../notifications/notifications.service";
-import type { ConversationDoc, MessageDoc, UserDoc } from "../../types/domain";
 
 export async function sendMessage(senderId: string, recipientId: string, body: string) {
   if (senderId === recipientId) throw BadRequest("Cannot message yourself");
   if (!body.trim()) throw BadRequest("Message body cannot be empty");
 
-  const [senderSnap, recipientSnap] = await Promise.all([
-    db.collection(Collections.users).doc(senderId).get(),
-    db.collection(Collections.users).doc(recipientId).get()
+  const [sender, recipient] = await Promise.all([
+    prisma.user.findUnique({ where: { id: senderId }, select: { id: true, full_name: true } }),
+    prisma.user.findUnique({ where: { id: recipientId }, select: { id: true, status: true } })
   ]);
-  if (!senderSnap.exists) throw NotFound("Sender not found");
-  if (!recipientSnap.exists) throw NotFound("Recipient not found");
-  const sender = senderSnap.data() as UserDoc;
-  const recipient = recipientSnap.data() as UserDoc;
+  if (!sender) throw NotFound("Sender not found");
+  if (!recipient) throw NotFound("Recipient not found");
   if (recipient.status === "suspended") throw Forbidden("Recipient cannot receive messages");
 
-  const convId = pairId(senderId, recipientId);
-  const convRef = db.collection(Collections.conversations).doc(convId);
-  const msgId = newId();
-  const msgRef = db.collection(Collections.messages).doc(msgId);
+  // Find or create the 1:1 conversation.
+  let conversation = await prisma.conversation.findFirst({
+    where: { participant_ids: { hasEvery: [senderId, recipientId] } },
+    select: { id: true, unread_counts: true }
+  });
 
-  await db.runTransaction(async (tx) => {
-    const convSnap = await tx.get(convRef);
-    const msg: MessageDoc = {
-      id: msgId,
-      conversation_id: convId,
+  if (!conversation) {
+    conversation = await prisma.conversation.create({
+      data: {
+        participant_ids: [senderId, recipientId],
+        last_message: { body, sender_id: senderId, at: new Date() },
+        unread_counts: { [senderId]: 0, [recipientId]: 1 }
+      },
+      select: { id: true, unread_counts: true }
+    });
+  } else {
+    const counts = (conversation.unread_counts as Record<string, number>) ?? {};
+    const updatedCounts = { ...counts, [recipientId]: (counts[recipientId] ?? 0) + 1 };
+    await prisma.conversation.update({
+      where: { id: conversation.id },
+      data: {
+        last_message: { body, sender_id: senderId, at: new Date() },
+        unread_counts: updatedCounts
+      }
+    });
+  }
+
+  const message = await prisma.message.create({
+    data: {
+      conversation_id: conversation.id,
       sender_id: senderId,
       recipient_id: recipientId,
-      body,
-      created_at: now()
-    };
-    tx.set(msgRef, msg);
-    if (!convSnap.exists) {
-      const conv: ConversationDoc = {
-        id: convId,
-        participant_ids: [senderId, recipientId],
-        last_message: { body, sender_id: senderId, at: now() },
-        unread_counts: { [senderId]: 0, [recipientId]: 1 },
-        created_at: now(),
-        updated_at: now()
-      };
-      tx.set(convRef, conv);
-    } else {
-      tx.update(convRef, {
-        last_message: { body, sender_id: senderId, at: now() },
-        [`unread_counts.${recipientId}`]: FieldValue.increment(1),
-        updated_at: now()
-      });
+      body
     }
   });
 
@@ -59,46 +55,56 @@ export async function sendMessage(senderId: string, recipientId: string, body: s
     type: "new_message",
     title: `New message from ${sender.full_name}`,
     body: body.length > 120 ? body.slice(0, 117) + "..." : body,
-    link: `/messages/${convId}`,
+    link: `/messages/${conversation.id}`,
     email: true
   });
 
-  return { conversation_id: convId, id: msgId };
+  return { conversation_id: conversation.id, id: message.id };
 }
 
 export async function listConversations(userId: string, limit = 50) {
-  const snap = await db
-    .collection(Collections.conversations)
-    .where("participant_ids", "array-contains", userId)
-    .orderBy("updated_at", "desc")
-    .limit(limit)
-    .get();
-  return snap.docs.map((d) => d.data() as ConversationDoc);
+  return prisma.conversation.findMany({
+    where: { participant_ids: { has: userId } },
+    orderBy: { updated_at: "desc" },
+    take: limit
+  });
 }
 
 export async function listMessages(userId: string, conversationId: string, limit = 50, cursor?: string) {
-  const convSnap = await db.collection(Collections.conversations).doc(conversationId).get();
-  if (!convSnap.exists) throw NotFound("Conversation not found");
-  const conv = convSnap.data() as ConversationDoc;
+  const conv = await prisma.conversation.findUnique({
+    where: { id: conversationId },
+    select: { participant_ids: true }
+  });
+  if (!conv) throw NotFound("Conversation not found");
   if (!conv.participant_ids.includes(userId)) throw Forbidden("Not a participant");
-  let q = db
-    .collection(Collections.messages)
-    .where("conversation_id", "==", conversationId)
-    .orderBy("created_at", "desc")
-    .limit(limit);
-  if (cursor) q = q.startAfter(Number(cursor));
-  const snap = await q.get();
-  const items = snap.docs.map((d) => d.data() as MessageDoc);
-  const next_cursor = snap.docs.length === limit ? String(snap.docs[snap.docs.length - 1].get("created_at")) : null;
-  return { items: items.reverse(), next_cursor };
+
+  const items = await prisma.message.findMany({
+    where: { conversation_id: conversationId },
+    orderBy: { created_at: "desc" },
+    take: limit + 1,
+    ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {})
+  });
+
+  const hasMore = items.length > limit;
+  const page = hasMore ? items.slice(0, limit) : items;
+  return {
+    items: page.reverse(),
+    next_cursor: hasMore ? page[page.length - 1].id : null
+  };
 }
 
 export async function markRead(userId: string, conversationId: string) {
-  const convRef = db.collection(Collections.conversations).doc(conversationId);
-  const convSnap = await convRef.get();
-  if (!convSnap.exists) throw NotFound("Conversation not found");
-  const conv = convSnap.data() as ConversationDoc;
+  const conv = await prisma.conversation.findUnique({
+    where: { id: conversationId },
+    select: { participant_ids: true, unread_counts: true }
+  });
+  if (!conv) throw NotFound("Conversation not found");
   if (!conv.participant_ids.includes(userId)) throw Forbidden("Not a participant");
-  await convRef.update({ [`unread_counts.${userId}`]: 0, updated_at: now() });
+
+  const counts = (conv.unread_counts as Record<string, number>) ?? {};
+  await prisma.conversation.update({
+    where: { id: conversationId },
+    data: { unread_counts: { ...counts, [userId]: 0 } }
+  });
   return { ok: true };
 }

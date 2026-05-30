@@ -1,6 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 import { api, getApiError } from "../api/client";
-import { PageHeader, Spinner } from "../components/UI";
+import { PageHeader, Spinner, Kicker } from "../components/UI";
 
 export default function AITips() {
   const m = useMutation({
@@ -8,31 +8,72 @@ export default function AITips() {
   });
 
   return (
-    <div className="space-y-4 max-w-2xl">
+    <div className="max-w-2xl space-y-5">
       <PageHeader
         title="AI Performance Tips"
-        subtitle="Personalised suggestions based on your sport, stats, and experience."
-        action={<button className="btn-primary" disabled={m.isPending} onClick={() => m.mutate()}>{m.isPending ? "Thinking..." : "Get tips"}</button>}
+        subtitle="◆ AI coaching"
+        action={
+          <button className="btn-accent" disabled={m.isPending} onClick={() => m.mutate()}>
+            {m.isPending ? "Thinking…" : "◆ Get tips"}
+          </button>
+        }
       />
-      {m.isPending && <Spinner />}
-      {m.isError && <div className="rounded-lg bg-red-50 p-3 text-sm text-red-800">{getApiError(m.error).message}</div>}
+
+      {!m.data && !m.isPending && !m.isError && (
+        <div className="panel p-8 text-center border-dashed">
+          <div className="w-14 h-14 rounded-full bg-brand-50 text-brand-500 flex items-center justify-center text-2xl mx-auto">◆</div>
+          <h3 className="font-disp text-2xl mt-4">Personalised coaching tips</h3>
+          <p className="text-sm text-ink-sub mt-2 leading-relaxed max-w-xs mx-auto">
+            AI analyses your sport, role, stats and experience to generate specific, actionable recommendations.
+          </p>
+          <button className="btn-accent mt-5" onClick={() => m.mutate()}>Get my tips →</button>
+        </div>
+      )}
+
+      {m.isPending && (
+        <div className="panel p-10 flex flex-col items-center gap-4">
+          <Spinner className="text-brand-500 h-8 w-8" />
+          <p className="lab">Analysing your profile…</p>
+        </div>
+      )}
+
+      {m.isError && (
+        <div className="rounded bg-red-50 border border-red-200 p-4 text-sm text-red-800">
+          {getApiError(m.error).message}
+        </div>
+      )}
+
       {m.data && (
-        <div className="card card-body space-y-3">
+        <div className="space-y-4 animate-fadein">
           {m.data.focus_areas?.length > 0 && (
-            <div>
-              <h3 className="text-sm font-semibold">Focus areas</h3>
-              <ul className="mt-1 list-disc list-inside text-sm text-slate-700">
-                {m.data.focus_areas.map((f: string, i: number) => <li key={i}>{f}</li>)}
-              </ul>
+            <div className="panel p-6">
+              <Kicker>Focus areas</Kicker>
+              <div className="mt-4 flex flex-wrap gap-2">
+                {m.data.focus_areas.map((f: string, i: number) => (
+                  <span key={i} className="badge bg-brand-50 text-brand-700 border-brand-200">{f}</span>
+                ))}
+              </div>
             </div>
           )}
-          <div>
-            <h3 className="text-sm font-semibold">Recommended actions</h3>
-            <ol className="mt-1 list-decimal list-inside text-sm space-y-1">
-              {m.data.tips?.map((t: string, i: number) => <li key={i}>{t}</li>)}
+
+          <div className="panel p-6">
+            <Kicker>Recommended actions</Kicker>
+            <ol className="mt-4 space-y-4">
+              {m.data.tips?.map((t: string, i: number) => (
+                <li key={i} className="flex gap-4">
+                  <span className="font-disp text-3xl text-brand-500 leading-none flex-shrink-0 mt-0.5">
+                    {String(i + 1).padStart(2, "0")}
+                  </span>
+                  <p className="text-[14.5px] text-ink-70 leading-relaxed">{t}</p>
+                </li>
+              ))}
             </ol>
           </div>
-          <p className="text-xs text-slate-500">Source: {m.data.source}{m.data.model ? ` (${m.data.model})` : ""}</p>
+
+          <div className="flex items-center justify-between">
+            <span className="lab">Source: {m.data.source}{m.data.model ? ` · ${m.data.model}` : ""}</span>
+            <button className="btn-ghost" onClick={() => m.mutate()}>Regenerate →</button>
+          </div>
         </div>
       )}
     </div>

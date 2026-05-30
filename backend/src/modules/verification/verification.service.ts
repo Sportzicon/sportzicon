@@ -1,12 +1,19 @@
-import { db, Collections } from "../../config/firestore";
+import { prisma } from "../../config/prisma";
 import { BadRequest, Forbidden, NotFound } from "../../utils/errors";
-import { newId, now } from "../../utils/ids";
 import { createNotification } from "../notifications/notifications.service";
-import type { EntityType, Role, VerificationDoc } from "../../types/domain";
+import type { EntityType } from "../../types/domain";
 
 const VALID_TYPES: Record<EntityType, string[]> = {
   user: ["athlete_id", "coach_license", "scout_id", "stats_endorsement"],
   organization: ["org_registration"]
+};
+
+const BADGE_MAP: Record<string, string> = {
+  athlete_id: "verified_player",
+  coach_license: "verified_coach",
+  scout_id: "verified_scout",
+  stats_endorsement: "verified_stats",
+  org_registration: "verified_org"
 };
 
 export async function submit(input: {
@@ -21,103 +28,114 @@ export async function submit(input: {
     throw BadRequest(`Invalid verification_type for ${input.entity_type}`);
   if (input.documents.length === 0) throw BadRequest("At least one document is required");
 
-  // Authorisation:
-  //  - user entity: only the user themselves
-  //  - organization entity: only the owner
   if (input.entity_type === "user" && input.entity_id !== input.actorId)
     throw Forbidden("Cannot submit verification for another user");
+
   if (input.entity_type === "organization") {
-    const orgSnap = await db.collection(Collections.organizations).doc(input.entity_id).get();
-    if (!orgSnap.exists) throw NotFound("Organization not found");
-    if (orgSnap.get("owner_user_id") !== input.actorId)
+    const org = await prisma.organization.findUnique({
+      where: { id: input.entity_id },
+      select: { owner_user_id: true }
+    });
+    if (!org) throw NotFound("Organization not found");
+    if (org.owner_user_id !== input.actorId)
       throw Forbidden("Cannot submit verification for an organization you do not own");
   }
 
-  const id = newId();
-  const doc: VerificationDoc = {
-    id,
-    entity_type: input.entity_type,
-    entity_id: input.entity_id,
-    verification_type: input.verification_type,
-    documents: input.documents,
-    notes: input.notes,
-    status: "pending",
-    submitted_by: input.actorId,
-    created_at: now()
-  };
-  await db.collection(Collections.verifications).doc(id).set(doc);
-
-  // Reflect "pending" on the target entity so the badge UI can show progress.
-  const col = input.entity_type === "user" ? Collections.users : Collections.organizations;
-  await db.collection(col).doc(input.entity_id).update({
-    "verification.status": "pending",
-    updated_at: now()
+  const verification = await prisma.verification.create({
+    data: {
+      entity_type: input.entity_type,
+      entity_id: input.entity_id,
+      verification_type: input.verification_type,
+      documents: input.documents,
+      notes: input.notes,
+      submitted_by: input.actorId
+    }
   });
 
-  return doc;
+  // Reflect pending status on the target entity.
+  if (input.entity_type === "user") {
+    await prisma.user.update({
+      where: { id: input.entity_id },
+      data: { verification_status: "pending" }
+    });
+  } else {
+    await prisma.organization.update({
+      where: { id: input.entity_id },
+      data: { verification_status: "pending" }
+    });
+  }
+
+  return verification;
 }
 
 export async function listPending(limit = 100) {
-  const snap = await db
-    .collection(Collections.verifications)
-    .where("status", "==", "pending")
-    .orderBy("created_at", "desc")
-    .limit(limit)
-    .get();
-  return snap.docs.map((d) => d.data() as VerificationDoc);
+  return prisma.verification.findMany({
+    where: { status: "pending" },
+    orderBy: { created_at: "desc" },
+    take: limit
+  });
 }
 
 export async function review(id: string, reviewerId: string, decision: "approve" | "reject", reason?: string) {
-  const ref = db.collection(Collections.verifications).doc(id);
-  const snap = await ref.get();
-  if (!snap.exists) throw NotFound("Verification not found");
-  const v = snap.data() as VerificationDoc;
+  const v = await prisma.verification.findUnique({ where: { id } });
+  if (!v) throw NotFound("Verification not found");
   if (v.status !== "pending") throw BadRequest("Verification already reviewed");
 
   const newStatus = decision === "approve" ? "approved" : "rejected";
-  const col = v.entity_type === "user" ? Collections.users : Collections.organizations;
-  const targetRef = db.collection(col).doc(v.entity_id);
+  const badge = BADGE_MAP[v.verification_type];
 
-  await db.runTransaction(async (tx) => {
-    tx.update(ref, {
+  await prisma.verification.update({
+    where: { id },
+    data: {
       status: newStatus,
       reviewed_by: reviewerId,
-      reviewed_at: now(),
+      reviewed_at: new Date(),
       rejection_reason: decision === "reject" ? reason : undefined
-    });
-    const badgeMap: Record<string, string> = {
-      athlete_id: "verified_player",
-      coach_license: "verified_coach",
-      scout_id: "verified_scout",
-      stats_endorsement: "verified_stats",
-      org_registration: "verified_org"
-    };
-    const badge = badgeMap[v.verification_type];
-    const targetSnap = await tx.get(targetRef);
-    const existing: string[] = (targetSnap.get("verification.badges") as string[]) ?? [];
-    const badges =
-      decision === "approve" && badge && !existing.includes(badge) ? [...existing, badge] : existing;
-    tx.update(targetRef, {
-      "verification.status": newStatus,
-      "verification.badges": badges,
-      updated_at: now()
-    });
+    }
   });
 
-  // Notify the entity owner (for an org we need its owner_user_id; for a user it's the user themselves).
-  let notifyUserId = v.entity_id;
-  if (v.entity_type === "organization") {
-    const ownerSnap = await targetRef.get();
-    notifyUserId = ownerSnap.get("owner_user_id");
+  // Update target entity with new status and badge.
+  if (v.entity_type === "user") {
+    const user = await prisma.user.findUnique({
+      where: { id: v.entity_id },
+      select: { verification_badges: true }
+    });
+    const existing = user?.verification_badges ?? [];
+    const badges = decision === "approve" && badge && !existing.includes(badge)
+      ? [...existing, badge]
+      : existing;
+    await prisma.user.update({
+      where: { id: v.entity_id },
+      data: { verification_status: newStatus, verification_badges: badges }
+    });
+  } else {
+    const org = await prisma.organization.findUnique({
+      where: { id: v.entity_id },
+      select: { verification_badges: true, owner_user_id: true }
+    });
+    const existing = org?.verification_badges ?? [];
+    const badges = decision === "approve" && badge && !existing.includes(badge)
+      ? [...existing, badge]
+      : existing;
+    await prisma.organization.update({
+      where: { id: v.entity_id },
+      data: { verification_status: newStatus, verification_badges: badges }
+    });
   }
+
+  // Notify the entity owner.
+  const notifyUserId =
+    v.entity_type === "user"
+      ? v.entity_id
+      : (await prisma.organization.findUnique({ where: { id: v.entity_id }, select: { owner_user_id: true } }))?.owner_user_id ?? v.entity_id;
+
   await createNotification({
     user_id: notifyUserId,
     type: `verification_${newStatus}`,
     title: `Verification ${newStatus}`,
-    body:
-      decision === "approve"
-        ? "Your verification has been approved and your badge is now visible on your profile."
-        : `Your verification was rejected.${reason ? " Reason: " + reason : ""}`,
+    body: decision === "approve"
+      ? "Your verification has been approved and your badge is now visible on your profile."
+      : `Your verification was rejected.${reason ? " Reason: " + reason : ""}`,
     email: true
   });
 

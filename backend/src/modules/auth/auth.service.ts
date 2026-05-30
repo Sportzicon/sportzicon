@@ -1,9 +1,9 @@
-import { db, Collections } from "../../config/firestore";
+import { prisma } from "../../config/prisma";
 import { env } from "../../config/env";
 import { sendMail } from "../../config/mailer";
 import { logger } from "../../config/logger";
-import { newId, now } from "../../utils/ids";
 import { BadRequest, Conflict, NotFound, Unauthorized } from "../../utils/errors";
+import { omitSensitive } from "../../utils/user";
 import {
   comparePassword,
   hashPassword,
@@ -13,26 +13,10 @@ import {
   rotateRefreshToken,
   signAccessToken
 } from "./tokens";
-import type { Role, UserDoc } from "../../types/domain";
+import type { Role } from "../../types/domain";
 
 const VERIFY_TTL_MS = 1000 * 60 * 60 * 24; // 24h
 const RESET_TTL_MS = 1000 * 60 * 30; // 30m
-
-async function findByEmail(email: string): Promise<UserDoc | null> {
-  const snap = await db
-    .collection(Collections.users)
-    .where("email_lower", "==", email.trim().toLowerCase())
-    .limit(1)
-    .get();
-  if (snap.empty) return null;
-  return snap.docs[0].data() as UserDoc;
-}
-
-async function findByPhone(phone: string): Promise<UserDoc | null> {
-  const snap = await db.collection(Collections.users).where("phone", "==", phone).limit(1).get();
-  if (snap.empty) return null;
-  return snap.docs[0].data() as UserDoc;
-}
 
 export async function signup(input: {
   email: string;
@@ -40,55 +24,71 @@ export async function signup(input: {
   full_name: string;
   phone: string;
   role: Role;
+  country?: string;
+  state?: string;
+  city?: string;
+  dob?: string;
+  gender?: string;
+  primary_sport?: string;
+  position?: string;
+  experience_level?: string;
+  looking_for_club?: boolean;
 }) {
   const email = input.email.trim();
   const emailLower = email.toLowerCase();
 
-  // SRS: prevent duplicate registrations using same email OR phone.
-  if (await findByEmail(emailLower)) throw Conflict("An account with this email already exists");
-  if (await findByPhone(input.phone)) throw Conflict("An account with this phone already exists");
+  const existing = await prisma.user.findFirst({
+    where: { OR: [{ email_lower: emailLower }, { phone: input.phone }] },
+    select: { email_lower: true, phone: true }
+  });
+  if (existing?.email_lower === emailLower) throw Conflict("An account with this email already exists");
+  if (existing?.phone === input.phone) throw Conflict("An account with this phone already exists");
 
-  const id = newId();
   const password_hash = await hashPassword(input.password);
 
-  const user: UserDoc = {
-    id,
-    email,
-    email_lower: emailLower,
-    email_verified: false,
-    phone: input.phone,
-    phone_verified: false,
-    password_hash,
-    full_name: input.full_name,
-    full_name_lower: input.full_name.toLowerCase(),
-    role: input.role,
-    status: "pending", // becomes "active" after email verification
-    verification: { badges: [], status: "unverified" },
-    follower_count: 0,
-    following_count: 0,
-    created_at: now(),
-    updated_at: now(),
-    last_active_at: now()
-  };
+  const athleteData =
+    input.role === "athlete" && input.primary_sport
+      ? {
+          primary_sport: input.primary_sport,
+          position: input.position ?? "",
+          experience_level: input.experience_level ?? "amateur",
+          looking_for_club: input.looking_for_club ?? false,
+          availability: "available",
+          stats: {}
+        }
+      : undefined;
 
-  await db.collection(Collections.users).doc(id).set(user);
+  const user = await prisma.user.create({
+    data: {
+      email,
+      email_lower: emailLower,
+      email_verified: false,
+      phone: input.phone,
+      password_hash,
+      full_name: input.full_name,
+      full_name_lower: input.full_name.toLowerCase(),
+      role: input.role,
+      status: "pending",
+      country: input.country,
+      state: input.state,
+      city: input.city,
+      dob: input.dob,
+      gender: input.gender,
+      athlete_data: athleteData as object ?? undefined
+    }
+  });
 
   await issueAndSendVerificationEmail(user.id, user.email, user.full_name);
 
-  return { id, email, role: input.role };
+  return { id: user.id, email: user.email, role: input.role };
 }
 
 async function issueAndSendVerificationEmail(userId: string, email: string, name: string) {
-  const token = newId() + newId().replace(/-/g, "");
-  const expires_at = now() + VERIFY_TTL_MS;
+  const token = crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, "");
+  const expiresAt = new Date(Date.now() + VERIFY_TTL_MS);
 
-  await db.collection(Collections.emailVerifications).doc(token).set({
-    token,
-    user_id: userId,
-    email,
-    expires_at,
-    used: false,
-    created_at: now()
+  await prisma.emailVerification.create({
+    data: { user_id: userId, token, expires_at: expiresAt }
   });
 
   const link = `${env.WEB_APP_URL.replace(/\/$/, "")}/verify-email?token=${encodeURIComponent(token)}`;
@@ -104,50 +104,53 @@ async function issueAndSendVerificationEmail(userId: string, email: string, name
 }
 
 export async function verifyEmail(token: string) {
-  const ref = db.collection(Collections.emailVerifications).doc(token);
-  const snap = await ref.get();
-  if (!snap.exists) throw BadRequest("Invalid verification token");
-  const data = snap.data() as { user_id: string; expires_at: number; used: boolean };
-  if (data.used) throw BadRequest("This link has already been used");
-  if (data.expires_at < now()) throw BadRequest("This link has expired");
+  const record = await prisma.emailVerification.findUnique({ where: { token } });
+  if (!record) throw BadRequest("Invalid verification token");
+  if (record.expires_at < new Date()) throw BadRequest("This link has expired");
 
-  const userRef = db.collection(Collections.users).doc(data.user_id);
-  await db.runTransaction(async (tx) => {
-    const u = await tx.get(userRef);
-    if (!u.exists) throw NotFound("User not found");
-    tx.update(userRef, { email_verified: true, status: "active", updated_at: now() });
-    tx.update(ref, { used: true, used_at: now() });
-  });
+  const user = await prisma.user.findUnique({ where: { id: record.user_id } });
+  if (!user) throw NotFound("User not found");
+
+  await prisma.$transaction([
+    prisma.user.update({
+      where: { id: record.user_id },
+      data: { email_verified: true, status: "active" }
+    }),
+    prisma.emailVerification.delete({ where: { token } })
+  ]);
+
   return { ok: true };
 }
 
 export async function resendVerification(email: string) {
-  const user = await findByEmail(email);
-  // Always 200 — don't leak which emails exist.
-  if (!user) return { ok: true };
-  if (user.email_verified) return { ok: true };
+  const user = await prisma.user.findUnique({
+    where: { email_lower: email.trim().toLowerCase() },
+    select: { id: true, email: true, full_name: true, email_verified: true }
+  });
+  if (!user || user.email_verified) return { ok: true };
   await issueAndSendVerificationEmail(user.id, user.email, user.full_name);
   return { ok: true };
 }
 
 export async function login(email: string, password: string) {
-  const user = await findByEmail(email);
+  const user = await prisma.user.findUnique({
+    where: { email_lower: email.trim().toLowerCase() }
+  });
   if (!user) throw Unauthorized("Invalid credentials");
   const ok = await comparePassword(password, user.password_hash);
   if (!ok) throw Unauthorized("Invalid credentials");
   if (user.status === "suspended") throw Unauthorized("Account is suspended");
   if (!user.email_verified) throw Unauthorized("Email not verified — please check your inbox");
 
-  await db.collection(Collections.users).doc(user.id).update({ last_active_at: now() });
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { last_active_at: new Date() }
+  });
 
   const access_token = signAccessToken(user);
   const refresh_token = await issueRefreshToken(user.id);
 
-  return {
-    access_token,
-    refresh_token,
-    user: publicUser(user)
-  };
+  return { access_token, refresh_token, user: omitSensitive(user) };
 }
 
 export async function refresh(token: string) {
@@ -157,14 +160,13 @@ export async function refresh(token: string) {
   } catch (err: any) {
     throw Unauthorized(err?.message ?? "Invalid refresh token");
   }
-  const userSnap = await db.collection(Collections.users).doc(result.userId).get();
-  if (!userSnap.exists) throw Unauthorized("User no longer exists");
-  const user = userSnap.data() as UserDoc;
+  const user = await prisma.user.findUnique({ where: { id: result.userId } });
+  if (!user) throw Unauthorized("User no longer exists");
   if (user.status === "suspended") throw Unauthorized("Account is suspended");
   return {
     access_token: signAccessToken(user),
     refresh_token: result.newToken,
-    user: publicUser(user)
+    user: omitSensitive(user)
   };
 }
 
@@ -174,17 +176,17 @@ export async function logout(refreshToken?: string) {
 }
 
 export async function forgotPassword(email: string) {
-  const user = await findByEmail(email);
-  if (!user) return { ok: true }; // do not leak existence
-
-  const token = newId() + newId().replace(/-/g, "");
-  await db.collection(Collections.passwordResets).doc(token).set({
-    token,
-    user_id: user.id,
-    expires_at: now() + RESET_TTL_MS,
-    used: false,
-    created_at: now()
+  const user = await prisma.user.findUnique({
+    where: { email_lower: email.trim().toLowerCase() },
+    select: { id: true, email: true }
   });
+  if (!user) return { ok: true };
+
+  const token = crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, "");
+  await prisma.passwordReset.create({
+    data: { user_id: user.id, token, expires_at: new Date(Date.now() + RESET_TTL_MS) }
+  });
+
   const link = `${env.WEB_APP_URL.replace(/\/$/, "")}/reset-password?token=${encodeURIComponent(token)}`;
   await sendMail({
     to: user.email,
@@ -197,77 +199,57 @@ export async function forgotPassword(email: string) {
 }
 
 export async function resetPassword(token: string, password: string) {
-  const ref = db.collection(Collections.passwordResets).doc(token);
-  const snap = await ref.get();
-  if (!snap.exists) throw BadRequest("Invalid reset token");
-  const data = snap.data() as { user_id: string; expires_at: number; used: boolean };
-  if (data.used) throw BadRequest("This link has already been used");
-  if (data.expires_at < now()) throw BadRequest("This link has expired");
+  const record = await prisma.passwordReset.findUnique({ where: { token } });
+  if (!record) throw BadRequest("Invalid reset token");
+  if (record.used) throw BadRequest("This link has already been used");
+  if (record.expires_at < new Date()) throw BadRequest("This link has expired");
 
   const hash = await hashPassword(password);
-  await db.runTransaction(async (tx) => {
-    tx.update(db.collection(Collections.users).doc(data.user_id), {
-      password_hash: hash,
-      updated_at: now()
-    });
-    tx.update(ref, { used: true, used_at: now() });
-  });
-  // Force re-login everywhere after a password change.
-  await revokeAllRefreshTokensForUser(data.user_id);
+  await prisma.$transaction([
+    prisma.user.update({ where: { id: record.user_id }, data: { password_hash: hash } }),
+    prisma.passwordReset.update({ where: { token }, data: { used: true } })
+  ]);
+  await revokeAllRefreshTokensForUser(record.user_id);
   return { ok: true };
 }
 
 export async function changePassword(userId: string, current: string, next_: string) {
-  const ref = db.collection(Collections.users).doc(userId);
-  const snap = await ref.get();
-  if (!snap.exists) throw NotFound("User not found");
-  const user = snap.data() as UserDoc;
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) throw NotFound("User not found");
   const ok = await comparePassword(current, user.password_hash);
   if (!ok) throw Unauthorized("Current password is incorrect");
   const hash = await hashPassword(next_);
-  await ref.update({ password_hash: hash, updated_at: now() });
+  await prisma.user.update({ where: { id: userId }, data: { password_hash: hash } });
   await revokeAllRefreshTokensForUser(userId);
   return { ok: true };
 }
 
-export function publicUser(u: UserDoc) {
-  const { password_hash, email_lower, full_name_lower, ...safe } = u;
-  return safe;
+export async function bootstrapAdminIfNeeded() {
+  if (!env.BOOTSTRAP_ADMIN_EMAIL || !env.BOOTSTRAP_ADMIN_PASSWORD) return;
+  const existing = await prisma.user.findFirst({ where: { role: "admin" }, select: { id: true } });
+  if (existing) return;
+
+  const password_hash = await hashPassword(env.BOOTSTRAP_ADMIN_PASSWORD);
+  await prisma.user.create({
+    data: {
+      email: env.BOOTSTRAP_ADMIN_EMAIL,
+      email_lower: env.BOOTSTRAP_ADMIN_EMAIL.toLowerCase(),
+      email_verified: true,
+      phone: "+0000000000",
+      password_hash,
+      full_name: "Sportivox Admin",
+      full_name_lower: "sportivox admin",
+      role: "admin",
+      status: "active",
+      verification_status: "approved",
+      verification_badges: ["verified_admin"]
+    }
+  });
+  logger.warn({ email: env.BOOTSTRAP_ADMIN_EMAIL }, "Bootstrapped admin account. CHANGE THE PASSWORD IMMEDIATELY.");
 }
 
 function escapeHtml(s: string): string {
   return s.replace(/[&<>"']/g, (c) =>
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!
   );
-}
-
-// Bootstrap helper: create an admin account if no admin exists yet.
-export async function bootstrapAdminIfNeeded() {
-  if (!env.BOOTSTRAP_ADMIN_EMAIL || !env.BOOTSTRAP_ADMIN_PASSWORD) return;
-  const adminSnap = await db.collection(Collections.users).where("role", "==", "admin").limit(1).get();
-  if (!adminSnap.empty) return;
-
-  const id = newId();
-  const password_hash = await hashPassword(env.BOOTSTRAP_ADMIN_PASSWORD);
-  const adminUser: UserDoc = {
-    id,
-    email: env.BOOTSTRAP_ADMIN_EMAIL,
-    email_lower: env.BOOTSTRAP_ADMIN_EMAIL.toLowerCase(),
-    email_verified: true,
-    phone: "+0000000000",
-    phone_verified: false,
-    password_hash,
-    full_name: "Sportivox Admin",
-    full_name_lower: "sportivox admin",
-    role: "admin",
-    status: "active",
-    verification: { badges: ["verified_admin"], status: "approved" },
-    follower_count: 0,
-    following_count: 0,
-    created_at: now(),
-    updated_at: now(),
-    last_active_at: now()
-  };
-  await db.collection(Collections.users).doc(id).set(adminUser);
-  logger.warn({ email: adminUser.email }, "Bootstrapped admin account. CHANGE THE PASSWORD IMMEDIATELY.");
 }

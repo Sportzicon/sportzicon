@@ -1,8 +1,6 @@
-import { db, Collections } from "../../config/firestore";
+import { prisma } from "../../config/prisma";
 import { logger } from "../../config/logger";
-import { newId, now } from "../../utils/ids";
 import { sendMail } from "../../config/mailer";
-import type { NotificationDoc, UserDoc } from "../../types/domain";
 
 export async function createNotification(input: {
   user_id: string;
@@ -12,24 +10,23 @@ export async function createNotification(input: {
   link?: string;
   email?: boolean;
 }) {
-  const id = newId();
-  const doc: NotificationDoc = {
-    id,
-    user_id: input.user_id,
-    type: input.type,
-    title: input.title,
-    body: input.body,
-    link: input.link,
-    read: false,
-    created_at: now()
-  };
-  await db.collection(Collections.notifications).doc(id).set(doc);
+  const notification = await prisma.notification.create({
+    data: {
+      user_id: input.user_id,
+      type: input.type,
+      title: input.title,
+      body: input.body,
+      link: input.link
+    }
+  });
 
   if (input.email) {
     try {
-      const userSnap = await db.collection(Collections.users).doc(input.user_id).get();
-      if (userSnap.exists) {
-        const user = userSnap.data() as UserDoc;
+      const user = await prisma.user.findUnique({
+        where: { id: input.user_id },
+        select: { email: true, full_name: true }
+      });
+      if (user) {
         await sendMail({
           to: user.email,
           subject: input.title,
@@ -37,64 +34,38 @@ export async function createNotification(input: {
         });
       }
     } catch (err) {
-      // Reliability: in-app notification has already been created; log and continue.
       logger.warn({ err }, "notification email failed");
     }
   }
-  return doc;
+
+  return notification;
 }
 
 export async function listForUser(userId: string, limit = 50, unreadOnly = false) {
-  let q = db
-    .collection(Collections.notifications)
-    .where("user_id", "==", userId)
-    .orderBy("created_at", "desc")
-    .limit(limit);
-  if (unreadOnly) {
-    q = db
-      .collection(Collections.notifications)
-      .where("user_id", "==", userId)
-      .where("read", "==", false)
-      .orderBy("created_at", "desc")
-      .limit(limit);
-  }
-  const snap = await q.get();
-  return snap.docs.map((d) => d.data() as NotificationDoc);
+  return prisma.notification.findMany({
+    where: { user_id: userId, ...(unreadOnly ? { read: false } : {}) },
+    orderBy: { created_at: "desc" },
+    take: limit
+  });
 }
 
 export async function countUnread(userId: string) {
-  const snap = await db
-    .collection(Collections.notifications)
-    .where("user_id", "==", userId)
-    .where("read", "==", false)
-    .count()
-    .get();
-  return snap.data().count;
+  return prisma.notification.count({ where: { user_id: userId, read: false } });
 }
 
 export async function markRead(userId: string, ids: string[]) {
   if (ids.length === 0) {
-    // Mark all
-    const snap = await db
-      .collection(Collections.notifications)
-      .where("user_id", "==", userId)
-      .where("read", "==", false)
-      .limit(500)
-      .get();
-    const batch = db.batch();
-    snap.docs.forEach((d) => batch.update(d.ref, { read: true }));
-    await batch.commit();
-    return { updated: snap.size };
+    const result = await prisma.notification.updateMany({
+      where: { user_id: userId, read: false },
+      data: { read: true }
+    });
+    return { updated: result.count };
   }
-  const batch = db.batch();
-  let updated = 0;
-  for (const id of ids) {
-    const ref = db.collection(Collections.notifications).doc(id);
-    batch.update(ref, { read: true });
-    updated++;
-  }
-  await batch.commit();
-  return { updated };
+  const result = await prisma.notification.updateMany({
+    where: { id: { in: ids }, user_id: userId },
+    data: { read: true }
+  });
+  return { updated: result.count };
 }
 
 function escapeHtml(s: string): string {

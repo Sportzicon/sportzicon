@@ -9,11 +9,7 @@ export default function VerifyEmail() {
 
   useEffect(() => {
     const token = params.get("token");
-    if (!token) {
-      setState("err");
-      setMsg("Missing token.");
-      return;
-    }
+    if (!token) { setState("err"); setMsg("Missing token."); return; }
     (async () => {
       try {
         await api.post("/auth/verify-email", { token });
@@ -26,25 +22,37 @@ export default function VerifyEmail() {
   }, [params]);
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4">
-      <div className="card w-full max-w-md text-center">
-        <div className="card-body">
-          {state === "loading" && <p>Verifying your email...</p>}
-          {state === "ok" && (
-            <>
-              <h1 className="text-xl font-semibold">Email verified</h1>
-              <p className="mt-2 text-sm text-slate-600">You can now sign in to your account.</p>
-              <Link to="/login" className="btn-primary mt-6 inline-flex">Go to sign in</Link>
-            </>
-          )}
-          {state === "err" && (
-            <>
-              <h1 className="text-xl font-semibold text-red-700">Verification failed</h1>
-              <p className="mt-2 text-sm text-slate-600">{msg}</p>
-              <Link to="/login" className="btn-secondary mt-6 inline-flex">Back to sign in</Link>
-            </>
-          )}
-        </div>
+    <div className="min-h-screen bg-paper flex items-center justify-center px-4">
+      <div className="w-full max-w-sm text-center">
+        <Link to="/" className="flex items-baseline gap-2 justify-center mb-10">
+          <span className="inline-flex h-7 w-7 items-center justify-center rounded bg-brand-500 font-disp text-lg text-white">S</span>
+          <span className="font-disp text-xl">Sportivox</span>
+        </Link>
+
+        {state === "loading" && (
+          <div className="panel p-8">
+            <div className="w-12 h-12 rounded-full border-2 border-brand-500 border-t-transparent animate-spin mx-auto" />
+            <p className="lab mt-5">Verifying your email…</p>
+          </div>
+        )}
+
+        {state === "ok" && (
+          <div className="panel p-8">
+            <div className="w-14 h-14 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center text-2xl mx-auto">✓</div>
+            <h1 className="font-disp text-3xl mt-5">Email verified</h1>
+            <p className="text-sm text-ink-sub mt-3 leading-relaxed">Your account is now active. Sign in to get started.</p>
+            <Link to="/login" className="btn-primary mt-6 inline-flex w-full justify-center">Sign in →</Link>
+          </div>
+        )}
+
+        {state === "err" && (
+          <div className="panel p-8">
+            <div className="w-14 h-14 rounded-full bg-red-50 text-red-600 flex items-center justify-center text-2xl mx-auto">✕</div>
+            <h1 className="font-disp text-3xl mt-5">Verification failed</h1>
+            <p className="text-sm text-ink-sub mt-3">{msg}</p>
+            <Link to="/login" className="btn-secondary mt-6 inline-flex w-full justify-center">Back to sign in</Link>
+          </div>
+        )}
       </div>
     </div>
   );

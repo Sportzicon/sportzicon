@@ -1,37 +1,69 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
-import { PageHeader, Spinner, StatusPill } from "../components/UI";
+import { PageHeader, Spinner, EmptyState, Kicker, SectionHead } from "../components/UI";
 import type { Blog } from "../types";
 
 export default function Blogs() {
+  const [sport, setSport] = useState("");
+  const [tag, setTag] = useState("");
+
+  const params: any = { status: "published" };
+  if (sport) params.sport = sport;
+  if (tag) params.tag = tag;
+
   const q = useQuery({
-    queryKey: ["blogs"],
-    queryFn: async () => (await api.get<{ items: Blog[] }>("/blogs", { params: { limit: 30 } })).data.items
+    queryKey: ["blogs", params],
+    queryFn: async () => (await api.get<{ items: Blog[] }>("/blogs", { params })).data.items
   });
 
   return (
-    <div className="space-y-4">
-      <PageHeader title="Blogs" subtitle="Long-form posts from the community."
-        action={<Link to="/blogs/new" className="btn-primary">Write a blog</Link>}
+    <div className="space-y-5">
+      <PageHeader
+        title="Blogs"
+        subtitle="Guides & insights"
+        action={<Link to="/blogs/new" className="btn-accent">+ Write blog</Link>}
       />
-      {q.isLoading ? <Spinner /> : (
-        <div className="grid gap-4 sm:grid-cols-2">
-          {q.data?.map((b) => (
-            <Link key={b.id} to={`/blogs/${b.slug ?? b.id}`} className="card hover:shadow">
-              {b.cover_image_url && <img src={b.cover_image_url} alt="" className="h-40 w-full object-cover" />}
-              <div className="card-body">
-                <div className="flex items-start justify-between gap-2">
-                  <h3 className="font-semibold">{b.title}</h3>
-                  <StatusPill status={b.status} />
+
+      <div className="panel p-4 flex flex-wrap gap-3">
+        <input className="input w-44" placeholder="Sport" value={sport} onChange={(e) => setSport(e.target.value)} />
+        <input className="input w-44" placeholder="Tag" value={tag} onChange={(e) => setTag(e.target.value)} />
+      </div>
+
+      {q.isLoading ? (
+        <div className="panel p-8 flex justify-center"><Spinner className="text-brand-500" /></div>
+      ) : !q.data?.length ? (
+        <EmptyState
+          title="No blogs found"
+          hint="Try adjusting your filters or check back later."
+          action={<Link to="/blogs/new" className="btn-accent">+ Write blog</Link>}
+        />
+      ) : (
+        <>
+          <SectionHead n="01" title="Latest blogs" />
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {q.data.map((b) => (
+            <Link key={b.id} to={`/blogs/${b.slug ?? b.id}`} className="panel overflow-hidden hover:shadow-card transition group">
+              {b.cover_image_url && (
+                <img src={b.cover_image_url} alt="" className="w-full h-40 object-cover" />
+              )}
+              <div className="p-4">
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {b.sport && <Kicker>{b.sport}</Kicker>}
+                  {b.tags?.slice(0, 1).map((t) => <span key={t} className="badge text-[10px]">{t}</span>)}
                 </div>
-                <p className="mt-1 text-sm text-slate-600 line-clamp-3">{b.excerpt}</p>
-                <p className="mt-2 text-xs text-slate-500">By {b.author_name} · {new Date(b.published_at ?? b.created_at).toLocaleDateString()}</p>
+                <h3 className="font-disp text-lg leading-tight group-hover:text-brand-500 transition">{b.title}</h3>
+                <p className="text-[13px] text-ink-sub mt-2 line-clamp-2">{b.excerpt || b.body_markdown?.slice(0, 80)}</p>
+                <div className="mt-3 pt-3 border-t border-hairsoft flex items-center justify-between text-[11px]">
+                  <span className="lab">{b.author_name}</span>
+                  <span className="font-mononum text-ink-faint">◎ {b.view_count}</span>
+                </div>
               </div>
             </Link>
           ))}
-          {!q.data?.length && <div className="card card-body text-sm text-slate-600 sm:col-span-2">No published blogs yet.</div>}
         </div>
+        </>
       )}
     </div>
   );

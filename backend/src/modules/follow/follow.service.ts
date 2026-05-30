@@ -1,122 +1,98 @@
-import { FieldValue } from "@google-cloud/firestore";
-import { db, Collections } from "../../config/firestore";
+import { prisma } from "../../config/prisma";
 import { BadRequest, NotFound } from "../../utils/errors";
-import { now, pairId } from "../../utils/ids";
 import { createNotification } from "../notifications/notifications.service";
-import type { UserDoc } from "../../types/domain";
 
 export async function follow(followerId: string, followeeId: string) {
   if (followerId === followeeId) throw BadRequest("You cannot follow yourself");
 
-  const followeeRef = db.collection(Collections.users).doc(followeeId);
-  const followerRef = db.collection(Collections.users).doc(followerId);
-  // Composite id so the (a,b) pair is unique — also makes unfollow a single-doc delete.
-  const followDocId = `${followerId}_${followeeId}`;
-  const followRef = db.collection(Collections.follows).doc(followDocId);
+  const [followee, follower] = await Promise.all([
+    prisma.user.findUnique({ where: { id: followeeId }, select: { id: true } }),
+    prisma.user.findUnique({ where: { id: followerId }, select: { id: true, full_name: true } })
+  ]);
+  if (!followee) throw NotFound("User to follow not found");
+  if (!follower) throw NotFound("Follower not found");
 
-  const result = await db.runTransaction(async (tx) => {
-    const [followeeSnap, followerSnap, existingSnap] = await Promise.all([
-      tx.get(followeeRef),
-      tx.get(followerRef),
-      tx.get(followRef)
-    ]);
-    if (!followeeSnap.exists) throw NotFound("User to follow not found");
-    if (!followerSnap.exists) throw NotFound("Follower not found");
-    if (existingSnap.exists) return { already: true };
+  const existing = await prisma.follow.findUnique({
+    where: { follower_id_followee_id: { follower_id: followerId, followee_id: followeeId } },
+    select: { follower_id: true }
+  });
+  if (existing) return { ok: true };
 
-    tx.set(followRef, {
-      id: followDocId,
-      follower_id: followerId,
-      followee_id: followeeId,
-      created_at: now()
-    });
-    tx.update(followeeRef, { follower_count: FieldValue.increment(1), updated_at: now() });
-    tx.update(followerRef, { following_count: FieldValue.increment(1), updated_at: now() });
-    return { already: false, followerName: (followerSnap.data() as UserDoc).full_name };
+  await prisma.$transaction([
+    prisma.follow.create({ data: { follower_id: followerId, followee_id: followeeId } }),
+    prisma.user.update({ where: { id: followeeId }, data: { follower_count: { increment: 1 } } }),
+    prisma.user.update({ where: { id: followerId }, data: { following_count: { increment: 1 } } })
+  ]);
+
+  await createNotification({
+    user_id: followeeId,
+    type: "new_follower",
+    title: "New follower",
+    body: `${follower.full_name} started following you.`,
+    link: `/profile/${followerId}`
   });
 
-  if (!result.already) {
-    await createNotification({
-      user_id: followeeId,
-      type: "new_follower",
-      title: "New follower",
-      body: `${result.followerName} started following you.`,
-      link: `/profile/${followerId}`
-    });
-  }
   return { ok: true };
 }
 
 export async function unfollow(followerId: string, followeeId: string) {
   if (followerId === followeeId) throw BadRequest("Invalid request");
 
-  const followDocId = `${followerId}_${followeeId}`;
-  const followRef = db.collection(Collections.follows).doc(followDocId);
-  const followeeRef = db.collection(Collections.users).doc(followeeId);
-  const followerRef = db.collection(Collections.users).doc(followerId);
-
-  await db.runTransaction(async (tx) => {
-    const existing = await tx.get(followRef);
-    if (!existing.exists) return;
-    tx.delete(followRef);
-    tx.update(followeeRef, { follower_count: FieldValue.increment(-1), updated_at: now() });
-    tx.update(followerRef, { following_count: FieldValue.increment(-1), updated_at: now() });
+  const existing = await prisma.follow.findUnique({
+    where: { follower_id_followee_id: { follower_id: followerId, followee_id: followeeId } },
+    select: { follower_id: true }
   });
+  if (!existing) return { ok: true };
+
+  await prisma.$transaction([
+    prisma.follow.delete({ where: { follower_id_followee_id: { follower_id: followerId, followee_id: followeeId } } }),
+    prisma.user.update({ where: { id: followeeId }, data: { follower_count: { decrement: 1 } } }),
+    prisma.user.update({ where: { id: followerId }, data: { following_count: { decrement: 1 } } })
+  ]);
+
   return { ok: true };
 }
 
 export async function isFollowing(followerId: string, followeeId: string) {
-  const snap = await db.collection(Collections.follows).doc(`${followerId}_${followeeId}`).get();
-  return snap.exists;
+  const r = await prisma.follow.findUnique({
+    where: { follower_id_followee_id: { follower_id: followerId, followee_id: followeeId } },
+    select: { follower_id: true }
+  });
+  return Boolean(r);
 }
 
-export async function listFollowers(userId: string, limit = 50, _cursor?: string) {
-  const snap = await db
-    .collection(Collections.follows)
-    .where("followee_id", "==", userId)
-    .limit(limit)
-    .get();
-  const docs = snap.docs.sort((a, b) => b.get("created_at") - a.get("created_at"));
-  const ids = docs.map((d) => d.get("follower_id"));
-  const users = await fetchUsersByIds(ids as string[]);
-  return { items: users, next_cursor: null };
-}
-
-export async function listFollowing(userId: string, limit = 50, _cursor?: string) {
-  const snap = await db
-    .collection(Collections.follows)
-    .where("follower_id", "==", userId)
-    .limit(limit)
-    .get();
-  const docs = snap.docs.sort((a, b) => b.get("created_at") - a.get("created_at"));
-  const ids = docs.map((d) => d.get("followee_id"));
-  const users = await fetchUsersByIds(ids as string[]);
-  return { items: users, next_cursor: null };
-}
-
-async function fetchUsersByIds(ids: string[]) {
-  if (ids.length === 0) return [];
-  // Firestore "in" supports up to 30 values — chunk if necessary.
-  const chunks: string[][] = [];
-  for (let i = 0; i < ids.length; i += 30) chunks.push(ids.slice(i, i + 30));
-  const results = await Promise.all(
-    chunks.map((c) => db.collection(Collections.users).where("id", "in", c).get())
-  );
-  const out: any[] = [];
-  for (const r of results) {
-    for (const d of r.docs) {
-      const u = d.data() as UserDoc;
-      out.push({
-        id: u.id,
-        full_name: u.full_name,
-        role: u.role,
-        profile_photo_url: u.profile_photo_url,
-        verification: u.verification,
-        bio: u.bio,
-        country: u.country,
-        city: u.city
-      });
+export async function listFollowers(userId: string, limit = 50) {
+  const follows = await prisma.follow.findMany({
+    where: { followee_id: userId },
+    orderBy: { created_at: "desc" },
+    take: limit,
+    include: {
+      follower: {
+        select: {
+          id: true, full_name: true, role: true, profile_photo_url: true,
+          bio: true, country: true, city: true,
+          verification_status: true, verification_badges: true
+        }
+      }
     }
-  }
-  return out;
+  });
+  return { items: follows.map((f) => f.follower), next_cursor: null };
+}
+
+export async function listFollowing(userId: string, limit = 50) {
+  const follows = await prisma.follow.findMany({
+    where: { follower_id: userId },
+    orderBy: { created_at: "desc" },
+    take: limit,
+    include: {
+      followee: {
+        select: {
+          id: true, full_name: true, role: true, profile_photo_url: true,
+          bio: true, country: true, city: true,
+          verification_status: true, verification_badges: true
+        }
+      }
+    }
+  });
+  return { items: follows.map((f) => f.followee), next_cursor: null };
 }

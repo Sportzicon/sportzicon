@@ -1,37 +1,29 @@
-import { db } from "../../src/config/firestore";
+import { prisma } from "../../src/config/prisma";
 
-// Wipe every doc in every collection between tests. Safe only against the emulator.
-const COLLECTIONS = [
-  "users",
-  "organizations",
-  "opportunities",
-  "applications",
-  "conversations",
-  "messages",
-  "notifications",
-  "verifications",
-  "reports",
-  "follows",
-  "posts",
-  "reels",
-  "blogs",
-  "comments",
-  "audit_logs",
-  "email_verifications",
-  "password_resets",
-  "refresh_tokens"
-];
-
-export async function resetFirestore() {
-  if (!process.env.FIRESTORE_EMULATOR_HOST) {
-    throw new Error("Refusing to wipe Firestore - emulator not configured");
+// Truncates all tables between tests. Safe only against a test database.
+export async function resetDatabase() {
+  if (!process.env.DATABASE_URL?.includes("localhost") && !process.env.DATABASE_URL?.includes("test")) {
+    throw new Error("Refusing to truncate — DATABASE_URL does not look like a local/test database");
   }
-  await Promise.all(
-    COLLECTIONS.map(async (c) => {
-      const snap = await db.collection(c).limit(500).get();
-      const batch = db.batch();
-      snap.docs.forEach((d) => batch.delete(d.ref));
-      if (!snap.empty) await batch.commit();
-    })
-  );
+  await prisma.auditLog.deleteMany();
+  await prisma.report.deleteMany();
+  await prisma.notification.deleteMany();
+  await prisma.message.deleteMany();
+  await prisma.conversation.deleteMany();
+  await prisma.comment.deleteMany();
+  await prisma.blogLike.deleteMany();
+  await prisma.reelLike.deleteMany();
+  await prisma.postLike.deleteMany();
+  await prisma.blog.deleteMany();
+  await prisma.reel.deleteMany();
+  await prisma.post.deleteMany();
+  await prisma.follow.deleteMany();
+  await prisma.application.deleteMany();
+  await prisma.opportunity.deleteMany();
+  await prisma.organization.deleteMany();
+  await prisma.refreshToken.deleteMany();
+  await prisma.passwordReset.deleteMany();
+  await prisma.emailVerification.deleteMany();
+  await prisma.verification.deleteMany();
+  await prisma.user.deleteMany();
 }

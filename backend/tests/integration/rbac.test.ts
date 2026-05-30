@@ -1,9 +1,9 @@
 import { api, signupAndLogin } from "../helpers/agent";
-import { resetFirestore } from "../helpers/setup";
+import { resetDatabase } from "../helpers/setup";
 
 describe("RBAC enforcement", () => {
   beforeEach(async () => {
-    await resetFirestore();
+    await resetDatabase();
   });
 
   test("unauthenticated cannot hit protected endpoints", async () => {

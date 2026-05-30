@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, getApiError } from "../api/client";
-import { PageHeader, Spinner } from "../components/UI";
+import { PageHeader, Spinner, EmptyState } from "../components/UI";
 import { CommentSection } from "../components/CommentSection";
 import { useAuthStore } from "../store/auth";
-import { Heart, Trash2, Pencil, MoreVertical, MessageCircle } from "lucide-react";
+import { Heart, Trash2, Pencil, MoreVertical, MessageCircle, Eye } from "lucide-react";
 import type { Reel } from "../types";
 
 export default function Reels() {
@@ -19,14 +19,12 @@ export default function Reels() {
   const [openCommentId, setOpenCommentId] = useState<string | null>(null);
 
   useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      const target = event.target as HTMLElement;
-      if (!target.closest('[data-menu-button]') && !target.closest('[data-menu-content]')) {
-        setMenuOpenId(null);
-      }
+    function onClickOutside(e: MouseEvent) {
+      const t = e.target as HTMLElement;
+      if (!t.closest("[data-menu-button]") && !t.closest("[data-menu-content]")) setMenuOpenId(null);
     }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
   }, []);
 
   const q = useQuery({
@@ -40,29 +38,18 @@ export default function Reels() {
       Object.keys(payload).forEach((k) => payload[k] === "" && delete payload[k]);
       return api.post("/reels", payload);
     },
-    onSuccess: () => {
-      setOpen(false);
-      setForm({ video_url: "", thumbnail_url: "", caption: "", sport: "" });
-      qc.invalidateQueries({ queryKey: ["reels"] });
-    },
+    onSuccess: () => { setOpen(false); setForm({ video_url: "", thumbnail_url: "", caption: "", sport: "" }); qc.invalidateQueries({ queryKey: ["reels"] }); },
     onError: (e) => setErr(getApiError(e).message)
   });
 
   const update = useMutation({
-    mutationFn: async ({ id, caption }: { id: string; caption: string }) =>
-      api.put(`/reels/${id}`, { caption }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["reels"] });
-      setEditingId(null);
-    }
+    mutationFn: async ({ id, caption }: { id: string; caption: string }) => api.put(`/reels/${id}`, { caption }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["reels"] }); setEditingId(null); }
   });
 
   const deleteReel = useMutation({
     mutationFn: async (id: string) => api.delete(`/reels/${id}`),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["reels"] });
-      setPendingDeleteId(null);
-    }
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["reels"] }); setPendingDeleteId(null); }
   });
 
   const like = useMutation({
@@ -71,130 +58,135 @@ export default function Reels() {
   });
 
   return (
-    <div className="space-y-4">
-      <PageHeader title="Reels" subtitle="Short videos — highlights, drills, technique."
-        action={<button className="btn-primary" onClick={() => setOpen(true)}>Post a reel</button>}
+    <div className="space-y-5">
+      <PageHeader
+        title="Reels"
+        subtitle="Highlights · drills · technique"
+        action={<button className="btn-accent" onClick={() => setOpen(true)}>+ Post a reel</button>}
       />
+
       {open && (
-        <div className="card card-body space-y-3">
-          <h3 className="font-semibold">New reel</h3>
-          <input className="input" placeholder="Video URL (mp4/webm/mov)" value={form.video_url} onChange={(e) => setForm({ ...form, video_url: e.target.value })} />
-          <input className="input" placeholder="Thumbnail URL (optional)" value={form.thumbnail_url} onChange={(e) => setForm({ ...form, thumbnail_url: e.target.value })} />
-          <input className="input" placeholder="Sport" value={form.sport} onChange={(e) => setForm({ ...form, sport: e.target.value })} />
-          <textarea className="input" rows={2} placeholder="Caption" value={form.caption} onChange={(e) => setForm({ ...form, caption: e.target.value })} />
-          {err && <div className="text-sm text-red-700">{err}</div>}
-          <div className="flex gap-2">
-            <button className="btn-primary" disabled={create.isPending} onClick={() => create.mutate()}>Post</button>
-            <button className="btn-secondary" onClick={() => setOpen(false)}>Cancel</button>
+        <div className="panel p-5 space-y-4 animate-fadein">
+          <div className="kicker">New reel</div>
+          <div className="grid sm:grid-cols-2 gap-3">
+            <label className="block">
+              <span className="label">Video URL *</span>
+              <input className="input" placeholder="mp4 / webm / mov" value={form.video_url} onChange={(e) => setForm({ ...form, video_url: e.target.value })} />
+            </label>
+            <label className="block">
+              <span className="label">Thumbnail URL</span>
+              <input className="input" placeholder="Optional" value={form.thumbnail_url} onChange={(e) => setForm({ ...form, thumbnail_url: e.target.value })} />
+            </label>
+            <label className="block">
+              <span className="label">Sport</span>
+              <input className="input" placeholder="e.g. Cricket" value={form.sport} onChange={(e) => setForm({ ...form, sport: e.target.value })} />
+            </label>
+            <label className="block">
+              <span className="label">Caption</span>
+              <input className="input" placeholder="Describe the clip" value={form.caption} onChange={(e) => setForm({ ...form, caption: e.target.value })} />
+            </label>
           </div>
-          <p className="text-xs text-slate-500">Tip: Upload your video first via the media API to get a stable URL.</p>
+          {err && <div className="text-sm text-red-700 rounded bg-red-50 p-3">{err}</div>}
+          <div className="flex gap-2 justify-end pt-1">
+            <button className="btn-secondary" onClick={() => setOpen(false)}>Cancel</button>
+            <button className="btn-primary" disabled={create.isPending || !form.video_url} onClick={() => create.mutate()}>
+              {create.isPending ? "Posting…" : "Post reel →"}
+            </button>
+          </div>
         </div>
       )}
-      {q.isLoading ? <Spinner /> : (
+
+      {q.isLoading ? (
+        <div className="panel p-8 flex justify-center"><Spinner className="text-brand-500" /></div>
+      ) : !q.data?.length ? (
+        <EmptyState title="No reels yet" hint="Post match highlights, training clips or technique breakdowns." />
+      ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {q.data?.map((r) => (
-            <div key={r.id} className="card overflow-hidden">
-              <div className="aspect-[9/16] bg-black relative">
-                <video src={r.video_url} poster={r.thumbnail_url} controls className="h-full w-full" />
+          {q.data.map((r) => (
+            <div key={r.id} className="panel overflow-hidden">
+              <div className="aspect-[9/16] bg-ink relative">
+                <video src={r.video_url} poster={r.thumbnail_url || undefined} controls className="h-full w-full" />
+                {r.sport && (
+                  <span className="absolute top-2 left-2 badge bg-ink/70 text-paper border-transparent">{r.sport}</span>
+                )}
                 {user?.id === r.author_id && (
                   <div className="absolute top-2 right-2">
                     <button
                       data-menu-button
                       onClick={() => setMenuOpenId(menuOpenId === r.id ? null : r.id)}
-                      className="bg-slate-800 hover:bg-slate-900 text-white p-2 rounded transition"
-                      title="More options"
+                      className="bg-black/50 hover:bg-black/70 text-white p-2 rounded transition"
                     >
                       <MoreVertical className="h-4 w-4" />
                     </button>
                     {menuOpenId === r.id && (
-                      <div data-menu-content className="absolute right-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg z-10 min-w-40">
+                      <div data-menu-content className="absolute right-0 mt-1 panel shadow-pop z-10 min-w-36">
                         <button
-                          onClick={() => {
-                            setEditingId(r.id);
-                            setMenuOpenId(null);
-                          }}
-                          className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2 border-b border-slate-100 rounded-t-lg"
+                          onClick={() => { setEditingId(r.id); setMenuOpenId(null); }}
+                          className="w-full flex items-center gap-2 px-4 py-2.5 text-[12.5px] text-ink hover:bg-fill border-b border-hairsoft"
                         >
-                          <Pencil className="h-4 w-4" /> Edit caption
+                          <Pencil className="h-3.5 w-3.5" /> Edit caption
                         </button>
                         <button
-                          onClick={() => {
-                            setPendingDeleteId(r.id);
-                            setMenuOpenId(null);
-                          }}
-                          className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 rounded-b-lg"
+                          onClick={() => { setPendingDeleteId(r.id); setMenuOpenId(null); }}
+                          className="w-full flex items-center gap-2 px-4 py-2.5 text-[12.5px] text-red-600 hover:bg-red-50"
                         >
-                          <Trash2 className="h-4 w-4" /> Delete
+                          <Trash2 className="h-3.5 w-3.5" /> Delete
                         </button>
                       </div>
                     )}
                   </div>
                 )}
               </div>
-              <div className="p-3 text-sm space-y-2">
-                <div className="font-medium">{r.author_name}</div>
+
+              <div className="p-4 space-y-3">
+                <div className="font-semibold text-[13.5px] text-ink">{r.author_name}</div>
 
                 {editingId === r.id ? (
                   <div className="flex gap-2">
-                    <input
-                      id={`edit-${r.id}`}
-                      defaultValue={r.caption || ""}
-                      className="input flex-1 text-sm"
-                    />
+                    <input id={`edit-${r.id}`} defaultValue={r.caption || ""} className="input flex-1 text-sm" />
                     <button
                       onClick={() => {
-                        const input = document.getElementById(`edit-${r.id}`) as HTMLInputElement;
-                        update.mutate({ id: r.id, caption: input.value });
+                        const el = document.getElementById(`edit-${r.id}`) as HTMLInputElement;
+                        update.mutate({ id: r.id, caption: el.value });
                       }}
                       disabled={update.isPending}
-                      className="btn-primary btn-sm"
-                    >
-                      Save
-                    </button>
-                    <button onClick={() => setEditingId(null)} className="btn-secondary btn-sm">
-                      Cancel
-                    </button>
+                      className="btn-primary"
+                    >Save</button>
+                    <button onClick={() => setEditingId(null)} className="btn-secondary">✕</button>
                   </div>
-                ) : (
-                  <>
-                    {r.caption && <p className="text-slate-600">{r.caption}</p>}
-                    {pendingDeleteId === r.id && (
-                      <div className="bg-red-50 p-2 rounded flex gap-2 items-center">
-                        <span className="text-xs text-red-900">Delete reel?</span>
-                        <button
-                          onClick={() => deleteReel.mutate(r.id)}
-                          disabled={deleteReel.isPending}
-                          className="btn-danger btn-sm"
-                        >
-                          Confirm
-                        </button>
-                        <button onClick={() => setPendingDeleteId(null)} className="btn-secondary btn-sm">
-                          Cancel
-                        </button>
-                      </div>
-                    )}
-                  </>
+                ) : r.caption ? (
+                  <p className="text-sm text-ink-70 leading-snug">{r.caption}</p>
+                ) : null}
+
+                {pendingDeleteId === r.id && (
+                  <div className="flex items-center gap-2 rounded bg-red-50 border border-red-200 p-3">
+                    <span className="text-[12.5px] text-red-900 flex-1">Delete this reel?</span>
+                    <button onClick={() => deleteReel.mutate(r.id)} disabled={deleteReel.isPending} className="btn-danger">Confirm</button>
+                    <button onClick={() => setPendingDeleteId(null)} className="btn-secondary">Cancel</button>
+                  </div>
                 )}
 
-                <div className="mt-2 flex items-center gap-3 text-slate-600 text-xs">
-                  <button onClick={() => like.mutate(r.id)} className="inline-flex items-center gap-1 hover:text-brand-700">
-                    <Heart className="h-4 w-4" /> {r.like_count}
+                <div className="flex items-center gap-4 pt-2 border-t border-hairsoft">
+                  <button onClick={() => like.mutate(r.id)} className="font-mononum text-[11px] text-ink-sub hover:text-brand-500 flex items-center gap-1">
+                    <Heart className="h-3.5 w-3.5" /> {r.like_count}
                   </button>
                   <button
                     onClick={() => setOpenCommentId(openCommentId === r.id ? null : r.id)}
-                    className="inline-flex items-center gap-1 hover:text-brand-700"
+                    className="font-mononum text-[11px] text-ink-sub hover:text-brand-500 flex items-center gap-1"
                   >
-                    <MessageCircle className="h-4 w-4" /> {r.comment_count}
+                    <MessageCircle className="h-3.5 w-3.5" /> {r.comment_count}
                   </button>
-                  <span>{r.view_count} views</span>
+                  <span className="font-mononum text-[11px] text-ink-faint flex items-center gap-1 ml-auto">
+                    <Eye className="h-3.5 w-3.5" /> {r.view_count}
+                  </span>
                 </div>
+
                 {openCommentId === r.id && (
-                  <CommentSection parentType="reel" parentId={r.id} commentCount={r.comment_count} showForm={true} />
+                  <CommentSection parentType="reel" parentId={r.id} commentCount={r.comment_count} showForm />
                 )}
               </div>
             </div>
           ))}
-          {!q.data?.length && <div className="card card-body text-sm text-slate-600 sm:col-span-2 lg:col-span-3">No reels yet.</div>}
         </div>
       )}
     </div>

@@ -1,87 +1,65 @@
-import { FieldValue } from "@google-cloud/firestore";
-import { db, Collections } from "../../config/firestore";
-import { BadRequest, Forbidden, NotFound } from "../../utils/errors";
-import { newId, now, slugify } from "../../utils/ids";
-import type { BlogDoc, UserDoc } from "../../types/domain";
+import { prisma } from "../../config/prisma";
+import { Forbidden, NotFound } from "../../utils/errors";
+import { slugify } from "../../utils/ids";
 
 async function uniqueSlug(base: string): Promise<string> {
   const root = slugify(base) || "post";
   for (let i = 0; i < 6; i++) {
     const candidate = i === 0 ? root : `${root}-${i + 1}`;
-    const snap = await db.collection(Collections.blogs).where("slug", "==", candidate).limit(1).get();
-    if (snap.empty) return candidate;
+    const existing = await prisma.blog.findUnique({ where: { slug: candidate }, select: { id: true } });
+    if (!existing) return candidate;
   }
   return `${root}-${Date.now().toString(36)}`;
 }
 
-export async function createBlog(authorId: string, input: any, authorName?: string) {
-  let author: Partial<UserDoc> = { id: authorId };
-  const userSnap = await db.collection(Collections.users).doc(authorId).get();
-  if (userSnap.exists) {
-    const userData = userSnap.data() as UserDoc;
-    author.full_name = userData.full_name;
-  } else if (authorName) {
-    author.full_name = authorName;
-  } else {
-    author.full_name = "Unknown";
-  }
+export async function createBlog(authorId: string, input: Record<string, unknown>) {
+  const author = await prisma.user.findUnique({ where: { id: authorId }, select: { id: true } });
+  if (!author) throw NotFound("Author not found");
 
-  const id = newId();
-  const slug = await uniqueSlug(input.title);
+  const slug = await uniqueSlug(input.title as string);
   const isPublished = input.status === "published";
-  const doc: BlogDoc = {
-    id,
-    author_id: author.id!,
-    author_name: author.full_name || "Unknown",
-    title: input.title,
-    title_lower: String(input.title).toLowerCase(),
-    slug,
-    cover_image_url: input.cover_image_url,
-    excerpt: input.excerpt ?? input.body_markdown.replace(/[#*`>_-]/g, "").slice(0, 240),
-    body_markdown: input.body_markdown,
-    tags: input.tags ?? [],
-    sport: input.sport,
-    status: isPublished ? "published" : "draft",
-    like_count: 0,
-    comment_count: 0,
-    view_count: 0,
-    published_at: isPublished ? now() : undefined,
-    created_at: now(),
-    updated_at: now()
-  };
-  await db.collection(Collections.blogs).doc(id).set(doc);
-  return doc;
+
+  return prisma.blog.create({
+    data: {
+      author_id: authorId,
+      title: input.title as string,
+      slug,
+      cover_image_url: input.cover_image_url as string | undefined,
+      excerpt: (input.excerpt as string) ?? (input.body_markdown as string).replace(/[#*`>_-]/g, "").slice(0, 240),
+      body_markdown: input.body_markdown as string,
+      tags: (input.tags as string[]) ?? [],
+      sport: input.sport as string | undefined,
+      status: isPublished ? "published" : "draft",
+      published_at: isPublished ? new Date() : undefined
+    }
+  });
 }
 
-export async function updateBlog(id: string, actorId: string, isAdmin: boolean, patch: any) {
-  const ref = db.collection(Collections.blogs).doc(id);
-  const snap = await ref.get();
-  if (!snap.exists) throw NotFound("Blog not found");
-  const b = snap.data() as BlogDoc;
-  if (b.author_id !== actorId && !isAdmin) throw Forbidden("Cannot edit another user's blog");
-  const update: any = { updated_at: now() };
+export async function updateBlog(id: string, actorId: string, isAdmin: boolean, patch: Record<string, unknown>) {
+  const blog = await prisma.blog.findUnique({ where: { id } });
+  if (!blog) throw NotFound("Blog not found");
+  if (blog.author_id !== actorId && !isAdmin) throw Forbidden("Cannot edit another user's blog");
+
+  const data: Record<string, unknown> = {};
   if (patch.title) {
-    update.title = patch.title;
-    update.title_lower = patch.title.toLowerCase();
+    data.title = patch.title;
   }
   for (const k of ["body_markdown", "excerpt", "cover_image_url", "tags", "sport"]) {
-    if (patch[k] !== undefined) update[k] = patch[k];
+    if (patch[k] !== undefined) data[k] = patch[k];
   }
   if (patch.status) {
-    if (patch.status === "published" && b.status !== "published") update.published_at = now();
-    update.status = patch.status;
+    if (patch.status === "published" && blog.status !== "published") data.published_at = new Date();
+    data.status = patch.status;
   }
-  await ref.update(update);
-  return { ...b, ...update };
+
+  return prisma.blog.update({ where: { id }, data });
 }
 
 export async function deleteBlog(id: string, actorId: string, isAdmin: boolean) {
-  const ref = db.collection(Collections.blogs).doc(id);
-  const snap = await ref.get();
-  if (!snap.exists) throw NotFound("Blog not found");
-  const b = snap.data() as BlogDoc;
-  if (b.author_id !== actorId && !isAdmin) throw Forbidden();
-  await ref.delete();
+  const blog = await prisma.blog.findUnique({ where: { id }, select: { author_id: true } });
+  if (!blog) throw NotFound("Blog not found");
+  if (blog.author_id !== actorId && !isAdmin) throw Forbidden("Cannot delete another user's blog");
+  await prisma.blog.delete({ where: { id } });
   return { ok: true };
 }
 
@@ -89,59 +67,66 @@ export async function listBlogs(q: {
   author_id?: string;
   tag?: string;
   sport?: string;
-  status?: "draft" | "published";
+  status?: string;
   limit: number;
   cursor?: string;
 }) {
-  let query: FirebaseFirestore.Query = db.collection(Collections.blogs);
-  query = query.where("status", "==", q.status ?? "published");
-  if (q.author_id) query = query.where("author_id", "==", q.author_id);
-  if (q.sport) query = query.where("sport", "==", q.sport);
-  query = query.orderBy("created_at", "desc").limit(q.limit);
-  if (q.cursor) query = query.startAfter(Number(q.cursor));
-  const snap = await query.get();
-  let items = snap.docs.map((d) => d.data() as BlogDoc);
-  if (q.tag) items = items.filter((b) => b.tags?.includes(q.tag!));
-  return {
-    items,
-    next_cursor: snap.docs.length === q.limit ? String(snap.docs[snap.docs.length - 1].get("created_at")) : null
-  };
+  const where: Record<string, unknown> = { status: q.status ?? "published" };
+  if (q.author_id) where.author_id = q.author_id;
+  if (q.sport) where.sport = q.sport;
+  if (q.tag) where.tags = { has: q.tag };
+
+  const items = await prisma.blog.findMany({
+    where,
+    orderBy: { created_at: "desc" },
+    take: q.limit + 1,
+    ...(q.cursor ? { cursor: { id: q.cursor }, skip: 1 } : {}),
+    include: { author: { select: { id: true, full_name: true, profile_photo_url: true } } }
+  });
+
+  const hasMore = items.length > q.limit;
+  const page = hasMore ? items.slice(0, q.limit) : items;
+  return { items: page, next_cursor: hasMore ? page[page.length - 1].id : null };
 }
 
 export async function getBlog(idOrSlug: string) {
-  // Try id first, then slug.
-  const byId = await db.collection(Collections.blogs).doc(idOrSlug).get();
-  if (byId.exists) return enrich(byId.data() as BlogDoc, byId.ref);
-  const bySlug = await db.collection(Collections.blogs).where("slug", "==", idOrSlug).limit(1).get();
-  if (bySlug.empty) throw NotFound("Blog not found");
-  return enrich(bySlug.docs[0].data() as BlogDoc, bySlug.docs[0].ref);
-}
-
-async function enrich(b: BlogDoc, ref: FirebaseFirestore.DocumentReference) {
-  await ref.update({ view_count: FieldValue.increment(1) }).catch(() => undefined);
-  return { ...b, view_count: (b.view_count ?? 0) + 1 };
+  const blog = await prisma.blog.findFirst({
+    where: { OR: [{ id: idOrSlug }, { slug: idOrSlug }] },
+    include: { author: { select: { id: true, full_name: true, profile_photo_url: true } } }
+  });
+  if (!blog) throw NotFound("Blog not found");
+  // Fire-and-forget view count increment
+  prisma.blog.update({ where: { id: blog.id }, data: { view_count: { increment: 1 } } }).catch(() => undefined);
+  return { ...blog, view_count: blog.view_count + 1 };
 }
 
 export async function likeBlog(id: string, userId: string) {
-  const ref = db.collection(Collections.blogs).doc(id);
-  const likeRef = ref.collection("likes").doc(userId);
-  await db.runTransaction(async (tx) => {
-    const ex = await tx.get(likeRef);
-    if (ex.exists) return;
-    tx.set(likeRef, { user_id: userId, created_at: now() });
-    tx.update(ref, { like_count: FieldValue.increment(1) });
+  const exists = await prisma.blog.findUnique({ where: { id }, select: { id: true } });
+  if (!exists) throw NotFound("Blog not found");
+
+  const already = await prisma.blogLike.findUnique({
+    where: { blog_id_user_id: { blog_id: id, user_id: userId } },
+    select: { blog_id: true }
   });
+  if (already) return { ok: true };
+
+  await prisma.$transaction([
+    prisma.blogLike.create({ data: { blog_id: id, user_id: userId } }),
+    prisma.blog.update({ where: { id }, data: { like_count: { increment: 1 } } })
+  ]);
   return { ok: true };
 }
 
 export async function unlikeBlog(id: string, userId: string) {
-  const ref = db.collection(Collections.blogs).doc(id);
-  const likeRef = ref.collection("likes").doc(userId);
-  await db.runTransaction(async (tx) => {
-    const ex = await tx.get(likeRef);
-    if (!ex.exists) return;
-    tx.delete(likeRef);
-    tx.update(ref, { like_count: FieldValue.increment(-1) });
+  const already = await prisma.blogLike.findUnique({
+    where: { blog_id_user_id: { blog_id: id, user_id: userId } },
+    select: { blog_id: true }
   });
+  if (!already) return { ok: true };
+
+  await prisma.$transaction([
+    prisma.blogLike.delete({ where: { blog_id_user_id: { blog_id: id, user_id: userId } } }),
+    prisma.blog.update({ where: { id }, data: { like_count: { decrement: 1 } } })
+  ]);
   return { ok: true };
 }

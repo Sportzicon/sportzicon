@@ -1,23 +1,24 @@
-import { db, Collections } from "../../config/firestore";
-import type { OpportunityDoc, OrganizationDoc, UserDoc } from "../../types/domain";
+import { prisma } from "../../config/prisma";
+import type { User, Organization, Opportunity } from "@prisma/client";
 
-// NOTE: Firestore has no native full-text search. For Phase 1 we do:
-//   1. Indexed equality / range filters server-side.
-//   2. A simple case-insensitive substring filter applied in-memory for keyword `q`.
-// This works fine up to a few thousand candidates. The SRS Section 3.3 calls
-// out Algolia/Elasticsearch as the Phase-2 upgrade path; the API shape here
-// is compatible with either.
+// Phase 1: indexed SQL filters server-side + case-insensitive substring in-memory.
+// Phase 2 upgrade path: replace in-memory text filter with pg full-text search (tsvector).
 
-const ranked = <T extends { verification?: { status?: string }; updated_at?: number }>(items: T[]) => {
-  return items
-    .slice()
-    .sort((a, b) => {
-      const va = a.verification?.status === "approved" ? 1 : 0;
-      const vb = b.verification?.status === "approved" ? 1 : 0;
-      if (va !== vb) return vb - va;
-      return (b.updated_at ?? 0) - (a.updated_at ?? 0);
-    });
-};
+function rankPlayers(items: User[]) {
+  return items.sort((a, b) => {
+    const va = a.verification_status === "approved" ? 1 : 0;
+    const vb = b.verification_status === "approved" ? 1 : 0;
+    return va !== vb ? vb - va : b.updated_at.getTime() - a.updated_at.getTime();
+  });
+}
+
+function rankOrgs(items: Organization[]) {
+  return items.sort((a, b) => {
+    const va = a.verification_status === "approved" ? 1 : 0;
+    const vb = b.verification_status === "approved" ? 1 : 0;
+    return va !== vb ? vb - va : b.updated_at.getTime() - a.updated_at.getTime();
+  });
+}
 
 export async function searchPlayers(q: {
   q?: string;
@@ -33,23 +34,38 @@ export async function searchPlayers(q: {
   verified?: boolean;
   limit: number;
 }) {
-  let query: FirebaseFirestore.Query = db
-    .collection(Collections.users)
-    .where("role", "==", "athlete");
-  if (q.country) query = query.where("country", "==", q.country);
-  if (q.state) query = query.where("state", "==", q.state);
-  if (q.city) query = query.where("city", "==", q.city);
-  if (q.gender) query = query.where("gender", "==", q.gender);
-  if (q.sport) query = query.where("athlete.primary_sport", "==", q.sport);
-  if (q.experience_level) query = query.where("athlete.experience_level", "==", q.experience_level);
-  if (q.availability) query = query.where("athlete.availability", "==", q.availability);
-  query = query.limit(Math.min(q.limit * 3, 500));
+  const where: Record<string, unknown> = { role: "athlete" };
+  if (q.country) where.country = q.country;
+  if (q.state) where.state = q.state;
+  if (q.city) where.city = q.city;
+  if (q.gender) where.gender = q.gender;
+  if (q.verified) where.verification_status = "approved";
 
-  const snap = await query.get();
-  let items = snap.docs.map((d) => d.data() as UserDoc);
+  let items = await prisma.user.findMany({
+    where,
+    take: Math.min(q.limit * 3, 500)
+  });
 
-  if (q.verified) items = items.filter((u) => u.verification?.status === "approved");
-  if (q.age_min || q.age_max) {
+  // In-memory filters for JSON fields and age
+  if (q.sport) {
+    items = items.filter((u) => {
+      const d = u.athlete_data as Record<string, unknown> | null;
+      return d?.primary_sport === q.sport;
+    });
+  }
+  if (q.experience_level) {
+    items = items.filter((u) => {
+      const d = u.athlete_data as Record<string, unknown> | null;
+      return d?.experience_level === q.experience_level;
+    });
+  }
+  if (q.availability) {
+    items = items.filter((u) => {
+      const d = u.athlete_data as Record<string, unknown> | null;
+      return d?.availability === q.availability;
+    });
+  }
+  if (q.age_min != null || q.age_max != null) {
     items = items.filter((u) => {
       if (!u.dob) return false;
       const age = Math.floor((Date.now() - new Date(u.dob).getTime()) / (365.25 * 24 * 3600 * 1000));
@@ -60,16 +76,17 @@ export async function searchPlayers(q: {
   }
   if (q.q) {
     const needle = q.q.toLowerCase();
-    items = items.filter(
-      (u) =>
+    items = items.filter((u) => {
+      const d = u.athlete_data as Record<string, unknown> | null;
+      return (
         u.full_name_lower?.includes(needle) ||
-        (u.bio?.toLowerCase().includes(needle) ?? false) ||
-        (u.athlete?.primary_sport?.toLowerCase().includes(needle) ?? false)
-    );
+        u.bio?.toLowerCase().includes(needle) ||
+        String(d?.primary_sport ?? "").toLowerCase().includes(needle)
+      );
+    });
   }
 
-  const sorted = ranked(items).slice(0, q.limit);
-  return sorted.map((u) => publicCard(u));
+  return rankPlayers(items).slice(0, q.limit).map(playerCard);
 }
 
 export async function searchClubs(q: {
@@ -78,30 +95,28 @@ export async function searchClubs(q: {
   country?: string;
   state?: string;
   city?: string;
-  org_type?: "club" | "academy" | "both";
+  org_type?: string;
   verified?: boolean;
   limit: number;
 }) {
-  let query: FirebaseFirestore.Query = db.collection(Collections.organizations);
-  if (q.country) query = query.where("country", "==", q.country);
-  if (q.state) query = query.where("state", "==", q.state);
-  if (q.city) query = query.where("city", "==", q.city);
-  if (q.org_type) query = query.where("org_type", "==", q.org_type);
-  query = query.limit(Math.min(q.limit * 3, 500));
+  const where: Record<string, unknown> = {};
+  if (q.country) where.country = q.country;
+  if (q.state) where.state = q.state;
+  if (q.city) where.city = q.city;
+  if (q.org_type) where.org_type = q.org_type;
+  if (q.verified) where.verification_status = "approved";
 
-  const snap = await query.get();
-  let items = snap.docs.map((d) => d.data() as OrganizationDoc);
-  if (q.sport) items = items.filter((o) => o.sport_categories?.includes(q.sport!));
-  if (q.verified) items = items.filter((o) => o.verification?.status === "approved");
+  let items = await prisma.organization.findMany({ where, take: Math.min(q.limit * 3, 500) });
+
+  if (q.sport) items = items.filter((o) => o.sport_categories.includes(q.sport!));
   if (q.q) {
     const needle = q.q.toLowerCase();
     items = items.filter(
-      (o) =>
-        o.org_name_lower?.includes(needle) ||
-        (o.description?.toLowerCase().includes(needle) ?? false)
+      (o) => o.org_name_lower?.includes(needle) || o.description?.toLowerCase().includes(needle)
     );
   }
-  return ranked(items).slice(0, q.limit);
+
+  return rankOrgs(items).slice(0, q.limit);
 }
 
 export async function searchOpportunities(q: {
@@ -113,29 +128,34 @@ export async function searchOpportunities(q: {
   status?: string;
   limit: number;
 }) {
-  let query: FirebaseFirestore.Query = db.collection(Collections.opportunities);
-  query = query.where("status", "==", q.status ?? "open");
-  if (q.sport) query = query.where("sport", "==", q.sport);
-  if (q.type) query = query.where("type", "==", q.type);
-  if (q.country) query = query.where("country", "==", q.country);
-  if (q.city) query = query.where("city", "==", q.city);
-  query = query.orderBy("created_at", "desc").limit(Math.min(q.limit * 3, 500));
+  const where: Record<string, unknown> = { status: q.status ?? "open" };
+  if (q.sport) where.sport = q.sport;
+  if (q.type) where.type = q.type;
+  if (q.country) where.country = q.country;
+  if (q.city) where.city = q.city;
 
-  const snap = await query.get();
-  let items = snap.docs.map((d) => d.data() as OpportunityDoc);
+  let items = await prisma.opportunity.findMany({
+    where,
+    orderBy: { created_at: "desc" },
+    take: Math.min(q.limit * 3, 500),
+    include: { organization: { select: { org_name: true } } }
+  });
+
   if (q.q) {
     const needle = q.q.toLowerCase();
     items = items.filter(
       (o) =>
         o.title_lower?.includes(needle) ||
-        (o.description?.toLowerCase().includes(needle) ?? false) ||
-        (o.org_name?.toLowerCase().includes(needle) ?? false)
+        o.description?.toLowerCase().includes(needle) ||
+        o.organization.org_name.toLowerCase().includes(needle)
     );
   }
+
   return items.slice(0, q.limit);
 }
 
-function publicCard(u: UserDoc) {
+function playerCard(u: User) {
+  const d = u.athlete_data as Record<string, unknown> | null;
   return {
     id: u.id,
     full_name: u.full_name,
@@ -146,13 +166,13 @@ function publicCard(u: UserDoc) {
     state: u.state,
     city: u.city,
     bio: u.bio,
-    verification: u.verification,
-    athlete: u.athlete
+    verification: { status: u.verification_status, badges: u.verification_badges },
+    athlete: d
       ? {
-          primary_sport: u.athlete.primary_sport,
-          position: u.athlete.position,
-          experience_level: u.athlete.experience_level,
-          availability: u.athlete.availability
+          primary_sport: d.primary_sport,
+          position: d.position,
+          experience_level: d.experience_level,
+          availability: d.availability
         }
       : undefined,
     follower_count: u.follower_count

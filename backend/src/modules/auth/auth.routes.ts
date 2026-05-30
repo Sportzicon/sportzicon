@@ -107,10 +107,8 @@ router.get(
   "/me",
   requireAuth,
   asyncHandler(async (req, res) => {
-    const { db, Collections } = await import("../../config/firestore");
-    const snap = await db.collection(Collections.users).doc(req.user!.sub).get();
-    if (!snap.exists) return res.status(404).json({ error: { code: "NOT_FOUND", message: "User not found" } });
-    res.json({ user: svc.publicUser(snap.data() as any) });
+    const user = await import("../../modules/users/users.service").then((m) => m.getUserById(req.user!.sub));
+    res.json({ user });
   })
 );
 

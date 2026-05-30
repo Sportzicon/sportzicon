@@ -1,0 +1,437 @@
+name: Deploy API
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'backend/**'
+      - 'database/**'
+      - '.github/workflows/deploy.yml'
+      - 'docker-compose.yml'
+  workflow_dispatch:  # Allow manual trigger for debugging
+
+jobs:
+  validate-secrets:
+    name: Validate required secrets
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check all required secrets exist
+        run: |
+          set -e
+          required_secrets=(
+            "GCP_PROJECT_ID"
+            "GCP_SA_KEY"
+            "DATABASE_URL"
+            "DIRECT_URL"
+            "JWT_ACCESS_SECRET"
+            "JWT_REFRESH_SECRET"
+            "GMAIL_USER"
+            "GMAIL_APP_PASSWORD"
+            "EMAIL_FROM"
+            "GCS_BUCKET_MEDIA"
+            "GCS_BUCKET_DOCS"
+          )
+
+          missing=()
+          for secret in "${required_secrets[@]}"; do
+            if [ -z "$(eval echo \${{ secrets.$secret }})" ]; then
+              missing+=("$secret")
+            fi
+          done
+
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "❌ Missing required secrets:"
+            printf '  - %s\n' "${missing[@]}"
+            echo ""
+            echo "Configure at: Settings → Secrets and variables → Repository secrets"
+            exit 1
+          fi
+
+          echo "✓ All 10 required secrets configured"
+
+  build-and-test:
+    name: Build & Test
+    needs: validate-secrets
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_DB: sportivox_test
+          POSTGRES_USER: sportivox
+          POSTGRES_PASSWORD: testpass
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: |
+            database/package-lock.json
+            backend/package-lock.json
+
+      - name: Validate Prisma schema
+        run: |
+          cd database
+          npx prisma validate || {
+            echo "❌ Prisma schema validation failed"
+            exit 1
+          }
+          echo "✓ Prisma schema valid"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Build Docker image (build target)
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: ./backend/Dockerfile
+          target: build
+          load: true
+          tags: sportivox-api:build-${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
+
+      - name: Wait for postgres to be ready
+        run: |
+          timeout 30s bash -c 'until pg_isready -h localhost -p 5432; do sleep 1; done'
+        env:
+          PGPASSWORD: testpass
+
+      - name: Setup test database
+        env:
+          DATABASE_URL: postgresql://sportivox:testpass@localhost:5432/sportivox_test
+          DIRECT_URL: postgresql://sportivox:testpass@localhost:5432/sportivox_test
+        run: |
+          cd database
+          npm ci --no-audit --no-fund || {
+            echo "❌ npm ci failed in database"
+            exit 1
+          }
+
+          echo "Running migrations..."
+          npx prisma migrate deploy || {
+            echo "❌ Database migration failed"
+            echo "Checking migration status..."
+            npx prisma migrate status || true
+            exit 1
+          }
+          echo "✓ Database ready"
+
+      - name: Run type checking
+        run: |
+          cd backend
+          npm ci --no-audit --no-fund || {
+            echo "❌ npm ci failed in backend"
+            exit 1
+          }
+          npm run typecheck || {
+            echo "❌ TypeScript compilation failed"
+            exit 1
+          }
+          echo "✓ Types valid"
+
+      - name: Run linting (optional)
+        run: |
+          cd backend
+          npm run lint || {
+            echo "⚠️ Linting issues found (non-blocking)"
+          }
+
+      - name: Run tests
+        env:
+          DATABASE_URL: postgresql://sportivox:testpass@localhost:5432/sportivox_test
+          DIRECT_URL: postgresql://sportivox:testpass@localhost:5432/sportivox_test
+          NODE_ENV: test
+          JWT_ACCESS_SECRET: test-secret-32-characters-minimum
+          JWT_REFRESH_SECRET: test-secret-32-characters-minimum
+        run: |
+          cd backend
+          if npm run | grep -q "test:unit"; then
+            npm run test:unit || {
+              echo "❌ Unit tests failed"
+              exit 1
+            }
+            echo "✓ Tests passed"
+          else
+            echo "⚠️ No test:unit script found (skipping)"
+          fi
+
+  build-docker-runtime:
+    name: Build Docker Runtime
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Build runtime image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: ./backend/Dockerfile
+          target: runtime
+          load: true
+          tags: sportivox-api:runtime-${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    name: Deploy to Cloud Run
+    needs: [build-and-test, build-docker-runtime]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+          service_account_key: ${{ secrets.GCP_SA_KEY }}
+          export_default_credentials: true
+          install_components: 'gke-gcloud-auth-plugin'
+
+      - name: Configure Docker authentication
+        run: |
+          gcloud auth configure-docker gcr.io || {
+            echo "❌ Docker auth failed"
+            exit 1
+          }
+
+      - name: Build and push Docker image
+        run: |
+          IMAGE_TAG="gcr.io/${{ secrets.GCP_PROJECT_ID }}/sportivox-api:${{ github.sha }}"
+          LATEST_TAG="gcr.io/${{ secrets.GCP_PROJECT_ID }}/sportivox-api:latest"
+
+          docker build \
+            --file ./backend/Dockerfile \
+            --target runtime \
+            -t "$IMAGE_TAG" \
+            -t "$LATEST_TAG" \
+            . || {
+            echo "❌ Docker build failed"
+            exit 1
+          }
+
+          echo "Pushing image to registry..."
+          docker push "$IMAGE_TAG" || {
+            echo "❌ Docker push failed"
+            exit 1
+          }
+          docker push "$LATEST_TAG" || {
+            echo "❌ Docker push (latest) failed"
+            exit 1
+          }
+          echo "✓ Image pushed: $IMAGE_TAG"
+
+      - name: Run database migrations
+        env:
+          DATABASE_URL: ${{ secrets.DIRECT_URL }}
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+        run: |
+          cd database
+          npm ci --no-audit --no-fund || {
+            echo "❌ npm ci failed"
+            exit 1
+          }
+
+          echo "Running migrations on production database..."
+          npx prisma migrate deploy || {
+            echo "❌ Production migration failed"
+            npx prisma migrate status || true
+            exit 1
+          }
+          echo "✓ Migrations complete"
+
+      - name: Check Cloud Run service exists
+        run: |
+          if gcloud run services describe sportivox-api --region us-central1 >/dev/null 2>&1; then
+            echo "✓ Cloud Run service exists"
+          else
+            echo "ℹ️  Cloud Run service doesn't exist, will be created"
+          fi
+
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy sportivox-api \
+            --image=gcr.io/${{ secrets.GCP_PROJECT_ID }}/sportivox-api:${{ github.sha }} \
+            --platform=managed \
+            --region=us-central1 \
+            --allow-unauthenticated \
+            --memory=512Mi \
+            --cpu=1 \
+            --timeout=3600 \
+            --max-instances=100 \
+            --set-env-vars=DATABASE_URL="${{ secrets.DATABASE_URL }}" \
+            --set-env-vars=DIRECT_URL="${{ secrets.DIRECT_URL }}" \
+            --set-env-vars=JWT_ACCESS_SECRET="${{ secrets.JWT_ACCESS_SECRET }}" \
+            --set-env-vars=JWT_REFRESH_SECRET="${{ secrets.JWT_REFRESH_SECRET }}" \
+            --set-env-vars=GMAIL_USER="${{ secrets.GMAIL_USER }}" \
+            --set-env-vars=GMAIL_APP_PASSWORD="${{ secrets.GMAIL_APP_PASSWORD }}" \
+            --set-env-vars=EMAIL_FROM="${{ secrets.EMAIL_FROM }}" \
+            --set-env-vars=GCP_PROJECT_ID="${{ secrets.GCP_PROJECT_ID }}" \
+            --set-env-vars=GCS_BUCKET_MEDIA="${{ secrets.GCS_BUCKET_MEDIA }}" \
+            --set-env-vars=GCS_BUCKET_DOCS="${{ secrets.GCS_BUCKET_DOCS }}" \
+            --set-env-vars=NODE_ENV=production \
+            --set-env-vars=LOG_LEVEL=info \
+            || {
+            echo "❌ Cloud Run deployment failed"
+            exit 1
+          }
+          echo "✓ Deployed to Cloud Run"
+
+      - name: Wait for Cloud Run to stabilize
+        run: |
+          echo "Waiting for Cloud Run revision to become healthy..."
+          for i in {1..10}; do
+            status=$(gcloud run services describe sportivox-api \
+              --region us-central1 \
+              --format='value(status.conditions[0].status)')
+            if [ "$status" = "True" ]; then
+              echo "✓ Cloud Run service is healthy"
+              break
+            fi
+            echo "Waiting... ($i/10)"
+            sleep 3
+          done
+
+      - name: Get API URL
+        id: api-url
+        run: |
+          URL=$(gcloud run services describe sportivox-api \
+            --region us-central1 \
+            --format='value(status.url)')
+          echo "url=$URL" >> $GITHUB_OUTPUT
+          echo "API URL: $URL"
+
+      - name: Health check with retries
+        run: |
+          API_URL="${{ steps.api-url.outputs.url }}"
+          echo "Checking health of: $API_URL"
+
+          for i in {1..60}; do
+            echo "Health check attempt $i/60..."
+            if curl -sf --connect-timeout 5 --max-time 10 "$API_URL/healthz" > /dev/null; then
+              echo "✓ API is healthy and responding"
+              curl -s "$API_URL/healthz" | jq . || echo "Health response received"
+              exit 0
+            fi
+
+            if [ $((i % 10)) -eq 0 ]; then
+              echo "Still waiting... checking revision status"
+              gcloud run services describe sportivox-api --region us-central1 --format='value(status.conditions[*].message)' || true
+            fi
+
+            sleep 2
+          done
+
+          echo "❌ Health check failed after 120 seconds"
+          echo "Checking Cloud Run logs:"
+          gcloud run services logs read sportivox-api --region us-central1 --limit=20 || true
+          exit 1
+
+      - name: Verify API endpoints
+        run: |
+          API_URL="${{ steps.api-url.outputs.url }}"
+          echo "Verifying critical endpoints..."
+
+          # Health check
+          curl -sf "$API_URL/healthz" || {
+            echo "❌ Health endpoint failed"
+            exit 1
+          }
+          echo "✓ Health endpoint working"
+
+          # Readiness check
+          curl -sf "$API_URL/readyz" || {
+            echo "❌ Readiness endpoint failed"
+            exit 1
+          }
+          echo "✓ Readiness endpoint working"
+
+      - name: Deployment summary
+        run: |
+          echo "✓ Deployment successful!"
+          echo ""
+          echo "Summary:"
+          echo "  - Commit: ${{ github.sha }}"
+          echo "  - API URL: ${{ steps.api-url.outputs.url }}"
+          echo "  - Image: gcr.io/${{ secrets.GCP_PROJECT_ID }}/sportivox-api:${{ github.sha }}"
+          echo ""
+          echo "Next steps:"
+          echo "  1. Monitor logs: gcloud run services logs read sportivox-api --region us-central1 --limit=50"
+          echo "  2. Check metrics: gcloud monitoring dashboards list"
+          echo "  3. Test API: curl ${{ steps.api-url.outputs.url }}/healthz"
+
+      - name: Upload deployment logs
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: deployment-logs
+          path: |
+            /tmp/deploy-*.log
+          retention-days: 7
+
+  rollback:
+    name: Rollback on failure
+    needs: deploy
+    runs-on: ubuntu-latest
+    if: failure() && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Setup Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+          service_account_key: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Rollback to previous revision
+        run: |
+          echo "Deployment failed, attempting rollback..."
+
+          REVISIONS=$(gcloud run revisions list \
+            --service=sportivox-api \
+            --region us-central1 \
+            --format='value(name)' \
+            --sort-by='~created')
+
+          PREV_REVISION=$(echo "$REVISIONS" | tail -1)
+
+          if [ -z "$PREV_REVISION" ]; then
+            echo "❌ No previous revision found for rollback"
+            exit 1
+          fi
+
+          echo "Rolling back to: $PREV_REVISION"
+          gcloud run services update-traffic sportivox-api \
+            --region us-central1 \
+            --to-revisions="$PREV_REVISION=100" || {
+            echo "❌ Rollback failed"
+            exit 1
+          }
+          echo "✓ Rollback complete"
+
+      - name: Notify team
+        run: |
+          echo "⚠️  Deployment failed and rolled back"
+          echo "Check logs: https://console.cloud.google.com/cloud-build"

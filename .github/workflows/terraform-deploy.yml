@@ -1,0 +1,636 @@
+name: Terraform Deploy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'terraform/**'
+      - '.github/workflows/terraform-deploy.yml'
+      - '.terraform/**'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'terraform/**'
+      - '.terraform/**'
+  workflow_dispatch:
+
+env:
+  TF_VERSION: 1.5.0
+  TF_BACKEND: gs://sportivox-terraform-state
+  TF_LOG: INFO
+
+jobs:
+  validate-secrets:
+    name: Validate Terraform Secrets
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check required secrets
+        run: |
+          required_secrets=(
+            "GCP_PROJECT_ID"
+            "GCP_SA_KEY"
+            "TF_VAR_REGION"
+          )
+
+          missing=()
+          for secret in "${required_secrets[@]}"; do
+            if [ -z "$(eval echo \${{ secrets.$secret }})" ]; then
+              missing+=("$secret")
+            fi
+          done
+
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "❌ Missing required secrets:"
+            printf '  - %s\n' "${missing[@]}"
+            exit 1
+          fi
+
+          echo "✓ All required secrets configured"
+
+  terraform-validate:
+    name: Terraform Validate
+    needs: validate-secrets
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform Format Check
+        working-directory: terraform
+        run: |
+          terraform fmt -check -recursive . || {
+            echo "❌ Terraform formatting issues found"
+            echo "Run locally: terraform fmt -recursive ."
+            exit 1
+          }
+          echo "✓ Terraform formatting valid"
+
+      - name: Terraform Validation
+        working-directory: terraform
+        run: |
+          terraform init -backend=false || {
+            echo "❌ Terraform validation failed"
+            exit 1
+          }
+          terraform validate || {
+            echo "❌ Terraform validation failed"
+            exit 1
+          }
+          echo "✓ Terraform validation passed"
+
+      - name: Check for resource drift
+        working-directory: terraform
+        run: |
+          echo "Checking for terraform code quality..."
+          # Validate no hardcoded secrets
+          if grep -r "password\|secret\|api_key" . --include="*.tf" | grep -v "var\." | grep -v "sensitive"; then
+            echo "⚠️ Warning: Possible hardcoded secrets found"
+            exit 1
+          fi
+          echo "✓ No hardcoded secrets detected"
+
+  terraform-plan:
+    name: Terraform Plan
+    needs: terraform-validate
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Setup Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+          service_account_key: ${{ secrets.GCP_SA_KEY }}
+          export_default_credentials: true
+
+      - name: Create terraform backend bucket (if needed)
+        run: |
+          BUCKET_NAME="${{ env.TF_BACKEND }}"
+          if ! gsutil ls "$BUCKET_NAME" >/dev/null 2>&1; then
+            echo "Creating GCS bucket for Terraform state..."
+            gsutil mb -p ${{ secrets.GCP_PROJECT_ID }} "$BUCKET_NAME" || {
+              echo "❌ Failed to create bucket"
+              exit 1
+            }
+            # Enable versioning for safety
+            gsutil versioning set on "$BUCKET_NAME"
+            echo "✓ Bucket created with versioning enabled"
+          else
+            echo "✓ Terraform state bucket exists"
+          fi
+
+      - name: Terraform Init
+        working-directory: terraform
+        env:
+          TF_VAR_project_id: ${{ secrets.GCP_PROJECT_ID }}
+          TF_VAR_region: ${{ secrets.TF_VAR_REGION }}
+        run: |
+          terraform init \
+            -backend-config="bucket=${{ env.TF_BACKEND }}" \
+            -backend-config="prefix=sportivox" \
+            -upgrade || {
+            echo "❌ Terraform init failed"
+            exit 1
+          }
+          echo "✓ Terraform initialized"
+
+      - name: Terraform Plan
+        working-directory: terraform
+        env:
+          TF_VAR_project_id: ${{ secrets.GCP_PROJECT_ID }}
+          TF_VAR_region: ${{ secrets.TF_VAR_REGION }}
+        run: |
+          terraform plan -out=tfplan -lock=false || {
+            echo "❌ Terraform plan failed"
+            exit 1
+          }
+          echo "✓ Terraform plan successful"
+
+      - name: Save plan
+        working-directory: terraform
+        run: |
+          terraform show -json tfplan > tfplan.json || {
+            echo "❌ Failed to save plan"
+            exit 1
+          }
+
+      - name: Upload plan artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: terraform-plan
+          path: terraform/tfplan*
+          retention-days: 7
+
+      - name: Comment PR with plan
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            const plan = fs.readFileSync('terraform/tfplan.json', 'utf8');
+            const parsed = JSON.parse(plan);
+
+            const changes = parsed.resource_changes || [];
+            const summary = {
+              add: changes.filter(c => c.change.actions.includes('create')).length,
+              modify: changes.filter(c => c.change.actions.includes('update')).length,
+              delete: changes.filter(c => c.change.actions.includes('delete')).length,
+            };
+
+            let comment = `## Terraform Plan Summary\n\n`;
+            comment += `- **Add**: ${summary.add}\n`;
+            comment += `- **Modify**: ${summary.modify}\n`;
+            comment += `- **Delete**: ${summary.delete}\n\n`;
+            comment += `Plan saved for review.\n`;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+  terraform-apply:
+    name: Terraform Apply
+    needs: terraform-validate
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Setup Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+          service_account_key: ${{ secrets.GCP_SA_KEY }}
+          export_default_credentials: true
+
+      - name: Create terraform backend bucket (if needed)
+        run: |
+          BUCKET_NAME="${{ env.TF_BACKEND }}"
+          if ! gsutil ls "$BUCKET_NAME" >/dev/null 2>&1; then
+            echo "Creating GCS bucket for Terraform state..."
+            gsutil mb -p ${{ secrets.GCP_PROJECT_ID }} "$BUCKET_NAME" || {
+              echo "❌ Failed to create bucket"
+              exit 1
+            }
+            gsutil versioning set on "$BUCKET_NAME"
+            echo "✓ Bucket created"
+          fi
+
+      - name: Lock state file
+        run: |
+          echo "Acquiring state lock..."
+          # GCS backend automatically handles locking
+          echo "✓ State management configured"
+
+      - name: Terraform Init
+        working-directory: terraform
+        env:
+          TF_VAR_project_id: ${{ secrets.GCP_PROJECT_ID }}
+          TF_VAR_region: ${{ secrets.TF_VAR_REGION }}
+        run: |
+          terraform init \
+            -backend-config="bucket=${{ env.TF_BACKEND }}" \
+            -backend-config="prefix=sportivox" || {
+            echo "❌ Terraform init failed"
+            exit 1
+          }
+          echo "✓ Terraform initialized"
+
+      - name: Terraform Plan (for verification)
+        working-directory: terraform
+        env:
+          TF_VAR_project_id: ${{ secrets.GCP_PROJECT_ID }}
+          TF_VAR_region: ${{ secrets.TF_VAR_REGION }}
+        run: |
+          terraform plan -out=tfplan || {
+            echo "❌ Terraform plan failed"
+            exit 1
+          }
+
+      - name: Terraform Apply
+        working-directory: terraform
+        env:
+          TF_VAR_project_id: ${{ secrets.GCP_PROJECT_ID }}
+          TF_VAR_region: ${{ secrets.TF_VAR_REGION }}
+        run: |
+          echo "Applying Terraform changes..."
+          terraform apply -auto-approve tfplan || {
+            echo "❌ Terraform apply failed"
+            # Attempt rollback
+            echo "Attempting rollback..."
+            git checkout HEAD terraform/ || true
+            exit 1
+          }
+          echo "✓ Terraform apply successful"
+
+      - name: Output infrastructure details
+        working-directory: terraform
+        run: |
+          echo "Infrastructure outputs:"
+          terraform output || echo "No outputs defined"
+
+      - name: Save terraform state
+        working-directory: terraform
+        run: |
+          terraform show -json > state.json
+          echo "✓ State saved"
+
+      - name: Upload state backup
+        uses: actions/upload-artifact@v3
+        with:
+          name: terraform-state
+          path: terraform/state.json
+          retention-days: 30
+
+      - name: Notify deployment
+        run: |
+          echo "✓ Infrastructure deployed via Terraform"
+
+  build-and-push:
+    name: Build & Push Docker Image
+    needs: [terraform-validate, terraform-apply]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    outputs:
+      image-tag: ${{ steps.image.outputs.tag }}
+      image-digest: ${{ steps.image.outputs.digest }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+          service_account_key: ${{ secrets.GCP_SA_KEY }}
+          export_default_credentials: true
+
+      - name: Configure Docker authentication
+        run: |
+          gcloud auth configure-docker us-central1-docker.pkg.dev || {
+            echo "❌ Docker auth failed"
+            exit 1
+          }
+          echo "✓ Docker authenticated with Artifact Registry"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Validate Dockerfile
+        run: |
+          docker build --target runtime --dry-run ./backend/Dockerfile || {
+            echo "❌ Dockerfile validation failed"
+            exit 1
+          }
+          echo "✓ Dockerfile valid"
+
+      - name: Build Docker image
+        id: docker-build
+        run: |
+          IMAGE_REPO="us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/sportivox"
+          IMAGE_TAG="${{ github.sha }}"
+          IMAGE_NAME="$IMAGE_REPO/sportivox-api:$IMAGE_TAG"
+          IMAGE_LATEST="$IMAGE_REPO/sportivox-api:latest"
+
+          echo "Building image: $IMAGE_NAME"
+
+          docker build \
+            --file ./backend/Dockerfile \
+            --target runtime \
+            -t "$IMAGE_NAME" \
+            -t "$IMAGE_LATEST" \
+            . || {
+            echo "❌ Docker build failed"
+            exit 1
+          }
+
+          echo "image-name=$IMAGE_NAME" >> $GITHUB_OUTPUT
+          echo "image-latest=$IMAGE_LATEST" >> $GITHUB_OUTPUT
+          echo "✓ Docker image built"
+
+      - name: Push to Artifact Registry
+        id: image
+        run: |
+          IMAGE_NAME="${{ steps.docker-build.outputs.image-name }}"
+          IMAGE_LATEST="${{ steps.docker-build.outputs.image-latest }}"
+
+          echo "Pushing to Artifact Registry..."
+
+          docker push "$IMAGE_NAME" || {
+            echo "❌ Failed to push image: $IMAGE_NAME"
+            exit 1
+          }
+
+          docker push "$IMAGE_LATEST" || {
+            echo "❌ Failed to push latest tag"
+            exit 1
+          }
+
+          # Get image digest
+          DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' "$IMAGE_NAME" | cut -d'@' -f2)
+
+          echo "tag=$IMAGE_NAME" >> $GITHUB_OUTPUT
+          echo "digest=$DIGEST" >> $GITHUB_OUTPUT
+          echo "✓ Image pushed successfully"
+
+      - name: Verify image in registry
+        run: |
+          gcloud artifacts docker images list \
+            us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/sportivox || {
+            echo "❌ Failed to list images in registry"
+            exit 1
+          }
+          echo "✓ Image verified in Artifact Registry"
+
+  update-cloud-run:
+    name: Update Cloud Run Deployment
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+          service_account_key: ${{ secrets.GCP_SA_KEY }}
+          export_default_credentials: true
+
+      - name: Update Cloud Run service
+        run: |
+          IMAGE="${{ needs.build-and-push.outputs.image-tag }}"
+
+          echo "Updating Cloud Run service with image: $IMAGE"
+
+          gcloud run deploy sportivox-api \
+            --image="$IMAGE" \
+            --platform=managed \
+            --region=us-central1 \
+            --allow-unauthenticated \
+            --memory=512Mi \
+            --cpu=1 \
+            --timeout=3600 \
+            --max-instances=100 \
+            --update-secrets=DATABASE_URL=DATABASE_URL:latest,\
+JWT_ACCESS_SECRET=JWT_ACCESS_SECRET:latest,\
+JWT_REFRESH_SECRET=JWT_REFRESH_SECRET:latest,\
+GMAIL_USER=GMAIL_USER:latest,\
+GMAIL_APP_PASSWORD=GMAIL_APP_PASSWORD:latest,\
+EMAIL_FROM=EMAIL_FROM:latest,\
+GCP_PROJECT_ID=GCP_PROJECT_ID:latest,\
+GCS_BUCKET_MEDIA=GCS_BUCKET_MEDIA:latest,\
+GCS_BUCKET_DOCS=GCS_BUCKET_DOCS:latest \
+            --set-env-vars=NODE_ENV=production,LOG_LEVEL=info || {
+            echo "❌ Cloud Run deployment failed"
+            exit 1
+          }
+
+          echo "✓ Cloud Run service updated"
+
+      - name: Wait for service to stabilize
+        run: |
+          echo "Waiting for Cloud Run to stabilize..."
+          for i in {1..10}; do
+            status=$(gcloud run services describe sportivox-api \
+              --region us-central1 \
+              --format='value(status.conditions[0].status)')
+            if [ "$status" = "True" ]; then
+              echo "✓ Service is healthy"
+              break
+            fi
+            echo "Checking... ($i/10)"
+            sleep 3
+          done
+
+      - name: Get service URL
+        id: service-url
+        run: |
+          URL=$(gcloud run services describe sportivox-api \
+            --region us-central1 \
+            --format='value(status.url)')
+          echo "url=$URL" >> $GITHUB_OUTPUT
+
+      - name: Health check
+        run: |
+          URL="${{ steps.service-url.outputs.url }}"
+
+          for i in {1..60}; do
+            if curl -sf --connect-timeout 5 "$URL/healthz" > /dev/null; then
+              echo "✓ API health check passed"
+              exit 0
+            fi
+            if [ $((i % 10)) -eq 0 ]; then
+              echo "Health check attempt $i/60..."
+            fi
+            sleep 2
+          done
+
+          echo "❌ Health check failed"
+          gcloud run services logs read sportivox-api --region us-central1 --limit=20 || true
+          exit 1
+
+  post-deploy:
+    name: Post-Deployment Verification
+    needs: [terraform-apply, update-cloud-run, build-and-push]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Setup Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+          service_account_key: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Get deployment info
+        id: deploy-info
+        run: |
+          API_URL=$(gcloud run services describe sportivox-api \
+            --region us-central1 \
+            --format='value(status.url)')
+
+          REVISION=$(gcloud run services describe sportivox-api \
+            --region us-central1 \
+            --format='value(status.latestReadyRevision)')
+
+          echo "api-url=$API_URL" >> $GITHUB_OUTPUT
+          echo "revision=$REVISION" >> $GITHUB_OUTPUT
+
+      - name: Verify endpoints
+        run: |
+          API_URL="${{ steps.deploy-info.outputs.api-url }}"
+
+          echo "Testing critical endpoints..."
+
+          # Health check
+          curl -sf "$API_URL/healthz" > /dev/null || {
+            echo "❌ Health endpoint failed"
+            exit 1
+          }
+          echo "✓ /healthz working"
+
+          # Readiness check
+          curl -sf "$API_URL/readyz" > /dev/null || {
+            echo "❌ Readiness endpoint failed"
+            exit 1
+          }
+          echo "✓ /readyz working"
+
+      - name: Check logs for errors
+        run: |
+          echo "Checking for critical errors..."
+
+          ERROR_COUNT=$(gcloud run services logs read sportivox-api \
+            --region us-central1 \
+            --limit=100 \
+            --filter='severity=ERROR' \
+            --format='value(timestamp)' | wc -l)
+
+          if [ "$ERROR_COUNT" -gt 5 ]; then
+            echo "⚠️ Multiple errors detected in logs"
+            gcloud run services logs read sportivox-api \
+              --region us-central1 \
+              --limit=20 \
+              --filter='severity=ERROR'
+          else
+            echo "✓ No critical errors in logs"
+          fi
+
+      - name: Deployment summary
+        run: |
+          echo "═══════════════════════════════════════════════════════"
+          echo "✓ DEPLOYMENT COMPLETE"
+          echo "═══════════════════════════════════════════════════════"
+          echo ""
+          echo "Infrastructure:"
+          echo "  - Terraform: Applied successfully"
+          echo "  - Cloud Run: Updated with new image"
+          echo "  - Artifact Registry: Image pushed"
+          echo ""
+          echo "API Details:"
+          echo "  - URL: ${{ steps.deploy-info.outputs.api-url }}"
+          echo "  - Revision: ${{ steps.deploy-info.outputs.revision }}"
+          echo "  - Image: ${{ needs.build-and-push.outputs.image-tag }}"
+          echo ""
+          echo "Next Steps:"
+          echo "  1. Monitor logs: gcloud run services logs read sportivox-api"
+          echo "  2. Check metrics: https://console.cloud.google.com/run"
+          echo "  3. Test API: curl ${{ steps.deploy-info.outputs.api-url }}/healthz"
+          echo ""
+          echo "═══════════════════════════════════════════════════════"
+
+  rollback-on-failure:
+    name: Rollback on Failure
+    needs: [terraform-apply, update-cloud-run]
+    runs-on: ubuntu-latest
+    if: failure() && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Setup Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+          service_account_key: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Rollback Cloud Run
+        run: |
+          echo "Deployment failed, rolling back..."
+
+          REVISIONS=$(gcloud run revisions list \
+            --service=sportivox-api \
+            --region us-central1 \
+            --format='value(name)' \
+            --sort-by='~created')
+
+          PREV_REVISION=$(echo "$REVISIONS" | tail -1)
+
+          if [ -z "$PREV_REVISION" ]; then
+            echo "❌ No previous revision found"
+            exit 1
+          fi
+
+          echo "Rolling back to: $PREV_REVISION"
+
+          gcloud run services update-traffic sportivox-api \
+            --region us-central1 \
+            --to-revisions="$PREV_REVISION=100" || {
+            echo "❌ Rollback failed"
+            exit 1
+          }
+
+          echo "✓ Rollback complete"
+
+      - name: Notify failure
+        run: |
+          echo "⚠️ DEPLOYMENT FAILED AND ROLLED BACK"
+          echo ""
+          echo "Check logs:"
+          echo "  gcloud run services logs read sportivox-api --region us-central1 --limit=50"

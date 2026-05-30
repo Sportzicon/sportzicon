@@ -3,7 +3,23 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, getApiError } from "../api/client";
 import { useAuthStore } from "../store/auth";
-import { PageHeader, Spinner } from "../components/UI";
+import { PageHeader, Spinner, SectionHead } from "../components/UI";
+
+const TYPES = ["trial", "recruitment", "scholarship", "tournament", "coaching_job"];
+const TYPE_LABELS: Record<string, string> = {
+  trial: "Trial", recruitment: "Recruitment", scholarship: "Scholarship",
+  tournament: "Tournament", coaching_job: "Coaching Job"
+};
+
+function Field({ label, children, hint }: { label: string; children: React.ReactNode; hint?: string }) {
+  return (
+    <label className="block">
+      <span className="label">{label}</span>
+      {children}
+      {hint && <span className="lab mt-1.5 block normal-case tracking-normal text-[10.5px]">{hint}</span>}
+    </label>
+  );
+}
 
 export default function NewOpportunity() {
   const navigate = useNavigate();
@@ -17,7 +33,6 @@ export default function NewOpportunity() {
     queryKey: ["my-orgs"],
     queryFn: async () => (await api.get("/organizations/mine")).data.items as any[]
   });
-
   const oppQ = useQuery({
     queryKey: ["opp", id],
     queryFn: async () => (await api.get(`/opportunities/${id}`)).data.opportunity,
@@ -25,22 +40,10 @@ export default function NewOpportunity() {
   });
 
   const [form, setForm] = useState({
-    org_id: "",
-    title: "",
-    type: "trial",
-    sport: "",
-    description: "",
-    eligibility: "",
-    age_min: 14,
-    age_max: 35,
-    gender_eligibility: "all",
-    experience_level_required: "any",
-    country: "India",
-    state: "",
-    city: "",
-    start_date: "",
-    end_date: "",
-    application_deadline: "",
+    org_id: "", title: "", type: "trial", sport: "", description: "",
+    eligibility: "", age_min: 14, age_max: 35, gender_eligibility: "all",
+    experience_level_required: "any", country: "India", state: "", city: "",
+    start_date: "", end_date: "", application_deadline: "",
     vacancies: undefined as number | undefined
   });
   const [err, setErr] = useState<string | null>(null);
@@ -54,133 +57,170 @@ export default function NewOpportunity() {
     if (oppQ.data) {
       const opp = oppQ.data;
       setForm({
-        org_id: opp.org_id || "",
-        title: opp.title || "",
-        type: opp.type || "trial",
-        sport: opp.sport || "",
-        description: opp.description || "",
-        eligibility: opp.eligibility || "",
-        age_min: opp.age_min || 14,
-        age_max: opp.age_max || 35,
+        org_id: opp.org_id || "", title: opp.title || "", type: opp.type || "trial",
+        sport: opp.sport || "", description: opp.description || "", eligibility: opp.eligibility || "",
+        age_min: opp.age_min || 14, age_max: opp.age_max || 35,
         gender_eligibility: opp.gender_eligibility || "all",
         experience_level_required: opp.experience_level_required || "any",
-        country: opp.country || "India",
-        state: opp.state || "",
-        city: opp.city || "",
-        start_date: opp.start_date || "",
-        end_date: opp.end_date || "",
-        application_deadline: opp.application_deadline || "",
-        vacancies: opp.vacancies || undefined
+        country: opp.country || "India", state: opp.state || "", city: opp.city || "",
+        start_date: opp.start_date || "", end_date: opp.end_date || "",
+        application_deadline: opp.application_deadline || "", vacancies: opp.vacancies
       });
     }
   }, [oppQ.data]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    setErr(null);
-    setBusy(true);
+    setErr(null); setBusy(true);
     try {
       const payload: any = { ...form };
       Object.keys(payload).forEach((k) => (payload[k] === "" || payload[k] == null) && delete payload[k]);
       if (payload.vacancies) payload.vacancies = Number(payload.vacancies);
       payload.age_min = Number(payload.age_min);
       payload.age_max = Number(payload.age_max);
-
       const r = isEdit
         ? await api.put(`/opportunities/${id}`, payload)
         : await api.post("/opportunities", payload);
-
-      // Invalidate opportunity queries to get fresh data
       await qc.invalidateQueries({ queryKey: ["opp"] });
       await qc.invalidateQueries({ queryKey: ["opportunities"] });
-
       navigate(`/opportunities/${r.data.opportunity.id}`);
     } catch (e) {
       const er = getApiError(e);
       setErr(er.message + (er.details ? ` — ${JSON.stringify(er.details)}` : ""));
-    } finally {
-      setBusy(false);
-    }
+    } finally { setBusy(false); }
   }
 
-  if (isEdit && oppQ.isPending) return <Spinner />;
+  if (isEdit && oppQ.isPending) return <div className="flex justify-center p-12"><Spinner className="text-brand-500" /></div>;
 
   if (!isEdit && !isAdmin && !orgsQ.data?.length) {
     return (
-      <div className="card card-body">
-        <h2 className="font-semibold">Create an organization first</h2>
-        <p className="text-sm text-slate-600 mt-1">You need an organization profile before posting opportunities.</p>
-        <button className="btn-primary mt-3" onClick={() => navigate("/organizations/new")}>Create organization</button>
+      <div className="panel p-8 max-w-lg">
+        <div className="kicker">Organization required</div>
+        <h2 className="font-disp text-3xl mt-2">Create an organization first</h2>
+        <p className="text-sm text-ink-sub mt-3 leading-relaxed">You need an organization profile before posting opportunities. It helps athletes know who's behind the listing.</p>
+        <button className="btn-accent mt-5" onClick={() => navigate("/organizations/new")}>Create organization →</button>
       </div>
     );
   }
 
+  const set = (k: string, v: any) => setForm((f) => ({ ...f, [k]: v }));
+
   return (
-    <form onSubmit={submit} className="space-y-4 max-w-3xl">
-      <PageHeader title={isEdit ? "Edit opportunity" : "Post an opportunity"} subtitle="Trials, recruitment, scholarships, tournaments, coaching jobs." />
-      <section className="card card-body grid gap-3 sm:grid-cols-2">
+    <form onSubmit={submit} className="space-y-6 max-w-3xl">
+      <PageHeader
+        title={isEdit ? "Edit opportunity" : "Post an opportunity"}
+        subtitle="New listing"
+        action={
+          <div className="flex gap-2">
+            <button type="button" className="btn-ghost" onClick={() => navigate(-1)}>Cancel</button>
+            <button type="submit" className="btn-accent" disabled={busy}>
+              {busy ? (isEdit ? "Saving…" : "Publishing…") : isEdit ? "Save changes" : "Publish listing →"}
+            </button>
+          </div>
+        }
+      />
+
+      {/* Section 01 — Basics */}
+      <div className="panel p-6 space-y-4">
+        <SectionHead n="01" title="Basics" />
         {!isAdmin && (
-          <label className="sm:col-span-2"><span className="label">Organization</span>
-            <select className="input" value={form.org_id} onChange={(e) => setForm({ ...form, org_id: e.target.value })}>
+          <Field label="Organization">
+            <select className="input" value={form.org_id} onChange={(e) => set("org_id", e.target.value)}>
               {orgsQ.data!.map((o) => <option key={o.id} value={o.id}>{o.org_name}</option>)}
             </select>
-          </label>
+          </Field>
         )}
-        {isAdmin && (
-          <label className="sm:col-span-2"><span className="label">Organization (Optional)</span>
-            <select className="input" value={form.org_id} onChange={(e) => setForm({ ...form, org_id: e.target.value })}>
-              <option value="">No organization</option>
-              {orgsQ.data?.map((o) => <option key={o.id} value={o.id}>{o.org_name}</option>)}
+        <Field label="Title *">
+          <input className="input" value={form.title} onChange={(e) => set("title", e.target.value)} required placeholder="e.g. Senior Men's Trial — Season 2026" />
+        </Field>
+        <div>
+          <span className="label">Opportunity type *</span>
+          <div className="flex flex-wrap gap-2 mt-1.5">
+            {TYPES.map((t) => (
+              <button
+                key={t} type="button"
+                onClick={() => set("type", t)}
+                className={`font-mononum text-[10px] uppercase tracking-[0.08em] px-3 py-2 rounded border transition ${
+                  form.type === t ? "bg-ink text-paper border-ink" : "border-hair text-ink-sub hover:border-ink hover:text-ink"
+                }`}
+              >
+                {TYPE_LABELS[t]}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="grid sm:grid-cols-2 gap-4">
+          <Field label="Sport *">
+            <input className="input" value={form.sport} onChange={(e) => set("sport", e.target.value)} required placeholder="e.g. Cricket" />
+          </Field>
+        </div>
+        <Field label="Description *">
+          <textarea className="input" rows={4} value={form.description} onChange={(e) => set("description", e.target.value)} required placeholder="Describe the opportunity in detail…" />
+        </Field>
+      </div>
+
+      {/* Section 02 — Eligibility */}
+      <div className="panel p-6 space-y-4">
+        <SectionHead n="02" title="Eligibility & criteria" />
+        <div className="grid sm:grid-cols-2 gap-4">
+          <Field label="Age min *">
+            <input className="input font-mononum" type="number" value={form.age_min} onChange={(e) => set("age_min", e.target.value)} />
+          </Field>
+          <Field label="Age max *">
+            <input className="input font-mononum" type="number" value={form.age_max} onChange={(e) => set("age_max", e.target.value)} />
+          </Field>
+          <Field label="Gender eligibility">
+            <select className="input" value={form.gender_eligibility} onChange={(e) => set("gender_eligibility", e.target.value)}>
+              <option value="all">Open to all</option>
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+              <option value="other">Other</option>
             </select>
-          </label>
-        )}
-        <label className="sm:col-span-2"><span className="label">Title</span>
-          <input className="input" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required />
-        </label>
-        <label><span className="label">Type</span>
-          <select className="input" value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}>
-            {["trial", "recruitment", "scholarship", "tournament", "coaching_job"].map((t) => <option key={t}>{t}</option>)}
-          </select>
-        </label>
-        <label><span className="label">Sport</span>
-          <input className="input" value={form.sport} onChange={(e) => setForm({ ...form, sport: e.target.value })} required />
-        </label>
-        <label className="sm:col-span-2"><span className="label">Description</span>
-          <textarea className="input" rows={4} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} required />
-        </label>
-        <label className="sm:col-span-2"><span className="label">Eligibility</span>
-          <textarea className="input" rows={2} value={form.eligibility} onChange={(e) => setForm({ ...form, eligibility: e.target.value })} />
-        </label>
-        <label><span className="label">Age min</span>
-          <input className="input" type="number" value={form.age_min} onChange={(e) => setForm({ ...form, age_min: Number(e.target.value) })} />
-        </label>
-        <label><span className="label">Age max</span>
-          <input className="input" type="number" value={form.age_max} onChange={(e) => setForm({ ...form, age_max: Number(e.target.value) })} />
-        </label>
-        <label><span className="label">Gender eligibility</span>
-          <select className="input" value={form.gender_eligibility} onChange={(e) => setForm({ ...form, gender_eligibility: e.target.value })}>
-            <option>all</option><option>male</option><option>female</option><option>other</option>
-          </select>
-        </label>
-        <label><span className="label">Experience required</span>
-          <select className="input" value={form.experience_level_required} onChange={(e) => setForm({ ...form, experience_level_required: e.target.value })}>
-            <option>any</option><option>beginner</option><option>amateur</option><option>semi_pro</option><option>professional</option>
-          </select>
-        </label>
-        <label><span className="label">Country</span><input className="input" value={form.country} onChange={(e) => setForm({ ...form, country: e.target.value })} /></label>
-        <label><span className="label">State</span><input className="input" value={form.state} onChange={(e) => setForm({ ...form, state: e.target.value })} required /></label>
-        <label><span className="label">City</span><input className="input" value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} required /></label>
-        <label><span className="label">Vacancies</span>
-          <input className="input" type="number" value={form.vacancies ?? ""} onChange={(e) => setForm({ ...form, vacancies: e.target.value ? Number(e.target.value) : undefined })} />
-        </label>
-        <label><span className="label">Start date</span><input className="input" type="date" value={form.start_date} onChange={(e) => setForm({ ...form, start_date: e.target.value })} required /></label>
-        <label><span className="label">End date</span><input className="input" type="date" value={form.end_date} onChange={(e) => setForm({ ...form, end_date: e.target.value })} required /></label>
-        <label className="sm:col-span-2"><span className="label">Application deadline</span><input className="input" type="date" value={form.application_deadline} onChange={(e) => setForm({ ...form, application_deadline: e.target.value })} required /></label>
-      </section>
-      {err && <div className="rounded-lg bg-red-50 p-3 text-sm text-red-800">{err}</div>}
-      <button className="btn-primary" disabled={busy}>
-        {busy ? (isEdit ? "Saving..." : "Posting...") : isEdit ? "Save changes" : "Post opportunity"}
-      </button>
+          </Field>
+          <Field label="Experience level">
+            <select className="input" value={form.experience_level_required} onChange={(e) => set("experience_level_required", e.target.value)}>
+              {["any", "beginner", "amateur", "semi_pro", "professional"].map((l) => <option key={l}>{l}</option>)}
+            </select>
+          </Field>
+          <Field label="Vacancies">
+            <input className="input font-mononum" type="number" value={form.vacancies ?? ""} placeholder="Leave blank for unlimited"
+              onChange={(e) => set("vacancies", e.target.value ? Number(e.target.value) : undefined)} />
+          </Field>
+        </div>
+        <Field label="Eligibility criteria">
+          <textarea className="input" rows={2} value={form.eligibility} onChange={(e) => set("eligibility", e.target.value)} placeholder="Minimum requirements, experience, documentation…" />
+        </Field>
+      </div>
+
+      {/* Section 03 — Dates & location */}
+      <div className="panel p-6 space-y-4">
+        <SectionHead n="03" title="Dates & location" />
+        <div className="grid sm:grid-cols-3 gap-4">
+          <Field label="Start date *">
+            <input className="input font-mononum" type="date" value={form.start_date} onChange={(e) => set("start_date", e.target.value)} required />
+          </Field>
+          <Field label="End date *">
+            <input className="input font-mononum" type="date" value={form.end_date} onChange={(e) => set("end_date", e.target.value)} required />
+          </Field>
+          <Field label="Application deadline *" hint="Auto-closes at midnight on this date.">
+            <input className="input font-mononum" type="date" value={form.application_deadline} onChange={(e) => set("application_deadline", e.target.value)} required />
+          </Field>
+        </div>
+        <div className="grid sm:grid-cols-3 gap-4">
+          <Field label="Country"><input className="input" value={form.country} onChange={(e) => set("country", e.target.value)} /></Field>
+          <Field label="State *"><input className="input" value={form.state} onChange={(e) => set("state", e.target.value)} required /></Field>
+          <Field label="City *"><input className="input" value={form.city} onChange={(e) => set("city", e.target.value)} required /></Field>
+        </div>
+      </div>
+
+      {err && <div className="rounded bg-red-50 border border-red-200 p-3 text-sm text-red-800">{err}</div>}
+
+      <div className="flex justify-end gap-2 pt-2">
+        <button type="button" className="btn-ghost" onClick={() => navigate(-1)}>Cancel</button>
+        <button type="submit" className="btn-accent" disabled={busy}>
+          {busy ? (isEdit ? "Saving…" : "Publishing…") : isEdit ? "Save changes" : "Publish listing →"}
+        </button>
+      </div>
     </form>
   );
 }

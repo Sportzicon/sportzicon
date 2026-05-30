@@ -17,7 +17,20 @@ export const signupSchema = z.object({
   password: passwordSchema,
   full_name: z.string().min(2).max(120),
   phone: z.string().min(7).max(20),
-  role: z.enum(publicRoles)
+  role: z.enum(publicRoles),
+  // optional fields from onboarding step 2 (account details)
+  country: z.string().max(80).optional(),
+  state: z.string().max(80).optional(),
+  city: z.string().max(80).optional(),
+  dob: z.string().max(20).optional(),
+  gender: z.string().max(30).optional(),
+  // optional fields from onboarding step 3 (sport profile / org)
+  primary_sport: z.string().max(60).optional(),
+  position: z.string().max(80).optional(),
+  experience_level: z.string().max(40).optional(),
+  looking_for_club: z.boolean().optional(),
+  org_name: z.string().max(120).optional(),
+  org_type: z.string().max(40).optional()
 });
 
 export const loginSchema = z.object({

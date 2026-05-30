@@ -1,9 +1,9 @@
 import { api, signupAndLogin } from "../helpers/agent";
-import { resetFirestore } from "../helpers/setup";
+import { resetDatabase } from "../helpers/setup";
 
 describe("follow / unfollow", () => {
   beforeEach(async () => {
-    await resetFirestore();
+    await resetDatabase();
   });
 
   test("follow increments counts; unfollow decrements; idempotent", async () => {

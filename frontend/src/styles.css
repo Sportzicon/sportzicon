@@ -2,22 +2,87 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ==========================================================================
+   Sportivox — "Editorial Workstation" base + components.
+   ========================================================================== */
+
 @layer base {
   html, body, #root { @apply h-full; }
-  body { font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+  body {
+    font-family: "Public Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    @apply bg-paper text-ink antialiased;
+  }
+  ::selection { background: #FA4D14; color: #fff; }
+
+  h1, h2, h3 { @apply tracking-tight; }
+
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(20,17,13,.18);
+    border-radius: 10px;
+    border: 3px solid transparent;
+    background-clip: content-box;
+  }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(20,17,13,.32); background-clip: content-box; }
 }
 
 @layer components {
-  .btn { @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/50 disabled:opacity-50 disabled:cursor-not-allowed; }
-  .btn-primary { @apply btn bg-brand-600 text-white hover:bg-brand-700; }
-  .btn-secondary { @apply btn bg-white border border-slate-300 text-slate-800 hover:bg-slate-50; }
+  /* ---- typography helpers ---- */
+  .font-disp { font-family: "Oswald", "Saira Condensed", sans-serif; @apply uppercase font-semibold tracking-tight; line-height: 0.96; }
+  .font-mononum { font-family: "IBM Plex Mono", ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+  .kicker { font-family: "IBM Plex Mono", monospace; @apply text-[10.5px] font-medium uppercase text-brand-500; letter-spacing: 0.2em; }
+  .lab { font-family: "IBM Plex Mono", monospace; @apply text-[10px] uppercase text-ink-sub; letter-spacing: 0.13em; }
+
+  /* ---- buttons ---- */
+  .btn {
+    font-family: "IBM Plex Mono", monospace;
+    @apply inline-flex items-center justify-center gap-2 rounded px-4 py-2 text-[11.5px] uppercase tracking-[0.06em]
+           transition focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40
+           disabled:opacity-45 disabled:cursor-not-allowed whitespace-nowrap;
+    border: 1px solid transparent;
+  }
+  .btn-primary { @apply btn bg-ink text-paper hover:bg-black; }
+  .btn-accent { @apply btn bg-brand-500 text-white hover:bg-brand-600; }
+  .btn-secondary { @apply btn bg-transparent border-hair text-ink hover:bg-fill hover:border-ink; }
   .btn-danger { @apply btn bg-red-600 text-white hover:bg-red-700; }
-  .btn-ghost { @apply btn text-slate-700 hover:bg-slate-100; }
-  .input { @apply block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm placeholder:text-slate-400 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500; }
-  .label { @apply block text-sm font-medium text-slate-700 mb-1; }
-  .card { @apply rounded-xl border border-slate-200 bg-white shadow-sm; }
+  .btn-ghost { @apply btn bg-transparent text-ink-sub hover:bg-fill hover:text-ink; }
+
+  /* ---- inputs ---- */
+  .input {
+    @apply block w-full rounded border border-hair bg-panel px-3 py-2 text-sm text-ink shadow-sm
+           placeholder:text-ink-faint focus:border-ink focus:outline-none focus:ring-2 focus:ring-fill2;
+    font-family: "Public Sans", sans-serif;
+  }
+  .label { font-family: "IBM Plex Mono", monospace; @apply block text-[10px] uppercase tracking-[0.13em] text-ink-sub mb-1.5; }
+
+  /* ---- cards / panels ---- */
+  .card { @apply rounded border border-hair bg-panel shadow-card; }
   .card-body { @apply p-5; }
-  .badge { @apply inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700; }
-  .badge-verified { @apply inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800; }
+  .panel { @apply rounded border border-hair bg-panel; }
+  .hairline { @apply border-hair; }
+
+  /* ---- badges / pills ---- */
+  .badge {
+    font-family: "IBM Plex Mono", monospace;
+    @apply inline-flex items-center gap-1 rounded px-2 py-0.5 text-[10px] uppercase tracking-[0.08em]
+           border border-hair bg-panel text-ink-70;
+  }
+  .badge-verified {
+    font-family: "IBM Plex Mono", monospace;
+    @apply inline-flex items-center gap-1 rounded px-2 py-0.5 text-[10px] uppercase tracking-[0.08em] bg-ink text-paper;
+  }
+  .badge-verified .tick { color: #FA4D14; }
   .field-error { @apply text-xs text-red-600 mt-1; }
+
+  /* ---- section header (editorial, numbered) ---- */
+  .section-head { @apply flex items-end justify-between gap-3 pb-3 mb-4 border-b-[1.5px] border-ink; }
+
+  /* ---- skeleton ---- */
+  .skel { @apply rounded bg-fill animate-shimmer; background-image: linear-gradient(90deg,#F2F1EC 25%,#EBE9E1 37%,#F2F1EC 63%); background-size: 200% 100%; }
+
+  /* ---- striped media placeholder ---- */
+  .ph {
+    @apply rounded bg-fill relative overflow-hidden;
+    background-image: repeating-linear-gradient(135deg, rgba(20,17,13,0.10) 0 1px, transparent 1px 9px);
+  }
 }

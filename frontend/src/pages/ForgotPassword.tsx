@@ -14,29 +14,46 @@ export default function ForgotPassword() {
       await api.post("/auth/forgot-password", { email });
     } finally {
       setBusy(false);
-      setDone(true); // always show the same confirmation — don't leak which emails exist
+      setDone(true);
     }
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4">
-      <div className="card w-full max-w-md">
-        <div className="card-body">
-          <h1 className="text-xl font-semibold">Reset your password</h1>
+    <div className="min-h-screen bg-paper flex items-center justify-center px-4">
+      <div className="w-full max-w-sm">
+        <Link to="/" className="flex items-baseline gap-2 justify-center mb-10">
+          <span className="inline-flex h-7 w-7 items-center justify-center rounded bg-brand-500 font-disp text-lg text-white">S</span>
+          <span className="font-disp text-xl">Sportivox</span>
+        </Link>
+
+        <div className="panel p-8">
           {done ? (
-            <p className="mt-3 text-sm text-slate-600">
-              If an account exists for <strong>{email}</strong>, we've sent a reset link. Check your inbox.
-              <br />
-              <Link to="/login" className="text-brand-700 font-medium">Back to sign in</Link>
-            </p>
+            <div className="text-center">
+              <div className="w-14 h-14 rounded-full bg-brand-50 text-brand-500 flex items-center justify-center text-2xl mx-auto">✉</div>
+              <h1 className="font-disp text-3xl mt-5">Check your inbox</h1>
+              <p className="text-sm text-ink-sub mt-3 leading-relaxed">
+                If an account exists for <strong className="text-ink">{email}</strong>, we've sent a reset link.
+              </p>
+              <Link to="/login" className="btn-secondary mt-6 inline-flex w-full justify-center">← Back to sign in</Link>
+            </div>
           ) : (
-            <form onSubmit={submit} className="mt-4 space-y-3">
-              <div>
-                <label className="label">Email</label>
-                <input className="input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-              </div>
-              <button className="btn-primary w-full" disabled={busy}>Send reset link</button>
-            </form>
+            <>
+              <div className="kicker">Account recovery</div>
+              <h1 className="font-disp text-3xl mt-2">Reset password</h1>
+              <p className="text-sm text-ink-sub mt-2 leading-relaxed">Enter your email and we'll send a reset link if an account exists.</p>
+              <form onSubmit={submit} className="mt-6 space-y-4">
+                <label className="block">
+                  <span className="label">Email</span>
+                  <input className="input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoFocus />
+                </label>
+                <button className="btn-primary w-full" disabled={busy}>
+                  {busy ? "Sending…" : "Send reset link →"}
+                </button>
+                <div className="text-center">
+                  <Link to="/login" className="lab text-ink-sub hover:text-ink">← Back to sign in</Link>
+                </div>
+              </form>
+            </>
           )}
         </div>
       </div>

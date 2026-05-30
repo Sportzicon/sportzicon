@@ -1,5 +1,6 @@
 import request from "supertest";
 import { createApp } from "../../src/app";
+import { prisma } from "../../src/config/prisma";
 
 export const app = createApp();
 export const api = () => request(app);
@@ -21,10 +22,11 @@ export async function signupAndLogin(opts: {
   };
   await api().post("/api/v1/auth/signup").send(body).expect(201);
 
-  // Auto-verify the account via Firestore so we can log in directly.
-  const { db, Collections } = await import("../../src/config/firestore");
-  const snap = await db.collection(Collections.users).where("email_lower", "==", opts.email.toLowerCase()).get();
-  await snap.docs[0].ref.update({ email_verified: true, status: "active" });
+  // Bypass email verification for tests — mark the account directly in the DB.
+  await prisma.user.update({
+    where: { email_lower: opts.email.toLowerCase() },
+    data: { email_verified: true, status: "active" }
+  });
 
   const login = await api().post("/api/v1/auth/login").send({ email: opts.email, password }).expect(200);
   return {

@@ -1,9 +1,9 @@
 import { api, signupAndLogin } from "../helpers/agent";
-import { resetFirestore } from "../helpers/setup";
+import { resetDatabase } from "../helpers/setup";
 
 describe("posts + reels + blogs", () => {
   beforeEach(async () => {
-    await resetFirestore();
+    await resetDatabase();
   });
 
   test("post -> like -> comment lifecycle", async () => {

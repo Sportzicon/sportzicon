@@ -1,21 +1,11 @@
 # Local development stack for Sportivox.
-# Spins up: Firestore emulator, fake-gcs-server (S3-like GCS), the API, and the web app.
+# Spins up: PostgreSQL, fake-gcs-server (S3-like GCS), the API, and the web app.
 # Usage: docker compose up --build
 version: "3.9"
 
 services:
-  firestore:
-    image: mtlynch/firestore-emulator:latest
-    environment:
-      FIRESTORE_PROJECT_ID: sportivox-dev
-      PORT: 8081
-    ports:
-      - "8081:8081"
-    healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8081"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
+  # PostgreSQL moved to Supabase (cloud database)
+  # For local PostgreSQL, use: docker run -d --name postgres -e POSTGRES_PASSWORD=localdev -p 5432:5432 postgres:15-alpine
 
   gcs:
     image: fsouza/fake-gcs-server:latest
@@ -27,13 +17,14 @@ services:
 
   api:
     build:
-      context: ./backend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./backend/Dockerfile
       target: dev
     environment:
       NODE_ENV: development
       PORT: 8080
-      FIRESTORE_EMULATOR_HOST: firestore:8081
+      DATABASE_URL: postgresql://postgres.vrybsjdrftpoaexnffyv:Sportivox%402026@aws-1-ap-northeast-2.pooler.supabase.com:6543/postgres?sslmode=require&pgbouncer=true
+      DIRECT_URL: postgresql://postgres:Sportivox%402026@db.vrybsjdrftpoaexnffyv.supabase.co:5432/postgres?sslmode=require
       STORAGE_EMULATOR_HOST: http://gcs:4443
       GCP_PROJECT_ID: sportivox-dev
       GCS_BUCKET_MEDIA: sportivox-media-dev
@@ -57,9 +48,9 @@ services:
     volumes:
       - ./backend/src:/app/src
       - ./backend/tests:/app/tests
+      - ./database:/app/../database
+      - ./database:/database
     depends_on:
-      firestore:
-        condition: service_healthy
       gcs:
         condition: service_started
 

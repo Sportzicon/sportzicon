@@ -1,14 +1,41 @@
 import clsx from "clsx";
 import type { ReactNode } from "react";
 
+// ============================================================================
+// Shared UI primitives — "Editorial Workstation" skin.
+// All original exports keep identical signatures so every page compiles
+// unchanged: PageHeader, Badge, EmptyState, Spinner, StatusPill, VerifiedBadge.
+// New optional helpers (Kicker, SectionHead, Avatar, StatCard, Tabs, Placeholder)
+// are additive — adopt them where you want the full treatment.
+// ============================================================================
+
 export function PageHeader({ title, subtitle, action }: { title: string; subtitle?: string; action?: ReactNode }) {
   return (
-    <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+    <div className="mb-6 flex flex-wrap items-end justify-between gap-3 border-b-[1.5px] border-ink pb-3">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-slate-900">{title}</h1>
-        {subtitle && <p className="mt-1 text-sm text-slate-600">{subtitle}</p>}
+        {subtitle && <div className="lab mb-2 text-brand-500">{subtitle}</div>}
+        <h1 className="font-disp text-3xl text-ink">{title}</h1>
       </div>
       {action}
+    </div>
+  );
+}
+
+export function Kicker({ children, className }: { children: ReactNode; className?: string }) {
+  return <div className={clsx("kicker", className)}>{children}</div>;
+}
+
+export function SectionHead({ n, title, sub, right }: { n?: string; title: string; sub?: string; right?: ReactNode }) {
+  return (
+    <div className="section-head">
+      <div className="flex items-baseline gap-3">
+        {n && <span className="font-disp text-lg text-brand-500">{n}</span>}
+        <div>
+          <h2 className="font-disp text-2xl">{title}</h2>
+          {sub && <div className="lab mt-1.5">{sub}</div>}
+        </div>
+      </div>
+      {right}
     </div>
   );
 }
@@ -17,12 +44,12 @@ export function Badge({ children, color = "slate" }: { children: ReactNode; colo
   return (
     <span
       className={clsx(
-        "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium",
-        color === "slate" && "bg-slate-100 text-slate-700",
-        color === "emerald" && "bg-emerald-100 text-emerald-800",
-        color === "amber" && "bg-amber-100 text-amber-800",
-        color === "red" && "bg-red-100 text-red-800",
-        color === "blue" && "bg-brand-100 text-brand-800"
+        "badge",
+        color === "slate" && "bg-fill text-ink-70 border-hair",
+        color === "emerald" && "bg-emerald-50 text-emerald-800 border-emerald-200",
+        color === "amber" && "bg-amber-50 text-amber-800 border-amber-200",
+        color === "red" && "bg-red-50 text-red-800 border-red-200",
+        color === "blue" && "bg-blue-50 text-blue-800 border-blue-200"
       )}
     >
       {children}
@@ -32,9 +59,9 @@ export function Badge({ children, color = "slate" }: { children: ReactNode; colo
 
 export function EmptyState({ title, hint, action }: { title: string; hint?: string; action?: ReactNode }) {
   return (
-    <div className="card card-body text-center">
-      <h3 className="text-base font-medium text-slate-800">{title}</h3>
-      {hint && <p className="mt-1 text-sm text-slate-600">{hint}</p>}
+    <div className="card card-body text-center border-dashed">
+      <h3 className="font-disp text-xl text-ink-70">{title}</h3>
+      {hint && <p className="mx-auto mt-2 max-w-md text-sm text-ink-sub">{hint}</p>}
       {action && <div className="mt-4">{action}</div>}
     </div>
   );
@@ -50,26 +77,102 @@ export function Spinner({ className }: { className?: string }) {
 }
 
 export function StatusPill({ status }: { status: string }) {
-  const map: Record<string, "slate" | "emerald" | "amber" | "red" | "blue"> = {
-    pending: "amber",
-    shortlisted: "blue",
-    selected: "emerald",
-    rejected: "red",
-    withdrawn: "slate",
-    open: "emerald",
-    closed: "slate",
-    filled: "blue",
-    active: "emerald",
-    suspended: "red",
-    approved: "emerald",
-    unverified: "slate",
-    draft: "slate",
-    published: "emerald"
+  const map: Record<string, { c: string; bg: string; label?: string }> = {
+    pending: { c: "#B6791E", bg: "#F6ECD7" },
+    shortlisted: { c: "#2B66C9", bg: "#E2EAF8" },
+    selected: { c: "#2E7D52", bg: "#E2F0E8" },
+    rejected: { c: "#C0392B", bg: "#F8E3E0", label: "not selected" },
+    withdrawn: { c: "#726B60", bg: "#F2F1EC" },
+    open: { c: "#2E7D52", bg: "#E2F0E8" },
+    closed: { c: "#726B60", bg: "#F2F1EC" },
+    filled: { c: "#2B66C9", bg: "#E2EAF8" },
+    active: { c: "#2E7D52", bg: "#E2F0E8" },
+    suspended: { c: "#C0392B", bg: "#F8E3E0" },
+    approved: { c: "#2E7D52", bg: "#E2F0E8" },
+    unverified: { c: "#726B60", bg: "#F2F1EC" },
+    draft: { c: "#726B60", bg: "#F2F1EC" },
+    published: { c: "#2E7D52", bg: "#E2F0E8" },
+    review: { c: "#B6791E", bg: "#F6ECD7", label: "in review" }
   };
-  return <Badge color={map[status] ?? "slate"}>{status}</Badge>;
+  const s = map[status] ?? { c: "#726B60", bg: "#F2F1EC" };
+  return (
+    <span
+      className="font-mononum inline-flex items-center gap-1.5 rounded px-2 py-0.5 text-[10px] uppercase tracking-[0.08em]"
+      style={{ color: s.c, background: s.bg }}
+    >
+      <span className="h-1.5 w-1.5 rounded-full" style={{ background: s.c }} />
+      {s.label ?? status}
+    </span>
+  );
 }
 
-export function VerifiedBadge({ verification }: { verification?: { status: string; badges?: string[] } }) {
+export function VerifiedBadge({ verification, label = "verified" }: { verification?: { status: string; badges?: string[] }; label?: string }) {
   if (!verification || verification.status !== "approved") return null;
-  return <Badge color="emerald">✓ verified</Badge>;
+  return (
+    <span className="badge-verified">
+      <span className="tick">✓</span>
+      {label}
+    </span>
+  );
+}
+
+// ---- additive helpers (optional adoption) ----------------------------------
+
+// Initials avatar — square by default, ink fill when accent.
+export function Avatar({ name = "", size = 40, accent = false, square = true, className }: { name?: string; size?: number; accent?: boolean; square?: boolean; className?: string }) {
+  const ini = name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
+  return (
+    <span
+      className={clsx("font-disp inline-flex shrink-0 items-center justify-center border", square ? "rounded" : "rounded-full", className)}
+      style={{
+        width: size, height: size,
+        background: accent ? "#14110D" : "#F2F1EC",
+        color: accent ? "#F7F5EF" : "#4A453D",
+        borderColor: accent ? "#14110D" : "rgba(20,17,13,0.13)",
+        fontSize: size * 0.4
+      }}
+    >
+      {ini}
+    </span>
+  );
+}
+
+// Career headline stat card.
+export function StatCard({ k, v, big = false }: { k: string; v: ReactNode; big?: boolean }) {
+  return (
+    <div className="panel px-3.5 py-3">
+      <div className={clsx("font-disp", big ? "text-4xl" : "text-3xl")}>{v}</div>
+      <div className="lab mt-1.5">{k}</div>
+    </div>
+  );
+}
+
+// Striped media placeholder (drop-zone for real imagery).
+export function Placeholder({ label, height = 160, className }: { label?: string; height?: number; className?: string }) {
+  return (
+    <div className={clsx("ph", className)} style={{ height }}>
+      <span className="absolute left-2 top-2 h-1.5 w-1.5 bg-brand-500" />
+      {label && <span className="lab absolute bottom-2 left-2">{label}</span>}
+    </div>
+  );
+}
+
+export function Tabs({ tabs, active, onChange, className }: { tabs: { id: string; label: string }[] | string[]; active: string; onChange: (id: string) => void; className?: string }) {
+  const norm = tabs.map((t) => (typeof t === "string" ? { id: t, label: t } : t));
+  return (
+    <div className={clsx("flex gap-1 overflow-x-auto border-b border-hair", className)}>
+      {norm.map((t) => (
+        <button
+          key={t.id}
+          onClick={() => onChange(t.id)}
+          className={clsx(
+            "font-mononum whitespace-nowrap border-b-2 px-3.5 py-2.5 text-[11.5px] transition",
+            active === t.id ? "border-brand-500 font-semibold text-ink" : "border-transparent text-ink-sub hover:text-ink"
+          )}
+        >
+          {t.label}
+        </button>
+      ))}
+    </div>
+  );
 }
