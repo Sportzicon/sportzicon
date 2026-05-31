@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { api, getApiError } from "../api/client";
+import { api, humanizeError } from "../api/client";
 
 export default function VerifyEmail() {
   const [params] = useSearchParams();
@@ -16,7 +16,7 @@ export default function VerifyEmail() {
         setState("ok");
       } catch (e) {
         setState("err");
-        setMsg(getApiError(e).message);
+        setMsg(humanizeError(e));
       }
     })();
   }, [params]);

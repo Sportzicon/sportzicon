@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api, getApiError } from "../api/client";
+import { api, humanizeError } from "../api/client";
 import { PageHeader, Spinner, EmptyState } from "../components/UI";
 import { CommentSection } from "../components/CommentSection";
 import { useAuthStore } from "../store/auth";
@@ -17,6 +17,7 @@ export default function Reels() {
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
   const [openCommentId, setOpenCommentId] = useState<string | null>(null);
+  const [likedReels, setLikedReels] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     function onClickOutside(e: MouseEvent) {
@@ -39,7 +40,7 @@ export default function Reels() {
       return api.post("/reels", payload);
     },
     onSuccess: () => { setOpen(false); setForm({ video_url: "", thumbnail_url: "", caption: "", sport: "" }); qc.invalidateQueries({ queryKey: ["reels"] }); },
-    onError: (e) => setErr(getApiError(e).message)
+    onError: (e) => setErr(humanizeError(e))
   });
 
   const update = useMutation({
@@ -53,7 +54,24 @@ export default function Reels() {
   });
 
   const like = useMutation({
-    mutationFn: async (id: string) => api.post(`/reels/${id}/like`),
+    mutationFn: async (id: string) => {
+      if (likedReels.has(id)) return api.delete(`/reels/${id}/like`);
+      return api.post(`/reels/${id}/like`);
+    },
+    onMutate: (id: string) => {
+      setLikedReels((prev) => {
+        const next = new Set(prev);
+        next.has(id) ? next.delete(id) : next.add(id);
+        return next;
+      });
+    },
+    onError: (_err, id) => {
+      setLikedReels((prev) => {
+        const next = new Set(prev);
+        next.has(id) ? next.delete(id) : next.add(id);
+        return next;
+      });
+    },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["reels"] })
   });
 
@@ -101,7 +119,7 @@ export default function Reels() {
       ) : !q.data?.length ? (
         <EmptyState title="No reels yet" hint="Post match highlights, training clips or technique breakdowns." />
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 max-w-2xl lg:max-w-4xl">
           {q.data.map((r) => (
             <div key={r.id} className="panel overflow-hidden">
               <div className="aspect-[9/16] bg-ink relative">
@@ -167,8 +185,11 @@ export default function Reels() {
                 )}
 
                 <div className="flex items-center gap-4 pt-2 border-t border-hairsoft">
-                  <button onClick={() => like.mutate(r.id)} className="font-mononum text-[11px] text-ink-sub hover:text-brand-500 flex items-center gap-1">
-                    <Heart className="h-3.5 w-3.5" /> {r.like_count}
+                  <button
+                    onClick={() => like.mutate(r.id)}
+                    className={`font-mononum text-[11px] flex items-center gap-1 transition ${likedReels.has(r.id) ? "text-brand-500" : "text-ink-sub hover:text-brand-500"}`}
+                  >
+                    <Heart className="h-3.5 w-3.5" fill={likedReels.has(r.id) ? "currentColor" : "none"} /> {r.like_count}
                   </button>
                   <button
                     onClick={() => setOpenCommentId(openCommentId === r.id ? null : r.id)}

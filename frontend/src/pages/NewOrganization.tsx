@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { api, getApiError } from "../api/client";
+import { api, humanizeError } from "../api/client";
 import { PageHeader, Spinner, SectionHead } from "../components/UI";
 
 function Field({ label, children, hint }: { label: string; children: React.ReactNode; hint?: string }) {
@@ -75,7 +75,7 @@ export default function NewOrganization() {
 
       navigate("/my-organizations");
     } catch (e) {
-      setErr(getApiError(e).message);
+      setErr(humanizeError(e));
     } finally {
       setBusy(false);
     }

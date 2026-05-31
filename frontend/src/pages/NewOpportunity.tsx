@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { api, getApiError } from "../api/client";
+import { api, humanizeError } from "../api/client";
 import { useAuthStore } from "../store/auth";
 import { PageHeader, Spinner, SectionHead } from "../components/UI";
 
@@ -85,8 +85,7 @@ export default function NewOpportunity() {
       await qc.invalidateQueries({ queryKey: ["opportunities"] });
       navigate(`/opportunities/${r.data.opportunity.id}`);
     } catch (e) {
-      const er = getApiError(e);
-      setErr(er.message + (er.details ? ` — ${JSON.stringify(er.details)}` : ""));
+      setErr(humanizeError(e));
     } finally { setBusy(false); }
   }
 

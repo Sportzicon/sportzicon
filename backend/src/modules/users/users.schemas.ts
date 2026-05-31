@@ -25,6 +25,8 @@ export const athleteFieldsSchema = z
     playing_role: z.string().max(60).optional(),
     position: z.string().max(60).optional(),
     style: z.string().max(120).optional(),
+    batting_style: z.string().max(60).optional(),
+    bowling_style: z.string().max(120).optional(),
     dominance: z.string().max(20).optional(),
     height_cm: z.number().int().min(50).max(280).optional(),
     weight_kg: z.number().min(20).max(300).optional(),
@@ -47,6 +49,7 @@ export const athleteFieldsSchema = z
       .optional(),
     stats: z.record(z.string(), z.union([z.string(), z.number()])).optional(),
     cv_url: z.string().url().optional(),
+    career_summary: z.string().max(1000).optional(),
     availability: z.enum(["available", "not_available", "open_to_offers"]).optional(),
     looking_for_club: z.boolean().optional()
   })

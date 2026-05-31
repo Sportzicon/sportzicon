@@ -149,7 +149,7 @@ export async function listComments(parentType: "post" | "reel" | "blog", parentI
 
   const rows = await prisma.comment.findMany({
     where,
-    orderBy: { created_at: "desc" },
+    orderBy: { created_at: "asc" },
     take: limit,
     include: { author: { select: { id: true, full_name: true, profile_photo_url: true } } }
   });

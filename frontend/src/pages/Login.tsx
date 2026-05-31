@@ -26,9 +26,13 @@ export default function Login() {
       const to = (loc.state as any)?.from?.pathname ?? "/dashboard";
       navigate(to, { replace: true });
     } catch (e) {
-      const msg = getApiError(e).message;
-      if (msg.toLowerCase().includes("not verified")) setEmailUnverified(true);
-      setErr(msg);
+      const apiErr = getApiError(e);
+      if (apiErr.code === "NETWORK") {
+        setErr("Unable to reach the server. Check your internet connection or try again in a moment.");
+      } else {
+        if (apiErr.message.toLowerCase().includes("not verified")) setEmailUnverified(true);
+        setErr(apiErr.message);
+      }
     } finally {
       setSubmitting(false);
     }

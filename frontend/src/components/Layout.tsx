@@ -1,21 +1,51 @@
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/auth";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
-import { Bell, Home, Search, Briefcase, FileText, Film, MessageCircle, ShieldCheck, LogOut, User as UserIcon, Menu, X, Trophy } from "lucide-react";
-import { useState, useEffect } from "react";
+import { Bell, Home, Search, Briefcase, FileText, Film, MessageCircle, ShieldCheck, LogOut, User as UserIcon, Menu, X, Trophy, ChevronDown, Settings } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
 
 // ============================================================================
 // App chrome — "Editorial Workstation" skin.
-// Logic is unchanged (auth gate, notif-count query, role-based nav, logout,
-// responsive sidebar). Only presentation is restyled.
+// Enhanced with global search and smart features for better UX.
 // ============================================================================
 
-function NavItem({ to, icon, label, onClick }: { to: string; icon: React.ReactNode; label: string; onClick?: () => void }) {
+function GlobalSearch({ user, inputRef }: { user: any; inputRef: React.RefObject<HTMLInputElement> }) {
+  const navigate = useNavigate();
+  const [q, setQ] = useState("");
+  const isRecruiter = user.role === "club" || user.role === "scout" || user.role === "organizer" || user.role === "admin";
+
+  function handleKey(e: React.KeyboardEvent) {
+    if (e.key === "Enter" && q.trim()) {
+      navigate(isRecruiter ? `/search?q=${encodeURIComponent(q.trim())}` : `/opportunities?q=${encodeURIComponent(q.trim())}`);
+      setQ("");
+      inputRef.current?.blur();
+    }
+    if (e.key === "Escape") { setQ(""); inputRef.current?.blur(); }
+  }
+
+  return (
+    <div className="relative flex-1 max-w-xs hidden sm:block">
+      <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-ink-faint pointer-events-none" />
+      <input
+        ref={inputRef}
+        className="input w-full pl-8 text-[12px]"
+        style={{ height: 34 }}
+        placeholder={isRecruiter ? "Search players, clubs… (⌘K)" : "Search opportunities, athletes… (⌘K)"}
+        value={q}
+        onChange={(e) => setQ(e.target.value)}
+        onKeyDown={handleKey}
+      />
+    </div>
+  );
+}
+
+function NavItem({ to, icon, label, onClick, isCollapsed }: { to: string; icon: React.ReactNode; label: string; onClick?: () => void; isCollapsed?: boolean }) {
   return (
     <NavLink
       to={to}
       onClick={onClick}
+      title={isCollapsed ? label : undefined}
       className={({ isActive }) =>
         `group flex items-center gap-3 rounded px-3 py-2.5 font-mononum text-[12px] tracking-[0.04em] transition ${
           isActive ? "bg-ink text-paper" : "text-ink-70 hover:bg-fill"
@@ -24,8 +54,8 @@ function NavItem({ to, icon, label, onClick }: { to: string; icon: React.ReactNo
     >
       {({ isActive }: { isActive: boolean }) => (
         <>
-          <span className={`w-4 text-center ${isActive ? "text-brand-500" : "text-ink-faint"}`}>{icon}</span>
-          <span>{label}</span>
+          <span className={`w-4 flex-shrink-0 text-center ${isActive ? "text-brand-500" : "text-ink-faint"}`}>{icon}</span>
+          {!isCollapsed && <span className="truncate">{label}</span>}
         </>
       )}
     </NavLink>
@@ -35,14 +65,44 @@ function NavItem({ to, icon, label, onClick }: { to: string; icon: React.ReactNo
 export function Layout() {
   const { user, clear } = useAuthStore();
   const navigate = useNavigate();
+  const [isDesktop, setIsDesktop] = useState(() => window.innerWidth >= 1024);
   const [sidebarOpen, setSidebarOpen] = useState(() => window.innerWidth >= 1024);
+  const [sidebarHovered, setSidebarHovered] = useState(false);
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const profileMenuRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const qc = useQueryClient();
 
   useEffect(() => {
     const onResize = () => {
-      if (window.innerWidth >= 1024) setSidebarOpen(true);
+      const desktop = window.innerWidth >= 1024;
+      setIsDesktop(desktop);
+      if (desktop) setSidebarOpen(true);
     };
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
+  }, []);
+
+  useEffect(() => {
+    function onClickOutside(e: MouseEvent) {
+      if (profileMenuRef.current && !profileMenuRef.current.contains(e.target as Node)) {
+        setProfileMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
+  }, []);
+
+  // Keyboard shortcut: Cmd+K for global search
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
   const { data: count } = useQuery({
@@ -61,6 +121,7 @@ export function Layout() {
       /* ignore */
     }
     clear();
+    qc.clear();
     navigate("/login", { replace: true });
   };
 
@@ -95,6 +156,10 @@ export function Layout() {
               <span className="font-disp text-xl tracking-[0.02em]">Sportivox</span>
             </Link>
           </div>
+
+          {/* Global search bar — Cmd+K to focus */}
+          <GlobalSearch user={user} inputRef={searchInputRef} />
+
           <div className="flex items-center gap-2">
             <NavLink to="/notifications" className="relative rounded p-2 text-ink-70 hover:bg-fill">
               <Bell className="h-5 w-5" />
@@ -104,13 +169,40 @@ export function Layout() {
                 </span>
               )}
             </NavLink>
-            <NavLink to={`/profile/${user.id}`} className="btn-ghost">
-              <UserIcon className="h-4 w-4" />
-              <span className="hidden sm:inline normal-case tracking-normal">{user.full_name}</span>
-            </NavLink>
-            <button onClick={logout} className="btn-ghost" title="Logout">
-              <LogOut className="h-4 w-4" />
-            </button>
+            <div ref={profileMenuRef} className="relative">
+              <button
+                onClick={() => setProfileMenuOpen((o) => !o)}
+                className="btn-ghost"
+              >
+                <UserIcon className="h-4 w-4" />
+                <span className="hidden sm:inline normal-case tracking-normal">{user.full_name}</span>
+                <ChevronDown className="h-3 w-3 hidden sm:block" />
+              </button>
+              {profileMenuOpen && (
+                <div className="absolute right-0 mt-1 panel shadow-pop z-50 min-w-[160px]">
+                  <NavLink
+                    to={`/profile/${user.id}`}
+                    onClick={() => setProfileMenuOpen(false)}
+                    className="flex items-center gap-2 px-4 py-2.5 text-[12.5px] text-ink hover:bg-fill border-b border-hairsoft"
+                  >
+                    <UserIcon className="h-3.5 w-3.5" /> View profile
+                  </NavLink>
+                  <NavLink
+                    to="/settings"
+                    onClick={() => setProfileMenuOpen(false)}
+                    className="flex items-center gap-2 px-4 py-2.5 text-[12.5px] text-ink hover:bg-fill border-b border-hairsoft"
+                  >
+                    <Settings className="h-3.5 w-3.5" /> Settings
+                  </NavLink>
+                  <button
+                    onClick={() => { setProfileMenuOpen(false); logout(); }}
+                    className="w-full flex items-center gap-2 px-4 py-2.5 text-[12.5px] text-red-600 hover:bg-red-50"
+                  >
+                    <LogOut className="h-3.5 w-3.5" /> Log out
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </header>
@@ -118,20 +210,46 @@ export function Layout() {
       <div className="flex flex-1">
         {/* Sidebar */}
         <aside
-          className={`${sidebarOpen ? "w-60" : "w-0"} shrink-0 overflow-hidden border-r border-hair bg-panel transition-all duration-200 lg:w-60`}
+          onMouseEnter={() => setSidebarHovered(true)}
+          onMouseLeave={() => setSidebarHovered(false)}
+          className="sticky top-[3.5rem] shrink-0 overflow-hidden border-r border-hair bg-panel transition-all duration-200 flex flex-col z-20"
+          style={{
+            width: isDesktop ? (sidebarHovered ? 240 : 64) : (sidebarOpen ? 240 : 0)
+          }}
         >
-          <nav className="space-y-0.5 p-3">
-            {navItems.map((item) => (
-              <NavItem
-                key={item.to}
-                to={item.to}
-                icon={item.icon}
-                label={item.label}
-                onClick={() => {
-                  if (window.innerWidth < 1024) setSidebarOpen(false);
-                }}
-              />
-            ))}
+          <nav className="flex flex-col h-full">
+            <div className="space-y-0.5 p-3 flex-1">
+              {navItems.map((item) => (
+                <NavItem
+                  key={item.to}
+                  to={item.to}
+                  icon={item.icon}
+                  label={item.label}
+                  isCollapsed={isDesktop ? !sidebarHovered : !sidebarOpen}
+                  onClick={() => {
+                    if (!isDesktop) setSidebarOpen(false);
+                  }}
+                />
+              ))}
+            </div>
+
+            {/* Role-specific CTA + User info footer */}
+            <div className={`p-3 border-t border-hairsoft transition-all ${isDesktop && !sidebarHovered ? "opacity-0 invisible" : "opacity-100 visible"}`}>
+              {user.role === "athlete" ? (
+                <Link to="/opportunities" className="btn-primary w-full text-center text-[11px] mb-3" onClick={() => setSidebarOpen(false)}>
+                  Find a trial →
+                </Link>
+              ) : user.role === "club" || user.role === "organizer" ? (
+                <Link to="/opportunities/new" className="btn-primary w-full text-center text-[11px] mb-3" onClick={() => setSidebarOpen(false)}>
+                  + Post opportunity
+                </Link>
+              ) : null}
+
+              <div className="lab mt-2 text-[10px] leading-relaxed text-ink-faint">
+                <div className="font-semibold text-ink">{user.full_name}</div>
+                <div className="mt-1"><span className="capitalize">{user.role}</span> · Sportivox</div>
+              </div>
+            </div>
           </nav>
         </aside>
 

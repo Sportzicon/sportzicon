@@ -100,8 +100,8 @@ export default function Dashboard() {
         )}
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <section className="space-y-6 lg:col-span-2">
+      <div className="grid gap-6 lg:grid-cols-[1fr_280px]">
+        <section className="space-y-6">
           {/* feed */}
           <div>
             <SectionHead n="01" title="Your feed" sub="Recent posts from people you follow"

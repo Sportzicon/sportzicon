@@ -89,7 +89,12 @@
       "Bash(npm list *)",
       "PowerShell(head -20)",
       "Bash(ls backend/src/scripts/)",
-      "Bash(grep -r \"firestore\\\\|FIRESTORE\" .github/workflows/)"
+      "Bash(grep -r \"firestore\\\\|FIRESTORE\" .github/workflows/)",
+      "Bash(Start-Sleep -Seconds 3)",
+      "Bash(curl -s http://localhost:3000/health)",
+      "Bash(netstat -tuln)",
+      "Bash(Get-ChildItem -Path \"f:\\\\My Project\\\\sportivox-main\\\\sportivox-main\" -Force)",
+      "Bash(Select-Object Name, PSIsContainer)"
     ]
   }
 }

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { api, getApiError } from "../api/client";
+import { api, humanizeError } from "../api/client";
+import { COUNTRIES, statesForCountry } from "../data/geo";
 
 const ROLES = [
   { value: "athlete", label: "Athlete / Player", hint: "Build a profile, upload stats, get discovered and apply to trials." },
@@ -53,6 +54,15 @@ function Field({ label, req, hint, children }: { label: string; req?: boolean; h
   );
 }
 
+function PasswordRequirement({ met, text }: { met: boolean; text: string }) {
+  return (
+    <div className="flex items-center gap-2 text-[11px]" style={{ color: met ? "#16a34a" : "#6b7280" }}>
+      <span style={{ display: "inline-block" }}>{met ? "✓" : "○"}</span>
+      {text}
+    </div>
+  );
+}
+
 function Chip({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
   return (
     <button type="button" onClick={onClick}
@@ -91,6 +101,14 @@ export default function Signup() {
 
   // ── Step advance helpers ──────────────────────────────────────────────────
 
+  function validatePassword(pwd: string): string | null {
+    if (pwd.length < 8) return "Password must be at least 8 characters";
+    if (!/[A-Z]/.test(pwd)) return "Password must contain an uppercase letter";
+    if (!/[a-z]/.test(pwd)) return "Password must contain a lowercase letter";
+    if (!/[0-9]/.test(pwd)) return "Password must contain a digit";
+    return null;
+  }
+
   function advanceRole() {
     save({ step: 1, role: d.role });
     setDraft((p) => ({ ...p, step: 1 }));
@@ -99,6 +117,10 @@ export default function Signup() {
   function advanceAccount() {
     if (!d.full_name || !d.email || !d.phone || !d.password || !d.state || !d.city) {
       setErr("Please fill all required fields."); return;
+    }
+    const pwdErr = validatePassword(d.password);
+    if (pwdErr) {
+      setErr(pwdErr); return;
     }
     setErr(null);
     save({ step: 2 });
@@ -131,11 +153,9 @@ export default function Signup() {
         })
       });
       clear(); // wipe draft on success
-      save({ step: 3 });
       setDraft((p) => ({ ...p, step: 3 }));
-    } catch (e: any) {
-      const er = getApiError(e);
-      setErr(er.message + (er.details ? ` — ${JSON.stringify(er.details)}` : ""));
+    } catch (e) {
+      setErr(humanizeError(e));
     } finally { setSubmitting(false); }
   }
 
@@ -241,26 +261,34 @@ export default function Signup() {
                 </Field>
                 <Field label="Password" req>
                   <input className="input" type="password" value={d.password} onChange={(e) => patch({ password: e.target.value })} minLength={8} />
-                  <span className="lab mt-1.5 block normal-case tracking-normal text-[10.5px]">Min 8 chars · 1 uppercase · 1 lowercase · 1 digit</span>
+                  <div className="mt-2 space-y-1">
+                    <PasswordRequirement met={d.password.length >= 8} text="At least 8 characters" />
+                    <PasswordRequirement met={/[A-Z]/.test(d.password)} text="One uppercase letter" />
+                    <PasswordRequirement met={/[a-z]/.test(d.password)} text="One lowercase letter" />
+                    <PasswordRequirement met={/[0-9]/.test(d.password)} text="One digit" />
+                  </div>
                 </Field>
                 <Field label="Country" req>
-                  <select className="input" value={d.country} onChange={(e) => patch({ country: e.target.value })}>
-                    {["India","United Kingdom","Australia","South Africa","New Zealand","Sri Lanka","Bangladesh","Pakistan","Other"].map((c) => <option key={c}>{c}</option>)}
+                  <select className="input" value={d.country} onChange={(e) => patch({ country: e.target.value, state: "" })}>
+                    {COUNTRIES.map((c) => <option key={c}>{c}</option>)}
                   </select>
                 </Field>
                 <Field label="State" req>
-                  <input className="input" placeholder="e.g. Maharashtra" value={d.state} onChange={(e) => patch({ state: e.target.value })} />
+                  {statesForCountry(d.country) ? (
+                    <select className="input" value={d.state} onChange={(e) => patch({ state: e.target.value })}>
+                      <option value="">Select state…</option>
+                      {statesForCountry(d.country)!.map((s) => <option key={s}>{s}</option>)}
+                    </select>
+                  ) : (
+                    <input className="input" placeholder="e.g. Maharashtra" value={d.state} onChange={(e) => patch({ state: e.target.value })} />
+                  )}
                 </Field>
                 <Field label="City" req>
                   <input className="input" placeholder="e.g. Pune" value={d.city} onChange={(e) => patch({ city: e.target.value })} />
                 </Field>
-                {isAthlete ? (
+                {isAthlete && (
                   <Field label="Date of birth" req hint="Age is used for opportunity filters.">
                     <input className="input font-mononum" type="date" value={d.dob} onChange={(e) => patch({ dob: e.target.value })} />
-                  </Field>
-                ) : (
-                  <Field label="Primary contact role">
-                    <input className="input" placeholder="e.g. Talent Scout, Club Manager" value={d.dob} onChange={(e) => patch({ dob: e.target.value })} />
                   </Field>
                 )}
               </div>

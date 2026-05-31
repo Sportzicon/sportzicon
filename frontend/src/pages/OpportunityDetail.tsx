@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
-import { api, getApiError } from "../api/client";
+import { api, humanizeError } from "../api/client";
 import { useAuthStore } from "../store/auth";
 import { Spinner, StatusPill, SectionHead, Kicker } from "../components/UI";
 import { Trash2, Pencil, MoreVertical } from "lucide-react";
@@ -47,7 +47,7 @@ function ApplyModal({ opp, onClose, onSuccess }: { opp: Opportunity; onClose: ()
       qc.invalidateQueries({ queryKey: ["my-apps"] });
       onSuccess();
     } catch (e) {
-      setErr(getApiError(e).message);
+      setErr(humanizeError(e));
     } finally { setBusy(false); }
   }
 

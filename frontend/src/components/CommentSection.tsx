@@ -28,7 +28,7 @@ export function CommentSection({ parentType, parentId, commentCount: initialCoun
     enabled: open || showForm
   });
 
-  const comments = commentsData ?? [];
+  const comments = [...new Map((commentsData ?? []).map((c) => [c.id, c])).values()];
   const count = open ? comments.length : initialCount;
 
   const addMutation = useMutation({

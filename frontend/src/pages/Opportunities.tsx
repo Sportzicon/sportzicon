@@ -4,8 +4,9 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import { useAuthStore } from "../store/auth";
 import { PageHeader, Spinner, EmptyState, StatusPill, Kicker, SectionHead } from "../components/UI";
-import { Trash2, Pencil, MoreVertical } from "lucide-react";
+import { Trash2, Pencil, MoreVertical, Bookmark } from "lucide-react";
 import type { Opportunity } from "../types";
+import { useSavedOpportunities } from "../store/savedOpportunities";
 
 const TYPE_LABELS: Record<string, string> = {
   trial: "Trial", recruitment: "Recruitment", scholarship: "Scholarship",
@@ -92,6 +93,7 @@ export default function Opportunities() {
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["opportunities"] }); setPendingDeleteId(null); }
   });
 
+  const { toggle: toggleSave, isSaved } = useSavedOpportunities();
   const canPost = user?.role === "club" || user?.role === "organizer" || user?.role === "admin";
 
   const results = (q2.data ?? [])
@@ -201,32 +203,43 @@ export default function Opportunities() {
                       </div>
                     </Link>
 
-                    {isPoster && (
-                      <div className="px-5 pb-4 flex justify-end relative border-t border-hairsoft pt-3">
-                        <button data-menu-button onClick={() => setMenuOpenId(menuOpenId === o.id ? null : o.id)} className="btn-ghost p-2">
-                          <MoreVertical className="h-4 w-4" />
-                        </button>
-                        {menuOpenId === o.id && (
-                          <div data-menu-content className="absolute right-4 bottom-12 panel shadow-pop z-10 min-w-36">
-                            <Link to={`/opportunities/${o.id}/edit`} onClick={() => setMenuOpenId(null)}
-                              className="flex items-center gap-2 px-4 py-2.5 text-[12.5px] text-ink hover:bg-fill border-b border-hairsoft">
-                              <Pencil className="h-3.5 w-3.5" /> Edit
-                            </Link>
-                            <button onClick={() => { setPendingDeleteId(o.id); setMenuOpenId(null); }}
-                              className="w-full flex items-center gap-2 px-4 py-2.5 text-[12.5px] text-red-600 hover:bg-red-50">
-                              <Trash2 className="h-3.5 w-3.5" /> Delete
-                            </button>
-                          </div>
-                        )}
-                        {pendingDeleteId === o.id && (
-                          <div className="absolute right-4 bottom-14 panel shadow-pop z-10 p-3 flex items-center gap-2 min-w-52">
-                            <span className="text-[12.5px] text-ink flex-1">Delete this opportunity?</span>
-                            <button onClick={() => deleteOpp.mutate(o.id)} disabled={deleteOpp.isPending} className="btn-danger">Confirm</button>
-                            <button onClick={() => setPendingDeleteId(null)} className="btn-secondary">Cancel</button>
-                          </div>
-                        )}
-                      </div>
-                    )}
+                    <div className="px-[18px] py-2.5 border-t border-hairsoft flex items-center justify-between relative">
+                      <button
+                        onClick={() => toggleSave(o)}
+                        className={`font-mononum text-[10.5px] flex items-center gap-1.5 transition ${isSaved(o.id) ? "text-brand-500" : "text-ink-faint hover:text-ink"}`}
+                        title={isSaved(o.id) ? "Remove from saved" : "Save opportunity"}
+                      >
+                        <Bookmark className="h-3.5 w-3.5" fill={isSaved(o.id) ? "currentColor" : "none"} />
+                        {isSaved(o.id) ? "Saved" : "Save"}
+                      </button>
+
+                      {isPoster && (
+                        <div className="flex items-center gap-1">
+                          <button data-menu-button onClick={() => setMenuOpenId(menuOpenId === o.id ? null : o.id)} className="btn-ghost p-1.5">
+                            <MoreVertical className="h-4 w-4" />
+                          </button>
+                          {menuOpenId === o.id && (
+                            <div data-menu-content className="absolute right-4 bottom-10 panel shadow-pop z-10 min-w-36">
+                              <Link to={`/opportunities/${o.id}/edit`} onClick={() => setMenuOpenId(null)}
+                                className="flex items-center gap-2 px-4 py-2.5 text-[12.5px] text-ink hover:bg-fill border-b border-hairsoft">
+                                <Pencil className="h-3.5 w-3.5" /> Edit
+                              </Link>
+                              <button onClick={() => { setPendingDeleteId(o.id); setMenuOpenId(null); }}
+                                className="w-full flex items-center gap-2 px-4 py-2.5 text-[12.5px] text-red-600 hover:bg-red-50">
+                                <Trash2 className="h-3.5 w-3.5" /> Delete
+                              </button>
+                            </div>
+                          )}
+                          {pendingDeleteId === o.id && (
+                            <div className="absolute right-4 bottom-12 panel shadow-pop z-10 p-3 flex items-center gap-2 min-w-52">
+                              <span className="text-[12.5px] text-ink flex-1">Delete this opportunity?</span>
+                              <button onClick={() => deleteOpp.mutate(o.id)} disabled={deleteOpp.isPending} className="btn-danger">Confirm</button>
+                              <button onClick={() => setPendingDeleteId(null)} className="btn-secondary">Cancel</button>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 );
               })}

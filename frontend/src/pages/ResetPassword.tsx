@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { api, getApiError } from "../api/client";
+import { api, humanizeError } from "../api/client";
 
 export default function ResetPassword() {
   const [params] = useSearchParams();
@@ -17,7 +17,7 @@ export default function ResetPassword() {
       await api.post("/auth/reset-password", { token, password });
       setDone(true);
     } catch (e) {
-      setErr(getApiError(e).message);
+      setErr(humanizeError(e));
     } finally { setBusy(false); }
   }
 

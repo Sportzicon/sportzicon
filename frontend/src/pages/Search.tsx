@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import { PageHeader, Spinner, EmptyState, Avatar, StatusPill, SectionHead } from "../components/UI";
+import { ChevronDown, X } from "lucide-react";
 
 type Mode = "players" | "clubs" | "opportunities";
 type ViewMode = "table" | "grid";
@@ -36,6 +37,7 @@ function FilterGroup({ label, children }: { label: string; children: React.React
 export default function Search() {
   const [mode, setMode] = useState<Mode>("players");
   const [view, setView] = useState<ViewMode>("table");
+  const [filtersOpen, setFiltersOpen] = useState(window.innerWidth >= 1024);
   const [q, setQ] = useState("");
   const [sport, setSport] = useState("Cricket");
   const [playRole, setPlayRole] = useState("Any role");
@@ -46,6 +48,17 @@ export default function Search() {
   const [availOnly, setAvailOnly] = useState(false);
   const [savedOnly, setSavedOnly] = useState(false);
   const [shortlist, setShortlist] = useState<Set<string>>(new Set());
+
+  const prevResultsRef = useRef<any[]>();
+
+  useEffect(() => {
+    const onResize = () => {
+      if (window.innerWidth >= 1024) setFiltersOpen(true);
+      else setFiltersOpen(false);
+    };
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
 
   function toggleShortlist(id: string) {
     setShortlist((prev) => {
@@ -71,6 +84,14 @@ export default function Search() {
     queryFn: async () => (await api.get(`/search/${mode}`, { params })).data.items as any[],
     placeholderData: (prev) => prev
   });
+
+  // Auto-collapse filters when results load
+  useEffect(() => {
+    if (res.data && res.data.length > 0 && prevResultsRef.current !== res.data) {
+      prevResultsRef.current = res.data;
+      setFiltersOpen(false);
+    }
+  }, [res.data, res.isLoading]);
 
   const results: any[] = savedOnly && mode === "players"
     ? (res.data ?? []).filter((a: any) => shortlist.has(a.id))
@@ -124,9 +145,19 @@ export default function Search() {
         ))}
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[240px_1fr] items-start">
+      {/* ── filters toggle for mobile ─────────────────────── */}
+      <button
+        onClick={() => setFiltersOpen(!filtersOpen)}
+        className="lg:hidden flex items-center justify-between w-full panel p-3 text-sm font-medium"
+      >
+        <span>Filters</span>
+        <ChevronDown className="h-4 w-4" style={{ transform: filtersOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 200ms" }} />
+      </button>
+
+      <div className={`grid gap-6 lg:grid-cols-[200px_1fr] items-start ${!filtersOpen ? "lg:grid-cols-[1fr]" : ""}`}>
         {/* ── filter rail ─────────────────────────────────────── */}
-        <div className="panel p-[18px] sticky top-20">
+        {filtersOpen && (
+        <div className="panel p-[18px] sticky top-20 lg:sticky lg:top-20">
           <SectionHead title="Filters" />
 
           <FilterGroup label="Keyword">
@@ -191,16 +222,27 @@ export default function Search() {
             </>
           )}
         </div>
+        )}
 
         {/* ── results ──────────────────────────────────────────── */}
-        <div>
-          <div className="flex items-center justify-between mb-4">
+        <div className={filtersOpen ? "" : "lg:col-span-full"}>
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
             <span className="lab">
               {res.isLoading ? "Searching…" : `${results.length} result${results.length !== 1 ? "s" : ""}`}
               {savedOnly && " · shortlist"}
               {verifiedOnly && " · verified only"}
             </span>
-            {mode === "players" && <span className="lab">Verified ranked first</span>}
+            <div className="flex items-center gap-2">
+              {!filtersOpen && results.length > 0 && (
+                <button
+                  onClick={() => setFiltersOpen(true)}
+                  className="lab text-brand-500 hover:text-brand-600 transition text-[12px]"
+                >
+                  Show filters
+                </button>
+              )}
+              {mode === "players" && filtersOpen && <span className="lab">Verified ranked first</span>}
+            </div>
           </div>
 
           {res.isLoading ? (

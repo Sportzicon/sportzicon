@@ -3,10 +3,12 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api/client";
 import { useAuthStore } from "../store/auth";
-import { Spinner, VerifiedBadge, Avatar, SectionHead, Kicker, StatCard, Placeholder, Tabs, Badge } from "../components/UI";
+import { Spinner, VerifiedBadge, Avatar, SectionHead, Kicker, StatCard, Placeholder, Tabs, Badge, StatusPill } from "../components/UI";
 import type { Post, User } from "../types";
+import { useSavedOpportunities } from "../store/savedOpportunities";
+import { Bookmark } from "lucide-react";
 
-type Tab = "posts" | "followers" | "following";
+type Tab = "posts" | "followers" | "following" | "saved";
 
 function SpecRow({ label, value }: { label: string; value?: string | number }) {
   if (!value) return null;
@@ -37,6 +39,7 @@ export default function Profile() {
   const qc = useQueryClient();
   const isMe = me?.id === id;
   const [tab, setTab] = useState<Tab>("posts");
+  const { saved: savedOpps, toggle: toggleSaved, isSaved } = useSavedOpportunities();
 
   const userQ = useQuery({
     queryKey: ["user", id],
@@ -93,7 +96,8 @@ export default function Profile() {
   const tabs: { id: Tab; label: string }[] = [
     { id: "posts", label: "Posts" },
     { id: "followers", label: `Followers (${u.follower_count})` },
-    { id: "following", label: `Following (${u.following_count})` }
+    { id: "following", label: `Following (${u.following_count})` },
+    ...(isMe ? [{ id: "saved" as Tab, label: `Saved (${savedOpps.length})` }] : [])
   ];
 
   return (
@@ -363,6 +367,57 @@ export default function Profile() {
               )}
             </div>
           ))}
+
+        {tab === "saved" && isMe && (
+          savedOpps.length ? (
+            <div className="flex flex-col gap-3">
+              {savedOpps.map((o) => (
+                <div key={o.id} className="card overflow-hidden">
+                  <Link to={`/opportunities/${o.id}`} className="block p-4 hover:bg-fill transition">
+                    <div className="flex gap-3">
+                      <div className="w-10 h-10 rounded bg-fill border border-hairsoft flex-shrink-0 flex items-center justify-center">
+                        <span className="font-disp text-lg text-ink-sub">{(o.org_name ?? "?")[0]}</span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap gap-1.5 mb-1.5">
+                          <span className="badge capitalize">{o.type}</span>
+                          <span className="badge">{o.sport}</span>
+                          <StatusPill status={o.status} />
+                        </div>
+                        <div className="font-disp text-lg leading-tight">{o.title}</div>
+                        <div className="lab mt-1">{o.org_name} · {o.city}, {o.country}</div>
+                      </div>
+                    </div>
+                    <div className="mt-3 pt-3 border-t border-hairsoft flex items-center justify-between">
+                      <span className="lab">Deadline: {new Date(o.application_deadline).toLocaleDateString()}</span>
+                      <span className="font-mononum text-[11px]"
+                        style={{ color: Math.ceil((new Date(o.application_deadline).getTime() - Date.now()) / 86400_000) <= 5 ? "#FA4D14" : "#9A9286" }}>
+                        {Math.ceil((new Date(o.application_deadline).getTime() - Date.now()) / 86400_000) < 0
+                          ? "Closed"
+                          : `${Math.ceil((new Date(o.application_deadline).getTime() - Date.now()) / 86400_000)}d left`}
+                      </span>
+                    </div>
+                  </Link>
+                  <div className="px-4 pb-3 border-t border-hairsoft">
+                    <button
+                      onClick={() => toggleSaved(o)}
+                      className="font-mononum text-[10.5px] flex items-center gap-1.5 text-brand-500 hover:text-red-600 transition mt-2.5"
+                    >
+                      <Bookmark className="h-3.5 w-3.5" fill="currentColor" /> Remove
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="card card-body text-center">
+              <Bookmark className="h-8 w-8 text-ink-faint mx-auto mb-2" />
+              <div className="lab text-ink-faint">No saved opportunities</div>
+              <p className="text-[12.5px] text-ink-sub mt-1">Browse opportunities and click Save to bookmark them here.</p>
+              <Link to="/opportunities" className="btn-secondary mt-3 inline-block">Browse opportunities →</Link>
+            </div>
+          )
+        )}
       </div>
     </div>
   );

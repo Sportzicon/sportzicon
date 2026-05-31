@@ -18,6 +18,7 @@ export default function Feed() {
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
   const [openCommentId, setOpenCommentId] = useState<string | null>(null);
+  const [likedPosts, setLikedPosts] = useState<Set<string>>(new Set());
 
   const feed = useQuery({
     queryKey: ["feed-all"],
@@ -40,7 +41,24 @@ export default function Feed() {
   });
 
   const like = useMutation({
-    mutationFn: async (id: string) => api.post(`/posts/${id}/like`),
+    mutationFn: async (id: string) => {
+      if (likedPosts.has(id)) return api.delete(`/posts/${id}/like`);
+      return api.post(`/posts/${id}/like`);
+    },
+    onMutate: (id: string) => {
+      setLikedPosts((prev) => {
+        const next = new Set(prev);
+        next.has(id) ? next.delete(id) : next.add(id);
+        return next;
+      });
+    },
+    onError: (_err, id) => {
+      setLikedPosts((prev) => {
+        const next = new Set(prev);
+        next.has(id) ? next.delete(id) : next.add(id);
+        return next;
+      });
+    },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["feed-all"] })
   });
 
@@ -188,8 +206,11 @@ export default function Feed() {
               )}
 
               <div className="mt-4 pt-3 border-t border-hairsoft flex items-center gap-5">
-                <button onClick={() => like.mutate(p.id)} className="font-mononum text-[11.5px] text-ink-sub hover:text-brand-500 flex items-center gap-1.5">
-                  <Heart className="h-4 w-4" /> {p.like_count}
+                <button
+                  onClick={() => like.mutate(p.id)}
+                  className={`font-mononum text-[11.5px] flex items-center gap-1.5 transition ${likedPosts.has(p.id) ? "text-brand-500" : "text-ink-sub hover:text-brand-500"}`}
+                >
+                  <Heart className="h-4 w-4" fill={likedPosts.has(p.id) ? "currentColor" : "none"} /> {p.like_count}
                 </button>
                 <button
                   onClick={() => setOpenCommentId(openCommentId === p.id ? null : p.id)}
