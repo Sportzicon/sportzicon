@@ -60,6 +60,18 @@ export async function getOrganization(orgId: string) {
   return formatOrg(org);
 }
 
+export async function listAllOrganizations(q: string, limit: number) {
+  const where = q
+    ? { org_name_lower: { contains: q.toLowerCase() } }
+    : {};
+  const orgs = await prisma.organization.findMany({
+    where,
+    orderBy: { created_at: "desc" },
+    take: limit
+  });
+  return orgs.map(formatOrg);
+}
+
 export async function listOrganizationsForOwner(ownerId: string) {
   const orgs = await prisma.organization.findMany({
     where: { owner_user_id: ownerId },

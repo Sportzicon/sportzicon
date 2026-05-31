@@ -20,6 +20,17 @@ router.post(
 );
 
 router.get(
+  "/",
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const q = (req.query.q as string) || "";
+    const limit = Math.min(Number(req.query.limit) || 50, 100);
+    const orgs = await svc.listAllOrganizations(q, limit);
+    res.json({ items: orgs });
+  })
+);
+
+router.get(
   "/mine",
   requireAuth,
   asyncHandler(async (req, res) => {

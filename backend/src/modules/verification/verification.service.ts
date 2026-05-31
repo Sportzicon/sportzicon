@@ -129,13 +129,18 @@ export async function review(id: string, reviewerId: string, decision: "approve"
       ? v.entity_id
       : (await prisma.organization.findUnique({ where: { id: v.entity_id }, select: { owner_user_id: true } }))?.owner_user_id ?? v.entity_id;
 
+  const verifyLink = v.entity_type === "user"
+    ? `/profile/${v.entity_id}`
+    : `/organizations/${v.entity_id}`;
+
   await createNotification({
     user_id: notifyUserId,
     type: `verification_${newStatus}`,
-    title: `Verification ${newStatus}`,
+    title: decision === "approve" ? "Verification approved ✓" : "Verification update",
     body: decision === "approve"
       ? "Your verification has been approved and your badge is now visible on your profile."
       : `Your verification was rejected.${reason ? " Reason: " + reason : ""}`,
+    link: verifyLink,
     email: true
   });
 

@@ -2,7 +2,7 @@ import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/auth";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
-import { Bell, Home, Search, Briefcase, FileText, Film, MessageCircle, ShieldCheck, LogOut, User as UserIcon, Menu, X, Trophy, ChevronDown } from "lucide-react";
+import { Bell, Home, Search, Briefcase, FileText, MessageCircle, ShieldCheck, LogOut, User as UserIcon, Menu, X, Trophy, ChevronDown, Building2 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 
 // ============================================================================
@@ -128,20 +128,21 @@ export function Layout() {
   const navItems = [
     { to: "/dashboard", icon: <Home className="h-4 w-4" />, label: "Dashboard" },
     { to: "/feed", icon: <FileText className="h-4 w-4" />, label: "Feed" },
-    { to: "/reels", icon: <Film className="h-4 w-4" />, label: "Reels" },
     { to: "/blogs", icon: <FileText className="h-4 w-4" />, label: "Blogs" },
     { to: "/search", icon: <Search className="h-4 w-4" />, label: "Search" },
     { to: "/opportunities", icon: <Briefcase className="h-4 w-4" />, label: "Opportunities" },
     { to: "/tournaments", icon: <Trophy className="h-4 w-4" />, label: "Tournaments" },
     { to: "/messages", icon: <MessageCircle className="h-4 w-4" />, label: "Messages" },
     ...(user.role === "athlete" ? [{ to: "/applications", icon: <Briefcase className="h-4 w-4" />, label: "My Applications" }] : []),
-    ...(user.role === "club" || user.role === "organizer" ? [{ to: "/my-organizations", icon: <Briefcase className="h-4 w-4" />, label: "My Organizations" }] : []),
+    ...(user.role === "club" || user.role === "organizer" || user.role === "admin"
+      ? [{ to: "/my-organizations", icon: <Building2 className="h-4 w-4" />, label: "Organizations" }]
+      : [{ to: "/search?tab=clubs", icon: <Building2 className="h-4 w-4" />, label: "Organizations" }]),
     ...(user.role === "admin" ? [{ to: "/admin", icon: <ShieldCheck className="h-4 w-4" />, label: "Admin" }] : [])
   ];
 
   return (
-    <div className="flex min-h-screen flex-col bg-paper">
-      <header className="sticky top-0 z-40 border-b border-hair bg-panel">
+    <div className="flex h-screen flex-col bg-paper">
+      <header className="shrink-0 sticky top-0 z-40 border-b border-hair bg-panel">
         <div className="flex items-center justify-between gap-4 px-5 py-3">
           <div className="flex items-center gap-4">
             <button
@@ -200,12 +201,13 @@ export function Layout() {
         </div>
       </header>
 
-      <div className="flex flex-1">
-        {/* Sidebar */}
+      {/* flex-1 min-h-0 makes this row fill remaining viewport height without overflow */}
+      <div className="flex flex-1 min-h-0 overflow-hidden">
+        {/* Sidebar — h-full so it fills the row, overflow-y-auto for its own scroll */}
         <aside
           onMouseEnter={() => setSidebarHovered(true)}
           onMouseLeave={() => setSidebarHovered(false)}
-          className="sticky top-[3.5rem] shrink-0 overflow-hidden border-r border-hair bg-panel transition-all duration-200 flex flex-col z-20"
+          className="h-full shrink-0 overflow-y-auto overflow-x-hidden border-r border-hair bg-panel transition-all duration-200 flex flex-col z-20"
           style={{
             width: isDesktop ? (sidebarHovered ? 240 : 64) : (sidebarOpen ? 240 : 0)
           }}
@@ -246,8 +248,8 @@ export function Layout() {
           </nav>
         </aside>
 
-        {/* Main content */}
-        <main className="min-w-0 flex-1 px-6 py-7">
+        {/* Main content — overflow-y-auto makes this the scroll container */}
+        <main className="min-w-0 flex-1 overflow-y-auto px-6 py-7">
           <Outlet />
         </main>
       </div>

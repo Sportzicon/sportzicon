@@ -55,7 +55,8 @@ export async function sendMessage(senderId: string, recipientId: string, body: s
     type: "new_message",
     title: `New message from ${sender.full_name}`,
     body: body.length > 120 ? body.slice(0, 117) + "..." : body,
-    link: `/messages/${conversation.id}`,
+    // Messages page opens a thread via ?to=userId, not via the conversation ID path param
+    link: `/messages?to=${senderId}`,
     email: true
   });
 

@@ -56,6 +56,9 @@ export function createApp(): Express {
     })
   );
 
+  // Raw body parser for file uploads (MUST come before other parsers)
+  app.use("/api/v1/media/upload", express.raw({ type: "*/*", limit: "100mb" }));
+
   app.use(express.json({ limit: "1mb" }));
   app.use(express.urlencoded({ extended: true, limit: "1mb" }));
   app.use(requestId);

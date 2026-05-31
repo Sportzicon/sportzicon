@@ -34,15 +34,19 @@ export async function getUploadUrl(input: {
   const file = bucket.file(objectName);
 
   if (usingGcsEmulator) {
-    // fake-gcs-server does not implement V4 signing — return a plain emulator URL the client can PUT to.
+    // fake-gcs-server supports direct PUT to /b/{bucket}/o/{object} endpoint
+    // Replace internal 'gcs' hostname with 'localhost' for browser access
+    const clientUrl = env.STORAGE_EMULATOR_HOST?.replace("gcs:", "localhost:") || "";
     return {
       method: "PUT" as const,
-      upload_url: `${env.STORAGE_EMULATOR_HOST}/upload/storage/v1/b/${bucket.name}/o?uploadType=media&name=${encodeURIComponent(objectName)}`,
-      headers: { "Content-Type": input.contentType },
+      upload_url: `${clientUrl}/b/${bucket.name}/o/${encodeURIComponent(objectName)}`,
+      headers: {
+        "Content-Type": input.contentType
+      },
       object_name: objectName,
       public_url: isPrivate(input.category)
         ? undefined
-        : `${env.STORAGE_EMULATOR_HOST}/${bucket.name}/${objectName}`
+        : `${clientUrl}/${bucket.name}/${objectName}`
     };
   }
 
@@ -73,9 +77,35 @@ export async function getUploadUrl(input: {
 export async function getReadUrl(category: UploadCategory, objectName: string) {
   const bucket = isPrivate(category) ? docsBucket : mediaBucket;
   if (usingGcsEmulator) {
-    return `${env.STORAGE_EMULATOR_HOST}/${bucket.name}/${objectName}`;
+    const clientUrl = env.STORAGE_EMULATOR_HOST?.replace("gcs:", "localhost:") || "";
+    return `${clientUrl}/${bucket.name}/${objectName}`;
   }
   const expires = Date.now() + env.GCS_SIGNED_URL_TTL_MIN * 60 * 1000;
   const [url] = await bucket.file(objectName).getSignedUrl({ version: "v4", action: "read", expires });
   return url;
+}
+
+export async function uploadFile(input: {
+  userId: string;
+  category: UploadCategory;
+  filename: string;
+  contentType: string;
+  buffer: Buffer;
+}) {
+  if (!ALLOWED[input.category]) throw BadRequest("Unsupported category");
+  if (!ALLOWED[input.category].includes(input.contentType))
+    throw BadRequest(`MIME type ${input.contentType} not allowed for ${input.category}`);
+  if (input.buffer.length <= 0 || input.buffer.length > env.MAX_UPLOAD_MB * 1024 * 1024)
+    throw BadRequest(`File size must be <= ${env.MAX_UPLOAD_MB}MB`);
+
+  const ext = mimeTypes.extension(input.contentType) || "bin";
+  const objectName = `${input.userId}/${input.category}s/${Date.now()}-${newId()}.${ext}`;
+  const bucket = isPrivate(input.category) ? docsBucket : mediaBucket;
+  const file = bucket.file(objectName);
+
+  await file.save(input.buffer, { contentType: input.contentType });
+
+  if (isPrivate(input.category)) return undefined;
+  const clientUrl = usingGcsEmulator ? env.STORAGE_EMULATOR_HOST?.replace("gcs:", "localhost:") || "" : "https://storage.googleapis.com";
+  return `${clientUrl}/${bucket.name}/${objectName}`;
 }

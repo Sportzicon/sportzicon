@@ -47,4 +47,28 @@ router.get(
   })
 );
 
+router.post(
+  "/upload",
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    let buffer: Buffer;
+    if (Buffer.isBuffer(req.body)) {
+      buffer = req.body;
+    } else if (typeof req.body === "string") {
+      buffer = Buffer.from(req.body);
+    } else {
+      buffer = Buffer.from(JSON.stringify(req.body));
+    }
+
+    const public_url = await svc.uploadFile({
+      userId: req.user!.sub,
+      category: (req.query.category as any) || "image",
+      filename: (req.query.filename as string) || "upload",
+      contentType: (req.query.content_type as string) || req.headers["content-type"] || "application/octet-stream",
+      buffer
+    });
+    res.json({ public_url });
+  })
+);
+
 export default router;

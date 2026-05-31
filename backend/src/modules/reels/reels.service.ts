@@ -35,13 +35,18 @@ export async function listReels(q: { author_id?: string; sport?: string; limit: 
     orderBy: { created_at: "desc" },
     take: q.limit + 1,
     ...(q.cursor ? { cursor: { id: q.cursor }, skip: 1 } : {}),
-    include: { author: { select: { id: true, full_name: true, profile_photo_url: true } } }
+    include: {
+      author: { select: { id: true, full_name: true, profile_photo_url: true } },
+      _count: { select: { likes: true, comments: true } }
+    }
   });
 
   const hasMore = rows.length > q.limit;
   const page = hasMore ? rows.slice(0, q.limit) : rows;
-  const items = page.map(({ author, created_at, ...r }) => ({
+  const items = page.map(({ author, created_at, _count, ...r }) => ({
     ...r, author, author_name: author?.full_name ?? "Unknown",
+    like_count: _count?.likes ?? r.like_count,
+    comment_count: _count?.comments ?? r.comment_count,
     created_at: created_at instanceof Date ? created_at.getTime() : created_at
   }));
   return { items, next_cursor: hasMore ? items[items.length - 1].id : null };

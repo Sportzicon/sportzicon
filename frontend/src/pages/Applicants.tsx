@@ -2,7 +2,8 @@ import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
-import { PageHeader, Spinner, EmptyState, StatusPill, Avatar, SectionHead, Tabs } from "../components/UI";
+import { PageHeader, Spinner, EmptyState, StatusPill, Avatar, Tabs } from "../components/UI";
+import { MapPin, Calendar, Users } from "lucide-react";
 import type { Application } from "../types";
 
 const NEXT: Record<string, string[]> = {
@@ -62,9 +63,16 @@ export default function Applicants() {
   const m = useMutation({
     mutationFn: async (vars: { id: string; status: string; reason?: string }) =>
       api.patch(`/applications/${vars.id}/status`, { status: vars.status, reason: vars.reason }),
-    onSuccess: () => {
+    onSuccess: (_data, vars) => {
       qc.invalidateQueries({ queryKey: ["applicants", id] });
       qc.invalidateQueries({ queryKey: ["opp", id] });
+      // Invalidate the applicant's profile cache so availability shows immediately
+      if (vars.status === "selected" || vars.status === "rejected") {
+        const app = q.data?.find((a) => a.id === vars.id);
+        if (app?.applicant_user_id) {
+          qc.invalidateQueries({ queryKey: ["user", app.applicant_user_id] });
+        }
+      }
       setRejectingId(null); setReason("");
     }
   });
@@ -95,10 +103,14 @@ export default function Applicants() {
     : activeTab === "rejected" ? apps.filter((a) => a.status === "rejected" || a.status === "withdrawn")
     : apps.filter((a) => a.status === activeTab);
 
+  const deadlineDays = opp?.application_deadline
+    ? Math.ceil((new Date(opp.application_deadline).getTime() - Date.now()) / 86400_000)
+    : null;
+
   return (
     <div className="space-y-5">
       <PageHeader
-        title="Applicant review"
+        title={opp ? opp.title : "Applicant review"}
         subtitle="Post → Review → Select"
         action={
           <Link to={`/opportunities/${id}`} className="btn-ghost text-[12.5px]">
@@ -106,6 +118,44 @@ export default function Applicants() {
           </Link>
         }
       />
+
+      {/* Opportunity context banner */}
+      {opp && (
+        <div className="panel p-4 flex flex-wrap items-center gap-x-6 gap-y-2">
+          <div className="flex flex-wrap gap-1.5">
+            <span className="badge capitalize">{opp.type}</span>
+            <span className="badge">{opp.sport}</span>
+            <StatusPill status={opp.status} />
+          </div>
+          <div className="flex items-center gap-1.5 text-[13px] text-ink-70">
+            <span className="font-semibold text-ink">{opp.org_name}</span>
+          </div>
+          {(opp.city || opp.country) && (
+            <div className="flex items-center gap-1.5 text-[13px] text-ink-sub">
+              <MapPin className="h-3.5 w-3.5 flex-shrink-0" />
+              {[opp.city, opp.state, opp.country].filter(Boolean).join(", ")}
+            </div>
+          )}
+          {opp.application_deadline && (
+            <div className="flex items-center gap-1.5 text-[13px]"
+              style={{ color: deadlineDays !== null && deadlineDays <= 5 ? "#FA4D14" : "#726B60" }}>
+              <Calendar className="h-3.5 w-3.5 flex-shrink-0" />
+              Deadline: {new Date(opp.application_deadline).toLocaleDateString()}
+              {deadlineDays !== null && (
+                <span className="font-mononum text-[11px]">
+                  ({deadlineDays < 0 ? "closed" : deadlineDays === 0 ? "today" : `${deadlineDays}d left`})
+                </span>
+              )}
+            </div>
+          )}
+          {opp.vacancies && (
+            <div className="flex items-center gap-1.5 text-[13px] text-ink-sub ml-auto">
+              <Users className="h-3.5 w-3.5 flex-shrink-0" />
+              {opp.vacancies_filled ?? counts.selected} / {opp.vacancies} filled
+            </div>
+          )}
+        </div>
+      )}
 
       {!apps.length ? (
         <EmptyState title="No applications yet" hint="Applications will appear here once candidates apply." />

@@ -59,13 +59,25 @@ export async function updateOpportunity(id: string, actorId: string, actorRole: 
 }
 
 export async function getOpportunity(id: string) {
-  const opp = await prisma.opportunity.findUnique({ where: { id } });
+  const opp = await prisma.opportunity.findUnique({
+    where: { id },
+    include: { _count: { select: { applications: true } } }
+  });
   if (!opp) throw NotFound("Opportunity not found");
-  // Auto-close if deadline has passed.
-  if (opp.status === "open" && new Date(opp.application_deadline) < new Date()) {
-    return prisma.opportunity.update({ where: { id }, data: { status: "closed" } });
+
+  const { _count, ...rest } = opp;
+  const realAppCount = _count.applications;
+  const realFilled = await prisma.application.count({
+    where: { opportunity_id: id, status: "selected" }
+  });
+
+  const base = { ...rest, application_count: realAppCount, vacancies_filled: realFilled };
+
+  if (base.status === "open" && new Date(base.application_deadline) < new Date()) {
+    await prisma.opportunity.update({ where: { id }, data: { status: "closed" } });
+    return { ...base, status: "closed" };
   }
-  return opp;
+  return base;
 }
 
 export async function deleteOpportunity(id: string, actorId: string, actorRole: Role) {
@@ -95,19 +107,21 @@ export async function listOpportunities(q: {
   if (q.city) where.city = q.city;
   if (q.org_id) where.org_id = q.org_id;
 
-  const items = await prisma.opportunity.findMany({
+  const rows = await prisma.opportunity.findMany({
     where,
     orderBy: { created_at: "desc" },
     take: q.limit + 1,
-    ...(q.cursor ? { cursor: { id: q.cursor }, skip: 1 } : {})
+    ...(q.cursor ? { cursor: { id: q.cursor }, skip: 1 } : {}),
+    include: { _count: { select: { applications: true } } }
   });
 
-  const hasMore = items.length > q.limit;
-  const page = hasMore ? items.slice(0, q.limit) : items;
-  return {
-    items: page,
-    next_cursor: hasMore ? page[page.length - 1].id : null
-  };
+  const hasMore = rows.length > q.limit;
+  const page = hasMore ? rows.slice(0, q.limit) : rows;
+  const items = page.map(({ _count, ...opp }) => ({
+    ...opp,
+    application_count: _count.applications
+  }));
+  return { items, next_cursor: hasMore ? items[items.length - 1].id : null };
 }
 
 export async function bumpApplicationCount(id: string, delta: number) {

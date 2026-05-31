@@ -39,7 +39,7 @@ export async function listPosts(q: { author_id?: string; sport?: string; type?: 
     orderBy: { created_at: "desc" },
     take: q.limit + 1,
     ...(q.cursor ? { cursor: { id: q.cursor }, skip: 1 } : {}),
-    include: { author: { select: { id: true, full_name: true, role: true, profile_photo_url: true } } }
+    include: { author: { select: { id: true, full_name: true, role: true, profile_photo_url: true } }, _count: { select: { likes: true, comments: true } } }
   });
 
   const hasMore = rows.length > q.limit;
@@ -58,7 +58,7 @@ export async function feedForUser(userId: string, limit = 20) {
     where: { author_id: { in: [userId, ...followeeIds] } },
     orderBy: { created_at: "desc" },
     take: limit,
-    include: { author: { select: { id: true, full_name: true, role: true, profile_photo_url: true } } }
+    include: { author: { select: { id: true, full_name: true, role: true, profile_photo_url: true } }, _count: { select: { likes: true, comments: true } } }
   });
 
   return { items: rows.map(flattenPost) };
@@ -207,13 +207,16 @@ export async function deleteComment(commentId: string, actorId: string, isAdmin:
 }
 
 // Flattens the nested author include into backward-compatible flat fields.
+// Uses _count from Prisma include to override stale stored counters.
 function flattenPost(row: any) {
-  const { author, created_at, updated_at, ...rest } = row;
+  const { author, created_at, updated_at, _count, ...rest } = row;
   return {
     ...rest,
     author,
     author_name: author?.full_name ?? "Unknown",
     author_role: author?.role,
+    like_count: _count?.likes ?? rest.like_count,
+    comment_count: _count?.comments ?? rest.comment_count,
     created_at: created_at instanceof Date ? created_at.getTime() : created_at,
     updated_at: updated_at instanceof Date ? updated_at.getTime() : updated_at
   };

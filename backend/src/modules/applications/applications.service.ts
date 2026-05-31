@@ -1,6 +1,7 @@
 import { prisma } from "../../config/prisma";
 import { BadRequest, Conflict, Forbidden, NotFound } from "../../utils/errors";
 import { createNotification } from "../notifications/notifications.service";
+import { logger } from "../../config/logger";
 import type { ApplicationStatus, Role } from "../../types/domain";
 
 const transitions: Record<ApplicationStatus, ApplicationStatus[]> = {
@@ -139,9 +140,31 @@ export async function transition(
       type: `application_${next}`,
       title: n.title,
       body: n.body,
-      link: `/applications/${app.id}`,
+      // Link to the opportunity detail page — athlete can see org contact + full details.
+      // (There is no /applications/:id route, so the old link caused a 404.)
+      link: `/opportunities/${opp.id}`,
       email: n.email
     });
+  }
+
+  // When selected, mark athlete as no longer available so their profile reflects it.
+  if (next === "selected") {
+    try {
+      const user = await prisma.user.findUnique({
+        where: { id: app.applicant_user_id },
+        select: { athlete_data: true }
+      });
+      if (user?.athlete_data) {
+        await prisma.user.update({
+          where: { id: app.applicant_user_id },
+          data: {
+            athlete_data: { ...(user.athlete_data as object), availability: "not_available" }
+          }
+        });
+      }
+    } catch (err) {
+      logger.warn({ err }, "failed to update athlete availability after selection");
+    }
   }
 
   return updated;

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import { PageHeader, Spinner, EmptyState, Avatar, StatusPill, SectionHead } from "../components/UI";
@@ -35,7 +35,12 @@ function FilterGroup({ label, children }: { label: string; children: React.React
 }
 
 export default function Search() {
-  const [mode, setMode] = useState<Mode>("players");
+  const [searchParams] = useSearchParams();
+  const [mode, setMode] = useState<Mode>(() => {
+    const tab = searchParams.get("tab");
+    if (tab === "clubs" || tab === "opportunities") return tab;
+    return "players";
+  });
   const [view, setView] = useState<ViewMode>("table");
   const [filtersOpen, setFiltersOpen] = useState(window.innerWidth >= 1024);
   const [q, setQ] = useState("");

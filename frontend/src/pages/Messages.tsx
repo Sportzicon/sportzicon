@@ -72,6 +72,17 @@ export default function Messages() {
   const [activeId, setActiveId] = useState<string | null>(initialTo ? pairId(me.id, initialTo) : null);
   const [text, setText] = useState("");
   const [recipient, setRecipient] = useState<string | null>(initialTo || null);
+
+  // When a notification link navigates to /messages?to=userId while the page is
+  // already mounted, useState won't re-initialise — update active conversation manually.
+  useEffect(() => {
+    const to = params.get("to");
+    if (to && to !== recipient) {
+      setActiveId(pairId(me.id, to));
+      setRecipient(to);
+      setParams({}, { replace: true });
+    }
+  }, [params]);
   const qc = useQueryClient();
   const endRef = useRef<HTMLDivElement>(null);
 

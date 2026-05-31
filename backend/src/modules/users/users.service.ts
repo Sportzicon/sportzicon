@@ -3,9 +3,19 @@ import { Forbidden, NotFound } from "../../utils/errors";
 import { omitSensitive } from "../../utils/user";
 
 export async function getUserById(id: string) {
-  const user = await prisma.user.findUnique({ where: { id } });
+  const user = await prisma.user.findUnique({
+    where: { id },
+    include: {
+      _count: { select: { followers: true, following: true } }
+    }
+  });
   if (!user) throw NotFound("User not found");
-  return omitSensitive(user);
+  const { _count, ...rest } = user;
+  return omitSensitive({
+    ...rest,
+    follower_count: _count.followers,
+    following_count: _count.following
+  });
 }
 
 export async function updateProfile(userId: string, patch: Record<string, unknown>) {

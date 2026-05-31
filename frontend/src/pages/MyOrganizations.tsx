@@ -1,14 +1,18 @@
 import { Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
+import { useAuthStore } from "../store/auth";
 import { PageHeader, Spinner, EmptyState, Kicker } from "../components/UI";
-import { Trash2, Pencil, MoreVertical, CheckCircle } from "lucide-react";
+import { Trash2, Pencil, MoreVertical } from "lucide-react";
 import { useState, useEffect } from "react";
 
 export default function MyOrganizations() {
+  const user = useAuthStore((s) => s.user);
+  const isAdmin = user?.role === "admin";
   const qc = useQueryClient();
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
     function onClickOutside(e: MouseEvent) {
@@ -20,8 +24,10 @@ export default function MyOrganizations() {
   }, []);
 
   const q = useQuery({
-    queryKey: ["my-orgs"],
-    queryFn: async () => (await api.get("/organizations/mine")).data.items as any[]
+    queryKey: ["my-orgs", isAdmin, search],
+    queryFn: async () => isAdmin
+      ? (await api.get("/organizations", { params: { q: search || undefined, limit: 100 } })).data.items as any[]
+      : (await api.get("/organizations/mine")).data.items as any[]
   });
 
   const deleteOrg = useMutation({
@@ -34,10 +40,19 @@ export default function MyOrganizations() {
   return (
     <div className="space-y-5">
       <PageHeader
-        title="My organizations"
-        subtitle="Club & academy profiles"
+        title={isAdmin ? "All organizations" : "My organizations"}
+        subtitle={isAdmin ? "Platform-wide club & academy registry" : "Club & academy profiles"}
         action={<Link to="/organizations/new" className="btn-accent">+ New organization</Link>}
       />
+
+      {isAdmin && (
+        <input
+          className="input max-w-xs"
+          placeholder="Search by name…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+      )}
 
       {!q.data?.length ? (
         <EmptyState

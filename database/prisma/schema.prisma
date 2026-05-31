@@ -52,7 +52,7 @@ enum ApplicationStatus {
 }
 
 model User {
-  id                 String             @id @default(cuid())
+  id                 String             @id @default(uuid()) @db.Uuid
   email              String             @unique
   email_lower        String             @unique
   email_verified     Boolean            @default(false)
@@ -105,8 +105,8 @@ model User {
 }
 
 model Organization {
-  id                   String             @id @default(cuid())
-  owner_user_id        String
+  id                   String             @id @default(uuid()) @db.Uuid
+  owner_user_id        String             @db.Uuid
   org_name             String
   org_name_lower       String
   org_type             String
@@ -137,9 +137,9 @@ model Organization {
 }
 
 model Opportunity {
-  id                        String            @id @default(cuid())
-  org_id                    String
-  posted_by_user_id         String
+  id                        String            @id @default(uuid()) @db.Uuid
+  org_id                    String            @db.Uuid
+  posted_by_user_id         String            @db.Uuid
   title                     String
   title_lower               String
   type                      OpportunityType
@@ -178,9 +178,9 @@ model Opportunity {
 }
 
 model Application {
-  id                String            @id @default(cuid())
-  opportunity_id    String
-  applicant_user_id String
+  id                String            @id @default(uuid()) @db.Uuid
+  opportunity_id    String            @db.Uuid
+  applicant_user_id String            @db.Uuid
   cover_note        String?           @db.Text
   documents         String[]          @default([])
   status            ApplicationStatus @default(pending)
@@ -198,9 +198,9 @@ model Application {
 }
 
 model Follow {
-  id          String   @id @default(cuid())
-  follower_id String
-  followee_id String
+  id          String   @id @default(uuid()) @db.Uuid
+  follower_id String   @db.Uuid
+  followee_id String   @db.Uuid
   created_at  DateTime @default(now())
 
   follower User @relation("Follower", fields: [follower_id], references: [id])
@@ -211,8 +211,8 @@ model Follow {
 }
 
 model Post {
-  id            String   @id @default(cuid())
-  author_id     String
+  id            String   @id @default(uuid()) @db.Uuid
+  author_id     String   @db.Uuid
   type          String   @default("post")
   text          String   @db.Text
   media_urls    String[] @default([])
@@ -231,8 +231,8 @@ model Post {
 }
 
 model Reel {
-  id               String   @id @default(cuid())
-  author_id        String
+  id               String   @id @default(uuid()) @db.Uuid
+  author_id        String   @db.Uuid
   caption          String?
   video_url        String
   thumbnail_url    String?
@@ -249,8 +249,8 @@ model Reel {
 }
 
 model Blog {
-  id              String    @id @default(cuid())
-  author_id       String
+  id              String    @id @default(uuid()) @db.Uuid
+  author_id       String    @db.Uuid
   title           String
   slug            String    @unique
   cover_image_url String?
@@ -274,12 +274,12 @@ model Blog {
 }
 
 model Comment {
-  id          String   @id @default(cuid())
+  id          String   @id @default(uuid()) @db.Uuid
   parent_type String
-  post_id     String?
-  reel_id     String?
-  blog_id     String?
-  author_id   String
+  post_id     String?  @db.Uuid
+  reel_id     String?  @db.Uuid
+  blog_id     String?  @db.Uuid
+  author_id   String   @db.Uuid
   text        String   @db.Text
   created_at  DateTime @default(now())
 
@@ -294,7 +294,7 @@ model Comment {
 }
 
 model Conversation {
-  id              String   @id @default(cuid())
+  id              String   @id @default(uuid()) @db.Uuid
   participant_ids String[]
   last_message    Json?
   unread_counts   Json     @default("{}")
@@ -307,10 +307,10 @@ model Conversation {
 }
 
 model Message {
-  id              String    @id @default(cuid())
-  conversation_id String
-  sender_id       String
-  recipient_id    String
+  id              String    @id @default(uuid()) @db.Uuid
+  conversation_id String    @db.Uuid
+  sender_id       String    @db.Uuid
+  recipient_id    String    @db.Uuid
   body            String    @db.Text
   read_at         DateTime?
   flagged         Boolean   @default(false)
@@ -323,8 +323,8 @@ model Message {
 }
 
 model Notification {
-  id         String   @id @default(cuid())
-  user_id    String
+  id         String   @id @default(uuid()) @db.Uuid
+  user_id    String   @db.Uuid
   type       String
   title      String
   body       String
@@ -339,12 +339,12 @@ model Notification {
 }
 
 model AuditLog {
-  id          String   @id @default(cuid())
-  actor_id    String
+  id          String   @id @default(uuid()) @db.Uuid
+  actor_id    String   @db.Uuid
   actor_role  Role
   action      String
   target_type String?
-  target_id   String?
+  target_id   String?  @db.Uuid
   details     Json?
   ip          String?
   created_at  DateTime @default(now())
@@ -356,13 +356,13 @@ model AuditLog {
 }
 
 model Report {
-  id          String    @id @default(cuid())
-  reporter_id String
+  id          String    @id @default(uuid()) @db.Uuid
+  reporter_id String    @db.Uuid
   target_type String
-  target_id   String
+  target_id   String    @db.Uuid
   reason      String    @db.Text
   status      String    @default("open")
-  resolved_by String?
+  resolved_by String?   @db.Uuid
   resolved_at DateTime?
   notes       String?
   created_at  DateTime  @default(now())
@@ -371,23 +371,23 @@ model Report {
 }
 
 model Verification {
-  id                String             @id @default(cuid())
+  id                String             @id @default(uuid()) @db.Uuid
   entity_type       String
-  entity_id         String
+  entity_id         String             @db.Uuid
   verification_type String
   documents         String[]
   notes             String?
   status            VerificationStatus @default(pending)
-  submitted_by      String
-  reviewed_by       String?
+  submitted_by      String             @db.Uuid
+  reviewed_by       String?            @db.Uuid
   reviewed_at       DateTime?
   rejection_reason  String?
   created_at        DateTime           @default(now())
 }
 
 model EmailVerification {
-  id         String   @id @default(cuid())
-  user_id    String
+  id         String   @id @default(uuid()) @db.Uuid
+  user_id    String   @db.Uuid
   token      String   @unique
   expires_at DateTime
   created_at DateTime @default(now())
@@ -396,8 +396,8 @@ model EmailVerification {
 }
 
 model PasswordReset {
-  id         String   @id @default(cuid())
-  user_id    String
+  id         String   @id @default(uuid()) @db.Uuid
+  user_id    String   @db.Uuid
   token      String   @unique
   expires_at DateTime
   used       Boolean  @default(false)
@@ -407,8 +407,8 @@ model PasswordReset {
 }
 
 model RefreshToken {
-  id         String   @id @default(cuid())
-  user_id    String
+  id         String   @id @default(uuid()) @db.Uuid
+  user_id    String   @db.Uuid
   token      String   @unique
   expires_at DateTime
   revoked    Boolean  @default(false)
@@ -418,8 +418,8 @@ model RefreshToken {
 }
 
 model PostLike {
-  post_id    String
-  user_id    String
+  post_id    String   @db.Uuid
+  user_id    String   @db.Uuid
   created_at DateTime @default(now())
 
   post Post @relation(fields: [post_id], references: [id], onDelete: Cascade)
@@ -429,8 +429,8 @@ model PostLike {
 }
 
 model ReelLike {
-  reel_id    String
-  user_id    String
+  reel_id    String   @db.Uuid
+  user_id    String   @db.Uuid
   created_at DateTime @default(now())
 
   reel Reel @relation(fields: [reel_id], references: [id], onDelete: Cascade)
@@ -440,8 +440,8 @@ model ReelLike {
 }
 
 model BlogLike {
-  blog_id    String
-  user_id    String
+  blog_id    String   @db.Uuid
+  user_id    String   @db.Uuid
   created_at DateTime @default(now())
 
   blog Blog @relation(fields: [blog_id], references: [id], onDelete: Cascade)

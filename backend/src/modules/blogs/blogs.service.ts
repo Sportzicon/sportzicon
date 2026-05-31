@@ -81,7 +81,7 @@ export async function listBlogs(q: {
     orderBy: { created_at: "desc" },
     take: q.limit + 1,
     ...(q.cursor ? { cursor: { id: q.cursor }, skip: 1 } : {}),
-    include: { author: { select: { id: true, full_name: true, profile_photo_url: true } } }
+    include: { author: { select: { id: true, full_name: true, profile_photo_url: true } }, _count: { select: { likes: true, comments: true } } }
   });
 
   const hasMore = rows.length > q.limit;
@@ -93,7 +93,7 @@ export async function listBlogs(q: {
 export async function getBlog(idOrSlug: string) {
   const blog = await prisma.blog.findFirst({
     where: { OR: [{ id: idOrSlug }, { slug: idOrSlug }] },
-    include: { author: { select: { id: true, full_name: true, profile_photo_url: true } } }
+    include: { author: { select: { id: true, full_name: true, profile_photo_url: true } }, _count: { select: { likes: true, comments: true } } }
   });
   if (!blog) throw NotFound("Blog not found");
   prisma.blog.update({ where: { id: blog.id }, data: { view_count: { increment: 1 } } }).catch(() => undefined);
@@ -132,11 +132,13 @@ export async function unlikeBlog(id: string, userId: string) {
 }
 
 function flattenBlog(row: any) {
-  const { author, created_at, updated_at, published_at, ...rest } = row;
+  const { author, created_at, updated_at, published_at, _count, ...rest } = row;
   return {
     ...rest,
     author,
     author_name: author?.full_name ?? "Unknown",
+    like_count: _count?.likes ?? rest.like_count,
+    comment_count: _count?.comments ?? rest.comment_count,
     created_at: created_at instanceof Date ? created_at.getTime() : created_at,
     updated_at: updated_at instanceof Date ? updated_at.getTime() : updated_at,
     published_at: published_at instanceof Date ? published_at.getTime() : published_at
