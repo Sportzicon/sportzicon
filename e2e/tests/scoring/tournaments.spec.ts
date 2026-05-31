@@ -1,15 +1,17 @@
 import { test, expect } from "@playwright/test";
+import { inputByType, fieldByLabel } from "../_helpers/labels";
 
 const ADMIN_EMAIL = process.env.SCORING_ADMIN_EMAIL || "admin@scoring.local";
 const ADMIN_PASSWORD = process.env.SCORING_ADMIN_PASSWORD || "Demo1234!";
 
 async function loginScoring(page) {
   await page.goto("/login");
-  await page.getByLabel(/email/i).fill(ADMIN_EMAIL);
-  await page.getByLabel(/password/i).fill(ADMIN_PASSWORD);
+  await inputByType(page, "email").fill(ADMIN_EMAIL);
+  await inputByType(page, "password").fill(ADMIN_PASSWORD);
   await page.getByRole("button", { name: /(log\s?in|sign\s?in)/i }).click();
-  await page.waitForURL(url => !url.pathname.endsWith("/login"), { timeout: 10_000 })
-    .catch(() => test.skip(true, "Scoring seed missing"));
+  const ok = await page.waitForURL(url => !url.pathname.endsWith("/login"), { timeout: 10_000 })
+    .then(() => true).catch(() => false);
+  if (!ok) test.skip(true, "Scoring seed missing — start scoring backend with admin@scoring.local");
 }
 
 test.describe("Scoring console — tournaments", () => {
@@ -21,8 +23,8 @@ test.describe("Scoring console — tournaments", () => {
   test("@critical organizer can open the new tournament form", async ({ page }) => {
     await loginScoring(page);
     await page.goto("/tournaments/new");
-    await expect(page.getByLabel(/name/i).first()).toBeVisible();
-    await expect(page.getByLabel(/sport/i).first()).toBeVisible();
+    await expect(fieldByLabel(page, "name")).toBeVisible();
+    await expect(fieldByLabel(page, "sport")).toBeVisible();
   });
 
   test("@critical organizer can create a tournament", async ({ page }) => {
@@ -30,8 +32,8 @@ test.describe("Scoring console — tournaments", () => {
     await page.goto("/tournaments/new");
 
     const stamp = Date.now();
-    await page.getByLabel(/name/i).first().fill(`E2E Tournament ${stamp}`);
-    const sportField = page.getByLabel(/sport/i).first();
+    await fieldByLabel(page, "name").fill(`E2E Tournament ${stamp}`);
+    const sportField = fieldByLabel(page, "sport");
     if (await sportField.evaluate(el => (el as HTMLSelectElement).tagName) === "SELECT") {
       await sportField.selectOption("cricket").catch(() => {});
     } else {

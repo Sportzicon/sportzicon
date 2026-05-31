@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
@@ -67,6 +67,14 @@ export default function LiveScoring() {
     queryFn: () => api.get(`/matches/${matchId}`).then(r => r.data.match),
     refetchInterval: 5_000
   });
+
+  // Auto-pin the latest innings as active so the form/mutations are wired up
+  // even when the scorer arrives via a deep link without tapping a tab.
+  useEffect(() => {
+    if (activeInningsId) return;
+    const innings = match?.innings;
+    if (innings?.length) setActiveInningsId(innings[innings.length - 1].id);
+  }, [match, activeInningsId]);
 
   const { data: ballsData } = useQuery({
     queryKey: ["balls", activeInningsId],

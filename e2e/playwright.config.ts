@@ -36,7 +36,7 @@ export default defineConfig({
   projects: [
     {
       name: "sportivox-chromium",
-      testMatch: /sportivox\/.*\.spec\.ts$/,
+      testDir: "./tests/sportivox",
       use: {
         ...devices["Desktop Chrome"],
         baseURL: SVOX_URL
@@ -44,7 +44,7 @@ export default defineConfig({
     },
     {
       name: "scoring-chromium",
-      testMatch: /scoring\/.*\.spec\.ts$/,
+      testDir: "./tests/scoring",
       use: {
         ...devices["Desktop Chrome"],
         baseURL: SCORING_URL
@@ -52,7 +52,8 @@ export default defineConfig({
     },
     {
       name: "mobile-chrome",
-      testMatch: /sportivox\/landing\.spec\.ts/,
+      testDir: "./tests/sportivox",
+      testMatch: ["landing.spec.ts"],
       use: {
         ...devices["Pixel 7"],
         baseURL: SVOX_URL

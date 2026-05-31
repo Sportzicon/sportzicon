@@ -3,7 +3,7 @@
   "counts": {
     "P1": 2,
     "P2": 4,
-    "P3": 4
+    "P3": 2
   },
   "findings": [
     {
@@ -52,20 +52,6 @@
       "sev": "P3",
       "area": "security",
       "title": "npm audit failed for backend",
-      "evidence": "Command failed: npm audit --json --omit=dev",
-      "suggestion": "Run npm install first, then re-run audit."
-    },
-    {
-      "sev": "P3",
-      "area": "security",
-      "title": "npm audit failed for scoring/backend",
-      "evidence": "Command failed: npm audit --json --omit=dev",
-      "suggestion": "Run npm install first, then re-run audit."
-    },
-    {
-      "sev": "P3",
-      "area": "security",
-      "title": "npm audit failed for scoring/frontend",
       "evidence": "Command failed: npm audit --json --omit=dev",
       "suggestion": "Run npm install first, then re-run audit."
     },

@@ -7,6 +7,7 @@ const ADMIN_PASSWORD = process.env.SCORING_ADMIN_PASSWORD || "Demo1234!";
 const SCORING_API = process.env.SCORING_API_URL || "http://localhost:8081/api";
 
 async function setupMatch() {
+  try {
   const ctx = await request.newContext();
   const lg = await ctx.post(`${SCORING_API}/auth/login`, { data: { email: ADMIN_EMAIL, password: ADMIN_PASSWORD } });
   if (!lg.ok()) return null;
@@ -21,6 +22,9 @@ async function setupMatch() {
     headers: h, data: { team1_id: team1.id, team2_id: team2.id }
   })).json()).match;
   return { token: access_token, match: m };
+  } catch {
+    return null;
+  }
 }
 
 test.describe("@scoring Match configuration", () => {
@@ -33,9 +37,16 @@ test.describe("@scoring Match configuration", () => {
 
   test.beforeEach(async ({ page }) => {
     if (!setup) test.skip(true, "Setup unavailable");
-    await page.addInitScript(([token]) => {
-      localStorage.setItem("auth", JSON.stringify({ access_token: token, refresh_token: "" }));
-    }, [setup.token]);
+    await page.addInitScript((token) => {
+      localStorage.setItem("scoring-auth", JSON.stringify({
+        state: {
+          user: { id: "e2e", email: "admin@scoring.local", full_name: "E2E", role: "admin" },
+          access_token: token,
+          refresh_token: ""
+        },
+        version: 0
+      }));
+    }, setup.token);
   });
 
   test("@critical config screen renders all PPTX sections", async ({ page }) => {

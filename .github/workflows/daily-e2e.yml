@@ -86,9 +86,9 @@ jobs:
         if: github.event_name != 'pull_request' && always()
         run: |
           DATE=$(date -u +%F)
-          mkdir -p reports/e2e/$DATE
-          cp e2e/reports/results.json reports/e2e/$DATE/ 2>/dev/null || true
-          cp e2e/reports/junit.xml   reports/e2e/$DATE/ 2>/dev/null || true
+          mkdir -p "reports/e2e/$DATE"
+          cp e2e/reports/results.json "reports/e2e/$DATE/" 2>/dev/null || true
+          cp e2e/reports/junit.xml   "reports/e2e/$DATE/" 2>/dev/null || true
           node -e "
             const fs = require('fs');
             const d = JSON.parse(fs.readFileSync('reports/e2e/$DATE/results.json','utf8') || '{}');
