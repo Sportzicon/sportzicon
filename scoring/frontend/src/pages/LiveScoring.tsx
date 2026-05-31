@@ -1,10 +1,12 @@
 import { useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
-import { CheckCircle, RotateCcw, Trophy, ChevronDown, AlertCircle } from "lucide-react";
-
-const WICKET_TYPES = ["bowled", "caught", "lbw", "run_out", "stumped", "hit_wicket", "retired_hurt", "obstructing_field"];
+import { CheckCircle, AlertCircle, Undo2, BarChart3 } from "lucide-react";
+import {
+  SHOT_TYPES, BALL_LINES, BALL_LENGTHS, BOWLER_TYPE_SHORT, bowlerVariantFromShort,
+  WICKET_TYPES, FIELDING_POSITIONS, DISMISSAL_ZONES, BALL_TRAJECTORIES
+} from "../data/cricket";
 
 function oversFromBalls(balls: number) {
   return `${Math.floor(balls / 6)}.${balls % 6}`;
@@ -13,6 +15,7 @@ function oversFromBalls(balls: number) {
 interface BallInput {
   batsman_id: string;
   bowler_id: string;
+  non_striker_id: string;
   runs: number;
   is_wide: boolean;
   is_no_ball: boolean;
@@ -21,16 +24,29 @@ interface BallInput {
   is_wicket: boolean;
   is_four: boolean;
   is_six: boolean;
+  is_free_hit: boolean;
+  // PPTX § Level 1 — mandatory dropdowns
+  shot_type: string;
+  ball_line: string;
+  ball_length: string;
+  bowler_type_short: string;  // UI-only, mapped to bowler_variant on submit
+  // PPTX § Level 2 wicket panel
   wicket_type: string;
   dismissed_player_id: string;
   fielder_id: string;
+  fielder_name: string;
+  fielding_position: string;
+  dismissal_zone: string;
+  ball_trajectory: string;
 }
 
 const DEFAULT_BALL: BallInput = {
-  batsman_id: "", bowler_id: "", runs: 0,
+  batsman_id: "", bowler_id: "", non_striker_id: "", runs: 0,
   is_wide: false, is_no_ball: false, is_bye: false, is_leg_bye: false,
-  is_wicket: false, is_four: false, is_six: false,
-  wicket_type: "", dismissed_player_id: "", fielder_id: ""
+  is_wicket: false, is_four: false, is_six: false, is_free_hit: false,
+  shot_type: "", ball_line: "", ball_length: "", bowler_type_short: "",
+  wicket_type: "", dismissed_player_id: "", fielder_id: "", fielder_name: "",
+  fielding_position: "", dismissal_zone: "", ball_trajectory: ""
 };
 
 export default function LiveScoring() {
@@ -64,11 +80,28 @@ export default function LiveScoring() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["match", matchId] });
       qc.invalidateQueries({ queryKey: ["balls", activeInningsId] });
-      setBall({ ...DEFAULT_BALL, batsman_id: ball.batsman_id, bowler_id: ball.bowler_id });
+      // Keep batsman/bowler/non-striker for fast next-ball entry (PPTX § Level 1 fast flow).
+      setBall(prev => ({
+        ...DEFAULT_BALL,
+        batsman_id: prev.batsman_id,
+        bowler_id: prev.bowler_id,
+        non_striker_id: prev.non_striker_id,
+        bowler_type_short: prev.bowler_type_short
+      }));
       setFeedback({ type: "success", msg: "Ball recorded" });
       setTimeout(() => setFeedback(null), 2000);
     },
     onError: (err: any) => setFeedback({ type: "error", msg: err.response?.data?.error?.message || "Failed" })
+  });
+
+  const undoMutation = useMutation({
+    mutationFn: () => api.post(`/innings/${activeInningsId}/balls/undo`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["match", matchId] });
+      qc.invalidateQueries({ queryKey: ["balls", activeInningsId] });
+      setFeedback({ type: "success", msg: "Last ball undone" });
+    },
+    onError: (err: any) => setFeedback({ type: "error", msg: err.response?.data?.error?.message || "Undo failed" })
   });
 
   const createInningsMutation = useMutation({
@@ -115,10 +148,31 @@ export default function LiveScoring() {
     addBallMutation.mutate({
       over_number: currentOver,
       ball_number: currentBallNum,
-      ...ball,
+      batsman_id: ball.batsman_id,
+      bowler_id: ball.bowler_id,
+      non_striker_id: ball.non_striker_id || undefined,
       runs: Number(ball.runs),
+      is_wide: ball.is_wide,
+      is_no_ball: ball.is_no_ball,
+      is_bye: ball.is_bye,
+      is_leg_bye: ball.is_leg_bye,
+      is_wicket: ball.is_wicket,
+      is_four: ball.is_four,
+      is_six: ball.is_six,
+      is_free_hit: ball.is_free_hit,
+      // PPTX § Level 1 dropdowns
+      shot_type: ball.shot_type || undefined,
+      ball_line: ball.ball_line || undefined,
+      ball_length: ball.ball_length || undefined,
+      bowler_variant: bowlerVariantFromShort(ball.bowler_type_short),
+      // PPTX § Level 2 wicket panel
+      wicket_type: ball.is_wicket ? ball.wicket_type || undefined : undefined,
       dismissed_player_id: ball.is_wicket ? ball.dismissed_player_id || ball.batsman_id : undefined,
-      fielder_id: ball.fielder_id || undefined
+      fielder_id: ball.is_wicket ? ball.fielder_id || undefined : undefined,
+      fielder_name: ball.is_wicket ? ball.fielder_name || undefined : undefined,
+      fielding_position: ball.is_wicket ? ball.fielding_position || undefined : undefined,
+      dismissal_zone: ball.is_wicket ? ball.dismissal_zone || undefined : undefined,
+      ball_trajectory: ball.is_wicket ? ball.ball_trajectory || undefined : undefined
     });
   }
 
@@ -142,7 +196,19 @@ export default function LiveScoring() {
           <h1 className="font-bold text-lg">{match.team1.name} vs {match.team2.name}</h1>
           <p className="text-sm text-gray-400 capitalize">{match.sport} · {match.format}</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          {activeInnings && (
+            <Link to={`/innings/${activeInnings.id}/analytics`} className="btn-secondary text-sm inline-flex items-center gap-1">
+              <BarChart3 className="w-4 h-4" /> Analytics
+            </Link>
+          )}
+          <button
+            onClick={() => undoMutation.mutate()}
+            disabled={!activeInnings || undoMutation.isPending}
+            className="btn-secondary text-sm inline-flex items-center gap-1"
+          >
+            <Undo2 className="w-4 h-4" /> Undo
+          </button>
           <button onClick={() => setShowNewInnings(true)} className="btn-secondary text-sm">
             + New Innings
           </button>
@@ -194,6 +260,41 @@ export default function LiveScoring() {
           <p className="text-gray-500 text-xs mt-2">
             Extras: {activeInnings.extras} (W:{activeInnings.wides} NB:{activeInnings.no_balls} B:{activeInnings.byes} LB:{activeInnings.leg_byes})
           </p>
+          {/* PPTX § Live Innings Tracking — derived metrics */}
+          <div className="mt-3 grid grid-cols-2 sm:grid-cols-5 gap-2 text-center">
+            <div className="bg-gray-800 rounded-md py-1.5 px-2">
+              <p className="text-[10px] uppercase text-gray-400">CRR</p>
+              <p className="text-sm font-bold">
+                {activeInnings.total_balls > 0
+                  ? ((activeInnings.total_runs / activeInnings.total_balls) * 6).toFixed(2)
+                  : "0.00"}
+              </p>
+            </div>
+            {activeInnings.target && (
+              <div className="bg-gray-800 rounded-md py-1.5 px-2">
+                <p className="text-[10px] uppercase text-gray-400">RRR</p>
+                <p className="text-sm font-bold">
+                  {(() => {
+                    const ballsLeft = 120 - activeInnings.total_balls;
+                    const need = activeInnings.target - activeInnings.total_runs;
+                    return ballsLeft > 0 && need > 0 ? ((need / ballsLeft) * 6).toFixed(2) : "—";
+                  })()}
+                </p>
+              </div>
+            )}
+            <div className="bg-gray-800 rounded-md py-1.5 px-2">
+              <p className="text-[10px] uppercase text-gray-400">Proj</p>
+              <p className="text-sm font-bold">{activeInnings.projected_score ?? "—"}</p>
+            </div>
+            <div className="bg-gray-800 rounded-md py-1.5 px-2">
+              <p className="text-[10px] uppercase text-gray-400">Win %</p>
+              <p className="text-sm font-bold">{activeInnings.win_probability ?? "—"}</p>
+            </div>
+            <div className="bg-gray-800 rounded-md py-1.5 px-2">
+              <p className="text-[10px] uppercase text-gray-400">4s/6s · Dot</p>
+              <p className="text-sm font-bold">{activeInnings.boundary_4s ?? 0}/{activeInnings.boundary_6s ?? 0} · {activeInnings.dot_balls ?? 0}</p>
+            </div>
+          </div>
           {/* Recent balls */}
           {ballsData && (
             <div className="mt-3 flex gap-1.5 flex-wrap">
@@ -223,12 +324,21 @@ export default function LiveScoring() {
         <form onSubmit={handleBallSubmit} className="card p-4 space-y-4">
           <h2 className="font-semibold">Over {currentOver + 1} · Ball {currentBallNum}</h2>
 
-          <div className="grid sm:grid-cols-2 gap-4">
+          <div className="grid sm:grid-cols-3 gap-4">
             <div>
-              <label className="label">Batsman *</label>
+              <label className="label">Batsman (on strike) *</label>
               <select className="input" value={ball.batsman_id} onChange={e => update("batsman_id", e.target.value)} required>
                 <option value="">Select batsman</option>
                 {battingPlayers.map((p: any) => <option key={p.id} value={p.id}>{p.name}{p.is_captain ? " (c)" : ""}{p.is_keeper ? " (wk)" : ""}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="label">Non-striker</label>
+              <select className="input" value={ball.non_striker_id} onChange={e => update("non_striker_id", e.target.value)}>
+                <option value="">Select non-striker</option>
+                {battingPlayers.filter((p: any) => p.id !== ball.batsman_id).map((p: any) =>
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                )}
               </select>
             </div>
             <div>
@@ -236,6 +346,38 @@ export default function LiveScoring() {
               <select className="input" value={ball.bowler_id} onChange={e => update("bowler_id", e.target.value)} required>
                 <option value="">Select bowler</option>
                 {bowlingPlayers.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
+              </select>
+            </div>
+          </div>
+
+          {/* PPTX § Level 1 — Ball Length / Line / Bowler Type / Shot Type (mandatory) */}
+          <div className="grid sm:grid-cols-2 gap-4 border-t border-gray-100 pt-4">
+            <div>
+              <label className="label">Ball Length *</label>
+              <select className="input" value={ball.ball_length} onChange={e => update("ball_length", e.target.value)} required>
+                <option value="">Select length</option>
+                {BALL_LENGTHS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="label">Ball Line *</label>
+              <select className="input" value={ball.ball_line} onChange={e => update("ball_line", e.target.value)} required>
+                <option value="">Select line</option>
+                {BALL_LINES.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="label">Bowler Type *</label>
+              <select className="input" value={ball.bowler_type_short} onChange={e => update("bowler_type_short", e.target.value)} required>
+                <option value="">Select bowler type</option>
+                {BOWLER_TYPE_SHORT.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="label">Shot Type *</label>
+              <select className="input" value={ball.shot_type} onChange={e => update("shot_type", e.target.value)} required>
+                <option value="">Select shot</option>
+                {SHOT_TYPES.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
               </select>
             </div>
           </div>
@@ -265,6 +407,7 @@ export default function LiveScoring() {
                 { key: "is_no_ball", label: "No Ball", color: "orange" },
                 { key: "is_bye", label: "Bye", color: "blue" },
                 { key: "is_leg_bye", label: "Leg Bye", color: "blue" },
+                { key: "is_free_hit", label: "Free Hit", color: "green" },
                 { key: "is_wicket", label: "Wicket!", color: "red" },
               ].map(({ key, label, color }) => {
                 const active = ball[key as keyof BallInput] as boolean;
@@ -272,6 +415,7 @@ export default function LiveScoring() {
                   yellow: "bg-yellow-500 text-white",
                   orange: "bg-orange-500 text-white",
                   blue: "bg-blue-500 text-white",
+                  green: "bg-emerald-600 text-white",
                   red: "bg-red-600 text-white"
                 };
                 return (
@@ -284,16 +428,16 @@ export default function LiveScoring() {
             </div>
           </div>
 
-          {/* Wicket details */}
+          {/* PPTX § Level 2 — Wicket panel (expanded automatically on W) */}
           {ball.is_wicket && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-3 space-y-3">
-              <p className="text-sm font-medium text-red-700">Wicket Details</p>
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 space-y-4">
+              <p className="text-sm font-semibold text-red-700">Wicket — Level 2 panel</p>
               <div className="grid sm:grid-cols-3 gap-3">
                 <div>
-                  <label className="label">Dismissal Type</label>
-                  <select className="input" value={ball.wicket_type} onChange={e => update("wicket_type", e.target.value)}>
+                  <label className="label">Dismissal Type *</label>
+                  <select className="input" value={ball.wicket_type} onChange={e => update("wicket_type", e.target.value)} required>
                     <option value="">Select</option>
-                    {WICKET_TYPES.map(w => <option key={w} value={w} className="capitalize">{w.replace("_", " ")}</option>)}
+                    {WICKET_TYPES.map(w => <option key={w.value} value={w.value}>{w.label}</option>)}
                   </select>
                 </div>
                 <div>
@@ -303,16 +447,48 @@ export default function LiveScoring() {
                     {battingPlayers.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
                   </select>
                 </div>
-                {["caught", "run_out", "stumped"].includes(ball.wicket_type) && (
+                {["caught", "cb", "run_out", "stumped"].includes(ball.wicket_type) && (
                   <div>
                     <label className="label">Fielder</label>
                     <select className="input" value={ball.fielder_id} onChange={e => update("fielder_id", e.target.value)}>
-                      <option value="">Select fielder</option>
+                      <option value="">Select from roster</option>
                       {bowlingPlayers.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
                     </select>
+                    <input
+                      type="text" placeholder="…or fielder name"
+                      className="input mt-1.5"
+                      value={ball.fielder_name}
+                      onChange={e => update("fielder_name", e.target.value)}
+                    />
                   </div>
                 )}
               </div>
+              <div className="grid sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="label">Fielding position</label>
+                  <select className="input" value={ball.fielding_position} onChange={e => update("fielding_position", e.target.value)}>
+                    <option value="">Select position</option>
+                    {FIELDING_POSITIONS.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="label">Dismissal zone</label>
+                  <select className="input" value={ball.dismissal_zone} onChange={e => update("dismissal_zone", e.target.value)}>
+                    <option value="">Select zone</option>
+                    {DISMISSAL_ZONES.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="label">Ball trajectory</label>
+                  <select className="input" value={ball.ball_trajectory} onChange={e => update("ball_trajectory", e.target.value)}>
+                    <option value="">Select trajectory</option>
+                    {BALL_TRAJECTORIES.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                  </select>
+                </div>
+              </div>
+              <p className="text-[11px] text-red-600/80">
+                Level 2 reuses Level 1 dropdowns (length · line · shot · bowler type). Covers 95%+ of dismissals with no extra taps.
+              </p>
             </div>
           )}
 

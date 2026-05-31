@@ -70,3 +70,12 @@ crash.log
 .cache/
 tmp/
 .turbo/
+
+# Playwright runtime artifacts (we commit only the summary markdown, not the
+# HTML report directory or videos/screenshots/traces).
+e2e/reports/html/
+e2e/reports/results.json
+e2e/reports/junit.xml
+e2e/test-results/
+e2e/playwright-report/
+playwright-report/

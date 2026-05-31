@@ -210,6 +210,11 @@ export default function MatchDetail() {
             <Edit2 className="w-4 h-4" /> Manage
           </Link>
         )}
+        {canManage && (
+          <Link to={`/matches/${matchId}/config`} className="btn-secondary text-sm">
+            Config
+          </Link>
+        )}
       </div>
 
       {/* Toss info */}
