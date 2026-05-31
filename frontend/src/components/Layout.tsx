@@ -2,7 +2,7 @@ import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/auth";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
-import { Bell, Home, Search, Briefcase, FileText, Film, MessageCircle, ShieldCheck, LogOut, User as UserIcon, Menu, X, Trophy, ChevronDown, Settings } from "lucide-react";
+import { Bell, Home, Search, Briefcase, FileText, Film, MessageCircle, ShieldCheck, LogOut, User as UserIcon, Menu, X, Trophy, ChevronDown } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 
 // ============================================================================
@@ -65,13 +65,13 @@ function NavItem({ to, icon, label, onClick, isCollapsed }: { to: string; icon: 
 export function Layout() {
   const { user, clear } = useAuthStore();
   const navigate = useNavigate();
+  const qc = useQueryClient();
   const [isDesktop, setIsDesktop] = useState(() => window.innerWidth >= 1024);
   const [sidebarOpen, setSidebarOpen] = useState(() => window.innerWidth >= 1024);
   const [sidebarHovered, setSidebarHovered] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const qc = useQueryClient();
 
   useEffect(() => {
     const onResize = () => {
@@ -186,13 +186,6 @@ export function Layout() {
                     className="flex items-center gap-2 px-4 py-2.5 text-[12.5px] text-ink hover:bg-fill border-b border-hairsoft"
                   >
                     <UserIcon className="h-3.5 w-3.5" /> View profile
-                  </NavLink>
-                  <NavLink
-                    to="/settings"
-                    onClick={() => setProfileMenuOpen(false)}
-                    className="flex items-center gap-2 px-4 py-2.5 text-[12.5px] text-ink hover:bg-fill border-b border-hairsoft"
-                  >
-                    <Settings className="h-3.5 w-3.5" /> Settings
                   </NavLink>
                   <button
                     onClick={() => { setProfileMenuOpen(false); logout(); }}
