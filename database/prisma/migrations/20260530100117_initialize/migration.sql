@@ -18,7 +18,7 @@ CREATE TYPE "ApplicationStatus" AS ENUM ('pending', 'shortlisted', 'selected', '
 
 -- CreateTable
 CREATE TABLE "User" (
-    "id" TEXT NOT NULL,
+    "id" UUID NOT NULL,
     "email" TEXT NOT NULL,
     "email_lower" TEXT NOT NULL,
     "email_verified" BOOLEAN NOT NULL DEFAULT false,
@@ -53,8 +53,8 @@ CREATE TABLE "User" (
 
 -- CreateTable
 CREATE TABLE "Organization" (
-    "id" TEXT NOT NULL,
-    "owner_user_id" TEXT NOT NULL,
+    "id" UUID NOT NULL,
+    "owner_user_id" UUID NOT NULL,
     "org_name" TEXT NOT NULL,
     "org_name_lower" TEXT NOT NULL,
     "org_type" TEXT NOT NULL,
@@ -84,9 +84,9 @@ CREATE TABLE "Organization" (
 
 -- CreateTable
 CREATE TABLE "Opportunity" (
-    "id" TEXT NOT NULL,
-    "org_id" TEXT NOT NULL,
-    "posted_by_user_id" TEXT NOT NULL,
+    "id" UUID NOT NULL,
+    "org_id" UUID NOT NULL,
+    "posted_by_user_id" UUID NOT NULL,
     "title" TEXT NOT NULL,
     "title_lower" TEXT NOT NULL,
     "type" "OpportunityType" NOT NULL,
@@ -119,9 +119,9 @@ CREATE TABLE "Opportunity" (
 
 -- CreateTable
 CREATE TABLE "Application" (
-    "id" TEXT NOT NULL,
-    "opportunity_id" TEXT NOT NULL,
-    "applicant_user_id" TEXT NOT NULL,
+    "id" UUID NOT NULL,
+    "opportunity_id" UUID NOT NULL,
+    "applicant_user_id" UUID NOT NULL,
     "cover_note" TEXT,
     "documents" TEXT[] DEFAULT ARRAY[]::TEXT[],
     "status" "ApplicationStatus" NOT NULL DEFAULT 'pending',
@@ -135,9 +135,9 @@ CREATE TABLE "Application" (
 
 -- CreateTable
 CREATE TABLE "Follow" (
-    "id" TEXT NOT NULL,
-    "follower_id" TEXT NOT NULL,
-    "followee_id" TEXT NOT NULL,
+    "id" UUID NOT NULL,
+    "follower_id" UUID NOT NULL,
+    "followee_id" UUID NOT NULL,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "Follow_pkey" PRIMARY KEY ("id")
@@ -145,8 +145,8 @@ CREATE TABLE "Follow" (
 
 -- CreateTable
 CREATE TABLE "Post" (
-    "id" TEXT NOT NULL,
-    "author_id" TEXT NOT NULL,
+    "id" UUID NOT NULL,
+    "author_id" UUID NOT NULL,
     "type" TEXT NOT NULL DEFAULT 'post',
     "text" TEXT NOT NULL,
     "media_urls" TEXT[] DEFAULT ARRAY[]::TEXT[],
@@ -162,8 +162,8 @@ CREATE TABLE "Post" (
 
 -- CreateTable
 CREATE TABLE "Reel" (
-    "id" TEXT NOT NULL,
-    "author_id" TEXT NOT NULL,
+    "id" UUID NOT NULL,
+    "author_id" UUID NOT NULL,
     "caption" TEXT,
     "video_url" TEXT NOT NULL,
     "thumbnail_url" TEXT,
@@ -179,8 +179,8 @@ CREATE TABLE "Reel" (
 
 -- CreateTable
 CREATE TABLE "Blog" (
-    "id" TEXT NOT NULL,
-    "author_id" TEXT NOT NULL,
+    "id" UUID NOT NULL,
+    "author_id" UUID NOT NULL,
     "title" TEXT NOT NULL,
     "slug" TEXT NOT NULL,
     "cover_image_url" TEXT,
@@ -201,12 +201,12 @@ CREATE TABLE "Blog" (
 
 -- CreateTable
 CREATE TABLE "Comment" (
-    "id" TEXT NOT NULL,
+    "id" UUID NOT NULL,
     "parent_type" TEXT NOT NULL,
-    "post_id" TEXT,
-    "reel_id" TEXT,
-    "blog_id" TEXT,
-    "author_id" TEXT NOT NULL,
+    "post_id" UUID,
+    "reel_id" UUID,
+    "blog_id" UUID,
+    "author_id" UUID NOT NULL,
     "text" TEXT NOT NULL,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
@@ -215,7 +215,7 @@ CREATE TABLE "Comment" (
 
 -- CreateTable
 CREATE TABLE "Conversation" (
-    "id" TEXT NOT NULL,
+    "id" UUID NOT NULL,
     "participant_ids" TEXT[],
     "last_message" JSONB,
     "unread_counts" JSONB NOT NULL DEFAULT '{}',
@@ -227,10 +227,10 @@ CREATE TABLE "Conversation" (
 
 -- CreateTable
 CREATE TABLE "Message" (
-    "id" TEXT NOT NULL,
-    "conversation_id" TEXT NOT NULL,
-    "sender_id" TEXT NOT NULL,
-    "recipient_id" TEXT NOT NULL,
+    "id" UUID NOT NULL,
+    "conversation_id" UUID NOT NULL,
+    "sender_id" UUID NOT NULL,
+    "recipient_id" UUID NOT NULL,
     "body" TEXT NOT NULL,
     "read_at" TIMESTAMP(3),
     "flagged" BOOLEAN NOT NULL DEFAULT false,
@@ -241,8 +241,8 @@ CREATE TABLE "Message" (
 
 -- CreateTable
 CREATE TABLE "Notification" (
-    "id" TEXT NOT NULL,
-    "user_id" TEXT NOT NULL,
+    "id" UUID NOT NULL,
+    "user_id" UUID NOT NULL,
     "type" TEXT NOT NULL,
     "title" TEXT NOT NULL,
     "body" TEXT NOT NULL,
@@ -255,12 +255,12 @@ CREATE TABLE "Notification" (
 
 -- CreateTable
 CREATE TABLE "AuditLog" (
-    "id" TEXT NOT NULL,
-    "actor_id" TEXT NOT NULL,
+    "id" UUID NOT NULL,
+    "actor_id" UUID NOT NULL,
     "actor_role" "Role" NOT NULL,
     "action" TEXT NOT NULL,
     "target_type" TEXT,
-    "target_id" TEXT,
+    "target_id" UUID,
     "details" JSONB,
     "ip" TEXT,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -270,13 +270,13 @@ CREATE TABLE "AuditLog" (
 
 -- CreateTable
 CREATE TABLE "Report" (
-    "id" TEXT NOT NULL,
-    "reporter_id" TEXT NOT NULL,
+    "id" UUID NOT NULL,
+    "reporter_id" UUID NOT NULL,
     "target_type" TEXT NOT NULL,
-    "target_id" TEXT NOT NULL,
+    "target_id" UUID NOT NULL,
     "reason" TEXT NOT NULL,
     "status" TEXT NOT NULL DEFAULT 'open',
-    "resolved_by" TEXT,
+    "resolved_by" UUID,
     "resolved_at" TIMESTAMP(3),
     "notes" TEXT,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -286,15 +286,15 @@ CREATE TABLE "Report" (
 
 -- CreateTable
 CREATE TABLE "Verification" (
-    "id" TEXT NOT NULL,
+    "id" UUID NOT NULL,
     "entity_type" TEXT NOT NULL,
-    "entity_id" TEXT NOT NULL,
+    "entity_id" UUID NOT NULL,
     "verification_type" TEXT NOT NULL,
     "documents" TEXT[],
     "notes" TEXT,
     "status" "VerificationStatus" NOT NULL DEFAULT 'pending',
-    "submitted_by" TEXT NOT NULL,
-    "reviewed_by" TEXT,
+    "submitted_by" UUID NOT NULL,
+    "reviewed_by" UUID,
     "reviewed_at" TIMESTAMP(3),
     "rejection_reason" TEXT,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -304,8 +304,8 @@ CREATE TABLE "Verification" (
 
 -- CreateTable
 CREATE TABLE "EmailVerification" (
-    "id" TEXT NOT NULL,
-    "user_id" TEXT NOT NULL,
+    "id" UUID NOT NULL,
+    "user_id" UUID NOT NULL,
     "token" TEXT NOT NULL,
     "expires_at" TIMESTAMP(3) NOT NULL,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -315,8 +315,8 @@ CREATE TABLE "EmailVerification" (
 
 -- CreateTable
 CREATE TABLE "PasswordReset" (
-    "id" TEXT NOT NULL,
-    "user_id" TEXT NOT NULL,
+    "id" UUID NOT NULL,
+    "user_id" UUID NOT NULL,
     "token" TEXT NOT NULL,
     "expires_at" TIMESTAMP(3) NOT NULL,
     "used" BOOLEAN NOT NULL DEFAULT false,
@@ -327,8 +327,8 @@ CREATE TABLE "PasswordReset" (
 
 -- CreateTable
 CREATE TABLE "RefreshToken" (
-    "id" TEXT NOT NULL,
-    "user_id" TEXT NOT NULL,
+    "id" UUID NOT NULL,
+    "user_id" UUID NOT NULL,
     "token" TEXT NOT NULL,
     "expires_at" TIMESTAMP(3) NOT NULL,
     "revoked" BOOLEAN NOT NULL DEFAULT false,
@@ -339,8 +339,8 @@ CREATE TABLE "RefreshToken" (
 
 -- CreateTable
 CREATE TABLE "PostLike" (
-    "post_id" TEXT NOT NULL,
-    "user_id" TEXT NOT NULL,
+    "post_id" UUID NOT NULL,
+    "user_id" UUID NOT NULL,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "PostLike_pkey" PRIMARY KEY ("post_id","user_id")
@@ -348,8 +348,8 @@ CREATE TABLE "PostLike" (
 
 -- CreateTable
 CREATE TABLE "ReelLike" (
-    "reel_id" TEXT NOT NULL,
-    "user_id" TEXT NOT NULL,
+    "reel_id" UUID NOT NULL,
+    "user_id" UUID NOT NULL,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "ReelLike_pkey" PRIMARY KEY ("reel_id","user_id")
@@ -357,8 +357,8 @@ CREATE TABLE "ReelLike" (
 
 -- CreateTable
 CREATE TABLE "BlogLike" (
-    "blog_id" TEXT NOT NULL,
-    "user_id" TEXT NOT NULL,
+    "blog_id" UUID NOT NULL,
+    "user_id" UUID NOT NULL,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "BlogLike_pkey" PRIMARY KEY ("blog_id","user_id")

@@ -5,9 +5,11 @@
   "scripts": {
     "generate": "prisma generate",
     "migrate:dev": "prisma migrate dev",
+    "migrate:new": "prisma migrate dev --create-only",
     "migrate:deploy": "prisma migrate deploy",
     "migrate:reset": "prisma migrate reset --force",
     "migrate:status": "prisma migrate status",
+    "migrate:baseline": "node -e \"const{execSync}=require('child_process');const m=require('fs').readdirSync('prisma/migrations').filter(f=>f!=='migration_lock.toml').sort().pop();if(!m){console.error('No migrations found');process.exit(1);}console.log('Baselining:',m);execSync('npx prisma migrate resolve --applied '+m,{stdio:'inherit'});\"",
     "studio": "prisma studio",
     "seed": "tsx seeds/seed.ts",
     "reset": "tsx scripts/reset-db.ts && tsx seeds/seed.ts",

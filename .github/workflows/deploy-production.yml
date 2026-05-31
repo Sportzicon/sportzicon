@@ -45,7 +45,25 @@ jobs:
         run: |
           npm ci --no-audit --no-fund
           echo "Running migrations on production database..."
-          npx prisma migrate deploy
+
+          # Try to deploy; if P3005 (tables exist but no migration history), baseline then retry
+          set +e
+          OUTPUT=$(npx prisma migrate deploy 2>&1)
+          EXIT_CODE=$?
+          set -e
+          echo "$OUTPUT"
+
+          if [ $EXIT_CODE -ne 0 ]; then
+            if echo "$OUTPUT" | grep -q "P3005"; then
+              echo "⚠️  P3005: database has no migration history — baselining latest migration..."
+              LATEST=$(ls prisma/migrations | grep -v migration_lock | sort | tail -1)
+              echo "Baselining: $LATEST"
+              npx prisma migrate resolve --applied "$LATEST"
+              npx prisma migrate deploy
+            else
+              exit $EXIT_CODE
+            fi
+          fi
           echo "✅ Migrations complete"
 
       - name: Set up Docker Buildx
