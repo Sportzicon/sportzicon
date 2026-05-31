@@ -27,9 +27,9 @@ type Draft = {
 const DEFAULT: Draft = {
   step: 0, role: "athlete",
   full_name: "", email: "", phone: "", password: "",
-  country: "India", state: "", city: "", dob: "",
-  primary_sport: "Cricket", play_role: "All-rounder", level: "State", looking: true,
-  org_name: "", org_type: "Academy", org_sport: "Cricket"
+  country: "", state: "", city: "", dob: "",
+  primary_sport: "Cricket", play_role: "", level: "", looking: true,
+  org_name: "", org_type: "", org_sport: "Cricket"
 };
 
 function load(): Draft {
@@ -115,7 +115,7 @@ export default function Signup() {
   }
 
   function advanceAccount() {
-    if (!d.full_name || !d.email || !d.phone || !d.password || !d.state || !d.city) {
+    if (!d.full_name || !d.email || !d.phone || !d.password || !d.country || !d.state || !d.city) {
       setErr("Please fill all required fields."); return;
     }
     const pwdErr = validatePassword(d.password);
@@ -134,6 +134,12 @@ export default function Signup() {
   }
 
   async function submit() {
+    if (isAthlete && (!d.play_role || !d.level)) {
+      setErr("Please select your playing role and experience level."); return;
+    }
+    if (!isAthlete && !d.org_type) {
+      setErr("Please select an organization type."); return;
+    }
     setSubmitting(true); setErr(null);
     try {
       await api.post("/auth/signup", {
@@ -270,6 +276,7 @@ export default function Signup() {
                 </Field>
                 <Field label="Country" req>
                   <select className="input" value={d.country} onChange={(e) => patch({ country: e.target.value, state: "" })}>
+                    <option value="">Select country</option>
                     {COUNTRIES.map((c) => <option key={c}>{c}</option>)}
                   </select>
                 </Field>
@@ -316,6 +323,7 @@ export default function Signup() {
                 <div className="grid grid-cols-2 gap-4">
                   <Field label="Playing role" req>
                     <select className="input" value={d.play_role} onChange={(e) => patch({ play_role: e.target.value })}>
+                      <option value="">Select playing role</option>
                       {(d.primary_sport === "Cricket"
                         ? ["Batter", "Bowler", "All-rounder", "Wicket-keeper"]
                         : d.primary_sport === "Football"
@@ -336,6 +344,7 @@ export default function Signup() {
                   </Field>
                   <Field label="Experience level" req>
                     <select className="input" value={d.level} onChange={(e) => patch({ level: e.target.value })}>
+                      <option value="">Select experience level</option>
                       {LEVELS.map((l) => <option key={l}>{l}</option>)}
                     </select>
                   </Field>
@@ -384,6 +393,7 @@ export default function Signup() {
                   </Field>
                   <Field label="Type" req>
                     <select className="input" value={d.org_type} onChange={(e) => patch({ org_type: e.target.value })}>
+                      <option value="">Select type</option>
                       {ORG_TYPES.map((t) => <option key={t}>{t}</option>)}
                     </select>
                   </Field>

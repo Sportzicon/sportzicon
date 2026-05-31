@@ -126,7 +126,12 @@
       "PowerShell(Get-NetTCPConnection -LocalPort 8080 -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue }; Start-Sleep -Seconds 2; Get-NetTCPConnection -LocalPort 8080 -ErrorAction SilentlyContinue | Write-Output; if \\(-not \\(Get-NetTCPConnection -LocalPort 8080 -ErrorAction SilentlyContinue\\)\\) { Write-Output \"✅ Port 8080 is now free!\" })",
       "Bash(node -e \"const l = require\\('lucide-react'\\); console.log\\(Object.keys\\(l\\).filter\\(k => k.includes\\('Building'\\)\\)\\)\")",
       "Bash(taskkill /F /IM node.exe)",
-      "Bash(Start-Sleep -Seconds 2)"
+      "Bash(Start-Sleep -Seconds 2)",
+      "Bash(Remove-Item -Force \"f:\\\\My Project\\\\sportivox-main\\\\sportivox-main\\\\backend\\\\src\\\\modules\\\\scoring\\\\scoring.schemas.ts\" -ErrorAction SilentlyContinue)",
+      "Bash(Remove-Item -Force \"f:\\\\My Project\\\\sportivox-main\\\\sportivox-main\\\\backend\\\\src\\\\modules\\\\scoring\\\\scoring.service.ts\" -ErrorAction SilentlyContinue)",
+      "Bash(Write-Host \"Cleaned\")",
+      "PowerShell(Get-ChildItem -Recurse \"f:\\\\My Project\\\\sportivox-main\\\\sportivox-main\\\\scoring\" | Where-Object { !$_.PSIsContainer } | Select-Object -ExpandProperty FullName | ForEach-Object { $_.Replace\\(\"f:\\\\My Project\\\\sportivox-main\\\\sportivox-main\\\\\", \"\"\\) })",
+      "Bash(git log *)"
     ]
   }
 }

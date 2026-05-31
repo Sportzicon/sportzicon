@@ -1,0 +1,313 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ── Auth ─────────────────────────────────────────────────────────────────────
+
+enum UserRole {
+  admin
+  organizer
+  scorer
+  viewer
+}
+
+model User {
+  id            String    @id @default(uuid()) @db.Uuid
+  email         String    @unique
+  password_hash String
+  full_name     String
+  role          UserRole  @default(viewer)
+  avatar_url    String?
+  created_at    DateTime  @default(now())
+  updated_at    DateTime  @updatedAt
+
+  tournaments   Tournament[]
+  refresh_tokens RefreshToken[]
+}
+
+model RefreshToken {
+  id         String   @id @default(uuid()) @db.Uuid
+  user_id    String   @db.Uuid
+  token      String   @unique
+  expires_at DateTime
+  revoked    Boolean  @default(false)
+  created_at DateTime @default(now())
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+}
+
+// ── Tournaments ───────────────────────────────────────────────────────────────
+
+enum TournamentStatus {
+  upcoming
+  ongoing
+  completed
+  cancelled
+}
+
+enum MatchStatus {
+  upcoming
+  live
+  completed
+  abandoned
+  no_result
+}
+
+enum BattingStatus {
+  yet_to_bat
+  not_out
+  out
+  retired_hurt
+}
+
+model Tournament {
+  id          String           @id @default(uuid()) @db.Uuid
+  name        String
+  sport       String           // "cricket", "football", "basketball"
+  format      String?          // "T20", "ODI", "Test", "League", "Knockout"
+  description String?          @db.Text
+  start_date  String?
+  end_date    String?
+  location    String?
+  status      TournamentStatus @default(upcoming)
+  logo_url    String?
+  banner_url  String?
+  is_public   Boolean          @default(true)
+
+  created_by  String           @db.Uuid
+  creator     User             @relation(fields: [created_by], references: [id])
+
+  teams       Team[]
+  matches     Match[]
+
+  created_at  DateTime         @default(now())
+  updated_at  DateTime         @updatedAt
+
+  @@index([status, sport])
+  @@index([created_by])
+}
+
+model Team {
+  id            String     @id @default(uuid()) @db.Uuid
+  tournament_id String     @db.Uuid
+  name          String
+  short_name    String?    // e.g. "CSK", "RCB"
+  logo_url      String?
+  color         String?    // hex color for UI
+
+  tournament    Tournament @relation(fields: [tournament_id], references: [id], onDelete: Cascade)
+  players       Player[]
+  home_matches  Match[]    @relation("Team1")
+  away_matches  Match[]    @relation("Team2")
+  innings       Innings[]
+
+  created_at    DateTime   @default(now())
+
+  @@index([tournament_id])
+}
+
+model Player {
+  id             String    @id @default(uuid()) @db.Uuid
+  team_id        String    @db.Uuid
+  name           String
+  jersey_number  Int?
+  role           String?   // "batsman","bowler","all-rounder","wicket-keeper","goalkeeper"
+  batting_style  String?   // "right-hand bat","left-hand bat"
+  bowling_style  String?   // "right-arm fast","left-arm off-spin" etc.
+  is_captain     Boolean   @default(false)
+  is_keeper      Boolean   @default(false)
+  photo_url      String?
+
+  // Link to Sportivox user (for future integration)
+  sportivox_user_id String?
+
+  team           Team      @relation(fields: [team_id], references: [id], onDelete: Cascade)
+  batting_entries BattingEntry[]
+  bowling_entries BowlingEntry[]
+  ball_as_batsman BallEvent[] @relation("BallBatsman")
+  ball_as_bowler  BallEvent[] @relation("BallBowler")
+
+  created_at     DateTime  @default(now())
+
+  @@index([team_id])
+}
+
+model Match {
+  id             String      @id @default(uuid()) @db.Uuid
+  tournament_id  String      @db.Uuid
+  match_number   Int?
+  title          String?     // "Semi-Final 1", "Group A - Match 3"
+  sport          String
+  format         String?
+
+  team1_id       String      @db.Uuid
+  team2_id       String      @db.Uuid
+  venue          String?
+  scheduled_at   DateTime?
+  status         MatchStatus @default(upcoming)
+
+  winner_team_id String?     @db.Uuid
+  result_summary String?
+
+  toss_winner_id String?     @db.Uuid
+  toss_decision  String?     // "bat" or "bowl"
+
+  // For non-cricket sports: flexible event-based score data
+  match_data     Json?       // { team1_score: 0, team2_score: 0, events: [] }
+
+  tournament     Tournament  @relation(fields: [tournament_id], references: [id], onDelete: Cascade)
+  team1          Team        @relation("Team1", fields: [team1_id], references: [id])
+  team2          Team        @relation("Team2", fields: [team2_id], references: [id])
+
+  innings        Innings[]
+  events         MatchEvent[]
+
+  created_at     DateTime    @default(now())
+  updated_at     DateTime    @updatedAt
+
+  @@index([tournament_id, status])
+  @@index([status])
+}
+
+// ── Cricket-specific ──────────────────────────────────────────────────────────
+
+model Innings {
+  id              String    @id @default(uuid()) @db.Uuid
+  match_id        String    @db.Uuid
+  innings_number  Int       // 1 or 2 (up to 4 for Test)
+  batting_team_id String    @db.Uuid
+  bowling_team_id String    @db.Uuid
+
+  total_runs      Int       @default(0)
+  total_wickets   Int       @default(0)
+  total_balls     Int       @default(0)
+  extras          Int       @default(0)
+  wides           Int       @default(0)
+  no_balls        Int       @default(0)
+  byes            Int       @default(0)
+  leg_byes        Int       @default(0)
+
+  target          Int?
+  is_declared     Boolean   @default(false)
+  is_completed    Boolean   @default(false)
+
+  match           Match     @relation(fields: [match_id], references: [id], onDelete: Cascade)
+  batting_team    Team      @relation(fields: [batting_team_id], references: [id])
+  batting_entries BattingEntry[]
+  bowling_entries BowlingEntry[]
+  ball_events     BallEvent[]
+
+  created_at      DateTime  @default(now())
+  updated_at      DateTime  @updatedAt
+
+  @@unique([match_id, innings_number])
+  @@index([match_id])
+}
+
+model BattingEntry {
+  id               String        @id @default(uuid()) @db.Uuid
+  innings_id       String        @db.Uuid
+  player_id        String        @db.Uuid
+  batting_position Int
+
+  runs             Int           @default(0)
+  balls_faced      Int           @default(0)
+  fours            Int           @default(0)
+  sixes            Int           @default(0)
+
+  status           BattingStatus @default(yet_to_bat)
+  dismissal_type   String?       // "caught","bowled","lbw","run_out","stumped","hit_wicket"
+  dismissed_by_id  String?       @db.Uuid
+  fielder_id       String?       @db.Uuid
+  dismissal_desc   String?
+
+  innings          Innings       @relation(fields: [innings_id], references: [id], onDelete: Cascade)
+  player           Player        @relation(fields: [player_id], references: [id])
+
+  created_at       DateTime      @default(now())
+  updated_at       DateTime      @updatedAt
+
+  @@unique([innings_id, player_id])
+  @@index([innings_id])
+}
+
+model BowlingEntry {
+  id            String   @id @default(uuid()) @db.Uuid
+  innings_id    String   @db.Uuid
+  player_id     String   @db.Uuid
+
+  balls         Int      @default(0)
+  maidens       Int      @default(0)
+  runs_conceded Int      @default(0)
+  wickets       Int      @default(0)
+  wides         Int      @default(0)
+  no_balls      Int      @default(0)
+
+  innings       Innings  @relation(fields: [innings_id], references: [id], onDelete: Cascade)
+  player        Player   @relation(fields: [player_id], references: [id])
+
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  @@unique([innings_id, player_id])
+  @@index([innings_id])
+}
+
+model BallEvent {
+  id                  String   @id @default(uuid()) @db.Uuid
+  innings_id          String   @db.Uuid
+  over_number         Int
+  ball_number         Int
+
+  batsman_id          String   @db.Uuid
+  bowler_id           String   @db.Uuid
+
+  runs                Int      @default(0)
+  is_wide             Boolean  @default(false)
+  is_no_ball          Boolean  @default(false)
+  is_bye              Boolean  @default(false)
+  is_leg_bye          Boolean  @default(false)
+  is_wicket           Boolean  @default(false)
+  is_four             Boolean  @default(false)
+  is_six              Boolean  @default(false)
+
+  wicket_type         String?  // "caught","bowled","lbw","run_out","stumped","hit_wicket"
+  dismissed_player_id String?  @db.Uuid
+  fielder_id          String?  @db.Uuid
+
+  innings             Innings  @relation(fields: [innings_id], references: [id], onDelete: Cascade)
+  batsman             Player   @relation("BallBatsman", fields: [batsman_id], references: [id])
+  bowler              Player   @relation("BallBowler", fields: [bowler_id], references: [id])
+
+  created_at          DateTime @default(now())
+
+  @@index([innings_id, over_number, ball_number])
+}
+
+// ── Generic match events (football, basketball, etc.) ─────────────────────────
+
+model MatchEvent {
+  id          String   @id @default(uuid()) @db.Uuid
+  match_id    String   @db.Uuid
+  team_id     String?  @db.Uuid
+  player_id   String?  @db.Uuid
+  event_type  String   // "goal","yellow_card","red_card","substitution","point","timeout"
+  minute      Int?
+  period      String?  // "1st_half","2nd_half","Q1","Q2","extra_time"
+  value       Int      @default(1)
+  description String?
+
+  match       Match    @relation(fields: [match_id], references: [id], onDelete: Cascade)
+
+  created_at  DateTime @default(now())
+
+  @@index([match_id])
+}

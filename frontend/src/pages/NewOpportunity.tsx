@@ -178,7 +178,11 @@ export default function NewOpportunity() {
           </Field>
           <Field label="Experience level">
             <select className="input" value={form.experience_level_required} onChange={(e) => set("experience_level_required", e.target.value)}>
-              {["any", "beginner", "amateur", "semi_pro", "professional"].map((l) => <option key={l}>{l}</option>)}
+              <option value="any">Any level</option>
+              <option value="beginner">Beginner</option>
+              <option value="amateur">Amateur</option>
+              <option value="semi_pro">Semi-pro</option>
+              <option value="professional">Professional</option>
             </select>
           </Field>
           <Field label="Vacancies">
