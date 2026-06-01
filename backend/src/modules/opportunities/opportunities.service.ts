@@ -101,10 +101,10 @@ export async function listOpportunities(q: {
 }) {
   const where: Record<string, unknown> = {};
   if (q.status) where.status = q.status;
-  if (q.sport) where.sport = q.sport;
+  if (q.sport) where.sport = { contains: q.sport, mode: "insensitive" };
   if (q.type) where.type = q.type;
-  if (q.country) where.country = q.country;
-  if (q.city) where.city = q.city;
+  if (q.country) where.country = { contains: q.country, mode: "insensitive" };
+  if (q.city) where.city = { contains: q.city, mode: "insensitive" };
   if (q.org_id) where.org_id = q.org_id;
 
   const rows = await prisma.opportunity.findMany({

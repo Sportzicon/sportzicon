@@ -71,9 +71,10 @@ export async function listBlogs(q: {
   limit: number;
   cursor?: string;
 }) {
-  const where: Record<string, unknown> = { status: q.status ?? "published" };
+  const where: Record<string, unknown> = {};
+  if (q.status) where.status = q.status;
   if (q.author_id) where.author_id = q.author_id;
-  if (q.sport) where.sport = q.sport;
+  if (q.sport) where.sport = { contains: q.sport, mode: "insensitive" };
   if (q.tag) where.tags = { has: q.tag };
 
   const rows = await prisma.blog.findMany({

@@ -38,12 +38,18 @@ export default function BlogDetail() {
 
   const deleteBlog = useMutation({
     mutationFn: async (id: string) => api.delete(`/blogs/${id}`),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["blog"] }); navigate("/blogs"); }
+    onSuccess: async () => {
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["blog"] }),
+        qc.invalidateQueries({ queryKey: ["blogs"] }),
+      ]);
+      navigate("/blogs");
+    }
   });
 
   if (q.isLoading) return <div className="flex justify-center p-12"><Spinner className="text-brand-500" /></div>;
-  const b = q.data;
-  if (!b) return <div className="panel p-8 text-center font-disp text-xl text-ink-70">Blog not found.</div>;
+  if (q.isError) return <div className="panel p-8 text-center font-disp text-xl text-ink-70">Blog not found.</div>;
+  const b = q.data!;
 
   const isAuthor = user?.id === b.author_id;
 

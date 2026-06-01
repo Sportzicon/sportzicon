@@ -8,9 +8,15 @@ import { ChevronDown, X } from "lucide-react";
 type Mode = "players" | "clubs" | "opportunities";
 type ViewMode = "table" | "grid";
 
-const SPORTS = ["All", "Cricket", "Football", "Athletics", "Basketball", "Hockey", "Tennis", "Badminton", "Kabaddi"];
-const ROLES = ["Any role", "Batter", "Bowler", "All-rounder", "Wicket-keeper", "Winger", "Goalkeeper", "Striker", "Sprinter", "Raider", "Point Guard"];
-const LEVELS = ["Any", "Beginner", "Amateur", "Academy", "Semi-professional", "State", "National", "Professional"];
+const SPORTS = ["Cricket", "Football", "Athletics", "Basketball", "Hockey", "Tennis", "Badminton", "Kabaddi"];
+const ROLES = ["Batter", "Bowler", "All-rounder", "Wicket-keeper", "Winger", "Goalkeeper", "Striker", "Defender", "Midfielder", "Sprinter", "Raider", "Point Guard"];
+const LEVELS = [
+  { label: "Any level", value: "" },
+  { label: "Beginner", value: "beginner" },
+  { label: "Amateur", value: "amateur" },
+  { label: "Semi-pro", value: "semi_pro" },
+  { label: "Professional", value: "professional" },
+];
 
 function Toggle({ on, onChange, label }: { on: boolean; onChange: (v: boolean) => void; label: string }) {
   return (
@@ -44,9 +50,9 @@ export default function Search() {
   const [view, setView] = useState<ViewMode>("table");
   const [filtersOpen, setFiltersOpen] = useState(window.innerWidth >= 1024);
   const [q, setQ] = useState("");
-  const [sport, setSport] = useState("Cricket");
-  const [playRole, setPlayRole] = useState("Any role");
-  const [level, setLevel] = useState("Any");
+  const [sport, setSport] = useState("All");
+  const [playRole, setPlayRole] = useState("");
+  const [level, setLevel] = useState("");
   const [city, setCity] = useState("");
   const [ageMax, setAgeMax] = useState(35);
   const [verifiedOnly, setVerifiedOnly] = useState(false);
@@ -75,12 +81,12 @@ export default function Search() {
 
   const params: any = {
     q: q || undefined,
-    sport: (mode === "players" && sport !== "All") ? sport : undefined,
+    sport: (mode !== "clubs" && sport) ? sport : undefined,
     city: city || undefined,
     verified: verifiedOnly || undefined,
     available: availOnly || undefined,
-    role: (playRole !== "Any role") ? playRole : undefined,
-    experience_level: (level !== "Any") ? level.toLowerCase().replace(/-/g, "_") : undefined,
+    position: playRole || undefined,
+    experience_level: level || undefined,
     age_max: ageMax < 40 ? ageMax : undefined
   };
 
@@ -103,8 +109,8 @@ export default function Search() {
     : (res.data ?? []);
 
   function resetFilters() {
-    setQ(""); setSport("Cricket"); setPlayRole("Any role"); setLevel("Any");
-    setCity(""); setAgeMax(35); setVerifiedOnly(false); setAvailOnly(false); setSavedOnly(false);
+    setQ(""); setSport(""); setPlayRole(""); setLevel("");
+    setCity(""); setAgeMax(40); setVerifiedOnly(false); setAvailOnly(false); setSavedOnly(false);
   }
 
   const savedCount = shortlist.size;
@@ -175,13 +181,15 @@ export default function Search() {
               <FilterGroup label="Sport">
                 <select className="input font-mononum" style={{ fontSize: 12, height: 34 }}
                   value={sport} onChange={(e) => setSport(e.target.value)}>
-                  {SPORTS.map((s) => <option key={s}>{s}</option>)}
+                  <option value="">Select sport</option>
+                  {SPORTS.map((s) => <option key={s} value={s}>{s}</option>)}
                 </select>
               </FilterGroup>
               <FilterGroup label="Playing role / position">
                 <select className="input font-mononum" style={{ fontSize: 12, height: 34 }}
                   value={playRole} onChange={(e) => setPlayRole(e.target.value)}>
-                  {ROLES.map((r) => <option key={r}>{r}</option>)}
+                  <option value="">Select role</option>
+                  {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
                 </select>
               </FilterGroup>
               <FilterGroup label={`Max age — ${ageMax}`}>
@@ -195,7 +203,7 @@ export default function Search() {
               <FilterGroup label="Experience level">
                 <select className="input font-mononum" style={{ fontSize: 12, height: 34 }}
                   value={level} onChange={(e) => setLevel(e.target.value)}>
-                  {LEVELS.map((l) => <option key={l}>{l}</option>)}
+                  {LEVELS.map((l) => <option key={l.value} value={l.value}>{l.label}</option>)}
                 </select>
               </FilterGroup>
               <div className="flex flex-col gap-3">
@@ -217,7 +225,8 @@ export default function Search() {
               <FilterGroup label="Sport">
                 <select className="input font-mononum" style={{ fontSize: 12, height: 34 }}
                   value={sport} onChange={(e) => setSport(e.target.value)}>
-                  {SPORTS.map((s) => <option key={s}>{s}</option>)}
+                  <option value="">Select sport</option>
+                  {SPORTS.map((s) => <option key={s} value={s}>{s}</option>)}
                 </select>
               </FilterGroup>
               <FilterGroup label="City">

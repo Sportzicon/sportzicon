@@ -218,13 +218,6 @@ export default function Feed() {
                 >
                   <MessageCircle className="h-4 w-4" /> {p.comment_count}
                 </button>
-                <button
-                  onClick={() => navigator.clipboard?.writeText(window.location.origin + `/feed`)}
-                  className="font-mononum text-[11.5px] text-ink-sub hover:text-brand-500 ml-auto"
-                  title="Copy link"
-                >
-                  ↗ Share
-                </button>
               </div>
 
               {openCommentId === p.id && (

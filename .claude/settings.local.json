@@ -131,7 +131,8 @@
       "Bash(Remove-Item -Force \"f:\\\\My Project\\\\sportivox-main\\\\sportivox-main\\\\backend\\\\src\\\\modules\\\\scoring\\\\scoring.service.ts\" -ErrorAction SilentlyContinue)",
       "Bash(Write-Host \"Cleaned\")",
       "PowerShell(Get-ChildItem -Recurse \"f:\\\\My Project\\\\sportivox-main\\\\sportivox-main\\\\scoring\" | Where-Object { !$_.PSIsContainer } | Select-Object -ExpandProperty FullName | ForEach-Object { $_.Replace\\(\"f:\\\\My Project\\\\sportivox-main\\\\sportivox-main\\\\\", \"\"\\) })",
-      "Bash(git log *)"
+      "Bash(git log *)",
+      "Bash(grep -rn \"where\\\\[.*\\\\] =\\\\|where\\\\..*=\\\\|where: {\" backend/src/modules/ --include=\"*.ts\")"
     ]
   }
 }

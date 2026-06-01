@@ -28,7 +28,7 @@ export async function deleteReel(reelId: string, actorId: string, isAdmin: boole
 export async function listReels(q: { author_id?: string; sport?: string; limit: number; cursor?: string }) {
   const where: Record<string, unknown> = {};
   if (q.author_id) where.author_id = q.author_id;
-  if (q.sport) where.sport = q.sport;
+  if (q.sport) where.sport = { contains: q.sport, mode: "insensitive" };
 
   const rows = await prisma.reel.findMany({
     where,

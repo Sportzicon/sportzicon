@@ -234,7 +234,7 @@ export default function Profile() {
           <SectionHead n="04" title="Highlights & media"
             right={<Link to="/reels" className="btn-ghost text-[12px]">All reels →</Link>}
           />
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {reelsQ.data.slice(0, 3).map((r: any) => (
               <div key={r.id} className="card overflow-hidden cursor-pointer group">
                 <div className="h-28 bg-ink relative overflow-hidden">

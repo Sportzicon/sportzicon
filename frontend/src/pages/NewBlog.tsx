@@ -57,7 +57,7 @@ export default function NewBlog() {
         : await api.post("/blogs", payload);
       await qc.invalidateQueries({ queryKey: ["blog"] });
       await qc.invalidateQueries({ queryKey: ["blogs"] });
-      navigate(`/blogs/${r.data.blog.slug ?? r.data.blog.id}`);
+      navigate(`/blogs/${r.data.blog.id}`);
     } catch (e) {
       setErr(humanizeError(e));
     } finally { setBusy(false); }

@@ -17,7 +17,8 @@ const playerSearchQ = z.object({
   age_min: z.coerce.number().int().min(0).max(120).optional(),
   age_max: z.coerce.number().int().min(0).max(120).optional(),
   experience_level: z.enum(["beginner", "amateur", "semi_pro", "professional"]).optional(),
-  availability: z.enum(["available", "not_available", "open_to_offers"]).optional(),
+  position: z.string().optional(),
+  available: z.coerce.boolean().optional(),
   verified: z.coerce.boolean().optional(),
   limit: z.coerce.number().int().min(1).max(100).default(20)
 });
