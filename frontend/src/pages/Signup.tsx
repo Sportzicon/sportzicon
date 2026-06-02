@@ -214,7 +214,7 @@ export default function Signup() {
               <div className="kicker">Step 1 — Choose your role</div>
               <h2 className="font-disp text-[34px] mt-3">How will you use Sportivox?</h2>
               <p className="text-sm text-ink-sub mt-2">Your role sets your permissions. It can't be changed later.</p>
-              <div className="grid grid-cols-2 gap-3 mt-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-6">
                 {ROLES.map((r) => (
                   <button key={r.value} type="button" onClick={() => patch({ role: r.value })}
                     className="panel p-[18px] text-left transition"
@@ -249,7 +249,7 @@ export default function Signup() {
             <div>
               <div className="kicker">Step 2 — Account details</div>
               <h2 className="font-disp text-[34px] mt-3">Create your account</h2>
-              <div className="grid grid-cols-2 gap-x-4 gap-y-5 mt-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-5 mt-6">
                 <Field label="Full name" req>
                   <input className="input" value={d.full_name} onChange={(e) => patch({ full_name: e.target.value })} autoFocus />
                 </Field>
@@ -313,7 +313,7 @@ export default function Signup() {
                     ))}
                   </div>
                 </Field>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <Field label="Playing role" req>
                     <select className="input" value={d.play_role} onChange={(e) => patch({ play_role: e.target.value })}>
                       {(d.primary_sport === "Cricket"
@@ -378,7 +378,7 @@ export default function Signup() {
               <div className="kicker">Step 3 — Organisation</div>
               <h2 className="font-disp text-[34px] mt-3">Set up your organisation</h2>
               <div className="mt-6 flex flex-col gap-6">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <Field label="Organisation name" req>
                     <input className="input" value={d.org_name} onChange={(e) => patch({ org_name: e.target.value })} placeholder="e.g. Maharashtra State XI" />
                   </Field>

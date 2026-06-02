@@ -72,6 +72,7 @@ export default function Messages() {
   const [activeId, setActiveId] = useState<string | null>(initialTo ? pairId(me.id, initialTo) : null);
   const [text, setText] = useState("");
   const [recipient, setRecipient] = useState<string | null>(initialTo || null);
+  const [mobileView, setMobileView] = useState<"list" | "thread">(initialTo ? "thread" : "list");
 
   // When a notification link navigates to /messages?to=userId while the page is
   // already mounted, useState won't re-initialise — update active conversation manually.
@@ -128,6 +129,7 @@ export default function Messages() {
     setActiveId(c.id);
     setRecipient(otherId);
     setParams({});
+    setMobileView("thread");
   }
 
   const demo = useMemo(() => makeDemoData(me.id), [me.id]);
@@ -146,11 +148,11 @@ export default function Messages() {
     <div className="space-y-0 h-full">
       <PageHeader title="Messages" subtitle="Inbox" />
 
-      <div className="panel grid sm:grid-cols-[320px_1fr] divide-x divide-hair"
-        style={{ height: "calc(100vh - 200px)", minHeight: 500 }}>
+      <div className="panel overflow-hidden" style={{ height: "calc(100vh - 200px)", minHeight: 420 }}>
+        <div className="grid h-full sm:grid-cols-[320px_1fr] sm:divide-x sm:divide-hair">
 
         {/* ── conversation list ──────────────────────────────── */}
-        <aside className="flex flex-col overflow-hidden">
+        <aside className={`${mobileView === "thread" ? "hidden sm:flex" : "flex"} flex-col overflow-hidden`}>
           <div className="px-[18px] py-[18px] border-b border-hair">
             <div className="kicker">Inbox</div>
             <h2 className="font-disp text-2xl mt-1.5">Messages</h2>
@@ -218,10 +220,17 @@ export default function Messages() {
         </aside>
 
         {/* ── message thread ─────────────────────────────────── */}
-        <section className="flex flex-col overflow-hidden min-w-0">
+        <section className={`${mobileView === "list" ? "hidden sm:flex" : "flex"} flex-col overflow-hidden min-w-0`}>
           {/* thread header */}
           {activeConv ? (
-            <div className="px-[22px] py-3.5 border-b border-hair bg-panel flex items-center gap-3 flex-shrink-0">
+            <div className="px-3 sm:px-[22px] py-3.5 border-b border-hair bg-panel flex items-center gap-3 flex-shrink-0">
+              <button
+                className="sm:hidden -ml-1 mr-1 p-2 rounded text-ink-70 hover:bg-fill transition flex-shrink-0"
+                onClick={() => setMobileView("list")}
+                aria-label="Back to conversations"
+              >
+                ←
+              </button>
               <Avatar name={activeDisplayName ?? "?"} size={38} />
               <div className="flex-1 min-w-0">
                 <div className="text-[14.5px] font-semibold text-ink">{activeDisplayName}</div>
@@ -277,7 +286,7 @@ export default function Messages() {
           </div>
 
           {/* compose */}
-          <form onSubmit={send} className="px-[22px] py-3.5 border-t border-hair bg-panel flex gap-2 items-end flex-shrink-0">
+          <form onSubmit={send} className="px-3 sm:px-[22px] py-3.5 border-t border-hair bg-panel flex gap-2 items-end flex-shrink-0">
             <textarea
               className="input flex-1 resize-none"
               rows={1}
@@ -292,10 +301,11 @@ export default function Messages() {
               <Send className="h-4 w-4" />
             </button>
           </form>
-          <div className="px-[22px] pb-2 lab text-ink-faint text-[10px]">
+          <div className="px-3 sm:px-[22px] pb-2 lab text-ink-faint text-[10px]">
             Async messaging · email notification on new message · real-time in Phase 2
           </div>
         </section>
+        </div>
       </div>
     </div>
   );

@@ -120,7 +120,7 @@ export default function Opportunities() {
 
       <div className="grid gap-6 lg:grid-cols-[232px_1fr] items-start">
         {/* ── filter rail ─────────────────────────────────────── */}
-        <div className="panel p-[18px] sticky top-20">
+        <div className="panel p-[18px] lg:sticky lg:top-20">
           <SectionHead title="Filters" />
 
           <FilterGroup label="Search">

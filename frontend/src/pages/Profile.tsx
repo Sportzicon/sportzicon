@@ -131,7 +131,7 @@ export default function Profile() {
                 </div>
               </div>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               {isMe && <button className="btn-primary" onClick={() => navigate("/profile/edit")}>✎ Edit profile</button>}
               {!isMe && (
                 <>
@@ -234,7 +234,7 @@ export default function Profile() {
           <SectionHead n="04" title="Highlights & media"
             right={<Link to="/reels" className="btn-ghost text-[12px]">All reels →</Link>}
           />
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {reelsQ.data.slice(0, 3).map((r: any) => (
               <div key={r.id} className="card overflow-hidden cursor-pointer group">
                 <div className="h-28 bg-ink relative overflow-hidden">
@@ -314,7 +314,7 @@ export default function Profile() {
 
       {/* ── Activity section (not numbered) ───────────────────── */}
       <div>
-        <div className="mb-4 flex gap-1 border-b border-hair">
+        <div className="mb-4 flex gap-1 border-b border-hair overflow-x-auto">
           {tabs.map((t) => (
             <button
               key={t.id}

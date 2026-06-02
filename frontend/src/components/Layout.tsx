@@ -249,7 +249,7 @@ export function Layout() {
         </aside>
 
         {/* Main content — overflow-y-auto makes this the scroll container */}
-        <main className="min-w-0 flex-1 overflow-y-auto px-6 py-7">
+        <main className="min-w-0 flex-1 overflow-y-auto px-3 py-4 sm:px-6 sm:py-7">
           <Outlet />
         </main>
       </div>

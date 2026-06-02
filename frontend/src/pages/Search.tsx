@@ -262,8 +262,8 @@ export default function Search() {
             />
           ) : mode === "players" && view === "table" ? (
             /* ── TABLE view ───────────────────────────────── */
-            <div className="panel overflow-hidden">
-              <table className="w-full text-[13px]">
+            <div className="panel overflow-x-auto">
+              <table className="w-full min-w-[560px] text-[13px]">
                 <thead>
                   <tr className="border-b border-hair">
                     {["Player", "Role", "Level", "Age", "Key stat", "Avail.", ""].map((h, i) => (

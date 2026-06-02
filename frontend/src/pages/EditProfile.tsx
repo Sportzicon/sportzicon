@@ -134,7 +134,7 @@ export default function EditProfile() {
         title="Edit profile"
         subtitle="Editing your profile"
         action={
-          <div className="flex gap-2.5">
+          <div className="flex flex-wrap gap-2.5">
             <button type="button" className="btn-secondary" onClick={() => navigate(`/profile/${user!.id}`)}>Cancel</button>
             <button className="btn-accent" disabled={busy}>{busy ? "Saving…" : "✓ Save changes"}</button>
           </div>
@@ -198,7 +198,7 @@ export default function EditProfile() {
         <div className="card card-body space-y-4">
           <Field label="Full name"><input className="input" value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} /></Field>
           <Field label="Bio"><textarea className="input" rows={3} maxLength={500} value={form.bio} onChange={(e) => setForm({ ...form, bio: e.target.value })} /></Field>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Field label="Phone"><input className="input" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></Field>
             <Field label="Date of birth"><input className="input" type="date" value={form.dob} onChange={(e) => setForm({ ...form, dob: e.target.value })} /></Field>
           </div>
@@ -207,7 +207,7 @@ export default function EditProfile() {
               <option value="male">Male</option><option value="female">Female</option><option value="other">Other</option><option value="prefer_not_to_say">Prefer not to say</option>
             </select>
           </Field>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <Field label="Country">
               <select className="input" value={form.country} onChange={(e) => setForm({ ...form, country: e.target.value, state: "" })}>
                 <option value="">Select country…</option>
@@ -234,7 +234,7 @@ export default function EditProfile() {
         <section>
           <SectionHead n="03" title="Sport & Role" sub="Sport, position & availability" />
           <div className="card card-body space-y-4">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Field label="Primary sport">
                 <input className="input" list="sport-list" value={athlete.primary_sport}
                   onChange={(e) => setAthlete({ ...athlete, primary_sport: e.target.value })} />
@@ -256,7 +256,7 @@ export default function EditProfile() {
 
             {/* Cricket-specific fields */}
             {athlete.primary_sport?.toLowerCase() === "cricket" && (
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Field label="Batting style">
                   <select className="input" value={athlete.batting_style} onChange={(e) => setAthlete({ ...athlete, batting_style: e.target.value })}>
                     <option value="">Select…</option>
@@ -294,7 +294,7 @@ export default function EditProfile() {
               </Field>
             )}
 
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <Field label="Experience level">
                 <select className="input" value={athlete.experience_level} onChange={(e) => setAthlete({ ...athlete, experience_level: e.target.value })}>
                   <option value="beginner">Beginner</option>
@@ -372,7 +372,7 @@ export default function EditProfile() {
                   ))}
                 </div>
               )}
-              <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <input
                   className="input flex-1"
                   placeholder="e.g., Runs scored, Wickets, Goals"
