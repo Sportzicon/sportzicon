@@ -131,7 +131,7 @@ export default function Profile() {
                 </div>
               </div>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               {isMe && <button className="btn-primary" onClick={() => navigate("/profile/edit")}>✎ Edit profile</button>}
               {!isMe && (
                 <>
@@ -314,7 +314,7 @@ export default function Profile() {
 
       {/* ── Activity section (not numbered) ───────────────────── */}
       <div>
-        <div className="mb-4 flex gap-1 border-b border-hair">
+        <div className="mb-4 flex gap-1 border-b border-hair overflow-x-auto">
           {tabs.map((t) => (
             <button
               key={t.id}

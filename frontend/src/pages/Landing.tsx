@@ -28,34 +28,34 @@ export default function Landing() {
   return (
     <div className="min-h-screen bg-paper text-ink">
       {/* masthead */}
-      <header className="flex items-center justify-between border-b-[1.5px] border-ink px-11 py-4">
+      <header className="flex items-center justify-between border-b-[1.5px] border-ink px-4 sm:px-8 lg:px-11 py-4">
         <div className="flex items-baseline gap-3">
           <span className="inline-flex h-7 w-7 translate-y-0.5 items-center justify-center rounded bg-brand-500 font-disp text-lg text-white">S</span>
           <span className="font-disp text-2xl tracking-[0.02em]">Sportivox</span>
-          <span className="lab">est. 2026</span>
+          <span className="lab hidden sm:inline">est. 2026</span>
         </div>
-        <nav className="flex items-center gap-7">
+        <nav className="flex items-center gap-3 sm:gap-5 lg:gap-7">
           {["For Athletes", "For Clubs", "Opportunities", "How it works"].map((n) => (
-            <span key={n} className="font-mononum cursor-pointer text-[11px] text-ink-70">{n}</span>
+            <span key={n} className="font-mononum cursor-pointer text-[11px] text-ink-70 hidden md:inline">{n}</span>
           ))}
           <Link to="/login" className="font-mononum text-[11px] text-ink-sub">Sign in</Link>
           <Link to="/signup" className="btn-primary">Get started</Link>
         </nav>
       </header>
 
-      <div className="flex items-center justify-between border-b border-hair px-11 py-2.5">
+      <div className="flex flex-wrap items-center justify-between gap-1 border-b border-hair px-4 sm:px-8 lg:px-11 py-2.5">
         <span className="lab">The verified sports recruitment network</span>
-        <span className="lab">Pune · Mumbai · London · Melbourne · Cape Town</span>
+        <span className="lab hidden sm:inline">Pune · Mumbai · London · Melbourne · Cape Town</span>
       </div>
 
       {/* hero */}
       <section className="grid grid-cols-1 border-b border-hair lg:grid-cols-[1.25fr_1fr]">
-        <div className="border-r border-hair px-11 py-12">
+        <div className="border-b border-hair lg:border-b-0 lg:border-r px-4 sm:px-8 lg:px-11 py-8 lg:py-12">
           <div className="kicker">Issue No. 01 — Talent, Verified</div>
-          <h1 className="font-disp mt-4 text-6xl leading-[0.95] lg:text-7xl">
+          <h1 className="font-disp mt-4 text-5xl leading-[0.95] sm:text-6xl lg:text-7xl">
             Where talent<br />gets <span className="text-brand-500">seen.</span>
           </h1>
-          <p className="mt-6 max-w-md text-lg leading-relaxed text-ink-sub">
+          <p className="mt-6 max-w-md text-base sm:text-lg leading-relaxed text-ink-sub">
             Sportivox connects athletes, clubs, academies and scouts in one verified ecosystem — a structured
             profile, a powerful search, and a recruitment workflow built for how sport actually hires.
           </p>
@@ -63,7 +63,7 @@ export default function Landing() {
             <Link to="/signup" className="btn-primary">Create your profile →</Link>
             <Link to="/signup" className="btn-secondary">For clubs &amp; scouts</Link>
           </div>
-          <div className="mt-10 flex flex-wrap gap-7">
+          <div className="mt-8 flex flex-wrap gap-5 sm:gap-7">
             {["Verified Player", "Verified Club", "Verified Stats", "Verified Scout"].map((b) => (
               <div key={b} className="flex items-center gap-2">
                 <span className="text-brand-500">✓</span>
@@ -72,7 +72,7 @@ export default function Landing() {
             ))}
           </div>
         </div>
-        <div className="flex flex-col justify-center bg-fill px-9 py-8">
+        <div className="flex flex-col justify-center bg-fill px-4 sm:px-6 lg:px-9 py-6 lg:py-8">
           <div className="flex items-center justify-between">
             <span className="lab">Built for recruiters</span>
             <span className="kicker">320 open</span>
@@ -92,7 +92,7 @@ export default function Landing() {
       {/* stat ledger */}
       <section className="grid grid-cols-2 border-b-[1.5px] border-ink lg:grid-cols-4">
         {stats.map(([n, l], i) => (
-          <div key={l} className={`px-8 py-6 ${i < stats.length - 1 ? "border-r border-hair" : ""}`}>
+          <div key={l} className={`px-4 sm:px-8 py-5 sm:py-6 ${i < stats.length - 1 ? "border-r border-hair" : ""}`}>
             <div className="font-disp text-5xl">{n}</div>
             <div className="lab mt-2">{l}</div>
           </div>
@@ -102,7 +102,7 @@ export default function Landing() {
       {/* value props */}
       <section className="grid grid-cols-1 lg:grid-cols-3">
         {props.map(([n, t, b], i) => (
-          <div key={n} className={`px-8 py-8 ${i < 2 ? "border-r border-hair" : ""}`}>
+          <div key={n} className={`px-4 sm:px-8 py-6 sm:py-8 border-hair ${i < 2 ? "border-b lg:border-b-0 lg:border-r" : ""}`}>
             <div className="font-disp text-2xl text-brand-500">{n}</div>
             <h3 className="font-disp mt-3.5 text-2xl">{t}</h3>
             <p className="mt-2.5 text-sm leading-relaxed text-ink-sub">{b}</p>
@@ -111,7 +111,7 @@ export default function Landing() {
       </section>
 
       {/* roles strip */}
-      <section className="border-t border-hair bg-fill px-11 py-9">
+      <section className="border-t border-hair bg-fill px-4 sm:px-8 lg:px-11 py-6 lg:py-9">
         <div className="kicker">One network, five roles</div>
         <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
           {roles.map(([t, d]) => (
@@ -124,17 +124,17 @@ export default function Landing() {
       </section>
 
       {/* CTA */}
-      <section className="flex flex-wrap items-center justify-between gap-6 border-t-[1.5px] border-ink px-11 py-10">
-        <h2 className="font-disp text-4xl leading-tight">
+      <section className="flex flex-wrap items-center justify-between gap-6 border-t-[1.5px] border-ink px-4 sm:px-8 lg:px-11 py-8 lg:py-10">
+        <h2 className="font-disp text-3xl sm:text-4xl leading-tight">
           Get discovered.<br /><span className="text-brand-500">Get recruited.</span>
         </h2>
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-3">
           <Link to="/signup" className="btn-primary">Create your profile →</Link>
           <Link to="/opportunities" className="btn-secondary">Browse opportunities</Link>
         </div>
       </section>
 
-      <footer className="flex items-center justify-between border-t border-hair px-11 py-5">
+      <footer className="flex flex-wrap items-center justify-between gap-2 border-t border-hair px-4 sm:px-8 lg:px-11 py-4 lg:py-5">
         <span className="lab">© {new Date().getFullYear()} Sportivox — All rights reserved</span>
         <span className="lab">Verified sports recruitment</span>
       </footer>

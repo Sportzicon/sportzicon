@@ -8,11 +8,14 @@
 
 @layer base {
   html, body, #root { @apply h-full; }
+  html { overflow-x: hidden; }
   body {
     font-family: "Public Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     @apply bg-paper text-ink antialiased;
+    overflow-x: hidden;
   }
   ::selection { background: #FA4D14; color: #fff; }
+  img, video { max-width: 100%; height: auto; }
 
   h1, h2, h3 { @apply tracking-tight; }
 
@@ -38,7 +41,7 @@
     font-family: "IBM Plex Mono", monospace;
     @apply inline-flex items-center justify-center gap-2 rounded px-4 py-2 text-[11.5px] uppercase tracking-[0.06em]
            transition focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40
-           disabled:opacity-45 disabled:cursor-not-allowed whitespace-nowrap;
+           disabled:opacity-45 disabled:cursor-not-allowed whitespace-nowrap min-h-[44px];
     border: 1px solid transparent;
   }
   .btn-primary { @apply btn bg-ink text-paper hover:bg-black; }

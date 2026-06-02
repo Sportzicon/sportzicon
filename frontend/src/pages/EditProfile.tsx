@@ -134,7 +134,7 @@ export default function EditProfile() {
         title="Edit profile"
         subtitle="Editing your profile"
         action={
-          <div className="flex gap-2.5">
+          <div className="flex flex-wrap gap-2.5">
             <button type="button" className="btn-secondary" onClick={() => navigate(`/profile/${user!.id}`)}>Cancel</button>
             <button className="btn-accent" disabled={busy}>{busy ? "Saving…" : "✓ Save changes"}</button>
           </div>
@@ -372,7 +372,7 @@ export default function EditProfile() {
                   ))}
                 </div>
               )}
-              <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <input
                   className="input flex-1"
                   placeholder="e.g., Runs scored, Wickets, Goals"
