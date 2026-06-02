@@ -75,6 +75,15 @@
     @apply inline-flex items-center gap-1 rounded px-2 py-0.5 text-[10px] uppercase tracking-[0.08em] bg-ink text-paper;
   }
   .badge-verified .tick { color: #FA4D14; }
+  .badge-live {
+    @apply badge bg-red-100 text-red-700 animate-pulse;
+  }
+  .badge-upcoming {
+    @apply badge bg-blue-100 text-blue-700;
+  }
+  .badge-completed {
+    @apply badge bg-gray-100 text-gray-600;
+  }
   .field-error { @apply text-xs text-red-600 mt-1; }
 
   /* ---- section header (editorial, numbered) ---- */
