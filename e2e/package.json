@@ -1,0 +1,22 @@
+{
+  "name": "sportivox-e2e",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "install:browsers": "playwright install --with-deps chromium",
+    "test": "playwright test",
+    "test:ui": "playwright test --ui",
+    "test:headed": "playwright test --headed",
+    "test:debug": "PWDEBUG=1 playwright test",
+    "report": "playwright show-report reports/html",
+    "test:smoke": "playwright test --grep @smoke",
+    "test:scoring": "playwright test --grep @scoring",
+    "test:auth": "playwright test --grep @auth",
+    "test:critical": "playwright test --grep @critical"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.0",
+    "@types/node": "^22.10.0"
+  }
+}

@@ -135,4 +135,59 @@ router.get("/innings/:inningsId/balls", optionalAuth, asyncHandler(async (req: a
   res.json({ balls: r });
 }));
 
+// Undo last ball (PPTX § Team Analytics)
+router.post("/innings/:inningsId/balls/undo", requireAuth, requireRole("organizer", "admin", "scorer"),
+  asyncHandler(async (req: any, res: any) => {
+    const r = await svc.undoLastBall(req.params.inningsId, req.user.sub, req.user.role);
+    res.json(r);
+  })
+);
+
+// ── Analytics (PPTX § Scorecard & Analytics) ─────────────────────────────────
+
+router.get("/innings/:inningsId/analytics", optionalAuth, asyncHandler(async (req: any, res: any) => {
+  const r = await svc.getInningsAnalytics(req.params.inningsId);
+  res.json(r);
+}));
+
+router.get("/innings/:inningsId/partnerships", optionalAuth, asyncHandler(async (req: any, res: any) => {
+  const r = await svc.listPartnerships(req.params.inningsId);
+  res.json({ partnerships: r });
+}));
+
+router.get("/players/:playerId/scouting", optionalAuth, asyncHandler(async (req: any, res: any) => {
+  const r = await svc.getPlayerScouting(req.params.playerId);
+  res.json(r);
+}));
+
+router.put("/innings/:inningsId/scouting/:playerId", requireAuth, requireRole("organizer", "admin", "scorer"),
+  asyncHandler(async (req: any, res: any) => {
+    const r = await svc.setPlayerScouting(req.params.inningsId, req.params.playerId, req.user.sub, req.user.role, req.body);
+    res.json({ batting_entry: r });
+  })
+);
+
+// ── Fielding (PPTX § 04 Fielder) ─────────────────────────────────────────────
+
+router.get("/innings/:inningsId/fielding", optionalAuth, asyncHandler(async (req: any, res: any) => {
+  const r = await svc.listFielding(req.params.inningsId);
+  res.json({ fielding: r });
+}));
+
+router.post("/innings/:inningsId/fielding", requireAuth, requireRole("organizer", "admin", "scorer"),
+  asyncHandler(async (req: any, res: any) => {
+    const r = await svc.logFieldingEvent(req.params.inningsId, req.user.sub, req.user.role, req.body);
+    res.status(201).json({ fielding_entry: r });
+  })
+);
+
+// ── Match configuration (PPTX § Match & Innings setup) ──────────────────────
+
+router.put("/matches/:matchId/config", requireAuth, requireRole("organizer", "admin"),
+  asyncHandler(async (req: any, res: any) => {
+    const r = await svc.updateMatchConfig(req.params.matchId, req.user.sub, req.user.role, req.body);
+    res.json({ tournament: r });
+  })
+);
+
 export default router;

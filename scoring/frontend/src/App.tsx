@@ -7,6 +7,8 @@ import NewTournament from "./pages/NewTournament";
 import MatchDetail from "./pages/MatchDetail";
 import LiveScoring from "./pages/LiveScoring";
 import PlayerStats from "./pages/PlayerStats";
+import InningsAnalytics from "./pages/InningsAnalytics";
+import MatchConfig from "./pages/MatchConfig";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import { ProtectedRoute } from "./components/ProtectedRoute";
@@ -25,6 +27,8 @@ export default function App() {
         <Route path="/tournaments/:id/edit" element={<ProtectedRoute><NewTournament /></ProtectedRoute>} />
         <Route path="/matches/:matchId" element={<MatchDetail />} />
         <Route path="/matches/:matchId/score" element={<ProtectedRoute><LiveScoring /></ProtectedRoute>} />
+        <Route path="/matches/:matchId/config" element={<ProtectedRoute><MatchConfig /></ProtectedRoute>} />
+        <Route path="/innings/:inningsId/analytics" element={<InningsAnalytics />} />
         <Route path="/players/:playerId" element={<PlayerStats />} />
         <Route path="*" element={<div className="p-10 text-center text-gray-500">404 — Page not found</div>} />
       </Route>
