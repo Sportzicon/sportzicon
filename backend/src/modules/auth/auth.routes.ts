@@ -6,7 +6,6 @@ import { requireAuth } from "../../middleware/auth";
 import * as svc from "./auth.service";
 import { getUserById } from "../users/users.service";
 import {
-  signupSchema,
   loginSchema,
   refreshSchema,
   verifyEmailSchema,
@@ -19,16 +18,6 @@ import {
 } from "./auth.schemas";
 
 const router = Router();
-
-router.post(
-  "/signup",
-  authLimiter,
-  validate(signupSchema),
-  asyncHandler(async (req, res) => {
-    const result = await svc.signup(req.body);
-    res.status(201).json(result);
-  })
-);
 
 router.post(
   "/check-availability",

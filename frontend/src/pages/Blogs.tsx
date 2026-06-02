@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import { useAuthStore } from "../store/auth";
-import { PageHeader, Spinner, EmptyState, Kicker, SectionHead } from "../components/UI";
+import { PageHeader, Spinner, EmptyState, Kicker, SectionHead, StatusPill } from "../components/UI";
 import type { Blog } from "../types";
 
 export default function Blogs() {

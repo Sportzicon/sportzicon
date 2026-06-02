@@ -202,9 +202,7 @@ export default function Signup() {
         // Incomplete signup detected — don't overwrite saved data, let user choose to resume
         setResumedUserId(res.data.user_id);
       } else {
-        const user_id: string = res.data.user_id;
-        patch({ step: 2, user_id });
-        setDraft((p) => ({ ...p, step: 2, user_id }));
+        patch({ step: 2, user_id: res.data.user_id as string });
       }
     } catch (e) {
       const msg = humanizeError(e);
@@ -408,10 +406,9 @@ export default function Signup() {
                     type="button"
                     className="font-semibold underline hover:text-amber-950"
                     onClick={() => {
-                      const uid = resumedUserId;
+                      const uid = resumedUserId!;
                       setResumedUserId(null);
                       patch({ step: 2, user_id: uid });
-                      setDraft((p) => ({ ...p, step: 2, user_id: uid }));
                     }}
                   >
                     Continue signup →

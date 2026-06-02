@@ -256,13 +256,10 @@ export default function Reels() {
               <Heart className="h-3.5 w-3.5" fill={isLiked ? "currentColor" : "none"} />
               {r.like_count}
             </button>
-            <button
-              onClick={() => setOpenCommentId(openCommentId === r.id ? null : r.id)}
-              className="flex items-center gap-1 text-[11px] font-mononum text-ink-sub hover:text-brand-500 transition"
-            >
+            <span className="flex items-center gap-1 text-[11px] font-mononum text-ink-sub">
               <MessageCircle className="h-3.5 w-3.5" />
               {r.comment_count}
-            </button>
+            </span>
             <button
               onClick={() => toggleFavoriteReel(r.id)}
               className={`flex items-center gap-1 text-[11px] font-mononum transition ml-auto ${
@@ -334,11 +331,9 @@ export default function Reels() {
             </div>
           )}
 
-          {openCommentId === r.id && (
-            <div className="pt-2 mt-2 border-t border-hairsoft">
-              <CommentSection parentType="reel" parentId={r.id} commentCount={r.comment_count} showForm />
-            </div>
-          )}
+          <div className="pt-2 mt-2 border-t border-hairsoft">
+            <CommentSection parentType="reel" parentId={r.id} commentCount={r.comment_count} showForm />
+          </div>
         </div>
       </div>
     );

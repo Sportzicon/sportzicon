@@ -17,7 +17,6 @@ export default function Feed() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
-  const [openCommentId, setOpenCommentId] = useState<string | null>(null);
   const [likedPosts, setLikedPosts] = useState<Set<string>>(new Set());
 
   const feed = useQuery({
@@ -212,17 +211,12 @@ export default function Feed() {
                 >
                   <Heart className="h-4 w-4" fill={likedPosts.has(p.id) ? "currentColor" : "none"} /> {p.like_count}
                 </button>
-                <button
-                  onClick={() => setOpenCommentId(openCommentId === p.id ? null : p.id)}
-                  className="font-mononum text-[11.5px] text-ink-sub hover:text-brand-500 flex items-center gap-1.5"
-                >
+                <span className="font-mononum text-[11.5px] text-ink-sub flex items-center gap-1.5">
                   <MessageCircle className="h-4 w-4" /> {p.comment_count}
-                </button>
+                </span>
               </div>
 
-              {openCommentId === p.id && (
-                <CommentSection parentType="post" parentId={p.id} commentCount={p.comment_count} showForm />
-              )}
+              <CommentSection parentType="post" parentId={p.id} commentCount={p.comment_count} showForm />
             </li>
           ))}
         </ul>

@@ -330,7 +330,8 @@ export async function registerProfile(input: {
       ...(input.org_name
         ? { org_name: input.org_name, org_name_lower: input.org_name.toLowerCase() }
         : {}),
-      ...(input.org_type ? { org_type: input.org_type } : {})
+      ...(input.org_type ? { org_type: input.org_type } : {}),
+      ...(input.org_sport ? { org_sport: input.org_sport } : {})
     }
   });
 
@@ -341,25 +342,18 @@ export async function registerProfile(input: {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export async function checkAvailability(email?: string, phone?: string) {
+  const [emailExists, phoneExists] = await Promise.all([
+    email
+      ? prisma.user.findFirst({ where: { email_lower: email.trim().toLowerCase() }, select: { id: true } })
+      : null,
+    phone
+      ? prisma.user.findFirst({ where: { phone }, select: { id: true } })
+      : null
+  ]);
+
   const result: { email?: "available" | "taken"; phone?: "available" | "taken" } = {};
-
-  if (email) {
-    const emailLower = email.trim().toLowerCase();
-    const exists = await prisma.user.findFirst({
-      where: { email_lower: emailLower },
-      select: { id: true }
-    });
-    result.email = exists ? "taken" : "available";
-  }
-
-  if (phone) {
-    const exists = await prisma.user.findFirst({
-      where: { phone },
-      select: { id: true }
-    });
-    result.phone = exists ? "taken" : "available";
-  }
-
+  if (email) result.email = emailExists ? "taken" : "available";
+  if (phone) result.phone = phoneExists ? "taken" : "available";
   return result;
 }
 
