@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { api, humanizeError } from "../api/client";
-import { COUNTRIES, statesForCountry } from "../data/geo";
+import { COUNTRIES, COUNTRY_PHONE, statesForCountry } from "../data/geo";
 
 const ROLES = [
   { value: "athlete", label: "Athlete / Player", hint: "Build a profile, upload stats, get discovered and apply to trials." },
@@ -18,6 +18,7 @@ const STORE_KEY = "sx_signup_draft";
 type Draft = {
   step: number;
   role: string;
+  user_id: string;
   full_name: string; email: string; phone: string; password: string;
   country: string; state: string; city: string; dob: string;
   primary_sport: string; play_role: string; level: string; looking: boolean;
@@ -25,7 +26,7 @@ type Draft = {
 };
 
 const DEFAULT: Draft = {
-  step: 0, role: "athlete",
+  step: 0, role: "athlete", user_id: "",
   full_name: "", email: "", phone: "", password: "",
   country: "", state: "", city: "", dob: "",
   primary_sport: "Cricket", play_role: "", level: "", looking: true,
@@ -44,7 +45,9 @@ function save(d: Partial<Draft>) {
 
 function clear() { localStorage.removeItem(STORE_KEY); }
 
-function Field({ label, req, hint, children }: { label: string; req?: boolean; hint?: string; children: React.ReactNode }) {
+function Field({ label, req, hint, children }: {
+  label: string; req?: boolean; hint?: string; children: React.ReactNode;
+}) {
   return (
     <label className="block">
       <span className="label">{label}{req && <span className="text-brand-500"> *</span>}</span>
@@ -77,15 +80,78 @@ function Chip({ label, active, onClick }: { label: string; active: boolean; onCl
   );
 }
 
+// Renders a dial-code prefix + digits-only number input.
+// For known countries the prefix is fixed; for "Other" the user can type the code.
+function PhoneInput({ country, value, onChange }: {
+  country: string;
+  value: string;           // full number stored as "dialCode + localDigits", e.g. "+919876543210"
+  onChange: (full: string) => void;
+}) {
+  const info = COUNTRY_PHONE[country];
+  const dial  = info?.dial ?? "";
+  const maxLocal = info?.max ?? 15;
+
+  // Derive the editable local part from the stored full value
+  const localDigits = value.startsWith(dial) ? value.slice(dial.length) : value.replace(/\D/g, "");
+
+  function handleChange(raw: string) {
+    // Strip everything except digits
+    const digits = raw.replace(/\D/g, "").slice(0, maxLocal);
+    onChange(dial + digits);
+  }
+
+  if (!info) {
+    // "Other" — allow free entry but block alphabets; user must include country code
+    return (
+      <input
+        className="input font-mononum"
+        type="tel"
+        inputMode="tel"
+        placeholder="+XX 9876543210"
+        value={value}
+        maxLength={20}
+        onChange={(e) => {
+          // Allow digits, +, spaces, hyphens, parentheses only
+          const cleaned = e.target.value.replace(/[^\d+\s\-()]/g, "").slice(0, 20);
+          onChange(cleaned);
+        }}
+      />
+    );
+  }
+
+  return (
+    <div className="flex">
+      <span className="inline-flex items-center px-3 rounded-l border border-r-0 border-[#D4D0C8] bg-[#F2F1EC] font-mononum text-[13px] text-ink-sub select-none whitespace-nowrap">
+        {dial}
+      </span>
+      <input
+        className="input rounded-l-none flex-1 font-mononum"
+        type="tel"
+        inputMode="numeric"
+        pattern="[0-9]*"
+        placeholder={info.placeholder}
+        value={localDigits}
+        maxLength={maxLocal}
+        onChange={(e) => handleChange(e.target.value)}
+      />
+    </div>
+  );
+}
+
 export default function Signup() {
   const navigate = useNavigate();
   const [d, setDraft] = useState<Draft>(DEFAULT);
   const [submitting, setSubmitting] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [emailExists, setEmailExists] = useState(false);
+  const [resumedUserId, setResumedUserId] = useState<string | null>(null);
   const [resendSent, setResendSent] = useState(false);
 
-  // Restore from localStorage on mount
-  useEffect(() => { setDraft(load()); }, []);
+  // Restore from localStorage on mount; clear it when user navigates away
+  useEffect(() => {
+    setDraft(load());
+    return () => { clear(); };
+  }, []);
 
   const isAthlete = d.role === "athlete";
 
@@ -114,17 +180,40 @@ export default function Signup() {
     setDraft((p) => ({ ...p, step: 1 }));
   }
 
-  function advanceAccount() {
+  async function advanceAccount() {
     if (!d.full_name || !d.email || !d.phone || !d.password || !d.country || !d.state || !d.city) {
       setErr("Please fill all required fields."); return;
     }
     const pwdErr = validatePassword(d.password);
-    if (pwdErr) {
-      setErr(pwdErr); return;
-    }
+    if (pwdErr) { setErr(pwdErr); return; }
     setErr(null);
-    save({ step: 2 });
-    setDraft((p) => ({ ...p, step: 2 }));
+    setEmailExists(false);
+    setResumedUserId(null);
+    setSubmitting(true);
+    try {
+      const res = await api.post("/auth/register/basic", {
+        ...(d.user_id ? { user_id: d.user_id } : {}),
+        email: d.email, password: d.password,
+        full_name: d.full_name, phone: d.phone, role: d.role,
+        country: d.country || undefined, state: d.state || undefined,
+        city: d.city || undefined, dob: d.dob || undefined
+      });
+      if (res.data.resumed) {
+        // Incomplete signup detected — don't overwrite saved data, let user choose to resume
+        setResumedUserId(res.data.user_id);
+      } else {
+        const user_id: string = res.data.user_id;
+        patch({ step: 2, user_id });
+        setDraft((p) => ({ ...p, step: 2, user_id }));
+      }
+    } catch (e) {
+      const msg = humanizeError(e);
+      if (msg.toLowerCase().includes("email already exists")) {
+        setEmailExists(true);
+      } else {
+        setErr(msg);
+      }
+    } finally { setSubmitting(false); }
   }
 
   function back(toStep: number) {
@@ -134,20 +223,23 @@ export default function Signup() {
   }
 
   async function submit() {
+    // Guard: no user_id means step 2 was never completed — send them back
+    if (!d.user_id) {
+      setErr(null);
+      save({ step: 1 });
+      setDraft((p) => ({ ...p, step: 1 }));
+      return;
+    }
     if (isAthlete && (!d.play_role || !d.level)) {
       setErr("Please select your playing role and experience level."); return;
     }
-    if (!isAthlete && !d.org_type) {
-      setErr("Please select an organization type."); return;
+    if (!isAthlete && (!d.org_name || !d.org_type)) {
+      setErr("Please fill in your organisation name and type."); return;
     }
     setSubmitting(true); setErr(null);
     try {
-      await api.post("/auth/signup", {
-        email: d.email, password: d.password,
-        full_name: d.full_name, phone: d.phone, role: d.role,
-        country: d.country || undefined, state: d.state || undefined,
-        city: d.city || undefined, dob: d.dob || undefined,
-        // sport profile (athlete)
+      const res = await api.post("/auth/register/profile", {
+        user_id: d.user_id,
         ...(isAthlete ? {
           primary_sport: d.primary_sport || undefined,
           position: d.play_role || undefined,
@@ -155,11 +247,12 @@ export default function Signup() {
           looking_for_club: d.looking
         } : {
           org_name: d.org_name || undefined,
-          org_type: d.org_type?.toLowerCase() || undefined
+          org_type: d.org_type?.toLowerCase() || undefined,
+          org_sport: d.org_sport || undefined
         })
       });
-      clear(); // wipe draft on success
-      setDraft((p) => ({ ...p, step: 3 }));
+      clear();
+      setDraft((p) => ({ ...p, step: 3, email: res.data.email ?? p.email }));
     } catch (e) {
       setErr(humanizeError(e));
     } finally { setSubmitting(false); }
@@ -260,10 +353,19 @@ export default function Signup() {
                   <input className="input" value={d.full_name} onChange={(e) => patch({ full_name: e.target.value })} autoFocus />
                 </Field>
                 <Field label="Email" req hint="Verification link sent on signup.">
-                  <input className="input" type="email" value={d.email} onChange={(e) => patch({ email: e.target.value })} />
+                  <input
+                    className="input"
+                    type="email"
+                    value={d.email}
+                    onChange={(e) => { patch({ email: e.target.value }); setEmailExists(false); setResumedUserId(null); }}
+                  />
                 </Field>
                 <Field label="Phone" req hint="For OTP verification.">
-                  <input className="input" placeholder="+91 98XXX XXXXX" value={d.phone} onChange={(e) => patch({ phone: e.target.value })} />
+                  <PhoneInput
+                    country={d.country}
+                    value={d.phone}
+                    onChange={(v) => patch({ phone: v })}
+                  />
                 </Field>
                 <Field label="Password" req>
                   <input className="input" type="password" value={d.password} onChange={(e) => patch({ password: e.target.value })} minLength={8} />
@@ -275,7 +377,7 @@ export default function Signup() {
                   </div>
                 </Field>
                 <Field label="Country" req>
-                  <select className="input" value={d.country} onChange={(e) => patch({ country: e.target.value, state: "" })}>
+                  <select className="input" value={d.country} onChange={(e) => patch({ country: e.target.value, state: "", phone: "" })}>
                     <option value="">Select country</option>
                     {COUNTRIES.map((c) => <option key={c}>{c}</option>)}
                   </select>
@@ -299,10 +401,35 @@ export default function Signup() {
                   </Field>
                 )}
               </div>
+              {resumedUserId && (
+                <div className="mt-4 rounded bg-amber-50 border border-amber-200 p-3 text-sm text-amber-900">
+                  You have an incomplete signup with this email.{" "}
+                  <button
+                    type="button"
+                    className="font-semibold underline hover:text-amber-950"
+                    onClick={() => {
+                      const uid = resumedUserId;
+                      setResumedUserId(null);
+                      patch({ step: 2, user_id: uid });
+                      setDraft((p) => ({ ...p, step: 2, user_id: uid }));
+                    }}
+                  >
+                    Continue signup →
+                  </button>
+                </div>
+              )}
+              {emailExists && (
+                <div className="mt-4 rounded bg-red-50 border border-red-200 p-3 text-sm text-red-800">
+                  An account with this email already exists.{" "}
+                  <Link to="/login" className="font-semibold underline hover:text-red-900">Sign in instead →</Link>
+                </div>
+              )}
               {err && <div className="mt-4 rounded bg-red-50 border border-red-200 p-3 text-sm text-red-800">{err}</div>}
               <div className="flex justify-between items-center mt-7">
                 <button type="button" className="btn-ghost" onClick={() => back(0)}>← Back</button>
-                <button type="button" className="btn-primary" onClick={advanceAccount}>Continue →</button>
+                <button type="button" className="btn-primary" disabled={submitting} onClick={advanceAccount}>
+                  {submitting ? "Saving…" : "Continue →"}
+                </button>
               </div>
             </div>
           )}

@@ -213,6 +213,156 @@ export async function resetPassword(token: string, password: string) {
   return { ok: true };
 }
 
+// ── Two-step registration ─────────────────────────────────────────────────
+
+export async function registerBasic(input: {
+  user_id?: string;
+  email: string; password: string; full_name: string; phone: string;
+  role: Role; country?: string; state?: string; city?: string; dob?: string; gender?: string;
+}) {
+  const email = input.email.trim();
+  const emailLower = email.toLowerCase();
+
+  // If resuming (user_id present), verify the record is still pending and belongs to this email/phone
+  if (input.user_id) {
+    const existing = await prisma.user.findUnique({
+      where: { id: input.user_id },
+      select: { id: true, status: true, email_lower: true }
+    });
+    if (existing && existing.status === "pending") {
+      // Check email conflict excluding self
+      const emailTaken = await prisma.user.findFirst({
+        where: { email_lower: emailLower, NOT: { id: input.user_id } },
+        select: { id: true }
+      });
+      if (emailTaken) throw Conflict("An account with this email already exists");
+
+      const phoneTaken = await prisma.user.findFirst({
+        where: { phone: input.phone, NOT: { id: input.user_id } },
+        select: { id: true }
+      });
+      if (phoneTaken) throw Conflict("An account with this mobile number already exists");
+
+      const password_hash = await hashPassword(input.password);
+      await prisma.user.update({
+        where: { id: input.user_id },
+        data: {
+          email, email_lower: emailLower,
+          phone: input.phone, password_hash,
+          full_name: input.full_name,
+          full_name_lower: input.full_name.toLowerCase(),
+          role: input.role,
+          country: input.country, state: input.state, city: input.city,
+          dob: input.dob, gender: input.gender
+        }
+      });
+      return { user_id: input.user_id };
+    }
+  }
+
+  // Check if the email already exists
+  const existingByEmail = await prisma.user.findFirst({
+    where: { email_lower: emailLower },
+    select: { id: true, status: true }
+  });
+
+  if (existingByEmail) {
+    // Active / suspended account — hard conflict
+    if (existingByEmail.status !== "pending") {
+      throw Conflict("An account with this email already exists");
+    }
+    // Pending account = incomplete signup — let the user choose to resume
+    // Do NOT overwrite previously saved data; just return the existing user_id
+    return { user_id: existingByEmail.id, resumed: true };
+  }
+
+  // Completely new registration — check phone uniqueness
+  const phoneTaken = await prisma.user.findFirst({
+    where: { phone: input.phone },
+    select: { id: true }
+  });
+  if (phoneTaken) throw Conflict("An account with this mobile number already exists");
+
+  const password_hash = await hashPassword(input.password);
+  const user = await prisma.user.create({
+    data: {
+      email, email_lower: emailLower,
+      email_verified: false,
+      phone: input.phone, password_hash,
+      full_name: input.full_name,
+      full_name_lower: input.full_name.toLowerCase(),
+      role: input.role, status: "pending",
+      country: input.country, state: input.state, city: input.city,
+      dob: input.dob, gender: input.gender
+    }
+  });
+  return { user_id: user.id, resumed: false };
+}
+
+export async function registerProfile(input: {
+  user_id: string;
+  primary_sport?: string; position?: string; experience_level?: string; looking_for_club?: boolean;
+  org_name?: string; org_type?: string; org_sport?: string;
+}) {
+  const user = await prisma.user.findUnique({
+    where: { id: input.user_id },
+    select: { id: true, status: true, email: true, full_name: true, role: true }
+  });
+  if (!user) throw NotFound("Registration session not found. Please start again.");
+  if (user.status !== "pending") throw Conflict("Account is already active.");
+
+  const athleteData =
+    user.role === "athlete" && input.primary_sport
+      ? {
+          primary_sport: input.primary_sport,
+          position: input.position ?? "",
+          experience_level: input.experience_level ?? "amateur",
+          looking_for_club: input.looking_for_club ?? false,
+          availability: "available",
+          stats: {}
+        }
+      : undefined;
+
+  await prisma.user.update({
+    where: { id: input.user_id },
+    data: {
+      ...(athleteData ? { athlete_data: athleteData as object } : {}),
+      ...(input.org_name
+        ? { org_name: input.org_name, org_name_lower: input.org_name.toLowerCase() }
+        : {}),
+      ...(input.org_type ? { org_type: input.org_type } : {})
+    }
+  });
+
+  await issueAndSendVerificationEmail(user.id, user.email, user.full_name);
+  return { ok: true, email: user.email };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+export async function checkAvailability(email?: string, phone?: string) {
+  const result: { email?: "available" | "taken"; phone?: "available" | "taken" } = {};
+
+  if (email) {
+    const emailLower = email.trim().toLowerCase();
+    const exists = await prisma.user.findFirst({
+      where: { email_lower: emailLower },
+      select: { id: true }
+    });
+    result.email = exists ? "taken" : "available";
+  }
+
+  if (phone) {
+    const exists = await prisma.user.findFirst({
+      where: { phone },
+      select: { id: true }
+    });
+    result.phone = exists ? "taken" : "available";
+  }
+
+  return result;
+}
+
 export async function changePassword(userId: string, current: string, next_: string) {
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) throw NotFound("User not found");

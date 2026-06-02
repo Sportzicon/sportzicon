@@ -1,0 +1,80 @@
+import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
+
+// ============================================================================
+// Shared shell for public marketing pages (Landing + HowItWorks).
+// Header and footer are rendered once here — page content via <Outlet />.
+// This prevents the "completely separate page" feel when navigating between
+// public routes.
+// ============================================================================
+
+export default function PublicLayout() {
+  const { pathname } = useLocation();
+  const navigate = useNavigate();
+
+  function handleScrollNav(sectionId: string) {
+    if (pathname === "/") {
+      document.getElementById(sectionId)?.scrollIntoView({ behavior: "smooth" });
+    } else {
+      navigate("/");
+      // brief timeout so the Landing page mounts before we try to scroll
+      setTimeout(() => {
+        document.getElementById(sectionId)?.scrollIntoView({ behavior: "smooth" });
+      }, 80);
+    }
+  }
+
+  return (
+    <div className="min-h-screen bg-paper text-ink">
+      {/* ── Masthead ──────────────────────────────────────────────────────── */}
+      <header className="sticky top-0 z-50 flex items-center justify-between border-b-[1.5px] border-ink bg-paper px-4 sm:px-8 lg:px-11 py-4">
+        <div className="flex items-baseline gap-3">
+          <Link to="/" className="flex items-baseline gap-2">
+            <span className="inline-flex h-7 w-7 translate-y-0.5 items-center justify-center rounded bg-brand-500 font-disp text-lg text-white">S</span>
+            <span className="font-disp text-2xl tracking-[0.02em]">Sportivox</span>
+          </Link>
+          <span className="lab hidden sm:inline">est. 2026</span>
+        </div>
+        <nav className="flex items-center gap-3 sm:gap-5 lg:gap-7">
+          <button
+            onClick={() => handleScrollNav("for-athletes")}
+            className={`font-mononum text-[11px] transition bg-transparent border-none p-0 hidden md:inline cursor-pointer ${pathname === "/" ? "text-ink-70 hover:text-ink" : "text-ink-70 hover:text-ink"}`}
+          >
+            For Athletes
+          </button>
+          <button
+            onClick={() => handleScrollNav("for-clubs")}
+            className="font-mononum text-[11px] text-ink-70 hover:text-ink transition bg-transparent border-none p-0 hidden md:inline cursor-pointer"
+          >
+            For Clubs
+          </button>
+          <Link
+            to="/how-it-works"
+            className={`font-mononum text-[11px] transition hidden md:inline ${
+              pathname === "/how-it-works"
+                ? "text-ink border-b border-brand-500 pb-px"
+                : "text-ink-70 hover:text-ink"
+            }`}
+          >
+            How it works
+          </Link>
+          <Link to="/login" className="font-mononum text-[11px] text-ink-sub">Sign in</Link>
+          <Link to="/signup" className="btn-primary">Get started</Link>
+        </nav>
+      </header>
+
+      <div className="flex flex-wrap items-center justify-between gap-1 border-b border-hair px-4 sm:px-8 lg:px-11 py-2.5">
+        <span className="lab">The verified sports recruitment network</span>
+        <span className="lab hidden sm:inline">Pune · Mumbai · London · Melbourne · Cape Town</span>
+      </div>
+
+      {/* ── Page content ──────────────────────────────────────────────────── */}
+      <Outlet />
+
+      {/* ── Footer ────────────────────────────────────────────────────────── */}
+      <footer className="flex flex-wrap items-center justify-between gap-2 border-t border-hair px-4 sm:px-8 lg:px-11 py-4 lg:py-5">
+        <span className="lab">© {new Date().getFullYear()} Sportivox — All rights reserved</span>
+        <span className="lab">Verified sports recruitment</span>
+      </footer>
+    </div>
+  );
+}

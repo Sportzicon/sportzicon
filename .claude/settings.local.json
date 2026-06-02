@@ -132,7 +132,20 @@
       "Bash(Write-Host \"Cleaned\")",
       "PowerShell(Get-ChildItem -Recurse \"f:\\\\My Project\\\\sportivox-main\\\\sportivox-main\\\\scoring\" | Where-Object { !$_.PSIsContainer } | Select-Object -ExpandProperty FullName | ForEach-Object { $_.Replace\\(\"f:\\\\My Project\\\\sportivox-main\\\\sportivox-main\\\\\", \"\"\\) })",
       "Bash(git log *)",
-      "Bash(grep -rn \"where\\\\[.*\\\\] =\\\\|where\\\\..*=\\\\|where: {\" backend/src/modules/ --include=\"*.ts\")"
+      "Bash(git stash *)",
+      "Bash(python3 -c ' *)",
+      "Bash(node -e *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5174/)",
+      "Bash(npx playwright *)",
+      "Bash(npx --yes playwright --version)",
+      "Read(//c/Users/mahes/AppData/Roaming/npm/node_modules/**)",
+      "Bash(npm root *)",
+      "Bash(where npx *)",
+      "Bash(ls \"C:/Users/mahes/AppData/Local/npm-cache/_npx\" 2>/dev/null | head -5)",
+      "Read(//c/Users/mahes/AppData/Local/npm-cache/_npx/**)",
+      "Bash(xargs -I{} ls \"C:/Users/mahes/AppData/Local/npm-cache/_npx/{}/node_modules\")",
+      "Bash(read d *)",
+      "Bash(NODE_PATH=C:/Users/mahes/AppData/Local/npm-cache/_npx/e41f203b7505f1fb/node_modules node -e ' *)"
     ]
   }
 }

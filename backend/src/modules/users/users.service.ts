@@ -1,5 +1,5 @@
 import { prisma } from "../../config/prisma";
-import { Forbidden, NotFound } from "../../utils/errors";
+import { Conflict, Forbidden, NotFound } from "../../utils/errors";
 import { omitSensitive } from "../../utils/user";
 
 export async function getUserById(id: string) {
@@ -21,6 +21,15 @@ export async function getUserById(id: string) {
 export async function updateProfile(userId: string, patch: Record<string, unknown>) {
   const exists = await prisma.user.findUnique({ where: { id: userId }, select: { id: true } });
   if (!exists) throw NotFound("User not found");
+
+  // Duplicate phone check — exclude the current user's own record
+  if (patch.phone !== undefined && patch.phone !== null && patch.phone !== "") {
+    const phoneConflict = await prisma.user.findFirst({
+      where: { phone: String(patch.phone), NOT: { id: userId } },
+      select: { id: true }
+    });
+    if (phoneConflict) throw Conflict("This mobile number is already registered to another account");
+  }
 
   const data: Record<string, unknown> = {};
   const allowed = [

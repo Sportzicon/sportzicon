@@ -1,11 +1,10 @@
 import { useState } from "react";
-import { Link, useNavigate, useLocation } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { api, getApiError } from "../api/client";
 import { useAuthStore } from "../store/auth";
 
 export default function Login() {
   const navigate = useNavigate();
-  const loc = useLocation();
   const { setSession } = useAuthStore();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -23,8 +22,7 @@ export default function Login() {
     try {
       const r = await api.post("/auth/login", { email, password });
       setSession({ user: r.data.user, accessToken: r.data.access_token, refreshToken: r.data.refresh_token });
-      const to = (loc.state as any)?.from?.pathname ?? "/dashboard";
-      navigate(to, { replace: true });
+      navigate("/dashboard", { replace: true });
     } catch (e) {
       const apiErr = getApiError(e);
       if (apiErr.code === "NETWORK") {

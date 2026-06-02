@@ -2,10 +2,13 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
-import { PageHeader, Spinner, EmptyState, Kicker, SectionHead, StatusPill } from "../components/UI";
+import { useAuthStore } from "../store/auth";
+import { PageHeader, Spinner, EmptyState, Kicker, SectionHead } from "../components/UI";
 import type { Blog } from "../types";
 
 export default function Blogs() {
+  const user = useAuthStore((s) => s.user);
+  const canWrite = user?.role !== "athlete";
   const [sport, setSport] = useState("");
   const [tag, setTag] = useState("");
   const [status, setStatus] = useState("");
@@ -25,7 +28,7 @@ export default function Blogs() {
       <PageHeader
         title="Blogs"
         subtitle="Guides & insights"
-        action={<Link to="/blogs/new" className="btn-accent">+ Write blog</Link>}
+        action={canWrite ? <Link to="/blogs/new" className="btn-accent">+ Write blog</Link> : undefined}
       />
 
       <div className="panel p-4 flex flex-wrap gap-3">
@@ -49,7 +52,7 @@ export default function Blogs() {
         <EmptyState
           title="No blogs found"
           hint="Try adjusting your filters or check back later."
-          action={<Link to="/blogs/new" className="btn-accent">+ Write blog</Link>}
+          action={canWrite ? <Link to="/blogs/new" className="btn-accent">+ Write blog</Link> : undefined}
         />
       ) : (
         <>

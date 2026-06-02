@@ -14,9 +14,8 @@ interface CommentSectionProps {
   showForm?: boolean;
 }
 
-export function CommentSection({ parentType, parentId, commentCount: initialCount, showForm = false }: CommentSectionProps) {
+export function CommentSection({ parentType, parentId, commentCount: initialCount }: CommentSectionProps) {
   const { user } = useAuthStore();
-  const [open, setOpen] = useState(showForm);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const qc = useQueryClient();
@@ -25,11 +24,10 @@ export function CommentSection({ parentType, parentId, commentCount: initialCoun
   const { data: commentsData } = useQuery({
     queryKey: ["comments", parentType, parentId],
     queryFn: async () => (await api.get(`/${parentType}s/${parentId}/comments`)).data.items as CommentDoc[],
-    enabled: open || showForm
   });
 
   const comments = [...new Map((commentsData ?? []).map((c) => [c.id, c])).values()];
-  const count = open ? comments.length : initialCount;
+  const count = comments.length || initialCount;
 
   const addMutation = useMutation({
     mutationFn: async (text: string) => (await api.post(`/${parentType}s/${parentId}/comments`, { text })).data.comment,
@@ -52,14 +50,11 @@ export function CommentSection({ parentType, parentId, commentCount: initialCoun
 
   return (
     <div className="mt-4">
-      {!showForm && (
-        <button onClick={() => setOpen(!open)} className="font-mononum text-[11px] uppercase tracking-[0.08em] text-ink-sub hover:text-ink">
-          ❝ {count} {count === 1 ? "comment" : "comments"}
-        </button>
-      )}
+      <div className="font-mononum text-[11px] uppercase tracking-[0.08em] text-ink-sub mb-3">
+        ❝ {count} {count === 1 ? "comment" : "comments"}
+      </div>
 
-      {(open || showForm) && (
-        <div className="mt-4 border-t border-hairsoft pt-4 space-y-4">
+      <div className="border-t border-hairsoft pt-4 space-y-4">
           {user && (
             <form onSubmit={onAdd} className="flex gap-2">
               <Avatar name={user.full_name} size={32} />
@@ -139,8 +134,7 @@ export function CommentSection({ parentType, parentId, commentCount: initialCoun
               ))
             )}
           </div>
-        </div>
-      )}
+      </div>
     </div>
   );
 }

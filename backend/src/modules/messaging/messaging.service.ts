@@ -64,10 +64,34 @@ export async function sendMessage(senderId: string, recipientId: string, body: s
 }
 
 export async function listConversations(userId: string, limit = 50) {
-  return prisma.conversation.findMany({
+  const convs = await prisma.conversation.findMany({
     where: { participant_ids: { has: userId } },
     orderBy: { updated_at: "desc" },
     take: limit
+  });
+
+  // Collect unique IDs of the other participants
+  const otherIds = [...new Set(
+    convs.flatMap((c) => c.participant_ids.filter((p) => p !== userId))
+  )];
+
+  const users = otherIds.length
+    ? await prisma.user.findMany({
+        where: { id: { in: otherIds } },
+        select: { id: true, full_name: true, role: true }
+      })
+    : [];
+
+  const userMap = Object.fromEntries(users.map((u) => [u.id, u]));
+
+  return convs.map((c) => {
+    const otherId = c.participant_ids.find((p) => p !== userId);
+    const other = otherId ? userMap[otherId] : null;
+    return {
+      ...c,
+      _other_name: other?.full_name ?? null,
+      _other_sub: other?.role ?? null
+    };
   });
 }
 

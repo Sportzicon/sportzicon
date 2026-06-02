@@ -73,6 +73,7 @@ export default function Messages() {
   const [text, setText] = useState("");
   const [recipient, setRecipient] = useState<string | null>(initialTo || null);
   const [mobileView, setMobileView] = useState<"list" | "thread">(initialTo ? "thread" : "list");
+  const [sending, setSending] = useState(false);
 
   // When a notification link navigates to /messages?to=userId while the page is
   // already mounted, useState won't re-initialise — update active conversation manually.
@@ -113,15 +114,20 @@ export default function Messages() {
 
   async function send(e?: React.FormEvent) {
     e?.preventDefault();
-    if (!text.trim() || !recipient) return;
-    await api.post("/messages", { recipient_id: recipient, body: text });
-    setText("");
-    qc.invalidateQueries({ queryKey: ["msgs", activeId] });
-    qc.invalidateQueries({ queryKey: ["conversations"] });
+    if (!text.trim() || !recipient || sending) return;
+    setSending(true);
+    try {
+      await api.post("/messages", { recipient_id: recipient, body: text });
+      setText("");
+      qc.invalidateQueries({ queryKey: ["msgs", activeId] });
+      qc.invalidateQueries({ queryKey: ["conversations"] });
+    } finally {
+      setSending(false);
+    }
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
-    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
+    if (e.key === "Enter" && !e.shiftKey && !sending) { e.preventDefault(); send(); }
   }
 
   function pickConversation(c: any) {
@@ -297,8 +303,8 @@ export default function Messages() {
               disabled={!recipient || isDemoConv}
               style={{ fontFamily: "'Public Sans', sans-serif", minHeight: 42 }}
             />
-            <button type="submit" className="btn-accent px-3 flex-shrink-0" disabled={!recipient || !text.trim() || isDemoConv} title="Send">
-              <Send className="h-4 w-4" />
+            <button type="submit" className="btn-accent px-3 flex-shrink-0" disabled={!recipient || !text.trim() || isDemoConv || sending} title="Send">
+              {sending ? <span className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin inline-block" /> : <Send className="h-4 w-4" />}
             </button>
           </form>
           <div className="px-3 sm:px-[22px] pb-2 lab text-ink-faint text-[10px]">

@@ -1,4 +1,11 @@
-import { Route, Routes } from "react-router-dom";
+import { Route, Routes, useLocation } from "react-router-dom";
+import { useEffect } from "react";
+
+function ScrollToTop() {
+  const { pathname } = useLocation();
+  useEffect(() => { window.scrollTo(0, 0); }, [pathname]);
+  return null;
+}
 import { Layout } from "./components/Layout";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 
@@ -39,9 +46,12 @@ import AdminAuditLog from "./pages/admin/AdminAuditLog";
 
 export default function App() {
   return (
+    <>
+    <ScrollToTop />
     <Routes>
       {/* Public routes */}
       <Route path="/" element={<Landing />} />
+      <Route path="/how-it-works" element={<Landing initialView="how-it-works" />} />
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<Signup />} />
       <Route path="/verify-email" element={<VerifyEmail />} />
@@ -87,5 +97,6 @@ export default function App() {
 
       <Route path="*" element={<div className="p-10 text-center text-slate-600">404 — not found</div>} />
     </Routes>
+    </>
   );
 }

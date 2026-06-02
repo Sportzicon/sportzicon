@@ -12,7 +12,10 @@ import {
   verifyEmailSchema,
   forgotPasswordSchema,
   resetPasswordSchema,
-  changePasswordSchema
+  changePasswordSchema,
+  checkAvailabilitySchema,
+  registerBasicSchema,
+  registerProfileSchema
 } from "./auth.schemas";
 
 const router = Router();
@@ -24,6 +27,38 @@ router.post(
   asyncHandler(async (req, res) => {
     const result = await svc.signup(req.body);
     res.status(201).json(result);
+  })
+);
+
+router.post(
+  "/check-availability",
+  authLimiter,
+  validate(checkAvailabilitySchema),
+  asyncHandler(async (req, res) => {
+    const r = await svc.checkAvailability(req.body.email, req.body.phone);
+    res.json(r);
+  })
+);
+
+// Step-1: save basic account details (email, phone, password, location)
+router.post(
+  "/register/basic",
+  authLimiter,
+  validate(registerBasicSchema),
+  asyncHandler(async (req, res) => {
+    const r = await svc.registerBasic(req.body);
+    res.status(201).json(r);
+  })
+);
+
+// Step-2: save sport profile / org details and trigger email verification
+router.post(
+  "/register/profile",
+  authLimiter,
+  validate(registerProfileSchema),
+  asyncHandler(async (req, res) => {
+    const r = await svc.registerProfile(req.body);
+    res.json(r);
   })
 );
 
