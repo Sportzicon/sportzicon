@@ -6,7 +6,6 @@ import { useAuthStore } from "../store/auth";
 import { PageHeader, Spinner, Avatar } from "../components/UI";
 import { Send } from "lucide-react";
 
-function pairId(a: string, b: string) { return [a, b].sort().join("_"); }
 
 function makeDemoData(meId: string) {
   const T = Date.now();
@@ -69,19 +68,20 @@ export default function Messages() {
   const me = useAuthStore((s) => s.user)!;
   const [params, setParams] = useSearchParams();
   const initialTo = params.get("to") ?? "";
-  const [activeId, setActiveId] = useState<string | null>(initialTo ? pairId(me.id, initialTo) : null);
+  const [activeId, setActiveId] = useState<string | null>(null);
   const [text, setText] = useState("");
   const [recipient, setRecipient] = useState<string | null>(initialTo || null);
   const [mobileView, setMobileView] = useState<"list" | "thread">(initialTo ? "thread" : "list");
   const [sending, setSending] = useState(false);
 
-  // When a notification link navigates to /messages?to=userId while the page is
-  // already mounted, useState won't re-initialise — update active conversation manually.
+  // When a notification link navigates to /messages?to=userId while already mounted,
+  // useState won't re-initialise — update recipient so the conv-sync effect picks it up.
   useEffect(() => {
     const to = params.get("to");
     if (to && to !== recipient) {
-      setActiveId(pairId(me.id, to));
+      setActiveId(null);
       setRecipient(to);
+      setMobileView("thread");
       setParams({}, { replace: true });
     }
   }, [params]);
@@ -92,6 +92,22 @@ export default function Messages() {
     queryKey: ["conversations"],
     queryFn: async () => (await api.get<{ items: any[] }>("/conversations")).data.items,
     refetchInterval: 15_000
+  });
+
+  const isDemo = !convs.isLoading && !convs.data?.length;
+
+  // After conversations load, find the real conversation ID for the recipient from URL
+  useEffect(() => {
+    if (!convs.data || !recipient) return;
+    const existing = convs.data.find((c: any) => c.participant_ids.includes(recipient));
+    if (existing && activeId !== existing.id) setActiveId(existing.id);
+  }, [convs.data, recipient]);
+
+  // Fetch recipient profile for new conversations (no existing conv yet)
+  const recipientProfile = useQuery({
+    queryKey: ["user", recipient],
+    queryFn: async () => (await api.get<{ user: any }>(`/users/${recipient}`)).data.user,
+    enabled: !!recipient && !activeId && !isDemo,
   });
 
   const messages = useQuery({
@@ -139,7 +155,6 @@ export default function Messages() {
   }
 
   const demo = useMemo(() => makeDemoData(me.id), [me.id]);
-  const isDemo = !convs.isLoading && !convs.data?.length;
   const isDemoConv = activeId?.startsWith("demo_conv_");
 
   const displayConvs = isDemo ? demo.convs : (convs.data ?? []);
@@ -148,7 +163,12 @@ export default function Messages() {
   // derive active conv metadata
   const activeConv = displayConvs.find((c: any) => c.id === activeId);
   const activeOtherId = activeConv?.participant_ids?.find((p: string) => p !== me.id);
-  const activeDisplayName = (activeConv as any)?._other_name ?? activeOtherId?.slice(0, 16);
+  // For new conversations (no existing conv), fall back to the fetched recipient profile name
+  const activeDisplayName =
+    (activeConv as any)?._other_name ??
+    (activeOtherId ? activeOtherId.slice(0, 16) : undefined) ??
+    recipientProfile.data?.full_name ??
+    recipient?.slice(0, 16);
 
   return (
     <div className="space-y-0 h-full">
@@ -228,7 +248,7 @@ export default function Messages() {
         {/* ── message thread ─────────────────────────────────── */}
         <section className={`${mobileView === "list" ? "hidden sm:flex" : "flex"} flex-col overflow-hidden min-w-0`}>
           {/* thread header */}
-          {activeConv ? (
+          {(activeConv || recipient) ? (
             <div className="px-3 sm:px-[22px] py-3.5 border-b border-hair bg-panel flex items-center gap-3 flex-shrink-0">
               <button
                 className="sm:hidden -ml-1 mr-1 p-2 rounded text-ink-70 hover:bg-fill transition flex-shrink-0"
@@ -239,13 +259,16 @@ export default function Messages() {
               </button>
               <Avatar name={activeDisplayName ?? "?"} size={38} />
               <div className="flex-1 min-w-0">
-                <div className="text-[14.5px] font-semibold text-ink">{activeDisplayName}</div>
-                {(activeConv as any)._other_sub && (
+                <div className="text-[14.5px] font-semibold text-ink">{activeDisplayName ?? "New conversation"}</div>
+                {(activeConv as any)?._other_sub && (
                   <div className="lab text-[10.5px] mt-0.5">{(activeConv as any)._other_sub}</div>
                 )}
+                {!activeConv && recipient && !isDemoConv && (
+                  <div className="lab text-[10.5px] mt-0.5">New conversation</div>
+                )}
               </div>
-              {activeOtherId && !isDemoConv && (
-                <Link to={`/profile/${activeOtherId}`} className="btn-ghost text-[12px] flex-shrink-0">
+              {!isDemoConv && (recipient || activeOtherId) && (
+                <Link to={`/profile/${recipient ?? activeOtherId}`} className="btn-ghost text-[12px] flex-shrink-0">
                   View profile →
                 </Link>
               )}
@@ -307,9 +330,6 @@ export default function Messages() {
               {sending ? <span className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin inline-block" /> : <Send className="h-4 w-4" />}
             </button>
           </form>
-          <div className="px-3 sm:px-[22px] pb-2 lab text-ink-faint text-[10px]">
-            Async messaging · email notification on new message · real-time in Phase 2
-          </div>
         </section>
         </div>
       </div>

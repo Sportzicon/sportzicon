@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import { useAuthStore } from "../store/auth";
-import { PageHeader, Spinner, EmptyState, Kicker, SectionHead, StatusPill } from "../components/UI";
+import { PageHeader, Spinner, EmptyState, Kicker, SectionHead, StatusPill, Pagination } from "../components/UI";
+
+const PAGE_SIZE = 10;
 import type { Blog } from "../types";
 
 export default function Blogs() {
@@ -12,6 +14,9 @@ export default function Blogs() {
   const [sport, setSport] = useState("");
   const [tag, setTag] = useState("");
   const [status, setStatus] = useState("");
+  const [page, setPage] = useState(1);
+
+  useEffect(() => { setPage(1); }, [sport, tag, status]);
 
   const params: any = {};
   if (status) params.status = status;
@@ -58,7 +63,7 @@ export default function Blogs() {
         <>
           <SectionHead n="01" title="Latest blogs" />
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {q.data.map((b) => (
+          {q.data.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE).map((b) => (
             <Link key={b.id} to={`/blogs/${b.id}`} className="panel overflow-hidden hover:shadow-card transition group">
               {b.cover_image_url && (
                 <img src={b.cover_image_url} alt="" className="w-full h-40 object-cover" />
@@ -79,6 +84,7 @@ export default function Blogs() {
             </Link>
           ))}
         </div>
+          <Pagination page={page} total={q.data.length} pageSize={PAGE_SIZE} onChange={setPage} />
         </>
       )}
     </div>

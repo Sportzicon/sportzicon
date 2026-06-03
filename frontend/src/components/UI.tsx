@@ -176,3 +176,61 @@ export function Tabs({ tabs, active, onChange, className }: { tabs: { id: string
     </div>
   );
 }
+
+export function Pagination({ page, total, pageSize, onChange }: { page: number; total: number; pageSize: number; onChange: (p: number) => void }) {
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+
+  const pages: (number | "…")[] = [];
+  if (totalPages <= 7) {
+    for (let i = 1; i <= totalPages; i++) pages.push(i);
+  } else {
+    pages.push(1);
+    if (page > 3) pages.push("…");
+    for (let i = Math.max(2, page - 1); i <= Math.min(totalPages - 1, page + 1); i++) pages.push(i);
+    if (page < totalPages - 2) pages.push("…");
+    pages.push(totalPages);
+  }
+
+  const btn = "font-mononum text-[11px] min-w-[28px] h-[28px] rounded border transition flex items-center justify-center";
+  return (
+    <div className="flex items-center justify-between gap-4 pt-5">
+      <span className="font-mononum text-[11px] text-ink-sub whitespace-nowrap">
+        Page {page} of {totalPages} · {total} record{total !== 1 ? "s" : ""}
+      </span>
+      <div className="flex items-center gap-1">
+      <button
+        onClick={() => onChange(page - 1)}
+        disabled={page <= 1}
+        className={clsx(btn, "px-3 text-ink-sub border-hair hover:text-ink hover:border-ink disabled:opacity-35 disabled:cursor-not-allowed")}
+      >
+        ←
+      </button>
+      {pages.map((p, i) =>
+        p === "…" ? (
+          <span key={`el-${i}`} className="font-mononum text-[11px] w-7 text-center text-ink-faint">…</span>
+        ) : (
+          <button
+            key={p}
+            onClick={() => onChange(p as number)}
+            className={btn}
+            style={{
+              background: page === p ? "#14110D" : undefined,
+              color: page === p ? "#F7F5EF" : "#726B60",
+              borderColor: page === p ? "#14110D" : "rgba(20,17,13,0.13)",
+            }}
+          >
+            {p}
+          </button>
+        )
+      )}
+      <button
+        onClick={() => onChange(page + 1)}
+        disabled={page >= totalPages}
+        className={clsx(btn, "px-3 text-ink-sub border-hair hover:text-ink hover:border-ink disabled:opacity-35 disabled:cursor-not-allowed")}
+      >
+        →
+      </button>
+      </div>
+    </div>
+  );
+}

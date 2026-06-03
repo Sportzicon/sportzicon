@@ -1,14 +1,29 @@
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+import { useState, useRef } from "react";
 import { api } from "../api/client";
 import { useAuthStore } from "../store/auth";
 import { Spinner, VerifiedBadge, Avatar, SectionHead, Kicker, StatCard, Placeholder, Tabs, Badge, StatusPill } from "../components/UI";
 import type { Post, User } from "../types";
 import { useSavedOpportunities } from "../store/savedOpportunities";
-import { Bookmark } from "lucide-react";
+import { Bookmark, FileText, Trash2, Upload } from "lucide-react";
 
 type Tab = "posts" | "followers" | "following" | "saved";
+
+const PROFILE_DOC_TYPES = [
+  "Sports CV",
+  "Government ID",
+  "Coach Endorsement",
+  "Medical Certificate",
+  "Fitness Report",
+  "Training Certificate",
+  "Reference Letter",
+  "Academic Transcript",
+  "Age Proof",
+  "NOC from Current Club",
+  "Passport Copy",
+  "Other",
+];
 
 function SpecRow({ label, value }: { label: string; value?: string | number }) {
   if (!value) return null;
@@ -39,6 +54,8 @@ export default function Profile() {
   const qc = useQueryClient();
   const isMe = me?.id === id;
   const [tab, setTab] = useState<Tab>("posts");
+  const [docType, setDocType] = useState("");
+  const docFileRef = useRef<HTMLInputElement>(null);
   const { saved: savedOpps, toggle: toggleSaved, isSaved } = useSavedOpportunities();
 
   const userQ = useQuery({
@@ -67,6 +84,26 @@ export default function Profile() {
   const reelsQ = useQuery({
     queryKey: ["user-reels", id],
     queryFn: async () => (await api.get<{ items: any[] }>("/reels", { params: { author_id: id, limit: 3 } })).data.items
+  });
+
+  const docsQ = useQuery({
+    queryKey: ["user-docs", id],
+    queryFn: async () => (await api.get<{ items: any[] }>(`/users/${id}/documents`)).data.items,
+  });
+
+  const uploadDoc = useMutation({
+    mutationFn: async ({ file, type }: { file: File; type: string }) => {
+      const form = new FormData();
+      form.append("file", file);
+      form.append("type", type);
+      return api.post(`/users/${id}/documents`, form, { headers: { "Content-Type": "multipart/form-data" } });
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["user-docs", id] }),
+  });
+
+  const deleteDoc = useMutation({
+    mutationFn: async (docId: string) => api.delete(`/users/${id}/documents/${docId}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["user-docs", id] }),
   });
 
   async function toggleFollow() {
@@ -308,6 +345,91 @@ export default function Profile() {
                 </div>
               );
             })}
+          </div>
+        </div>
+      )}
+
+      {/* ── ZONE 07 — Documents ───────────────────────────────── */}
+      {isAthlete && (
+        <div>
+          <SectionHead n="07" title="Documents"
+            sub={isMe ? "Attach supporting documents to strengthen your profile" : "Supporting documents"}
+          />
+          <div className="card card-body space-y-3">
+            {/* Uploaded documents list */}
+            {docsQ.data && docsQ.data.length > 0 ? (
+              docsQ.data.map((doc: any) => (
+                <div key={doc.id} className="flex items-center gap-3 rounded border border-emerald-200 bg-emerald-50/40 p-3.5">
+                  <FileText className="h-4 w-4 text-emerald-600 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <div className="font-mononum text-[11px] uppercase tracking-[0.06em] text-ink">{doc.type}</div>
+                    {doc.file_name && (
+                      <a href={doc.url} target="_blank" rel="noreferrer"
+                        className="lab text-[10.5px] text-emerald-700 hover:underline truncate block mt-0.5">
+                        {doc.file_name}
+                      </a>
+                    )}
+                  </div>
+                  <span className="font-mononum text-[9px] text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded flex-shrink-0">✓ Uploaded</span>
+                  {isMe && (
+                    <button onClick={() => deleteDoc.mutate(doc.id)} disabled={deleteDoc.isPending}
+                      className="text-ink-faint hover:text-red-500 transition flex-shrink-0" title="Remove">
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
+              ))
+            ) : !isMe ? (
+              <div className="lab text-ink-faint text-center py-4">No documents uploaded.</div>
+            ) : null}
+
+            {/* Add document — dropdown + upload (owner only) */}
+            {isMe && (
+              <div className="flex gap-2 items-center flex-wrap pt-1">
+                <select
+                  className="input font-mononum flex-1 min-w-[200px]"
+                  style={{ fontSize: 12, height: 36 }}
+                  value={docType}
+                  onChange={(e) => {
+                    setDocType(e.target.value);
+                    if (docFileRef.current) docFileRef.current.value = "";
+                  }}
+                >
+                  <option value="">Select document type…</option>
+                  {PROFILE_DOC_TYPES.map((t) => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
+                </select>
+
+                <label className={`flex-shrink-0 ${!docType ? "opacity-40 pointer-events-none" : "cursor-pointer"}`}>
+                  <input
+                    ref={docFileRef}
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                    className="hidden"
+                    disabled={!docType}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file && docType) {
+                        uploadDoc.mutate({ file, type: docType });
+                        setDocType("");
+                        if (docFileRef.current) docFileRef.current.value = "";
+                      }
+                    }}
+                  />
+                  <span className="flex items-center gap-1.5 btn-secondary text-[11px] px-3 py-2 whitespace-nowrap">
+                    <Upload className="h-3.5 w-3.5" />
+                    {uploadDoc.isPending ? "Uploading…" : "Upload file"}
+                  </span>
+                </label>
+              </div>
+            )}
+
+            {isMe && (
+              <p className="lab text-[10.5px] text-ink-faint border-t border-hairsoft pt-3 mt-1">
+                Documents are reviewed during verification. Max file size 5 MB per file.
+              </p>
+            )}
           </div>
         </div>
       )}

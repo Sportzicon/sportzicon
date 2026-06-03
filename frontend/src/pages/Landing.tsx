@@ -14,7 +14,7 @@ export default function Landing({ initialView = "home" }: { initialView?: View }
   const [view, setView] = useState<View>(initialView);
 
   useEffect(() => {
-    window.scrollTo({ top: 0, behavior: "instant" });
+    document.body.scrollTo({ top: 0, behavior: "instant" });
   }, [view]);
 
   function showHowItWorks() {

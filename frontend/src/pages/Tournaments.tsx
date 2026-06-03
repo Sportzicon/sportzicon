@@ -3,7 +3,9 @@ import { Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import { useAuthStore } from "../store/auth";
-import { PageHeader, Spinner, EmptyState, StatusPill, Kicker } from "../components/UI";
+import { PageHeader, Spinner, EmptyState, StatusPill, Kicker, Pagination } from "../components/UI";
+
+const PAGE_SIZE = 10;
 import { Trash2, Pencil, MoreVertical } from "lucide-react";
 import type { Opportunity } from "../types";
 
@@ -14,6 +16,9 @@ export default function Tournaments() {
   const [status, setStatus] = useState("open");
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+
+  useEffect(() => { setPage(1); }, [sport, status]);
 
   useEffect(() => {
     function onClickOutside(e: MouseEvent) {
@@ -86,8 +91,9 @@ export default function Tournaments() {
       ) : !q.data?.length ? (
         <EmptyState title="No tournaments" hint="Check back later or post your own tournament." action={canPost ? <Link to="/tournaments/new" className="btn-accent">+ Post tournament</Link> : undefined} />
       ) : (
+        <>
         <div className="grid gap-3 sm:grid-cols-2">
-          {q.data.map((o) => {
+          {q.data.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE).map((o) => {
             const isPoster = user?.id === o.posted_by_user_id;
             return (
               <div key={o.id} className="panel overflow-hidden">
@@ -137,6 +143,8 @@ export default function Tournaments() {
             );
           })}
         </div>
+        <Pagination page={page} total={q.data.length} pageSize={PAGE_SIZE} onChange={setPage} />
+        </>
       )}
     </div>
   );

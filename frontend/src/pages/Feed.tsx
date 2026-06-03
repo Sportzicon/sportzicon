@@ -70,11 +70,12 @@ export default function Feed() {
     return () => document.removeEventListener("mousedown", onClickOutside);
   }, []);
 
-  const posts = feed.data ?? [];
-  const filtered = tab === "All" ? posts
+  const posts = (feed.data ?? []).sort(
+    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  );
+  const filtered = tab === "Updates" ? posts.filter((p) => p.type === "post")
     : tab === "Training logs" ? posts.filter((p) => p.type === "log")
-    : tab === "Opportunities" ? posts.filter((p) => (p as any).opportunity_id)
-    : posts.filter((p) => p.type === "post");
+    : posts;
 
   return (
     <div className="max-w-2xl space-y-5">
@@ -120,7 +121,7 @@ export default function Feed() {
         </div>
       </div>
 
-      <Tabs tabs={["All", "Training logs", "Updates", "Opportunities"]} active={tab} onChange={setTab} />
+      <Tabs tabs={["All", "Updates", "Training logs"]} active={tab} onChange={setTab} />
 
       {feed.isLoading ? (
         <div className="panel p-8 flex justify-center"><Spinner className="text-brand-500" /></div>

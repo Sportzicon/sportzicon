@@ -1,9 +1,9 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
-import { PageHeader, Spinner, EmptyState, Avatar, StatusPill, SectionHead } from "../components/UI";
-import { ChevronDown, X } from "lucide-react";
+import { PageHeader, Spinner, EmptyState, Avatar, StatusPill, SectionHead, Pagination } from "../components/UI";
+import { ChevronDown } from "lucide-react";
 
 type Mode = "players" | "clubs" | "opportunities";
 type ViewMode = "table" | "grid";
@@ -40,6 +40,8 @@ function FilterGroup({ label, children }: { label: string; children: React.React
   );
 }
 
+const PAGE_SIZE = 10;
+
 export default function Search() {
   const [searchParams] = useSearchParams();
   const [mode, setMode] = useState<Mode>(() => {
@@ -50,17 +52,16 @@ export default function Search() {
   const [view, setView] = useState<ViewMode>("table");
   const [filtersOpen, setFiltersOpen] = useState(window.innerWidth >= 1024);
   const [q, setQ] = useState("");
-  const [sport, setSport] = useState("All");
+  const [sport, setSport] = useState("");
   const [playRole, setPlayRole] = useState("");
   const [level, setLevel] = useState("");
   const [city, setCity] = useState("");
-  const [ageMax, setAgeMax] = useState(35);
+  const [ageMax, setAgeMax] = useState(40);
   const [verifiedOnly, setVerifiedOnly] = useState(false);
   const [availOnly, setAvailOnly] = useState(false);
   const [savedOnly, setSavedOnly] = useState(false);
   const [shortlist, setShortlist] = useState<Set<string>>(new Set());
-
-  const prevResultsRef = useRef<any[]>();
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
     const onResize = () => {
@@ -70,6 +71,9 @@ export default function Search() {
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
   }, []);
+
+  // Reset to page 1 whenever filters or mode change
+  useEffect(() => { setPage(1); }, [mode, q, sport, playRole, level, city, ageMax, verifiedOnly, availOnly, savedOnly, view]);
 
   function toggleShortlist(id: string) {
     setShortlist((prev) => {
@@ -81,7 +85,7 @@ export default function Search() {
 
   const params: any = {
     q: q || undefined,
-    sport: (mode !== "clubs" && sport) ? sport : undefined,
+    sport: sport || undefined,
     city: city || undefined,
     verified: verifiedOnly || undefined,
     available: availOnly || undefined,
@@ -96,79 +100,24 @@ export default function Search() {
     placeholderData: (prev) => prev
   });
 
-  // Auto-collapse filters when results load
-  useEffect(() => {
-    if (res.data && res.data.length > 0 && prevResultsRef.current !== res.data) {
-      prevResultsRef.current = res.data;
-      setFiltersOpen(false);
-    }
-  }, [res.data, res.isLoading]);
-
   const results: any[] = savedOnly && mode === "players"
     ? (res.data ?? []).filter((a: any) => shortlist.has(a.id))
     : (res.data ?? []);
 
+  const paginatedResults = results.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
   function resetFilters() {
     setQ(""); setSport(""); setPlayRole(""); setLevel("");
     setCity(""); setAgeMax(40); setVerifiedOnly(false); setAvailOnly(false); setSavedOnly(false);
+    setPage(1);
   }
 
   const savedCount = shortlist.size;
 
   return (
-    <div className="space-y-5">
-      <PageHeader
-        title="Search players"
-        subtitle="Talent search"
-        action={
-          <div className="flex items-center gap-2">
-            {mode === "players" && (
-              <>
-                <button
-                  onClick={() => setSavedOnly((s) => !s)}
-                  className={`font-mononum text-[10px] uppercase tracking-[0.08em] px-3 py-2 rounded border transition ${savedOnly ? "bg-ink text-paper border-ink" : "border-hair text-ink-sub hover:border-ink"}`}>
-                  ★ Shortlist · {savedCount}
-                </button>
-                <div className="flex border border-hair rounded overflow-hidden">
-                  {([["table", "≣"], ["grid", "▦"]] as const).map(([v, icon]) => (
-                    <button key={v} onClick={() => setView(v)}
-                      className="font-mononum px-3 py-2 text-[13px] transition"
-                      style={{ background: view === v ? "#14110D" : undefined, color: view === v ? "#F7F5EF" : "#726B60" }}>
-                      {icon}
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
-        }
-      />
-
-      {/* Mode tabs */}
-      <div className="flex gap-0 border-b border-hair">
-        {(["players", "clubs", "opportunities"] as Mode[]).map((m) => (
-          <button key={m} onClick={() => setMode(m)}
-            className={`font-mononum capitalize text-[11.5px] tracking-[0.06em] px-4 py-2.5 border-b-2 -mb-px transition ${
-              mode === m ? "border-brand-500 text-ink font-semibold" : "border-transparent text-ink-sub hover:text-ink"
-            }`}>
-            {m}
-          </button>
-        ))}
-      </div>
-
-      {/* ── filters toggle for mobile ─────────────────────── */}
-      <button
-        onClick={() => setFiltersOpen(!filtersOpen)}
-        className="lg:hidden flex items-center justify-between w-full panel p-3 text-sm font-medium"
-      >
-        <span>Filters</span>
-        <ChevronDown className="h-4 w-4" style={{ transform: filtersOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 200ms" }} />
-      </button>
-
-      <div className={`grid gap-6 lg:grid-cols-[200px_1fr] items-start ${!filtersOpen ? "lg:grid-cols-[1fr]" : ""}`}>
-        {/* ── filter rail ─────────────────────────────────────── */}
-        {filtersOpen && (
-        <div className="panel p-[18px] sticky top-20 lg:sticky lg:top-20">
+    <div className="grid gap-6 lg:grid-cols-[200px_1fr] items-start">
+        {/* Filter rail — always visible on desktop, toggled on mobile */}
+        <div className={`panel p-[18px] sticky top-4 ${filtersOpen ? "" : "hidden lg:block"}`}>
           <SectionHead title="Filters" />
 
           <FilterGroup label="Keyword">
@@ -181,7 +130,7 @@ export default function Search() {
               <FilterGroup label="Sport">
                 <select className="input font-mononum" style={{ fontSize: 12, height: 34 }}
                   value={sport} onChange={(e) => setSport(e.target.value)}>
-                  <option value="">Select sport</option>
+                  <option value="">All sports</option>
                   {SPORTS.map((s) => <option key={s} value={s}>{s}</option>)}
                 </select>
               </FilterGroup>
@@ -225,7 +174,7 @@ export default function Search() {
               <FilterGroup label="Sport">
                 <select className="input font-mononum" style={{ fontSize: 12, height: 34 }}
                   value={sport} onChange={(e) => setSport(e.target.value)}>
-                  <option value="">Select sport</option>
+                  <option value="">All sports</option>
                   {SPORTS.map((s) => <option key={s} value={s}>{s}</option>)}
                 </select>
               </FilterGroup>
@@ -235,29 +184,67 @@ export default function Search() {
               </FilterGroup>
             </>
           )}
-        </div>
-        )}
 
-        {/* ── results ──────────────────────────────────────────── */}
-        <div className={filtersOpen ? "" : "lg:col-span-full"}>
-          <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-            <span className="lab">
-              {res.isLoading ? "Searching…" : `${results.length} result${results.length !== 1 ? "s" : ""}`}
-              {savedOnly && " · shortlist"}
-              {verifiedOnly && " · verified only"}
-            </span>
-            <div className="flex items-center gap-2">
-              {!filtersOpen && results.length > 0 && (
-                <button
-                  onClick={() => setFiltersOpen(true)}
-                  className="lab text-brand-500 hover:text-brand-600 transition text-[12px]"
-                >
-                  Show filters
-                </button>
-              )}
-              {mode === "players" && filtersOpen && <span className="lab">Verified ranked first</span>}
-            </div>
+          <button onClick={resetFilters} className="mt-4 w-full btn-secondary text-[12px]">
+            Reset filters
+          </button>
+        </div>
+
+        {/* Results */}
+        <div>
+          <PageHeader
+            title="Search players"
+            subtitle="Talent search"
+            action={
+              <div className="flex items-center gap-2">
+                {mode === "players" && (
+                  <>
+                    <button
+                      onClick={() => setSavedOnly((s) => !s)}
+                      className={`font-mononum text-[10px] uppercase tracking-[0.08em] px-3 py-2 rounded border transition ${savedOnly ? "bg-ink text-paper border-ink" : "border-hair text-ink-sub hover:border-ink"}`}>
+                      ★ Shortlist · {savedCount}
+                    </button>
+                    <div className="flex border border-hair rounded overflow-hidden">
+                      {([["table", "≣"], ["grid", "▦"]] as const).map(([v, icon]) => (
+                        <button key={v} onClick={() => setView(v)}
+                          className="font-mononum px-3 py-2 text-[13px] transition"
+                          style={{ background: view === v ? "#14110D" : undefined, color: view === v ? "#F7F5EF" : "#726B60" }}>
+                          {icon}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+            }
+          />
+
+          {/* Mode tabs */}
+          <div className="flex gap-0 border-b border-hair mb-4">
+            {(["players", "clubs", "opportunities"] as Mode[]).map((m) => (
+              <button key={m} onClick={() => setMode(m)}
+                className={`font-mononum capitalize text-[11.5px] tracking-[0.06em] px-4 py-2.5 border-b-2 -mb-px transition ${
+                  mode === m ? "border-brand-500 text-ink font-semibold" : "border-transparent text-ink-sub hover:text-ink"
+                }`}>
+                {m}
+              </button>
+            ))}
           </div>
+
+          {/* Mobile filter toggle */}
+          <button
+            onClick={() => setFiltersOpen(!filtersOpen)}
+            className="lg:hidden flex items-center justify-between w-full panel p-3 text-sm font-medium mb-4"
+          >
+            <span>Filters</span>
+            <ChevronDown className="h-4 w-4" style={{ transform: filtersOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 200ms" }} />
+          </button>
+
+          {mode === "players" && (
+            <div className="flex justify-end mb-3">
+              <span className="lab">Verified ranked first</span>
+            </div>
+          )}
 
           {res.isLoading ? (
             <div className="panel p-8 flex justify-center"><Spinner className="text-brand-500" /></div>
@@ -270,143 +257,152 @@ export default function Search() {
               }
             />
           ) : mode === "players" && view === "table" ? (
-            /* ── TABLE view ───────────────────────────────── */
-            <div className="panel overflow-x-auto">
-              <table className="w-full min-w-[560px] text-[13px]">
-                <thead>
-                  <tr className="border-b border-hair">
-                    {["Player", "Role", "Level", "Age", "Key stat", "Avail.", ""].map((h, i) => (
-                      <th key={h} className={`lab px-[14px] py-[11px] font-normal ${i >= 2 && i <= 5 ? "text-right" : "text-left"}`}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {results.map((a: any) => {
-                    const saved = shortlist.has(a.id);
-                    const avail = a.athlete_data?.availability ?? a.availability;
-                    return (
-                      <tr key={a.id} className="border-b border-hairsoft hover:bg-fill transition">
-                        <td className="px-[14px] py-[10px]">
-                          <Link to={`/profile/${a.id}`} className="flex items-center gap-2.5">
-                            <Avatar name={a.full_name} size={32} />
-                            <div>
-                              <div className="font-semibold text-ink flex items-center gap-1.5">
-                                {a.full_name}
-                                {a.verification?.status === "approved" && <span className="text-brand-500 text-[10px]">✓</span>}
+            <>
+              <div className="panel overflow-x-auto">
+                <table className="w-full min-w-[560px] text-[13px]">
+                  <thead>
+                    <tr className="border-b border-hair">
+                      {["Player", "Role", "Level", "Age", "Key stat", "Avail.", ""].map((h, i) => (
+                        <th key={h} className={`lab px-[14px] py-[11px] font-normal ${i >= 2 && i <= 5 ? "text-right" : "text-left"}`}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {paginatedResults.map((a: any) => {
+                      const saved = shortlist.has(a.id);
+                      const avail = a.athlete_data?.availability ?? a.availability;
+                      return (
+                        <tr key={a.id} className="border-b border-hairsoft hover:bg-fill transition">
+                          <td className="px-[14px] py-[10px]">
+                            <Link to={`/profile/${a.id}`} className="flex items-center gap-2.5">
+                              <Avatar name={a.full_name} size={32} />
+                              <div>
+                                <div className="font-semibold text-ink flex items-center gap-1.5">
+                                  {a.full_name}
+                                  {a.verification?.status === "approved" && <span className="text-brand-500 text-[10px]">✓</span>}
+                                </div>
+                                <div className="lab mt-0.5">{a.athlete_data?.primary_sport ?? a.sport} · {a.city}</div>
                               </div>
-                              <div className="lab mt-0.5">{a.athlete_data?.primary_sport ?? a.sport} · {a.city}</div>
-                            </div>
+                            </Link>
+                          </td>
+                          <td className="px-[14px] py-[10px] text-ink-70">
+                            {a.athlete_data?.position ?? a.role ?? "—"}
+                          </td>
+                          <td className="px-[14px] py-[10px] text-right font-mononum text-[12px] text-ink-sub">
+                            {a.athlete_data?.experience_level?.replace(/_/g, " ") ?? "—"}
+                          </td>
+                          <td className="px-[14px] py-[10px] text-right font-mononum text-[12px]">
+                            {a.dob ? Math.floor((Date.now() - new Date(a.dob).getTime()) / (365.25 * 24 * 3600 * 1000)) : "—"}
+                          </td>
+                          <td className="px-[14px] py-[10px] text-right font-mononum text-[12px] text-ink-sub">
+                            {a.athlete_data?.primary_sport ?? "—"}
+                          </td>
+                          <td className="px-[14px] py-[10px] text-right">
+                            <span className="font-mononum text-[10px] uppercase tracking-[0.06em]"
+                              style={{ color: avail === "not_available" ? "#9A9286" : avail === "open_to_offers" ? "#2E7D52" : "#2B66C9" }}>
+                              {avail === "open_to_offers" ? "Open" : avail === "available" ? "Avail" : "—"}
+                            </span>
+                          </td>
+                          <td className="px-[14px] py-[10px] text-right">
+                            <button onClick={() => toggleShortlist(a.id)}
+                              className="text-[16px] transition hover:scale-110"
+                              style={{ color: saved ? "#FA4D14" : "#9A9286" }}
+                              title={saved ? "Remove from shortlist" : "Add to shortlist"}>
+                              {saved ? "★" : "☆"}
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              <Pagination page={page} total={results.length} pageSize={PAGE_SIZE} onChange={setPage} />
+            </>
+          ) : mode === "players" && view === "grid" ? (
+            <>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {paginatedResults.map((a: any) => {
+                  const saved = shortlist.has(a.id);
+                  const avail = a.athlete_data?.availability ?? a.availability;
+                  return (
+                    <div key={a.id} className="panel p-4">
+                      <div className="flex gap-3">
+                        <Avatar name={a.full_name} size={48} />
+                        <div className="flex-1 min-w-0">
+                          <Link to={`/profile/${a.id}`} className="flex items-center gap-1.5">
+                            <span className="font-disp text-lg leading-tight">{a.full_name}</span>
+                            {a.verification?.status === "approved" && <span className="text-brand-500 text-[10px]">✓</span>}
                           </Link>
-                        </td>
-                        <td className="px-[14px] py-[10px] text-ink-70">
-                          {a.athlete_data?.position ?? a.role ?? "—"}
-                        </td>
-                        <td className="px-[14px] py-[10px] text-right font-mononum text-[12px] text-ink-sub">
-                          {a.athlete_data?.experience_level?.replace(/_/g, " ") ?? "—"}
-                        </td>
-                        <td className="px-[14px] py-[10px] text-right font-mononum text-[12px]">
-                          {a.dob ? Math.floor((Date.now() - new Date(a.dob).getTime()) / (365.25 * 24 * 3600 * 1000)) : "—"}
-                        </td>
-                        <td className="px-[14px] py-[10px] text-right font-mononum text-[12px] text-ink-sub">
-                          {a.athlete_data?.primary_sport ?? "—"}
-                        </td>
-                        <td className="px-[14px] py-[10px] text-right">
-                          <span className="font-mononum text-[10px] uppercase tracking-[0.06em]"
+                          <div className="lab mt-1">{a.athlete_data?.position ?? "—"} · {a.athlete_data?.primary_sport ?? a.sport} · {a.city}</div>
+                        </div>
+                        <button onClick={() => toggleShortlist(a.id)}
+                          className="text-[17px] flex-shrink-0 transition hover:scale-110"
+                          style={{ color: saved ? "#FA4D14" : "#9A9286" }}>
+                          {saved ? "★" : "☆"}
+                        </button>
+                      </div>
+                      <div className="mt-4 pt-3 border-t border-hairsoft grid grid-cols-3 gap-2">
+                        <div>
+                          <div className="lab">Sport</div>
+                          <div className="font-mononum text-[12px] text-ink mt-0.5">{a.athlete_data?.primary_sport ?? "—"}</div>
+                        </div>
+                        <div>
+                          <div className="lab">Level</div>
+                          <div className="font-mononum text-[12px] text-ink mt-0.5 capitalize">{a.athlete_data?.experience_level?.replace(/_/g, " ") ?? "—"}</div>
+                        </div>
+                        <div>
+                          <div className="lab">Avail.</div>
+                          <div className="font-mononum text-[10px] mt-0.5 uppercase tracking-[0.06em]"
                             style={{ color: avail === "not_available" ? "#9A9286" : avail === "open_to_offers" ? "#2E7D52" : "#2B66C9" }}>
                             {avail === "open_to_offers" ? "Open" : avail === "available" ? "Avail" : "—"}
-                          </span>
-                        </td>
-                        <td className="px-[14px] py-[10px] text-right">
-                          <button onClick={() => toggleShortlist(a.id)}
-                            className="text-[16px] transition hover:scale-110"
-                            style={{ color: saved ? "#FA4D14" : "#9A9286" }}
-                            title={saved ? "Remove from shortlist" : "Add to shortlist"}>
-                            {saved ? "★" : "☆"}
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          ) : mode === "players" && view === "grid" ? (
-            /* ── GRID view ────────────────────────────────── */
-            <div className="grid gap-3 sm:grid-cols-2">
-              {results.map((a: any) => {
-                const saved = shortlist.has(a.id);
-                const avail = a.athlete_data?.availability ?? a.availability;
-                return (
-                  <div key={a.id} className="panel p-4">
-                    <div className="flex gap-3">
-                      <Avatar name={a.full_name} size={48} />
-                      <div className="flex-1 min-w-0">
-                        <Link to={`/profile/${a.id}`} className="flex items-center gap-1.5">
-                          <span className="font-disp text-lg leading-tight">{a.full_name}</span>
-                          {a.verification?.status === "approved" && <span className="text-brand-500 text-[10px]">✓</span>}
-                        </Link>
-                        <div className="lab mt-1">{a.athlete_data?.position ?? "—"} · {a.athlete_data?.primary_sport ?? a.sport} · {a.city}</div>
-                      </div>
-                      <button onClick={() => toggleShortlist(a.id)}
-                        className="text-[17px] flex-shrink-0 transition hover:scale-110"
-                        style={{ color: saved ? "#FA4D14" : "#9A9286" }}>
-                        {saved ? "★" : "☆"}
-                      </button>
-                    </div>
-                    <div className="mt-4 pt-3 border-t border-hairsoft grid grid-cols-3 gap-2">
-                      <div>
-                        <div className="lab">Sport</div>
-                        <div className="font-mononum text-[12px] text-ink mt-0.5">{a.athlete_data?.primary_sport ?? "—"}</div>
-                      </div>
-                      <div>
-                        <div className="lab">Level</div>
-                        <div className="font-mononum text-[12px] text-ink mt-0.5 capitalize">{a.athlete_data?.experience_level?.replace(/_/g, " ") ?? "—"}</div>
-                      </div>
-                      <div>
-                        <div className="lab">Avail.</div>
-                        <div className="font-mononum text-[10px] mt-0.5 uppercase tracking-[0.06em]"
-                          style={{ color: avail === "not_available" ? "#9A9286" : avail === "open_to_offers" ? "#2E7D52" : "#2B66C9" }}>
-                          {avail === "open_to_offers" ? "Open" : avail === "available" ? "Avail" : "—"}
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+              <Pagination page={page} total={results.length} pageSize={PAGE_SIZE} onChange={setPage} />
+            </>
           ) : mode === "opportunities" ? (
-            <div className="grid gap-3 sm:grid-cols-2">
-              {results.map((o: any) => (
-                <Link key={o.id} to={`/opportunities/${o.id}`} className="panel p-4 hover:bg-fill transition">
-                  <div className="kicker">{o.type} · {o.sport}</div>
-                  <div className="font-disp text-xl mt-1.5">{o.title}</div>
-                  <div className="lab mt-1">{o.org_name} · {o.city}, {o.country}</div>
-                  <div className="mt-3 pt-3 border-t border-hairsoft flex items-center gap-3">
-                    <StatusPill status={o.status} />
-                    <span className="lab">Deadline {o.application_deadline}</span>
-                  </div>
-                </Link>
-              ))}
-            </div>
+            <>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {paginatedResults.map((o: any) => (
+                  <Link key={o.id} to={`/opportunities/${o.id}`} className="panel p-4 hover:bg-fill transition">
+                    <div className="kicker">{o.type} · {o.sport}</div>
+                    <div className="font-disp text-xl mt-1.5">{o.title}</div>
+                    <div className="lab mt-1">{o.org_name} · {o.city}, {o.country}</div>
+                    <div className="mt-3 pt-3 border-t border-hairsoft flex items-center gap-3">
+                      <StatusPill status={o.status} />
+                      <span className="lab">Deadline {o.application_deadline}</span>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+              <Pagination page={page} total={results.length} pageSize={PAGE_SIZE} onChange={setPage} />
+            </>
           ) : (
             /* clubs */
-            <div className="grid gap-3 sm:grid-cols-2">
-              {results.map((item: any) => (
-                <Link key={item.id} to={`/organizations/${item.id}`} className="panel p-4 hover:bg-fill transition flex items-center gap-3">
-                  <Avatar name={item.org_name} size={40} />
-                  <div>
-                    <div className="font-semibold text-ink flex items-center gap-1.5">
-                      {item.org_name}
-                      {item.verification_status === "approved" && <span className="text-brand-500 text-[10px]">✓</span>}
+            <>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {paginatedResults.map((item: any) => (
+                  <Link key={item.id} to={`/organizations/${item.id}`} className="panel p-4 hover:bg-fill transition flex items-center gap-3">
+                    <Avatar name={item.org_name} size={40} />
+                    <div>
+                      <div className="font-semibold text-ink flex items-center gap-1.5">
+                        {item.org_name}
+                        {item.verification_status === "approved" && <span className="text-brand-500 text-[10px]">✓</span>}
+                      </div>
+                      <div className="lab mt-1">{item.org_type} · {item.city}</div>
                     </div>
-                    <div className="lab mt-1">{item.org_type} · {item.city}</div>
-                  </div>
-                </Link>
-              ))}
-            </div>
+                  </Link>
+                ))}
+              </div>
+              <Pagination page={page} total={results.length} pageSize={PAGE_SIZE} onChange={setPage} />
+            </>
           )}
         </div>
-      </div>
     </div>
   );
 }

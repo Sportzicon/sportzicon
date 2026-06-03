@@ -1,4 +1,4 @@
-import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
+import { Link, NavLink, Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useAuthStore } from "../store/auth";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
@@ -65,6 +65,8 @@ function NavItem({ to, icon, label, onClick, isCollapsed }: { to: string; icon: 
 export function Layout() {
   const { user, clear } = useAuthStore();
   const navigate = useNavigate();
+  const location = useLocation();
+  const mainRef = useRef<HTMLElement>(null);
   const qc = useQueryClient();
   const [isDesktop, setIsDesktop] = useState(() => window.innerWidth >= 1024);
   const [sidebarOpen, setSidebarOpen] = useState(() => window.innerWidth >= 1024);
@@ -92,6 +94,11 @@ export function Layout() {
     document.addEventListener("mousedown", onClickOutside);
     return () => document.removeEventListener("mousedown", onClickOutside);
   }, []);
+
+  // Scroll main content area back to top on every route change
+  useEffect(() => {
+    mainRef.current?.scrollTo({ top: 0 });
+  }, [location.pathname]);
 
   // Keyboard shortcut: Cmd+K for global search
   useEffect(() => {
@@ -249,7 +256,7 @@ export function Layout() {
         </aside>
 
         {/* Main content — overflow-y-auto makes this the scroll container */}
-        <main className="min-w-0 flex-1 overflow-y-auto px-3 py-4 sm:px-6 sm:py-7">
+        <main ref={mainRef} className="min-w-0 flex-1 overflow-y-auto px-3 py-4 sm:px-6 sm:py-7">
           <Outlet />
         </main>
       </div>
