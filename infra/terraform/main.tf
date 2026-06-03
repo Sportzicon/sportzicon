@@ -33,7 +33,7 @@ resource "google_artifact_registry_repository" "containers" {
 
 # Reference existing runtime service account (created outside Terraform or in previous run)
 data "google_service_account" "runtime" {
-  account_id = "sportivox-run-${local.name_suffix}"
+  account_id = "sportivox-run-${var.env}"
   project    = var.project_id
 }
 
