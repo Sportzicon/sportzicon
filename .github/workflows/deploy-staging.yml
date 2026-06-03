@@ -7,7 +7,6 @@ on:
 env:
   GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
   GCP_REGION: asia-south1
-  GHCR_IMAGE: ghcr.io/${{ github.repository_owner }}/sportivox
 
 jobs:
   build-and-deploy:
@@ -21,6 +20,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Set image name (lowercase)
+        run: echo "GHCR_IMAGE=ghcr.io/$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')/sportivox" >> $GITHUB_ENV
 
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v1
