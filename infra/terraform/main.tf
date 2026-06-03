@@ -3,7 +3,6 @@ locals {
 
   required_apis = [
     "run.googleapis.com",
-    "firestore.googleapis.com",
     "secretmanager.googleapis.com",
     "storage.googleapis.com",
     "artifactregistry.googleapis.com",
@@ -44,12 +43,6 @@ data "google_service_account" "runtime" {
 # }
 
 # Allow the runtime SA to read secrets, write to Firestore, and use GCS buckets.
-resource "google_project_iam_member" "runtime_datastore_user" {
-  project = var.project_id
-  role    = "roles/datastore.user"
-  member  = "serviceAccount:${data.google_service_account.runtime.email}"
-}
-
 resource "google_project_iam_member" "runtime_secret_accessor" {
   project = var.project_id
   role    = "roles/secretmanager.secretAccessor"

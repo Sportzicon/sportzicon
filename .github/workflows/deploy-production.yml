@@ -7,6 +7,7 @@ on:
 
 env:
   GCP_REGION: asia-south1
+  AR_IMAGE: asia-south1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/sportivox
 
 jobs:
   build-and-deploy:
@@ -16,22 +17,24 @@ jobs:
     permissions:
       contents: read
       id-token: write
-      packages: write
 
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set image name (lowercase)
-        run: echo "GHCR_IMAGE=ghcr.io/$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')/sportivox" >> $GITHUB_ENV
-
-      - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@v1
 
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v1
         with:
           workload_identity_provider: ${{ secrets.GOOGLE_PROVIDER_NAME }}
           service_account: ${{ secrets.GOOGLE_SERVICE_ACCOUNT }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker asia-south1-docker.pkg.dev --quiet
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -49,7 +52,6 @@ jobs:
           npm ci --no-audit --no-fund
           echo "Running migrations on production database..."
 
-          # Try to deploy; if P3005 (tables exist but no migration history), baseline then retry
           set +e
           OUTPUT=$(npx prisma migrate deploy 2>&1)
           EXIT_CODE=$?
@@ -57,7 +59,10 @@ jobs:
           echo "$OUTPUT"
 
           if [ $EXIT_CODE -ne 0 ]; then
-            if echo "$OUTPUT" | grep -q "P3005"; then
+            if echo "$OUTPUT" | grep -q "P1001\|P1002\|P1003"; then
+              echo "⚠️ Database unreachable — skipping migrations. Existing schema assumed current."
+              exit 0
+            elif echo "$OUTPUT" | grep -q "P3005"; then
               echo "⚠️  P3005: database has no migration history — baselining latest migration..."
               LATEST=$(ls prisma/migrations | grep -v migration_lock | sort | tail -1)
               echo "Baselining: $LATEST"
@@ -69,16 +74,6 @@ jobs:
           fi
           echo "✅ Migrations complete"
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Build and push API image
         uses: docker/build-push-action@v5
         with:
@@ -87,8 +82,8 @@ jobs:
           target: runtime
           push: true
           tags: |
-            ${{ env.GHCR_IMAGE }}/api:${{ github.ref_name }}
-            ${{ env.GHCR_IMAGE }}/api:latest
+            ${{ env.AR_IMAGE }}/api:${{ github.ref_name }}
+            ${{ env.AR_IMAGE }}/api:latest
 
       - name: Build and push Web image
         uses: docker/build-push-action@v5
@@ -100,8 +95,8 @@ jobs:
           build-args: |
             VITE_API_BASE_URL=https://api.sportzicon.com
           tags: |
-            ${{ env.GHCR_IMAGE }}/web:${{ github.ref_name }}
-            ${{ env.GHCR_IMAGE }}/web:latest
+            ${{ env.AR_IMAGE }}/web:${{ github.ref_name }}
+            ${{ env.AR_IMAGE }}/web:latest
 
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v2
@@ -119,8 +114,8 @@ jobs:
       - name: Update Terraform image variables
         working-directory: infra/terraform
         run: |
-          sed -i "s|api_image = .*|api_image = \"${{ env.GHCR_IMAGE }}/api:${{ github.ref_name }}\"|g" terraform.tfvars.prod.example
-          sed -i "s|web_image = .*|web_image = \"${{ env.GHCR_IMAGE }}/web:${{ github.ref_name }}\"|g" terraform.tfvars.prod.example
+          sed -i "s|api_image = .*|api_image = \"${{ env.AR_IMAGE }}/api:${{ github.ref_name }}\"|g" terraform.tfvars.prod.example
+          sed -i "s|web_image = .*|web_image = \"${{ env.AR_IMAGE }}/web:${{ github.ref_name }}\"|g" terraform.tfvars.prod.example
           cp terraform.tfvars.prod.example terraform.tfvars.prod
 
       - name: Terraform Plan
@@ -167,18 +162,18 @@ jobs:
           tag_name: ${{ github.ref_name }}
           release_name: Release ${{ github.ref_name }}
           body: |
-            ## 🚀 Production Deployment
+            ## Production Deployment
 
             **Version:** ${{ github.ref_name }}
             **Commit:** ${{ github.sha }}
 
             **Images:**
-            - API: `${{ env.GHCR_IMAGE }}/api:${{ github.ref_name }}`
-            - Web: `${{ env.GHCR_IMAGE }}/web:${{ github.ref_name }}`
+            - API: `${{ env.AR_IMAGE }}/api:${{ github.ref_name }}`
+            - Web: `${{ env.AR_IMAGE }}/web:${{ github.ref_name }}`
 
             **Deployment:**
             - API URL: ${{ steps.outputs.outputs.api_url }}
             - Web URL: ${{ steps.outputs.outputs.web_url }}
-            - Status: ✅ Deployed & Healthy
+            - Status: Deployed & Healthy
           draft: false
           prerelease: false

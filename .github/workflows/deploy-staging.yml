@@ -7,6 +7,7 @@ on:
 env:
   GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
   GCP_REGION: asia-south1
+  AR_IMAGE: asia-south1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/sportivox
 
 jobs:
   build-and-deploy:
@@ -16,16 +17,9 @@ jobs:
     permissions:
       contents: read
       id-token: write
-      packages: write
 
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set image name (lowercase)
-        run: echo "GHCR_IMAGE=ghcr.io/$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')/sportivox" >> $GITHUB_ENV
-
-      - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@v1
 
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v1
@@ -33,15 +27,14 @@ jobs:
           workload_identity_provider: ${{ secrets.GOOGLE_PROVIDER_NAME }}
           service_account: ${{ secrets.GOOGLE_SERVICE_ACCOUNT }}
 
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker asia-south1-docker.pkg.dev --quiet
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -88,8 +81,8 @@ jobs:
           target: runtime
           push: true
           tags: |
-            ${{ env.GHCR_IMAGE }}/api:latest
-            ${{ env.GHCR_IMAGE }}/api:main-${{ github.sha }}
+            ${{ env.AR_IMAGE }}/api:latest
+            ${{ env.AR_IMAGE }}/api:main-${{ github.sha }}
 
       - name: Build and push Web image
         uses: docker/build-push-action@v5
@@ -101,8 +94,8 @@ jobs:
           build-args: |
             VITE_API_BASE_URL=https://api.sportzicon.com
           tags: |
-            ${{ env.GHCR_IMAGE }}/web:latest
-            ${{ env.GHCR_IMAGE }}/web:main-${{ github.sha }}
+            ${{ env.AR_IMAGE }}/web:latest
+            ${{ env.AR_IMAGE }}/web:main-${{ github.sha }}
 
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v2
@@ -120,8 +113,8 @@ jobs:
       - name: Update Terraform image variables
         working-directory: infra/terraform
         run: |
-          sed -i "s|api_image = .*|api_image = \"${{ env.GHCR_IMAGE }}/api:main-${{ github.sha }}\"|g" terraform.tfvars.staging
-          sed -i "s|web_image = .*|web_image = \"${{ env.GHCR_IMAGE }}/web:main-${{ github.sha }}\"|g" terraform.tfvars.staging
+          sed -i "s|api_image = .*|api_image = \"${{ env.AR_IMAGE }}/api:main-${{ github.sha }}\"|g" terraform.tfvars.staging
+          sed -i "s|web_image = .*|web_image = \"${{ env.AR_IMAGE }}/web:main-${{ github.sha }}\"|g" terraform.tfvars.staging
 
       - name: Terraform Plan
         working-directory: infra/terraform
@@ -157,5 +150,4 @@ jobs:
             sleep 5
           done
           echo "⚠️ Health check did not confirm healthy within 75s — check Cloud Run logs"
-          echo "Deployment succeeded (Terraform startup probe passed). Service may still be warming up."
           exit 0

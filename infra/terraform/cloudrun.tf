@@ -1,5 +1,5 @@
 data "google_secret_manager_secret" "gmail_app_password" {
-  secret_id = "sportivox-gmail-app-password-prod"
+  secret_id = "sportivox-gmail-app-password-${var.env}"
   project   = var.project_id
 }
 
