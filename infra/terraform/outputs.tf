@@ -9,7 +9,7 @@ output "web_url" {
 }
 
 output "artifact_registry" {
-  value       = "${var.region}-docker.pkg.dev/${var.project_id}/${google_artifact_registry_repository.containers.repository_id}"
+  value       = "${var.region}-docker.pkg.dev/${var.project_id}/sportivox"
   description = "Push images here. Tag: <registry>/api:<tag> and <registry>/web:<tag>."
 }
 
