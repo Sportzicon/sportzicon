@@ -53,8 +53,8 @@ export default function App() {
     <Routes>
       {/* Public routes — all share the PublicLayout header */}
       <Route element={<PublicLayout />}>
-        <Route path="/" element={<Landing />} />
-        <Route path="/how-it-works" element={<Landing initialView="how-it-works" />} />
+        <Route path="/" element={<Landing key="home" />} />
+        <Route path="/how-it-works" element={<Landing key="how-it-works" initialView="how-it-works" />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/verify-email" element={<VerifyEmail />} />
