@@ -2,7 +2,7 @@ import { Link, NavLink, Outlet, useNavigate, useLocation } from "react-router-do
 import { useAuthStore } from "../store/auth";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
-import { Bell, Home, Search, Briefcase, FileText, MessageCircle, ShieldCheck, LogOut, User as UserIcon, Menu, X, Trophy, ChevronDown, Building2 } from "lucide-react";
+import { Bell, Home, Search, Briefcase, FileText, MessageCircle, ShieldCheck, LogOut, User as UserIcon, Menu, X, Trophy, ChevronDown, Building2, Activity } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 
 // ============================================================================
@@ -139,6 +139,7 @@ export function Layout() {
     { to: "/search", icon: <Search className="h-4 w-4" />, label: "Search" },
     { to: "/opportunities", icon: <Briefcase className="h-4 w-4" />, label: "Opportunities" },
     { to: "/tournaments", icon: <Trophy className="h-4 w-4" />, label: "Tournaments" },
+    { to: "/scoring/tournaments", icon: <Activity className="h-4 w-4" />, label: "Scoring" },
     { to: "/messages", icon: <MessageCircle className="h-4 w-4" />, label: "Messages" },
     ...(user.role === "athlete" ? [{ to: "/applications", icon: <Briefcase className="h-4 w-4" />, label: "My Applications" }] : []),
     ...(user.role === "club" || user.role === "organizer" || user.role === "admin"
