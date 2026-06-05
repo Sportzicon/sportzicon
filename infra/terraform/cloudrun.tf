@@ -1,5 +1,5 @@
 data "google_secret_manager_secret" "gmail_app_password" {
-  secret_id = "sportivox-gmail-app-password-prod"
+  secret_id = "sportivox-gmail-app-password-${var.env}"
   project   = var.project_id
 }
 
@@ -70,8 +70,12 @@ resource "google_cloud_run_v2_service" "api" {
         value = var.web_app_url
       }
       env {
+        name  = "PUBLIC_API_URL"
+        value = var.api_public_url
+      }
+      env {
         name  = "CORS_ORIGINS"
-        value = var.web_app_url
+        value = var.cors_origins
       }
       env {
         name  = "GCS_BUCKET_MEDIA"

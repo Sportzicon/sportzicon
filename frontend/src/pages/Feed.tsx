@@ -70,11 +70,12 @@ export default function Feed() {
     return () => document.removeEventListener("mousedown", onClickOutside);
   }, []);
 
-  const posts = feed.data ?? [];
-  const filtered = tab === "All" ? posts
+  const posts = (feed.data ?? []).sort(
+    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  );
+  const filtered = tab === "Updates" ? posts.filter((p) => p.type === "post")
     : tab === "Training logs" ? posts.filter((p) => p.type === "log")
-    : tab === "Opportunities" ? posts.filter((p) => (p as any).opportunity_id)
-    : posts.filter((p) => p.type === "post");
+    : posts;
 
   return (
     <div className="max-w-2xl space-y-5">
@@ -83,7 +84,7 @@ export default function Feed() {
       {/* composer */}
       <div className="panel p-4">
         <div className="flex gap-3">
-          <Avatar name={user?.full_name ?? ""} size={40} accent />
+          <Avatar name={user?.full_name ?? ""} src={user?.profile_photo_url} size={40} accent />
           <div className="flex-1">
             <div className="flex gap-2 mb-2">
               {(["post", "log"] as const).map((t) => (
@@ -120,7 +121,7 @@ export default function Feed() {
         </div>
       </div>
 
-      <Tabs tabs={["All", "Training logs", "Updates", "Opportunities"]} active={tab} onChange={setTab} />
+      <Tabs tabs={["All", "Updates", "Training logs"]} active={tab} onChange={setTab} />
 
       {feed.isLoading ? (
         <div className="panel p-8 flex justify-center"><Spinner className="text-brand-500" /></div>
@@ -132,7 +133,7 @@ export default function Feed() {
             <li key={p.id} className="panel p-5">
               <div className="flex items-center gap-3">
                 <Link to={`/profile/${p.author_id}`}>
-                  <Avatar name={p.author_name} size={38} />
+                  <Avatar name={p.author_name} src={p.author?.profile_photo_url} size={38} />
                 </Link>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">

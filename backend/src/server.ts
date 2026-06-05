@@ -20,7 +20,7 @@ async function main() {
   }
 
   const server = app.listen(env.PORT, () => {
-    logger.info({ port: env.PORT, env: env.NODE_ENV }, "Sportivox API listening");
+    logger.info({ port: env.PORT, env: env.NODE_ENV }, "Sportzicon API listening");
   });
 
   // Graceful shutdown — Cloud Run sends SIGTERM at the end of a revision's lifecycle.

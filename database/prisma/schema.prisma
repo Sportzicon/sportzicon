@@ -103,6 +103,21 @@ model User {
   reel_likes     ReelLike[]
   blog_likes     BlogLike[]
   scoring_tournaments Tournament[]
+  documents      UserDocument[]
+}
+
+model UserDocument {
+  id          String   @id @default(uuid()) @db.Uuid
+  user_id     String   @db.Uuid
+  type        String
+  file_name   String
+  url         String
+  size_bytes  Int
+  created_at  DateTime @default(now())
+
+  user        User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
 }
 
 model Organization {

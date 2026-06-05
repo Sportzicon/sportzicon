@@ -3,14 +3,13 @@
 # CI/CD pipeline updates api_image and web_image automatically on each push
 # Secrets (JWT, API keys) live in GCP Secret Manager — never in this file
 
-project_id = "sportivox-app"
+project_id = "sportzicon-app"
 region     = "asia-south1"
-env        = "prod"
+env        = "staging"
 
 # Docker image URLs (updated by CI/CD pipeline)
-# These are placeholders - GitHub Actions will replace them with actual image tags
-api_image = "asia-south1-docker.pkg.dev/sportivox-app/sportivox/api:latest"
-web_image = "asia-south1-docker.pkg.dev/sportivox-app/sportivox/web:latest"
+api_image = "asia-south1-docker.pkg.dev/sportzicon-app/sportivox/api:latest"
+web_image = "asia-south1-docker.pkg.dev/sportzicon-app/sportivox/web:latest"
 
 # Cloud Run scaling for staging
 min_instances_api = 1
@@ -21,9 +20,9 @@ max_instances_web = 2
 
 # API Configuration
 api_port                = 8080
-api_public_url          = "https://sportivox-api-prod-qylxb4qeyq-el.a.run.app"
-web_app_url             = "https://sportivox-web-prod-qylxb4qeyq-el.a.run.app"
-cors_origins            = "https://sportivox-web-prod-qylxb4qeyq-el.a.run.app"
+api_public_url          = "https://api.sportzicon.com"
+web_app_url             = "https://sportzicon.com"
+cors_origins            = "https://sportzicon.com"
 
 # Rate limiting (staging - more relaxed)
 rate_limit_window_ms    = 900000
@@ -33,10 +32,10 @@ auth_rate_limit_max     = 20
 # Logging level for staging
 log_level               = "info"
 
-# Email configuration (Gmail SMTP) — app password stored in Secret Manager
-gmail_user      = "singarimahesh0@gmail.com"
-email_from      = "singarimahesh0@gmail.com"
-email_from_name = "Sportivox"
+# Email configuration — app password stored in Secret Manager
+gmail_user      = "admin@sportzicon.com"
+email_from      = "admin@sportzicon.com"
+email_from_name = "Sportzicon"
 
 # Optional secrets managed by Terraform (JWT keys are always created)
 optional_secrets         = []
@@ -45,4 +44,4 @@ bootstrap_admin_email    = ""
 bootstrap_admin_password = ""
 
 # GCP Terraform state bucket
-gcs_bucket_terraform_state = "sportivox-terraform-state-sportivox-app"
+gcs_bucket_terraform_state = "sportivox-terraform-state-sportzicon-app"

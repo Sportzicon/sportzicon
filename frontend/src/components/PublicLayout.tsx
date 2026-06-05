@@ -15,11 +15,8 @@ export default function PublicLayout() {
     if (pathname === "/") {
       document.getElementById(sectionId)?.scrollIntoView({ behavior: "smooth" });
     } else {
-      navigate("/");
-      // brief timeout so the Landing page mounts before we try to scroll
-      setTimeout(() => {
-        document.getElementById(sectionId)?.scrollIntoView({ behavior: "smooth" });
-      }, 80);
+      // Pass scroll target via router state — Landing reads it after switching to home view
+      navigate("/", { state: { scrollTo: sectionId } });
     }
   }
 
@@ -27,13 +24,10 @@ export default function PublicLayout() {
     <div className="min-h-screen bg-paper text-ink">
       {/* ── Masthead ──────────────────────────────────────────────────────── */}
       <header className="sticky top-0 z-50 flex items-center justify-between border-b-[1.5px] border-ink bg-paper px-4 sm:px-8 lg:px-11 py-4">
-        <div className="flex items-baseline gap-3">
-          <Link to="/" className="flex items-baseline gap-2">
-            <span className="inline-flex h-7 w-7 translate-y-0.5 items-center justify-center rounded bg-brand-500 font-disp text-lg text-white">S</span>
-            <span className="font-disp text-2xl tracking-[0.02em]">Sportivox</span>
-          </Link>
-          <span className="lab hidden sm:inline">est. 2026</span>
-        </div>
+        <Link to="/" aria-label="Sportzicon" className="flex flex-col items-start">
+          <div style={{ width: 155, height: 48, backgroundImage: 'url(/logo.png)', backgroundSize: 'auto 450%', backgroundRepeat: 'no-repeat', backgroundPosition: 'center', flexShrink: 0 }} />
+          <span className="lab hidden sm:inline" style={{ fontSize: 9, marginTop: -4, marginLeft: 86, letterSpacing: '0.12em' }}>EST. 2026</span>
+        </Link>
         <nav className="flex items-center gap-3 sm:gap-5 lg:gap-7">
           <button
             onClick={() => handleScrollNav("for-athletes")}
@@ -72,7 +66,7 @@ export default function PublicLayout() {
 
       {/* ── Footer ────────────────────────────────────────────────────────── */}
       <footer className="flex flex-wrap items-center justify-between gap-2 border-t border-hair px-4 sm:px-8 lg:px-11 py-4 lg:py-5">
-        <span className="lab">© {new Date().getFullYear()} Sportivox — All rights reserved</span>
+        <span className="lab">© {new Date().getFullYear()} Sportzicon — All rights reserved</span>
         <span className="lab">Verified sports recruitment</span>
       </footer>
     </div>

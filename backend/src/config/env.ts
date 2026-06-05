@@ -23,12 +23,12 @@ const schema = z.object({
   DATABASE_URL: z.string().url(),
   DIRECT_URL: z.string().url().optional(),
 
-  GCP_PROJECT_ID: z.string().default("sportivox-dev"),
+  GCP_PROJECT_ID: z.string().default("sportzicon-dev"),
   GOOGLE_APPLICATION_CREDENTIALS: z.string().optional(),
   STORAGE_EMULATOR_HOST: z.string().optional(),
 
-  GCS_BUCKET_MEDIA: z.string().default("sportivox-media-dev"),
-  GCS_BUCKET_DOCS: z.string().default("sportivox-docs-dev"),
+  GCS_BUCKET_MEDIA: z.string().default("sportzicon-media-dev"),
+  GCS_BUCKET_DOCS: z.string().default("sportzicon-docs-dev"),
   GCS_SIGNED_URL_TTL_MIN: z.coerce.number().int().positive().default(15),
   MAX_UPLOAD_MB: z.coerce.number().int().positive().default(10),
 
@@ -37,8 +37,8 @@ const schema = z.object({
 
   GMAIL_USER: z.string().email().optional(),
   GMAIL_APP_PASSWORD: z.string().optional(),
-  EMAIL_FROM: z.string().email().default("no-reply@sportivox.local"),
-  EMAIL_FROM_NAME: z.string().default("Sportivox"),
+  EMAIL_FROM: z.string().email().default("no-reply@sportzicon.local"),
+  EMAIL_FROM_NAME: z.string().default("Sportzicon"),
 
   BOOTSTRAP_ADMIN_EMAIL: z.string().email().optional(),
   BOOTSTRAP_ADMIN_PASSWORD: z.string().min(8).optional()

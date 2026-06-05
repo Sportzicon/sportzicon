@@ -264,15 +264,11 @@ export default function Signup() {
   const step = d.step;
 
   return (
-    <div className="min-h-screen bg-paper grid lg:grid-cols-[minmax(300px,420px)_1fr]">
+    <div className="min-h-[calc(100vh-7rem)] bg-paper grid lg:grid-cols-[minmax(300px,420px)_1fr]">
 
       {/* ── left ink rail ─────────────────────────────────────────── */}
       <div className="hidden lg:flex flex-col bg-ink text-paper px-10 py-12">
-        <Link to="/" className="flex items-baseline gap-3">
-          <span className="inline-flex h-7 w-7 items-center justify-center rounded bg-brand-500 font-disp text-lg text-white">S</span>
-          <span className="font-disp text-2xl text-paper">Sportivox</span>
-        </Link>
-        <h1 className="font-disp text-[44px] text-paper mt-12 leading-[0.98]">
+        <h1 className="font-disp text-[44px] text-paper leading-[0.98]">
           Join the<br /><span className="text-brand-500">network.</span>
         </h1>
         <p className="mt-5 text-[14.5px] leading-relaxed text-white/60 max-w-[300px]">
@@ -298,18 +294,13 @@ export default function Signup() {
       </div>
 
       {/* ── right form ────────────────────────────────────────────── */}
-      <div className="flex items-start justify-center px-4 py-8 sm:px-8 sm:py-14 overflow-y-auto">
+      <div className="flex items-start justify-center px-4 pt-10 pb-12 sm:px-8 sm:pt-14 overflow-y-auto">
         <div className="w-full max-w-[680px] animate-fadein">
-          <Link to="/" className="flex lg:hidden items-baseline gap-2 mb-8">
-            <span className="inline-flex h-7 w-7 items-center justify-center rounded bg-brand-500 font-disp text-lg text-white">S</span>
-            <span className="font-disp text-xl">Sportivox</span>
-          </Link>
-
           {/* ── STEP 0: Role ─────────────────────────────────────── */}
           {step === 0 && (
             <div>
               <div className="kicker">Step 1 — Choose your role</div>
-              <h2 className="font-disp text-[34px] mt-3">How will you use Sportivox?</h2>
+              <h2 className="font-disp text-[34px] mt-3">How will you use Sportzicon?</h2>
               <p className="text-sm text-ink-sub mt-2">Your role sets your permissions. It can't be changed later.</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-6">
                 {ROLES.map((r) => (

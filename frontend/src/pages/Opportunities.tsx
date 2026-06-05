@@ -3,7 +3,9 @@ import { Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import { useAuthStore } from "../store/auth";
-import { PageHeader, Spinner, EmptyState, StatusPill, Kicker, SectionHead } from "../components/UI";
+import { PageHeader, Spinner, EmptyState, StatusPill, Kicker, SectionHead, Pagination } from "../components/UI";
+
+const PAGE_SIZE = 10;
 import { Trash2, Pencil, MoreVertical, Bookmark } from "lucide-react";
 import type { Opportunity } from "../types";
 import { useSavedOpportunities } from "../store/savedOpportunities";
@@ -67,6 +69,9 @@ export default function Opportunities() {
   const [sort, setSort] = useState("deadline");
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+
+  useEffect(() => { setPage(1); }, [type, sport, verifiedOnly, q, sort]);
 
   useEffect(() => {
     function onClickOutside(e: MouseEvent) {
@@ -107,20 +112,14 @@ export default function Opportunities() {
   const isFiltered = type || sport !== "All sports" || verifiedOnly || q;
 
   function resetFilters() {
-    setType(""); setSport("All sports"); setVerifiedOnly(false); setQ("");
+    setType(""); setSport("All sports"); setVerifiedOnly(false); setQ(""); setPage(1);
   }
 
   return (
-    <div className="space-y-5">
-      <PageHeader
-        title="Opportunities"
-        subtitle="Opportunity index"
-        action={canPost && <Link to="/opportunities/new" className="btn-accent">+ Post opportunity</Link>}
-      />
-
+    <div>
       <div className="grid gap-6 lg:grid-cols-[232px_1fr] items-start">
         {/* ── filter rail ─────────────────────────────────────── */}
-        <div className="panel p-[18px] lg:sticky lg:top-20">
+        <div className="panel p-[18px] lg:sticky lg:top-4">
           <SectionHead title="Filters" />
 
           <FilterGroup label="Search">
@@ -146,11 +145,12 @@ export default function Opportunities() {
 
         {/* ── results ──────────────────────────────────────────── */}
         <div>
-          <div className="flex items-center justify-between mb-4">
-            <span className="lab">
-              {q2.isLoading ? "Loading…" : `${results.length} opportunit${results.length === 1 ? "y" : "ies"}`}
-              {isFiltered ? " · filtered" : ""}
-            </span>
+          <PageHeader
+            title="Opportunities"
+            subtitle="Opportunity index"
+            action={canPost && <Link to="/opportunities/new" className="btn-accent">+ Post opportunity</Link>}
+          />
+          <div className="flex justify-end mb-4">
             <select className="input font-mononum" style={{ width: "auto", fontSize: 11, height: 32, padding: "0 28px 0 10px" }}
               value={sort} onChange={(e) => setSort(e.target.value)}>
               <option value="deadline">Sort: Deadline soonest</option>
@@ -168,8 +168,9 @@ export default function Opportunities() {
               action={<button onClick={resetFilters} className="btn-ghost">Clear filters</button>}
             />
           ) : (
+            <>
             <div className="flex flex-col gap-3">
-              {results.map((o) => {
+              {results.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE).map((o) => {
                 const isPoster = user?.id === o.posted_by_user_id;
                 const deadline = deadlineDays(o.application_deadline);
 
@@ -244,6 +245,8 @@ export default function Opportunities() {
                 );
               })}
             </div>
+            <Pagination page={page} total={results.length} pageSize={PAGE_SIZE} onChange={setPage} />
+            </>
           )}
         </div>
       </div>

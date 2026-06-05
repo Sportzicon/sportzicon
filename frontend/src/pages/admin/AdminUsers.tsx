@@ -1,14 +1,20 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../api/client";
-import { PageHeader, Spinner, StatusPill, Badge } from "../../components/UI";
+import { PageHeader, Spinner, StatusPill, Badge, Pagination } from "../../components/UI";
 import { Trash2 } from "lucide-react";
+
+const PAGE_SIZE = 10;
 
 export default function AdminUsers() {
   const qc = useQueryClient();
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [roleFilter, setRoleFilter] = useState<string>("");
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+
+  useEffect(() => { setPage(1); }, [statusFilter, roleFilter]);
+
   const params: any = {};
   if (statusFilter) params.status = statusFilter;
   if (roleFilter) params.role = roleFilter;
@@ -46,13 +52,14 @@ export default function AdminUsers() {
         </select>
       </div>
       {q.isLoading ? <Spinner /> : (
+        <>
         <div className="card overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="text-left bg-slate-50 text-slate-600"><tr>
               <th className="p-3">Name</th><th>Email</th><th>Role</th><th>Status</th><th>Actions</th>
             </tr></thead>
             <tbody>
-              {q.data?.map((u) => (
+              {q.data?.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE).map((u) => (
                 <tr key={u.id} className="border-t">
                   <td className="p-3">{u.full_name}</td>
                   <td>{u.email}</td>
@@ -92,6 +99,8 @@ export default function AdminUsers() {
             </tbody>
           </table>
         </div>
+        <Pagination page={page} total={q.data?.length ?? 0} pageSize={PAGE_SIZE} onChange={setPage} />
+        </>
       )}
     </div>
   );

@@ -38,12 +38,42 @@ function ApplyModal({ opp, onClose, onSuccess }: { opp: Opportunity; onClose: ()
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [extraDocs, setExtraDocs] = useState<{ type: string; file: File }[]>([]);
+  const [extraType, setExtraType] = useState("");
+  const extraInputRef = useRef<HTMLInputElement>(null);
   const qc = useQueryClient();
+
+  const EXTRA_DOC_TYPES = [
+    "Medical Certificate", "Fitness Report", "Training Certificate",
+    "Reference Letter", "Academic Transcript", "Age Proof",
+    "NOC from Current Club", "Passport Copy", "Other",
+  ];
+
+  function addExtraDoc(file: File) {
+    if (!extraType) return;
+    setExtraDocs((prev) => [...prev, { type: extraType, file }]);
+    setExtraType("");
+    if (extraInputRef.current) extraInputRef.current.value = "";
+  }
+
+  function removeExtraDoc(i: number) {
+    setExtraDocs((prev) => prev.filter((_, idx) => idx !== i));
+  }
 
   async function submit() {
     setBusy(true); setErr(null);
     try {
-      await api.post(`/opportunities/${opp.id}/apply`, { cover_note: note });
+      if (extraDocs.length > 0) {
+        const form = new FormData();
+        form.append("cover_note", note);
+        extraDocs.forEach((d, i) => {
+          form.append(`extra_doc_type_${i}`, d.type);
+          form.append(`extra_doc_file_${i}`, d.file);
+        });
+        await api.post(`/opportunities/${opp.id}/apply`, form, { headers: { "Content-Type": "multipart/form-data" } });
+      } else {
+        await api.post(`/opportunities/${opp.id}/apply`, { cover_note: note });
+      }
       qc.invalidateQueries({ queryKey: ["my-apps"] });
       onSuccess();
     } catch (e) {
@@ -140,6 +170,61 @@ function ApplyModal({ opp, onClose, onSuccess }: { opp: Opportunity; onClose: ()
                   </span>
                 </div>
               ))}
+
+              {/* Additional / other documents */}
+              <div className="border border-dashed border-hair rounded p-4 space-y-3">
+                <div className="lab text-ink text-[11px]">Additional documents (optional)</div>
+
+                {/* Uploaded extra docs list */}
+                {extraDocs.map((d, i) => (
+                  <div key={i} className="flex items-center gap-3 panel p-3">
+                    <span style={{ color: "#2E7D52", fontSize: 16 }}>✓</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[12.5px] font-medium text-ink">{d.type}</div>
+                      <div className="lab text-[10.5px] truncate mt-0.5">{d.file.name}</div>
+                    </div>
+                    <button onClick={() => removeExtraDoc(i)} className="lab text-[10.5px] text-red-500 hover:text-red-700 transition flex-shrink-0">
+                      Remove
+                    </button>
+                  </div>
+                ))}
+
+                {/* Dropdown + file picker row */}
+                <div className="flex gap-2 items-center flex-wrap">
+                  <select
+                    className="input font-mononum flex-1 min-w-[180px]"
+                    style={{ fontSize: 12, height: 34 }}
+                    value={extraType}
+                    onChange={(e) => {
+                      setExtraType(e.target.value);
+                      if (extraInputRef.current) extraInputRef.current.value = "";
+                    }}
+                  >
+                    <option value="">Select document type…</option>
+                    {EXTRA_DOC_TYPES.map((t) => (
+                      <option key={t} value={t}>{t}</option>
+                    ))}
+                  </select>
+
+                  <label className={`flex-shrink-0 ${!extraType ? "opacity-40 pointer-events-none" : "cursor-pointer"}`}>
+                    <input
+                      ref={extraInputRef}
+                      type="file"
+                      accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                      className="hidden"
+                      disabled={!extraType}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) addExtraDoc(file);
+                      }}
+                    />
+                    <span className="btn-secondary text-[11px] px-3 py-1.5 whitespace-nowrap">
+                      + Upload file
+                    </span>
+                  </label>
+                </div>
+              </div>
+
               <p className="font-mononum text-[10.5px] text-ink-faint mt-3">
                 Private documents are shared with this club only via signed time-limited links.
               </p>
@@ -349,7 +434,7 @@ export default function OpportunityDetail() {
 
         {/* sidebar — 1/3 sticky */}
         <aside>
-          <div className="panel p-5 sticky top-20 space-y-4">
+          <div className="panel p-5 sticky top-4 space-y-4">
             {/* Large deadline countdown (zip 2 pattern) */}
             {!deadline.closed && (
               <div>

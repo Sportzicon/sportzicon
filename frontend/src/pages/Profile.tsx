@@ -1,14 +1,29 @@
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
-import { api } from "../api/client";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+import { useState, useRef } from "react";
+import { api, getApiError, humanizeError } from "../api/client";
 import { useAuthStore } from "../store/auth";
 import { Spinner, VerifiedBadge, Avatar, SectionHead, Kicker, StatCard, Placeholder, Tabs, Badge, StatusPill } from "../components/UI";
 import type { Post, User } from "../types";
 import { useSavedOpportunities } from "../store/savedOpportunities";
-import { Bookmark } from "lucide-react";
+import { Bookmark, Camera, FileText, Trash2, Upload, X } from "lucide-react";
 
 type Tab = "posts" | "followers" | "following" | "saved";
+
+const PROFILE_DOC_TYPES = [
+  "Sports CV",
+  "Government ID",
+  "Coach Endorsement",
+  "Medical Certificate",
+  "Fitness Report",
+  "Training Certificate",
+  "Reference Letter",
+  "Academic Transcript",
+  "Age Proof",
+  "NOC from Current Club",
+  "Passport Copy",
+  "Other",
+];
 
 function SpecRow({ label, value }: { label: string; value?: string | number }) {
   if (!value) return null;
@@ -23,7 +38,7 @@ function SpecRow({ label, value }: { label: string; value?: string | number }) {
 function PersonCard({ u }: { u: User }) {
   return (
     <Link to={`/profile/${u.id}`} className="card card-body flex items-center gap-3 transition hover:shadow-pop">
-      <Avatar name={u.full_name} size={40} />
+      <Avatar name={u.full_name} src={u.profile_photo_url} size={40} />
       <div>
         <div className="text-sm font-semibold text-ink">{u.full_name}</div>
         <div className="mt-1"><Badge color="blue">{u.role}</Badge></div>
@@ -35,11 +50,61 @@ function PersonCard({ u }: { u: User }) {
 export default function Profile() {
   const { id = "" } = useParams();
   const navigate = useNavigate();
-  const me = useAuthStore((s) => s.user);
+  const { user: me, setUser } = useAuthStore();
   const qc = useQueryClient();
   const isMe = me?.id === id;
   const [tab, setTab] = useState<Tab>("posts");
+  const [docType, setDocType] = useState("");
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const [uploadingName, setUploadingName] = useState<string>("");
+  const docFileRef = useRef<HTMLInputElement>(null);
   const { saved: savedOpps, toggle: toggleSaved, isSaved } = useSavedOpportunities();
+
+  // Photo management state (only relevant when isMe)
+  const [photoUploading, setPhotoUploading] = useState<"profile" | "cover" | null>(null);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+  const profilePhotoRef = useRef<HTMLInputElement>(null);
+  const coverPhotoRef = useRef<HTMLInputElement>(null);
+
+  async function uploadPhoto(file: File, field: "profile" | "cover") {
+    setPhotoUploading(field);
+    setPhotoError(null);
+    try {
+      const urlRes = await api.post("/media/upload-url", {
+        category: "image",
+        filename: file.name,
+        content_type: file.type,
+        content_length: file.size,
+      });
+      const { upload_url, headers, public_url } = urlRes.data;
+      await fetch(upload_url, { method: "PUT", headers, body: file });
+      const key = field === "profile" ? "profile_photo_url" : "cover_photo_url";
+      const r = await api.put("/users/me", { [key]: public_url });
+      const updated: User = r.data.user;
+      setUser(updated);
+      qc.setQueryData(["user", id], updated);
+    } catch (e) {
+      setPhotoError(humanizeError(e));
+    } finally {
+      setPhotoUploading(null);
+    }
+  }
+
+  async function removePhoto(field: "profile" | "cover") {
+    setPhotoUploading(field);
+    setPhotoError(null);
+    try {
+      const key = field === "profile" ? "profile_photo_url" : "cover_photo_url";
+      const r = await api.put("/users/me", { [key]: null });
+      const updated: User = r.data.user;
+      setUser(updated);
+      qc.setQueryData(["user", id], updated);
+    } catch (e) {
+      setPhotoError(humanizeError(e));
+    } finally {
+      setPhotoUploading(null);
+    }
+  }
 
   const userQ = useQuery({
     queryKey: ["user", id],
@@ -67,6 +132,41 @@ export default function Profile() {
   const reelsQ = useQuery({
     queryKey: ["user-reels", id],
     queryFn: async () => (await api.get<{ items: any[] }>("/reels", { params: { author_id: id, limit: 3 } })).data.items
+  });
+
+  const docsQ = useQuery({
+    queryKey: ["user-docs", id],
+    queryFn: async () => (await api.get<{ items: any[] }>(`/users/${id}/documents`)).data.items,
+  });
+
+  const uploadDoc = useMutation({
+    mutationFn: async ({ file, type }: { file: File; type: string }) => {
+      const form = new FormData();
+      form.append("file", file);
+      form.append("type", type);
+      setUploadProgress(0);
+      setUploadingName(file.name);
+      return api.post(`/users/${id}/documents`, form, {
+        headers: { "Content-Type": "multipart/form-data" },
+        onUploadProgress: (e) => {
+          if (e.total) setUploadProgress(Math.round((e.loaded / e.total) * 100));
+        },
+      });
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["user-docs", id] });
+      setUploadProgress(null);
+      setUploadingName("");
+    },
+    onError: () => {
+      setUploadProgress(null);
+      setUploadingName("");
+    },
+  });
+
+  const deleteDoc = useMutation({
+    mutationFn: async (docId: string) => api.delete(`/users/${id}/documents/${docId}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["user-docs", id] }),
   });
 
   async function toggleFollow() {
@@ -104,18 +204,77 @@ export default function Profile() {
     <div className="space-y-6">
       {/* Cover band */}
       <div className="card overflow-hidden">
-        <div className="relative h-32 bg-ink">
+        <div className="relative h-32 bg-ink group/cover">
           <div className="absolute inset-0" style={{ backgroundImage: "repeating-linear-gradient(135deg, rgba(255,255,255,0.05) 0 1px, transparent 1px 11px)" }} />
           {u.cover_photo_url && <img src={u.cover_photo_url} alt="" className="absolute inset-0 h-full w-full object-cover" />}
+          {photoUploading === "cover" && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+              <span className="font-mononum text-[11px] text-white tracking-[0.06em] uppercase">Uploading…</span>
+            </div>
+          )}
+          {isMe && (
+            <div className="absolute bottom-2 right-2 flex gap-1.5 opacity-0 group-hover/cover:opacity-100 transition-opacity">
+              <button
+                onClick={() => coverPhotoRef.current?.click()}
+                disabled={!!photoUploading}
+                className="flex items-center gap-1 rounded bg-black/60 px-2 py-1 text-white text-[11px] font-mononum hover:bg-black/80 transition disabled:opacity-40"
+              >
+                <Camera className="h-3 w-3" /> Update cover
+              </button>
+              {u.cover_photo_url && (
+                <button
+                  onClick={() => removePhoto("cover")}
+                  disabled={!!photoUploading}
+                  className="flex items-center gap-1 rounded bg-black/60 px-2 py-1 text-white text-[11px] font-mononum hover:bg-red-600/80 transition disabled:opacity-40"
+                >
+                  <X className="h-3 w-3" /> Remove
+                </button>
+              )}
+              <input ref={coverPhotoRef} type="file" accept="image/jpeg,image/png,image/webp" className="sr-only"
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadPhoto(f, "cover"); e.currentTarget.value = ""; }} />
+            </div>
+          )}
         </div>
         <div className="card-body -mt-12">
+          {photoError && (
+            <div className="mb-3 rounded border border-red-200 bg-red-50 px-3 py-2 text-[12px] text-red-700">{photoError}</div>
+          )}
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div className="flex items-end gap-4">
-              <div className="h-24 w-24 overflow-hidden rounded border-4 border-panel bg-fill">
-                {u.profile_photo_url ? (
-                  <img src={u.profile_photo_url} alt={u.full_name} className="h-full w-full object-cover" />
-                ) : (
-                  <Avatar name={u.full_name} size={88} className="!rounded-none border-0" />
+              <div className="relative h-24 w-24 group/avatar">
+                <div className="h-24 w-24 overflow-hidden rounded border-4 border-panel bg-fill">
+                  {u.profile_photo_url ? (
+                    <img src={u.profile_photo_url} alt={u.full_name} className="h-full w-full object-cover" />
+                  ) : (
+                    <Avatar name={u.full_name} size={88} className="!rounded-none border-0" />
+                  )}
+                  {photoUploading === "profile" && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded">
+                      <span className="font-mononum text-[9px] text-white text-center leading-tight tracking-[0.04em] uppercase px-1">Uploading…</span>
+                    </div>
+                  )}
+                </div>
+                {isMe && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-black/50 rounded opacity-0 group-hover/avatar:opacity-100 transition-opacity">
+                    <button
+                      onClick={() => profilePhotoRef.current?.click()}
+                      disabled={!!photoUploading}
+                      className="flex items-center gap-1 rounded bg-black/70 px-2 py-1 text-white text-[10px] font-mononum hover:bg-black/90 transition disabled:opacity-40 whitespace-nowrap"
+                    >
+                      <Camera className="h-2.5 w-2.5" /> Update
+                    </button>
+                    {u.profile_photo_url && (
+                      <button
+                        onClick={() => removePhoto("profile")}
+                        disabled={!!photoUploading}
+                        className="flex items-center gap-1 rounded bg-black/70 px-2 py-1 text-white text-[10px] font-mononum hover:bg-red-600/80 transition disabled:opacity-40 whitespace-nowrap"
+                      >
+                        <X className="h-2.5 w-2.5" /> Remove
+                      </button>
+                    )}
+                    <input ref={profilePhotoRef} type="file" accept="image/jpeg,image/png,image/webp" className="sr-only"
+                      onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadPhoto(f, "profile"); e.currentTarget.value = ""; }} />
+                  </div>
                 )}
               </div>
               <div className="pb-1">
@@ -182,11 +341,11 @@ export default function Profile() {
       )}
 
       {/* ── ZONE 02 — Detailed statistics ─────────────────────── */}
-      {isAthlete && sport?.toLowerCase() === "cricket" && userStats.length > 0 && (
+      {isAthlete && (
         <div>
           <SectionHead n="02" title="Detailed statistics" sub="By format" />
-          <div className="card card-body">
-            <div className="lab text-ink-faint">Format-by-format statistics not yet implemented</div>
+          <div className="card card-body text-center border-dashed">
+            <div className="lab text-ink-faint">Format-by-format statistics not yet added</div>
             {isMe && (
               <button onClick={() => navigate("/profile/edit")} className="btn-secondary mt-3 mx-auto">+ Add format stats</button>
             )}
@@ -229,28 +388,38 @@ export default function Profile() {
       )}
 
       {/* ── ZONE 04 — Highlights & media ──────────────────────── */}
-      {isAthlete && reelsQ.data && reelsQ.data.length > 0 && (
+      {isAthlete && (
         <div>
           <SectionHead n="04" title="Highlights & media"
-            right={<Link to="/reels" className="btn-ghost text-[12px]">All reels →</Link>}
+            right={reelsQ.data && reelsQ.data.length > 0
+              ? <Link to="/reels" className="btn-ghost text-[12px]">All reels →</Link>
+              : isMe ? <Link to="/reels/upload" className="btn-ghost text-[12px]">+ Add</Link> : undefined}
           />
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            {reelsQ.data.slice(0, 3).map((r: any) => (
-              <div key={r.id} className="card overflow-hidden cursor-pointer group">
-                <div className="h-28 bg-ink relative overflow-hidden">
-                  {r.thumbnail_url
-                    ? <img src={r.thumbnail_url} alt="" className="h-full w-full object-cover" />
-                    : <Placeholder label="reel" height={112} />
-                  }
-                  <span className="absolute inset-0 flex items-center justify-center text-white/60 text-xl group-hover:text-white transition">▶</span>
+          {reelsQ.data && reelsQ.data.length > 0 ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {reelsQ.data.slice(0, 3).map((r: any) => (
+                <div key={r.id} className="card overflow-hidden cursor-pointer group">
+                  <div className="h-28 bg-ink relative overflow-hidden">
+                    {r.thumbnail_url
+                      ? <img src={r.thumbnail_url} alt="" className="h-full w-full object-cover" />
+                      : <Placeholder label="reel" height={112} />
+                    }
+                    <span className="absolute inset-0 flex items-center justify-center text-white/60 text-xl group-hover:text-white transition">▶</span>
+                  </div>
+                  <div className="px-3 py-2 flex items-center justify-between">
+                    <p className="text-[12px] font-medium text-ink truncate">{r.caption || "Reel"}</p>
+                    <span className="lab text-[10px] flex-shrink-0">▶ {r.view_count}</span>
+                  </div>
                 </div>
-                <div className="px-3 py-2 flex items-center justify-between">
-                  <p className="text-[12px] font-medium text-ink truncate">{r.caption || "Reel"}</p>
-                  <span className="lab text-[10px] flex-shrink-0">▶ {r.view_count}</span>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className="card card-body text-center border-dashed">
+              <div className="text-3xl text-ink-faint mb-2">▶</div>
+              <div className="lab text-ink-faint">No highlights added yet</div>
+              {isMe && <p className="text-[12.5px] text-ink-sub mt-1">Upload match clips and training reels.</p>}
+            </div>
+          )}
         </div>
       )}
 
@@ -280,13 +449,16 @@ export default function Profile() {
       )}
 
       {/* ── ZONE 06 — Career timeline ───────────────────────── */}
-      {isAthlete && careerHistory.length > 0 && (
+      {isAthlete && (
         <div>
           <SectionHead n="06" title="Career timeline"
-            right={isMe && careerHistory.length === 0 ? (
-              <button onClick={() => navigate("/profile/edit")} className="btn-ghost text-[12px]">+ Add clubs</button>
+            right={isMe ? (
+              <button onClick={() => navigate("/profile/edit")} className="btn-ghost text-[12px]">
+                {careerHistory.length === 0 ? "+ Add clubs" : "Edit"}
+              </button>
             ) : undefined}
           />
+          {careerHistory.length > 0 ? (
           <div className="card card-body">
             {careerHistory.map((h, i, arr) => {
               const label = h.current
@@ -308,6 +480,127 @@ export default function Profile() {
                 </div>
               );
             })}
+          </div>
+          ) : (
+            <div className="card card-body text-center border-dashed">
+              <div className="lab text-ink-faint">No career history added yet</div>
+              {isMe && <p className="text-[12.5px] text-ink-sub mt-1">Add clubs, teams and career milestones.</p>}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── ZONE 07 — Documents ───────────────────────────────── */}
+      {isAthlete && (
+        <div>
+          <SectionHead n="07" title="Documents"
+            sub={isMe ? "Attach supporting documents to strengthen your profile" : "Supporting documents"}
+          />
+          <div className="card card-body space-y-3">
+            {/* Uploaded documents list */}
+            {docsQ.data && docsQ.data.length > 0 ? (
+              docsQ.data.map((doc: any) => (
+                <div key={doc.id} className="flex items-center gap-3 rounded border border-emerald-200 bg-emerald-50/40 p-3.5">
+                  <FileText className="h-4 w-4 text-emerald-600 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <div className="font-mononum text-[11px] uppercase tracking-[0.06em] text-ink">{doc.type}</div>
+                    {doc.file_name && (
+                      <a href={doc.url} target="_blank" rel="noreferrer"
+                        className="lab text-[10.5px] text-emerald-700 hover:underline truncate block mt-0.5">
+                        {doc.file_name}
+                      </a>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <a href={doc.url} target="_blank" rel="noreferrer"
+                      className="font-mononum text-[9px] text-emerald-700 bg-emerald-100 px-2 py-1 rounded hover:bg-emerald-200 transition">
+                      View / Download
+                    </a>
+                    {isMe && (
+                      <button onClick={() => deleteDoc.mutate(doc.id)} disabled={deleteDoc.isPending || uploadDoc.isPending}
+                        className="text-ink-faint hover:text-red-500 transition" title="Remove">
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))
+            ) : !isMe ? (
+              <div className="lab text-ink-faint text-center py-4">No documents uploaded.</div>
+            ) : null}
+
+            {/* Upload progress row */}
+            {uploadProgress !== null && (
+              <div className="rounded border border-blue-200 bg-blue-50/40 p-3.5">
+                <div className="flex items-center gap-3 mb-2">
+                  <FileText className="h-4 w-4 text-blue-500 flex-shrink-0 animate-pulse" />
+                  <div className="flex-1 min-w-0">
+                    <div className="font-mononum text-[11px] uppercase tracking-[0.06em] text-ink">{docType || "Uploading…"}</div>
+                    <div className="lab text-[10.5px] text-blue-600 truncate mt-0.5">{uploadingName}</div>
+                  </div>
+                  <span className="font-mononum text-[11px] text-blue-600 flex-shrink-0">{uploadProgress}%</span>
+                </div>
+                <div className="w-full bg-blue-100 rounded-full h-1.5">
+                  <div
+                    className="bg-blue-500 h-1.5 rounded-full transition-all duration-200"
+                    style={{ width: `${uploadProgress}%` }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Add document — dropdown + upload (owner only) */}
+            {isMe && (
+              <div className="flex gap-2 items-center flex-wrap pt-1">
+                <select
+                  className="input font-mononum flex-1 min-w-[200px]"
+                  style={{ fontSize: 12, height: 36 }}
+                  value={docType}
+                  disabled={uploadDoc.isPending}
+                  onChange={(e) => {
+                    setDocType(e.target.value);
+                    if (docFileRef.current) docFileRef.current.value = "";
+                  }}
+                >
+                  <option value="">Select document type…</option>
+                  {PROFILE_DOC_TYPES.map((t) => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
+                </select>
+
+                <label className={`flex-shrink-0 ${!docType || uploadDoc.isPending ? "opacity-40 pointer-events-none" : "cursor-pointer"}`}>
+                  <input
+                    ref={docFileRef}
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                    className="hidden"
+                    disabled={!docType || uploadDoc.isPending}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (!file || !docType) return;
+                      if (file.size > 5 * 1024 * 1024) {
+                        alert(`File too large. Maximum size is 5 MB. Your file is ${(file.size / 1024 / 1024).toFixed(1)} MB.`);
+                        if (docFileRef.current) docFileRef.current.value = "";
+                        return;
+                      }
+                      uploadDoc.mutate({ file, type: docType });
+                      setDocType("");
+                      if (docFileRef.current) docFileRef.current.value = "";
+                    }}
+                  />
+                  <span className="flex items-center gap-1.5 btn-secondary text-[11px] px-3 py-2 whitespace-nowrap">
+                    <Upload className="h-3.5 w-3.5" />
+                    {uploadDoc.isPending ? "Uploading…" : "Upload file"}
+                  </span>
+                </label>
+              </div>
+            )}
+
+            {isMe && (
+              <p className="lab text-[10.5px] text-ink-faint border-t border-hairsoft pt-3 mt-1">
+                Documents are reviewed during verification. Max file size 5 MB per file.
+              </p>
+            )}
           </div>
         </div>
       )}

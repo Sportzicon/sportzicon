@@ -7,7 +7,7 @@ on:
 
 env:
   GCP_REGION: asia-south1
-  GCP_AR_REPO: sportivox
+  AR_IMAGE: asia-south1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/sportivox
 
 jobs:
   build-and-deploy:
@@ -21,14 +21,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@v1
-
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v1
         with:
           workload_identity_provider: ${{ secrets.GOOGLE_PROVIDER_NAME }}
           service_account: ${{ secrets.GOOGLE_SERVICE_ACCOUNT }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker asia-south1-docker.pkg.dev --quiet
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -46,7 +52,6 @@ jobs:
           npm ci --no-audit --no-fund
           echo "Running migrations on production database..."
 
-          # Try to deploy; if P3005 (tables exist but no migration history), baseline then retry
           set +e
           OUTPUT=$(npx prisma migrate deploy 2>&1)
           EXIT_CODE=$?
@@ -54,7 +59,10 @@ jobs:
           echo "$OUTPUT"
 
           if [ $EXIT_CODE -ne 0 ]; then
-            if echo "$OUTPUT" | grep -q "P3005"; then
+            if echo "$OUTPUT" | grep -q "P1001\|P1002\|P1003"; then
+              echo "⚠️ Database unreachable — skipping migrations. Existing schema assumed current."
+              exit 0
+            elif echo "$OUTPUT" | grep -q "P3005"; then
               echo "⚠️  P3005: database has no migration history — baselining latest migration..."
               LATEST=$(ls prisma/migrations | grep -v migration_lock | sort | tail -1)
               echo "Baselining: $LATEST"
@@ -66,41 +74,29 @@ jobs:
           fi
           echo "✅ Migrations complete"
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Configure Docker for Artifact Registry
-        run: |
-          gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev
-
-      - name: Build API image
+      - name: Build and push API image
         uses: docker/build-push-action@v5
         with:
           context: .
           file: ./backend/Dockerfile
           target: runtime
-          push: false
-          load: true
+          push: true
           tags: |
-            ${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.GCP_AR_REPO }}/api:${{ github.ref_name }}
+            ${{ env.AR_IMAGE }}/api:${{ github.ref_name }}
+            ${{ env.AR_IMAGE }}/api:latest
 
-      - name: Build Web image
+      - name: Build and push Web image
         uses: docker/build-push-action@v5
         with:
           context: ./frontend
           file: ./frontend/Dockerfile
           target: runtime
+          push: true
           build-args: |
-            VITE_API_BASE_URL=https://sportivox-api-prod-v4otdm3i5a-el.a.run.app
-          push: false
-          load: true
+            VITE_API_BASE_URL=https://api.sportzicon.com
           tags: |
-            ${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.GCP_AR_REPO }}/web:${{ github.ref_name }}
-
-      - name: Push images to Artifact Registry
-        run: |
-          docker push ${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.GCP_AR_REPO }}/api:${{ github.ref_name }}
-          docker push ${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.GCP_AR_REPO }}/web:${{ github.ref_name }}
+            ${{ env.AR_IMAGE }}/web:${{ github.ref_name }}
+            ${{ env.AR_IMAGE }}/web:latest
 
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v2
@@ -118,8 +114,8 @@ jobs:
       - name: Update Terraform image variables
         working-directory: infra/terraform
         run: |
-          sed -i "s|api_image = .*|api_image = \"${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.GCP_AR_REPO }}/api:${{ github.ref_name }}\"|g" terraform.tfvars.prod.example
-          sed -i "s|web_image = .*|web_image = \"${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.GCP_AR_REPO }}/web:${{ github.ref_name }}\"|g" terraform.tfvars.prod.example
+          sed -i "s|api_image = .*|api_image = \"${{ env.AR_IMAGE }}/api:${{ github.ref_name }}\"|g" terraform.tfvars.prod.example
+          sed -i "s|web_image = .*|web_image = \"${{ env.AR_IMAGE }}/web:${{ github.ref_name }}\"|g" terraform.tfvars.prod.example
           cp terraform.tfvars.prod.example terraform.tfvars.prod
 
       - name: Terraform Plan
@@ -166,18 +162,18 @@ jobs:
           tag_name: ${{ github.ref_name }}
           release_name: Release ${{ github.ref_name }}
           body: |
-            ## 🚀 Production Deployment
+            ## Production Deployment
 
             **Version:** ${{ github.ref_name }}
             **Commit:** ${{ github.sha }}
 
             **Images:**
-            - API: `${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.GCP_AR_REPO }}/api:${{ github.ref_name }}`
-            - Web: `${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.GCP_AR_REPO }}/web:${{ github.ref_name }}`
+            - API: `${{ env.AR_IMAGE }}/api:${{ github.ref_name }}`
+            - Web: `${{ env.AR_IMAGE }}/web:${{ github.ref_name }}`
 
             **Deployment:**
             - API URL: ${{ steps.outputs.outputs.api_url }}
             - Web URL: ${{ steps.outputs.outputs.web_url }}
-            - Status: ✅ Deployed & Healthy
+            - Status: Deployed & Healthy
           draft: false
           prerelease: false

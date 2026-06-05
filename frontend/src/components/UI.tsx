@@ -119,8 +119,20 @@ export function VerifiedBadge({ verification, label = "verified" }: { verificati
 // ---- additive helpers (optional adoption) ----------------------------------
 
 // Initials avatar — square by default, ink fill when accent.
-export function Avatar({ name = "", size = 40, accent = false, square = true, className }: { name?: string; size?: number; accent?: boolean; square?: boolean; className?: string }) {
+// Pass `src` to show a photo; falls back to initials when src is absent or fails to load.
+export function Avatar({ name = "", size = 40, accent = false, square = true, src, className }: { name?: string; size?: number; accent?: boolean; square?: boolean; src?: string | null; className?: string }) {
   const ini = name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
+  if (src) {
+    return (
+      <img
+        src={src}
+        alt={name}
+        className={clsx("shrink-0 object-cover border", square ? "rounded" : "rounded-full", className)}
+        style={{ width: size, height: size, borderColor: "rgba(20,17,13,0.13)" }}
+        onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+      />
+    );
+  }
   return (
     <span
       className={clsx("font-disp inline-flex shrink-0 items-center justify-center border", square ? "rounded" : "rounded-full", className)}
@@ -173,6 +185,64 @@ export function Tabs({ tabs, active, onChange, className }: { tabs: { id: string
           {t.label}
         </button>
       ))}
+    </div>
+  );
+}
+
+export function Pagination({ page, total, pageSize, onChange }: { page: number; total: number; pageSize: number; onChange: (p: number) => void }) {
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+
+  const pages: (number | "…")[] = [];
+  if (totalPages <= 7) {
+    for (let i = 1; i <= totalPages; i++) pages.push(i);
+  } else {
+    pages.push(1);
+    if (page > 3) pages.push("…");
+    for (let i = Math.max(2, page - 1); i <= Math.min(totalPages - 1, page + 1); i++) pages.push(i);
+    if (page < totalPages - 2) pages.push("…");
+    pages.push(totalPages);
+  }
+
+  const btn = "font-mononum text-[11px] min-w-[28px] h-[28px] rounded border transition flex items-center justify-center";
+  return (
+    <div className="flex items-center justify-between gap-4 pt-5">
+      <span className="font-mononum text-[11px] text-ink-sub whitespace-nowrap">
+        Page {page} of {totalPages} · {total} record{total !== 1 ? "s" : ""}
+      </span>
+      <div className="flex items-center gap-1">
+      <button
+        onClick={() => onChange(page - 1)}
+        disabled={page <= 1}
+        className={clsx(btn, "px-3 text-ink-sub border-hair hover:text-ink hover:border-ink disabled:opacity-35 disabled:cursor-not-allowed")}
+      >
+        ←
+      </button>
+      {pages.map((p, i) =>
+        p === "…" ? (
+          <span key={`el-${i}`} className="font-mononum text-[11px] w-7 text-center text-ink-faint">…</span>
+        ) : (
+          <button
+            key={p}
+            onClick={() => onChange(p as number)}
+            className={btn}
+            style={{
+              background: page === p ? "#14110D" : undefined,
+              color: page === p ? "#F7F5EF" : "#726B60",
+              borderColor: page === p ? "#14110D" : "rgba(20,17,13,0.13)",
+            }}
+          >
+            {p}
+          </button>
+        )
+      )}
+      <button
+        onClick={() => onChange(page + 1)}
+        disabled={page >= totalPages}
+        className={clsx(btn, "px-3 text-ink-sub border-hair hover:text-ink hover:border-ink disabled:opacity-35 disabled:cursor-not-allowed")}
+      >
+        →
+      </button>
+      </div>
     </div>
   );
 }

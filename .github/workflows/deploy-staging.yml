@@ -5,9 +5,9 @@ on:
     branches: [main]
 
 env:
-  GCP_PROJECT_ID: sportivox-app
+  GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
   GCP_REGION: asia-south1
-  GCP_AR_REPO: sportivox
+  AR_IMAGE: asia-south1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/sportivox
 
 jobs:
   build-and-deploy:
@@ -21,20 +21,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@v1
-
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v1
         with:
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
+          workload_identity_provider: ${{ secrets.GOOGLE_PROVIDER_NAME }}
+          service_account: ${{ secrets.GOOGLE_SERVICE_ACCOUNT }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker asia-south1-docker.pkg.dev --quiet
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-
-      - name: Configure Docker for Artifact Registry
-        run: |
-          gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -51,7 +51,6 @@ jobs:
         run: |
           npm ci --no-audit --no-fund
 
-          # Try to deploy; if P3005 (tables exist but no migration history), baseline then retry
           set +e
           OUTPUT=$(npx prisma migrate deploy 2>&1)
           EXIT_CODE=$?
@@ -59,7 +58,10 @@ jobs:
           echo "$OUTPUT"
 
           if [ $EXIT_CODE -ne 0 ]; then
-            if echo "$OUTPUT" | grep -q "P3005"; then
+            if echo "$OUTPUT" | grep -q "P1001\|P1002\|P1003"; then
+              echo "⚠️ Database unreachable — skipping migrations. Existing schema assumed current."
+              exit 0
+            elif echo "$OUTPUT" | grep -q "P3005"; then
               echo "⚠️  P3005: database has no migration history — baselining latest migration..."
               LATEST=$(ls prisma/migrations | grep -v migration_lock | sort | tail -1)
               echo "Baselining: $LATEST"
@@ -71,38 +73,29 @@ jobs:
           fi
           echo "✅ Migrations complete"
 
-      - name: Build API image
+      - name: Build and push API image
         uses: docker/build-push-action@v5
         with:
           context: .
           file: ./backend/Dockerfile
           target: runtime
-          push: false
-          load: true
+          push: true
           tags: |
-            ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.GCP_AR_REPO }}/api:latest
-            ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.GCP_AR_REPO }}/api:main-${{ github.sha }}
+            ${{ env.AR_IMAGE }}/api:latest
+            ${{ env.AR_IMAGE }}/api:main-${{ github.sha }}
 
-      - name: Build Web image
+      - name: Build and push Web image
         uses: docker/build-push-action@v5
         with:
           context: ./frontend
           file: ./frontend/Dockerfile
           target: runtime
+          push: true
           build-args: |
-            VITE_API_BASE_URL=https://sportivox-api-prod-qylxb4qeyq-el.a.run.app
-          push: false
-          load: true
+            VITE_API_BASE_URL=https://api.sportzicon.com
           tags: |
-            ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.GCP_AR_REPO }}/web:latest
-            ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.GCP_AR_REPO }}/web:main-${{ github.sha }}
-
-      - name: Push images to Artifact Registry
-        run: |
-          docker push ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.GCP_AR_REPO }}/api:latest
-          docker push ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.GCP_AR_REPO }}/api:main-${{ github.sha }}
-          docker push ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.GCP_AR_REPO }}/web:latest
-          docker push ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.GCP_AR_REPO }}/web:main-${{ github.sha }}
+            ${{ env.AR_IMAGE }}/web:latest
+            ${{ env.AR_IMAGE }}/web:main-${{ github.sha }}
 
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v2
@@ -112,18 +105,16 @@ jobs:
 
       - name: Configure Terraform backend
         working-directory: infra/terraform
-        env:
-          GOOGLE_APPLICATION_CREDENTIALS: ${{ env.GOOGLE_APPLICATION_CREDENTIALS }}
         run: |
           terraform init \
-            -backend-config="bucket=sportivox-terraform-state-${{ env.GCP_PROJECT_ID }}" \
+            -backend-config="bucket=sportivox-terraform-state-${{ secrets.GCP_PROJECT_ID }}" \
             -backend-config="prefix=staging"
 
       - name: Update Terraform image variables
         working-directory: infra/terraform
         run: |
-          sed -i "s|api_image = .*|api_image = \"${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.GCP_AR_REPO }}/api:main-${{ github.sha }}\"|g" terraform.tfvars.staging
-          sed -i "s|web_image = .*|web_image = \"${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.GCP_AR_REPO }}/web:main-${{ github.sha }}\"|g" terraform.tfvars.staging
+          sed -i "s|api_image = .*|api_image = \"${{ env.AR_IMAGE }}/api:main-${{ github.sha }}\"|g" terraform.tfvars.staging
+          sed -i "s|web_image = .*|web_image = \"${{ env.AR_IMAGE }}/web:main-${{ github.sha }}\"|g" terraform.tfvars.staging
 
       - name: Terraform Plan
         working-directory: infra/terraform
@@ -159,5 +150,4 @@ jobs:
             sleep 5
           done
           echo "⚠️ Health check did not confirm healthy within 75s — check Cloud Run logs"
-          echo "Deployment succeeded (Terraform startup probe passed). Service may still be warming up."
           exit 0

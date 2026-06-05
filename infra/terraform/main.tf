@@ -3,7 +3,6 @@ locals {
 
   required_apis = [
     "run.googleapis.com",
-    "firestore.googleapis.com",
     "secretmanager.googleapis.com",
     "storage.googleapis.com",
     "artifactregistry.googleapis.com",
@@ -22,18 +21,9 @@ resource "google_project_service" "apis" {
   disable_on_destroy = false
 }
 
-# Container registry — single repo for both api and web images.
-resource "google_artifact_registry_repository" "containers" {
-  location      = var.region
-  repository_id = "sportivox"
-  description   = "Sportivox container images (${var.env})"
-  format        = "DOCKER"
-  depends_on    = [google_project_service.apis]
-}
-
 # Reference existing runtime service account (created outside Terraform or in previous run)
 data "google_service_account" "runtime" {
-  account_id = "sportivox-run-${local.name_suffix}"
+  account_id = "sportivox-run-${var.env}"
   project    = var.project_id
 }
 
@@ -43,13 +33,7 @@ data "google_service_account" "runtime" {
 #   display_name = "Sportivox Cloud Run runtime (${var.env})"
 # }
 
-# Allow the runtime SA to read secrets, write to Firestore, and use GCS buckets.
-resource "google_project_iam_member" "runtime_datastore_user" {
-  project = var.project_id
-  role    = "roles/datastore.user"
-  member  = "serviceAccount:${data.google_service_account.runtime.email}"
-}
-
+# Allow the runtime SA to read secrets and use GCS buckets.
 resource "google_project_iam_member" "runtime_secret_accessor" {
   project = var.project_id
   role    = "roles/secretmanager.secretAccessor"
