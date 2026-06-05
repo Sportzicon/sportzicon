@@ -44,14 +44,10 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen bg-paper grid lg:grid-cols-[420px_1fr]">
+    <div className="min-h-[calc(100vh-7rem)] bg-paper grid lg:grid-cols-[420px_1fr]">
       {/* left ink rail */}
       <div className="hidden lg:flex flex-col bg-ink text-paper px-10 py-12">
-        <Link to="/" className="flex items-baseline gap-3">
-          <span className="inline-flex h-7 w-7 items-center justify-center rounded bg-brand-500 font-disp text-lg text-white">S</span>
-          <span className="font-disp text-2xl text-paper">Sportivox</span>
-        </Link>
-        <h1 className="font-disp text-5xl text-paper mt-14 leading-[0.97]">
+        <h1 className="font-disp text-5xl text-paper leading-[0.97]">
           Welcome<br />back.
         </h1>
         <p className="mt-5 text-[15px] leading-relaxed text-white/60 max-w-xs">
@@ -74,13 +70,8 @@ export default function Login() {
       </div>
 
       {/* right form */}
-      <div className="flex items-center justify-center px-6 py-12">
+      <div className="flex items-start justify-center px-6 pt-14 pb-12">
         <div className="w-full max-w-sm">
-          <Link to="/" className="flex lg:hidden items-baseline gap-2 mb-8">
-            <span className="inline-flex h-7 w-7 items-center justify-center rounded bg-brand-500 font-disp text-lg text-white">S</span>
-            <span className="font-disp text-xl">Sportivox</span>
-          </Link>
-
           <div className="kicker">Account access</div>
           <h2 className="font-disp text-4xl mt-2">Sign in</h2>
           <p className="lab mt-3">

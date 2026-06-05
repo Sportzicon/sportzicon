@@ -143,7 +143,7 @@ export function Layout() {
     ...(user.role === "athlete" ? [{ to: "/applications", icon: <Briefcase className="h-4 w-4" />, label: "My Applications" }] : []),
     ...(user.role === "club" || user.role === "organizer" || user.role === "admin"
       ? [{ to: "/my-organizations", icon: <Building2 className="h-4 w-4" />, label: "Organizations" }]
-      : [{ to: "/search?tab=clubs", icon: <Building2 className="h-4 w-4" />, label: "Organizations" }]),
+      : [{ to: "/organizations", icon: <Building2 className="h-4 w-4" />, label: "Organizations" }]),
     ...(user.role === "admin" ? [{ to: "/admin", icon: <ShieldCheck className="h-4 w-4" />, label: "Admin" }] : [])
   ];
 
@@ -159,9 +159,9 @@ export function Layout() {
             >
               {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
-            <Link to="/dashboard" className="flex items-center gap-2.5">
-              <span className="inline-flex h-7 w-7 items-center justify-center rounded bg-brand-500 font-disp text-lg text-white">S</span>
-              <span className="font-disp text-xl tracking-[0.02em]">Sportivox</span>
+            <Link to="/dashboard" aria-label="Sportzicon" className="flex flex-col items-start">
+              <div style={{ width: 155, height: 48, backgroundImage: 'url(/logo.png)', backgroundSize: 'auto 450%', backgroundRepeat: 'no-repeat', backgroundPosition: 'center', flexShrink: 0 }} />
+              <span className="lab hidden sm:inline" style={{ fontSize: 9, marginTop: -4, marginLeft: 86, letterSpacing: '0.12em' }}>EST. 2026</span>
             </Link>
           </div>
 
@@ -249,7 +249,7 @@ export function Layout() {
 
               <div className="lab mt-2 text-[10px] leading-relaxed text-ink-faint">
                 <div className="font-semibold text-ink">{user.full_name}</div>
-                <div className="mt-1"><span className="capitalize">{user.role}</span> · Sportivox</div>
+                <div className="mt-1"><span className="capitalize">{user.role}</span> · Sportzicon</div>
               </div>
             </div>
           </nav>

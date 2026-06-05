@@ -57,7 +57,7 @@ export function CommentSection({ parentType, parentId, commentCount: initialCoun
       <div className="border-t border-hairsoft pt-4 space-y-4">
           {user && (
             <form onSubmit={onAdd} className="flex gap-2">
-              <Avatar name={user.full_name} size={32} />
+              <Avatar name={user.full_name} src={user.profile_photo_url} size={32} />
               <div className="flex-1 flex gap-2">
                 <input
                   {...register("text")}

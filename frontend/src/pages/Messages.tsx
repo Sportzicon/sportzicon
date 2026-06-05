@@ -34,7 +34,7 @@ function makeDemoData(meId: string) {
 
   const msgs: Record<string, any[]> = {
     demo_conv_a: [
-      { id: "da1", sender_id: ids.a, body: "Hi! I came across your Sportivox profile — really impressive stats.", created_at: new Date(T - 3 * 3600_000).toISOString() },
+      { id: "da1", sender_id: ids.a, body: "Hi! I came across your Sportzicon profile — really impressive stats.", created_at: new Date(T - 3 * 3600_000).toISOString() },
       { id: "da2", sender_id: ids.a, body: "We're holding state-level cricket trials next month. Based on your numbers, you'd be a strong candidate.", created_at: new Date(T - 3 * 3600_000 + 30_000).toISOString() },
       { id: "da3", sender_id: meId, body: "Thanks for reaching out! I'd be very interested. Can you share more details about the format and location?", created_at: new Date(T - 2 * 3600_000).toISOString() },
       { id: "da4", sender_id: ids.a, body: "It's a 2-day selection camp at the Wankhede Academy — 15–16 July. U-23 category.", created_at: new Date(T - 100 * 60_000).toISOString() },

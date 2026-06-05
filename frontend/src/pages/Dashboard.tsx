@@ -56,7 +56,7 @@ export default function Dashboard() {
       {/* Gap 8 — availability in page header */}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <div className="lab text-brand-500">Your Sportivox desk</div>
+          <div className="lab text-brand-500">Your Sportzicon desk</div>
           <h1 className="font-disp text-4xl mt-1">Good morning, {user?.full_name?.split(" ")[0] ?? "there"}</h1>
         </div>
         {role === "athlete" && (
@@ -113,7 +113,7 @@ export default function Dashboard() {
                 {feed.data.map((p) => (
                   <li key={p.id} className="p-4">
                     <div className="flex items-center gap-3">
-                      <Avatar name={p.author_name} size={36} />
+                      <Avatar name={p.author_name} src={p.author?.profile_photo_url} size={36} />
                       <div className="flex flex-1 items-center justify-between gap-2">
                         <Link to={`/profile/${p.author_id}`} className="text-sm font-semibold text-ink">{p.author_name}</Link>
                         <span className="lab">{new Date(p.created_at).toLocaleDateString()}</span>

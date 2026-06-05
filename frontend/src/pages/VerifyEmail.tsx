@@ -24,11 +24,6 @@ export default function VerifyEmail() {
   return (
     <div className="min-h-screen bg-paper flex items-center justify-center px-4">
       <div className="w-full max-w-sm text-center">
-        <Link to="/" className="flex items-baseline gap-2 justify-center mb-10">
-          <span className="inline-flex h-7 w-7 items-center justify-center rounded bg-brand-500 font-disp text-lg text-white">S</span>
-          <span className="font-disp text-xl">Sportivox</span>
-        </Link>
-
         {state === "loading" && (
           <div className="panel p-8">
             <div className="w-12 h-12 rounded-full border-2 border-brand-500 border-t-transparent animate-spin mx-auto" />

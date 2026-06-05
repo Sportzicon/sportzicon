@@ -275,7 +275,7 @@ export default function Search() {
                         <tr key={a.id} className="border-b border-hairsoft hover:bg-fill transition">
                           <td className="px-[14px] py-[10px]">
                             <Link to={`/profile/${a.id}`} className="flex items-center gap-2.5">
-                              <Avatar name={a.full_name} size={32} />
+                              <Avatar name={a.full_name} src={a.profile_photo_url} size={32} />
                               <div>
                                 <div className="font-semibold text-ink flex items-center gap-1.5">
                                   {a.full_name}
@@ -328,7 +328,7 @@ export default function Search() {
                   return (
                     <div key={a.id} className="panel p-4">
                       <div className="flex gap-3">
-                        <Avatar name={a.full_name} size={48} />
+                        <Avatar name={a.full_name} src={a.profile_photo_url} size={48} />
                         <div className="flex-1 min-w-0">
                           <Link to={`/profile/${a.id}`} className="flex items-center gap-1.5">
                             <span className="font-disp text-lg leading-tight">{a.full_name}</span>

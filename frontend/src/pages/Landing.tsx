@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { useState, useEffect, useLayoutEffect, useRef } from "react";
+import { Link, useLocation } from "react-router-dom";
 import HowItWorksContent from "./HowItWorks";
 
 // ============================================================================
@@ -11,10 +11,30 @@ import HowItWorksContent from "./HowItWorks";
 type View = "home" | "how-it-works";
 
 export default function Landing({ initialView = "home" }: { initialView?: View }) {
+  const location = useLocation();
+  const pendingScroll = useRef<string | null>(null);
   const [view, setView] = useState<View>(initialView);
 
+  // Sync view when route changes; preserve any pending scroll target from router state
   useEffect(() => {
-    document.body.scrollTo({ top: 0, behavior: "instant" });
+    if (location.state?.scrollTo) {
+      pendingScroll.current = location.state.scrollTo;
+      window.history.replaceState({}, "", location.pathname);
+    }
+    setView(initialView);
+  }, [initialView, location.state]);
+
+  // After view settles, either execute pending scroll or go to top
+  useLayoutEffect(() => {
+    if (view === "home" && pendingScroll.current) {
+      const id = pendingScroll.current;
+      pendingScroll.current = null;
+      requestAnimationFrame(() => {
+        document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
+      });
+    } else {
+      window.scrollTo(0, 0);
+    }
   }, [view]);
 
   function showHowItWorks() {
@@ -70,50 +90,7 @@ export default function Landing({ initialView = "home" }: { initialView?: View }
   ];
 
   return (
-    <div className="min-h-screen bg-paper text-ink">
-
-      {/* ── Masthead — identical for both views ──────────────────────────── */}
-      <header className="sticky top-0 z-50 flex items-center justify-between border-b-[1.5px] border-ink bg-paper px-4 sm:px-8 lg:px-11 py-4">
-        <button
-          onClick={() => setView("home")}
-          className="flex items-baseline gap-2 bg-transparent border-none p-0 cursor-pointer"
-        >
-          <span className="inline-flex h-7 w-7 translate-y-0.5 items-center justify-center rounded bg-brand-500 font-disp text-lg text-white">S</span>
-          <span className="font-disp text-2xl tracking-[0.02em]">Sportivox</span>
-          <span className="lab hidden sm:inline ml-1">est. 2026</span>
-        </button>
-        <nav className="flex items-center gap-3 sm:gap-5 lg:gap-7">
-          <button
-            onClick={() => scrollToSection("for-athletes")}
-            className="font-mononum text-[11px] text-ink-70 hover:text-ink transition bg-transparent border-none p-0 hidden md:inline cursor-pointer"
-          >
-            For Athletes
-          </button>
-          <button
-            onClick={() => scrollToSection("for-clubs")}
-            className="font-mononum text-[11px] text-ink-70 hover:text-ink transition bg-transparent border-none p-0 hidden md:inline cursor-pointer"
-          >
-            For Clubs
-          </button>
-          <button
-            onClick={showHowItWorks}
-            className={`font-mononum text-[11px] transition bg-transparent border-none p-0 hidden md:inline cursor-pointer ${
-              view === "how-it-works"
-                ? "text-ink border-b border-brand-500 pb-px"
-                : "text-ink-70 hover:text-ink"
-            }`}
-          >
-            How it works
-          </button>
-          <Link to="/login" className="font-mononum text-[11px] text-ink-sub">Sign in</Link>
-          <Link to="/signup" className="btn-primary">Get started</Link>
-        </nav>
-      </header>
-
-      <div className="flex flex-wrap items-center justify-between gap-1 border-b border-hair px-4 sm:px-8 lg:px-11 py-2.5">
-        <span className="lab">The verified sports recruitment network</span>
-        <span className="lab hidden sm:inline">Pune · Mumbai · London · Melbourne · Cape Town</span>
-      </div>
+    <div className="bg-paper text-ink">
 
       {/* ── Body — swaps between Home content and How It Works content ───── */}
       {view === "how-it-works" ? (
@@ -128,7 +105,7 @@ export default function Landing({ initialView = "home" }: { initialView?: View }
                 Where talent<br />gets <span className="text-brand-500">seen.</span>
               </h1>
               <p className="mt-6 max-w-md text-base sm:text-lg leading-relaxed text-ink-sub">
-                Sportivox connects athletes, clubs, academies and scouts in one verified ecosystem — a structured
+                Sportzicon connects athletes, clubs, academies and scouts in one verified ecosystem — a structured
                 profile, a powerful search, and a recruitment workflow built for how sport actually hires.
               </p>
               <div className="mt-8 flex flex-wrap gap-3">
@@ -257,12 +234,6 @@ export default function Landing({ initialView = "home" }: { initialView?: View }
           </section>
         </>
       )}
-
-      {/* ── Footer — identical for both views ────────────────────────────── */}
-      <footer className="flex flex-wrap items-center justify-between gap-2 border-t border-hair px-4 sm:px-8 lg:px-11 py-4 lg:py-5">
-        <span className="lab">© {new Date().getFullYear()} Sportivox — All rights reserved</span>
-        <span className="lab">Verified sports recruitment</span>
-      </footer>
 
     </div>
   );

@@ -71,7 +71,7 @@ export function createApp(): Express {
   app.use(apiLimiter);
 
   // Liveness / readiness probes for Cloud Run + load balancers.
-  app.get("/healthz", (_req, res) => res.json({ ok: true, service: "sportivox-api", env: env.NODE_ENV }));
+  app.get("/healthz", (_req, res) => res.json({ ok: true, service: "sportzicon-api", env: env.NODE_ENV }));
   app.get("/readyz", (_req, res) => res.json({ ok: true }));
 
   app.use("/api/v1/auth", authRoutes);

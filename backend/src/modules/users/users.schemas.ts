@@ -6,8 +6,8 @@ export const updateProfileSchema = z
   .object({
     full_name: z.string().min(2).max(120).optional(),
     bio: z.string().max(500).optional(),
-    profile_photo_url: z.string().url().optional(),
-    cover_photo_url: z.string().url().optional(),
+    profile_photo_url: z.string().url().nullable().optional(),
+    cover_photo_url: z.string().url().nullable().optional(),
     country: z.string().max(80).optional(),
     state: z.string().max(80).optional(),
     city: z.string().max(80).optional(),

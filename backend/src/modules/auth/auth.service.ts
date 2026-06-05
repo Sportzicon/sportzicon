@@ -94,9 +94,9 @@ async function issueAndSendVerificationEmail(userId: string, email: string, name
   const link = `${env.WEB_APP_URL.replace(/\/$/, "")}/verify-email?token=${encodeURIComponent(token)}`;
   await sendMail({
     to: email,
-    subject: "Verify your Sportivox account",
+    subject: "Verify your Sportzicon account",
     html: `<p>Hi ${escapeHtml(name)},</p>
-           <p>Welcome to Sportivox. Click the link below to verify your email and activate your account. This link expires in 24 hours.</p>
+           <p>Welcome to Sportzicon. Click the link below to verify your email and activate your account. This link expires in 24 hours.</p>
            <p><a href="${link}">Verify my email</a></p>
            <p>If you didn't sign up, you can safely ignore this email.</p>`
   });
@@ -190,7 +190,7 @@ export async function forgotPassword(email: string) {
   const link = `${env.WEB_APP_URL.replace(/\/$/, "")}/reset-password?token=${encodeURIComponent(token)}`;
   await sendMail({
     to: user.email,
-    subject: "Reset your Sportivox password",
+    subject: "Reset your Sportzicon password",
     html: `<p>We received a request to reset your password. This link expires in 30 minutes:</p>
            <p><a href="${link}">Reset password</a></p>
            <p>If you didn't request this, you can ignore this email.</p>`
@@ -381,8 +381,8 @@ export async function bootstrapAdminIfNeeded() {
       email_verified: true,
       phone: "+0000000000",
       password_hash,
-      full_name: "Sportivox Admin",
-      full_name_lower: "sportivox admin",
+      full_name: "Sportzicon Admin",
+      full_name_lower: "sportzicon admin",
       role: "admin",
       status: "active",
       verification_status: "approved",

@@ -119,8 +119,20 @@ export function VerifiedBadge({ verification, label = "verified" }: { verificati
 // ---- additive helpers (optional adoption) ----------------------------------
 
 // Initials avatar — square by default, ink fill when accent.
-export function Avatar({ name = "", size = 40, accent = false, square = true, className }: { name?: string; size?: number; accent?: boolean; square?: boolean; className?: string }) {
+// Pass `src` to show a photo; falls back to initials when src is absent or fails to load.
+export function Avatar({ name = "", size = 40, accent = false, square = true, src, className }: { name?: string; size?: number; accent?: boolean; square?: boolean; src?: string | null; className?: string }) {
   const ini = name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
+  if (src) {
+    return (
+      <img
+        src={src}
+        alt={name}
+        className={clsx("shrink-0 object-cover border", square ? "rounded" : "rounded-full", className)}
+        style={{ width: size, height: size, borderColor: "rgba(20,17,13,0.13)" }}
+        onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+      />
+    );
+  }
   return (
     <span
       className={clsx("font-disp inline-flex shrink-0 items-center justify-center border", square ? "rounded" : "rounded-full", className)}

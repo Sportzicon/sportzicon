@@ -182,7 +182,32 @@
       "PowerShell(gcloud artifacts repositories list --project=sportzicon-app --location=asia-south1 --format=\"table\\(name,format\\)\" 2>&1)",
       "PowerShell(gcloud storage ls gs://sportivox-terraform-state-sportzicon-app/staging/ 2>&1)",
       "PowerShell(gcloud storage cp gs://sportivox-terraform-state-sportzicon-app/staging/default.tfstate - 2>&1)",
-      "PowerShell(Get-Content \"$env:TEMP\\\\tfstate.json\" | ConvertFrom-Json | Select-Object -ExpandProperty resources | Where-Object { $_.name -eq \"gmail_app_password\" } | Select-Object type, name, mode | Format-List)"
+      "PowerShell(Get-Content \"$env:TEMP\\\\tfstate.json\" | ConvertFrom-Json | Select-Object -ExpandProperty resources | Where-Object { $_.name -eq \"gmail_app_password\" } | Select-Object type, name, mode | Format-List)",
+      "PowerShell(gcloud run domain-mappings create --service=sportivox-web-staging --domain=sportzicon.com --region=asia-south1 --project=sportzicon-app 2>&1)",
+      "PowerShell(gcloud run domain-mappings create --service=sportivox-web-staging --domain=sportzicon.com --project=sportzicon-app 2>&1)",
+      "PowerShell(gcloud beta run domain-mappings create --service=sportivox-web-staging --domain=sportzicon.com --project=sportzicon-app 2>&1)",
+      "PowerShell(gcloud services enable compute.googleapis.com --project=sportzicon-app 2>&1)",
+      "Bash(nslookup sportzicon.com 8.8.8.8)",
+      "Bash(nslookup -type=NS sportzicon.com 8.8.8.8)",
+      "Bash(nslookup sportzicon.com 1.1.1.1)",
+      "Bash(curl -I https://sportzicon.com)",
+      "Bash(curl -I https://www.sportzicon.com)",
+      "PowerShell(gcloud logging read \"resource.type=cloud_run_revision AND resource.labels.service_name=sportivox-api-staging AND severity>=ERROR\" --project=sportzicon-app --limit=20 --format=\"value\\(textPayload, jsonPayload.message, jsonPayload.err, jsonPayload.stack\\)\" 2>&1)",
+      "PowerShell(gcloud logging read \"resource.type=cloud_run_revision AND resource.labels.service_name=sportivox-api-staging AND severity=ERROR\" --project=sportzicon-app --limit=5 --format=json 2>&1 | ConvertFrom-Json | ForEach-Object { $_.jsonPayload | ConvertTo-Json -Depth 5 })",
+      "PowerShell(gcloud logging read \"resource.type=cloud_run_revision AND resource.labels.service_name=sportivox-api-staging AND severity=ERROR\" --project=sportzicon-app --limit=5 --format=json 2>&1)",
+      "PowerShell(gcloud logging read \"resource.type=cloud_run_revision AND resource.labels.service_name=sportivox-api-staging AND logName=projects/sportzicon-app/logs/run.googleapis.com%2Fstdout\" --project=sportzicon-app --limit=20 --format=\"value\\(textPayload\\)\" 2>&1)",
+      "PowerShell(gcloud logging read \"resource.type=cloud_run_revision AND resource.labels.service_name=sportivox-api-staging\" --project=sportzicon-app --limit=50 --format=json 2>&1 | ConvertFrom-Json | Where-Object { $_.textPayload -ne $null } | Select-Object -ExpandProperty textPayload | Select-Object -First 30)",
+      "PowerShell(gcloud logging read \"resource.type=cloud_run_revision AND resource.labels.service_name=sportivox-api-staging\" --project=sportzicon-app --limit=50 --format=json 2>&1 | ConvertFrom-Json | Where-Object { $_.jsonPayload -ne $null } | Select-Object -First 10 | ForEach-Object { $_.jsonPayload })",
+      "PowerShell(gcloud storage buckets add-iam-policy-binding gs://sportivox-media-prod-3d9d50 --member=\"allUsers\" --role=\"roles/storage.objectViewer\" --project=sportzicon-app 2>&1)",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(json.dumps\\({**d.get\\('dependencies',{}\\), **d.get\\('devDependencies',{}\\)}, indent=2\\)\\)\")",
+      "Bash(ren \"-Icon1_NoBG.png\" \"icon1-nobg.png\")",
+      "Bash(ren \"-Icon1_WhiteBG.jpg\" \"icon1-whitebg.jpg\")",
+      "Bash(ren \"-Icon2_NoBG.png\" \"icon2-nobg.png\")",
+      "Bash(ren \"-Icon2_WhiteBG.jpg\" \"icon2-whitebg.jpg\")",
+      "Bash(ren \"-MainLogo_NoBG.png\" \"logo-nobg.png\")",
+      "PowerShell(ls \"f:\\\\My Project\\\\sportivox-main\\\\sportivox-main\\\\frontend\\\\public\\\\\")",
+      "Bash(node --version)",
+      "Bash(npx --yes sharp-cli --version)"
     ]
   }
 }

@@ -10,7 +10,7 @@ const steps: { n: string; title: string; body: string }[] = [
   { n: "02", title: "Get verified", body: "Submit a government ID, coach endorsement, or club registration certificate. An admin reviews your documents and issues a trust badge visible to everyone on the platform." },
   { n: "03", title: "Search or get found", body: "Athletes appear in the recruiter search index the moment they go live. Scouts and clubs use multi-filter search — sport, age, position, location, availability — to find the right fit fast." },
   { n: "04", title: "Apply or recruit", body: "Athletes apply to open trials and scholarship listings. Clubs receive applications in a structured pipeline and move candidates through Pending → Shortlisted → Selected." },
-  { n: "05", title: "Communicate", body: "Direct messaging keeps every conversation inside Sportivox. In-app and email notifications fire at every stage change — no one is left wondering where things stand." },
+  { n: "05", title: "Communicate", body: "Direct messaging keeps every conversation inside Sportzicon. In-app and email notifications fire at every stage change — no one is left wondering where things stand." },
 ];
 
 const roles: { title: string; tag: string; steps: string[] }[] = [
@@ -80,7 +80,7 @@ const features: { n: string; title: string; body: string }[] = [
   { n: "03", title: "Follow network", body: "Follow clubs, scouts, and athletes you want to track. Their activity shows in your feed. Your follower count is displayed on your profile — it matters to recruiters." },
   { n: "04", title: "Direct messages", body: "Every user can initiate a private thread. Conversations are stored in your inbox with unread counts. Admin can access threads only if formally flagged for abuse." },
   { n: "05", title: "Notifications", body: "In-app and email alerts fire on every meaningful event — new application, shortlisted, selected, new message, verification decision, new follower." },
-  { n: "06", title: "AI training tips", body: "Athletes click Get Tips on their dashboard. Sportivox sends their stats to OpenAI and returns personalised training recommendations in seconds." },
+  { n: "06", title: "AI training tips", body: "Athletes click Get Tips on their dashboard. Sportzicon sends their stats to OpenAI and returns personalised training recommendations in seconds." },
 ];
 
 export default function HowItWorks() {
@@ -94,7 +94,7 @@ export default function HowItWorks() {
             Built for how<br />sport <span className="text-brand-500">actually</span><br />works.
           </h1>
           <p className="mt-6 max-w-lg text-lg leading-relaxed text-ink-sub">
-            Sportivox is not a general social network. It is a structured recruitment platform with verified
+            Sportzicon is not a general social network. It is a structured recruitment platform with verified
             profiles, a formal application workflow, and role-specific tools — built for athletes, clubs,
             scouts, and organizers who mean business.
           </p>
@@ -261,7 +261,7 @@ export default function HowItWorks() {
           <div className="kicker">Trust & verification</div>
           <h2 className="font-disp mt-2 text-4xl">Verified badges — what they mean and how to earn them</h2>
           <p className="mt-3 max-w-2xl text-sm leading-relaxed text-ink-sub">
-            Every badge on Sportivox is issued by a human admin after reviewing uploaded documents. They cannot be self-assigned.
+            Every badge on Sportzicon is issued by a human admin after reviewing uploaded documents. They cannot be self-assigned.
           </p>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">

@@ -7,6 +7,7 @@ function ScrollToTop() {
   return null;
 }
 import { Layout } from "./components/Layout";
+import PublicLayout from "./components/PublicLayout";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 
 import Landing from "./pages/Landing";
@@ -37,6 +38,7 @@ import Notifications from "./pages/Notifications";
 import MyOrganizations from "./pages/MyOrganizations";
 import NewOrganization from "./pages/NewOrganization";
 import OrganizationDetail from "./pages/OrganizationDetail";
+import Organizations from "./pages/Organizations";
 import AITips from "./pages/AITips";
 import Admin from "./pages/admin/Admin";
 import AdminUsers from "./pages/admin/AdminUsers";
@@ -49,14 +51,16 @@ export default function App() {
     <>
     <ScrollToTop />
     <Routes>
-      {/* Public routes */}
-      <Route path="/" element={<Landing />} />
-      <Route path="/how-it-works" element={<Landing initialView="how-it-works" />} />
-      <Route path="/login" element={<Login />} />
-      <Route path="/signup" element={<Signup />} />
-      <Route path="/verify-email" element={<VerifyEmail />} />
-      <Route path="/forgot-password" element={<ForgotPassword />} />
-      <Route path="/reset-password" element={<ResetPassword />} />
+      {/* Public routes — all share the PublicLayout header */}
+      <Route element={<PublicLayout />}>
+        <Route path="/" element={<Landing />} />
+        <Route path="/how-it-works" element={<Landing initialView="how-it-works" />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<Signup />} />
+        <Route path="/verify-email" element={<VerifyEmail />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
+      </Route>
 
       {/* Authenticated routes (with chrome) */}
       <Route element={<Layout />}>
@@ -82,6 +86,7 @@ export default function App() {
         <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
         <Route path="/messages/:id" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
         <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
+        <Route path="/organizations" element={<ProtectedRoute><Organizations /></ProtectedRoute>} />
         <Route path="/my-organizations" element={<ProtectedRoute roles={["club", "organizer", "admin"]}><MyOrganizations /></ProtectedRoute>} />
         <Route path="/organizations/new" element={<ProtectedRoute roles={["club", "organizer", "admin"]}><NewOrganization /></ProtectedRoute>} />
         <Route path="/organizations/:id/edit" element={<ProtectedRoute roles={["club", "organizer", "admin"]}><NewOrganization /></ProtectedRoute>} />
