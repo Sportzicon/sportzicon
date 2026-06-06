@@ -1,6 +1,6 @@
 // Shape of values returned by the API. Kept loose - the API is the source of truth.
 
-export type Role = "athlete" | "club" | "scout" | "organizer" | "admin";
+export type Role = "athlete" | "club" | "scout" | "organizer" | "admin" | "scorer";
 
 export interface User {
   id: string;

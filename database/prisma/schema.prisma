@@ -14,6 +14,7 @@ enum Role {
   scout
   organizer
   admin
+  scorer
 }
 
 enum AccountStatus {

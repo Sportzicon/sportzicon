@@ -14,6 +14,20 @@ enum Role {
   scout
   organizer
   admin
+  scorer
+}
+
+enum EmailType {
+  email_verification
+  password_reset
+  notification
+  other
+}
+
+enum EmailStatus {
+  sent
+  failed
+  stub
 }
 
 enum AccountStatus {
@@ -103,6 +117,7 @@ model User {
   reel_likes     ReelLike[]
   blog_likes     BlogLike[]
   documents      UserDocument[]
+  email_logs     EmailLog[]
 }
 
 model UserDocument {
@@ -463,4 +478,22 @@ model BlogLike {
   user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   @@id([blog_id, user_id])
+}
+
+model EmailLog {
+  id         String      @id @default(uuid()) @db.Uuid
+  user_id    String?     @db.Uuid
+  to_email   String
+  subject    String
+  email_type EmailType   @default(other)
+  status     EmailStatus @default(sent)
+  error      String?
+  created_at DateTime    @default(now())
+
+  user User? @relation(fields: [user_id], references: [id], onDelete: SetNull)
+
+  @@index([user_id, created_at(sort: Desc)])
+  @@index([created_at(sort: Desc)])
+  @@index([email_type])
+  @@index([status])
 }
