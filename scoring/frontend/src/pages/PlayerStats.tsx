@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "react-router-dom";
 import { api } from "../api/client";
-import { User, Target, Zap } from "lucide-react";
+import { User, Target, Zap, Shield } from "lucide-react";
 
 function StatBox({ label, value }: { label: string; value: string | number }) {
   return (
@@ -23,7 +23,7 @@ export default function PlayerStats() {
   if (isLoading) return <div className="animate-pulse space-y-4"><div className="h-32 bg-gray-100 rounded-xl" /><div className="h-64 bg-gray-100 rounded-xl" /></div>;
   if (!data) return <div className="text-center py-20 text-gray-400">Player not found.</div>;
 
-  const { player, battingStats: bat, bowlingStats: bowl } = data;
+  const { player, battingStats: bat = {}, bowlingStats: bowl = {}, careerStats: career } = data;
 
   return (
     <div className="space-y-6 max-w-2xl mx-auto">
@@ -97,6 +97,70 @@ export default function PlayerStats() {
 
       {bat.innings === 0 && bowl.innings === 0 && (
         <div className="card p-8 text-center text-gray-400">No match stats recorded yet.</div>
+      )}
+
+      {/* Career stats */}
+      {career && (
+        <div className="card p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <Shield className="w-5 h-5 text-blue-600" />
+            <h2 className="font-semibold text-lg">Career Stats</h2>
+            <span className="text-xs text-gray-400 ml-1">(all completed matches)</span>
+          </div>
+
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Batting</p>
+          <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 mb-4">
+            <StatBox label="Matches" value={career.matches_played} />
+            <StatBox label="Innings" value={career.innings_batted} />
+            <StatBox label="Runs" value={career.total_runs} />
+            <StatBox label="Highest" value={career.highest_score} />
+            <StatBox label="Average" value={career.batting_average} />
+            <StatBox label="Strike Rate" value={career.strike_rate} />
+          </div>
+          <div className="grid grid-cols-3 sm:grid-cols-5 gap-3 mb-5">
+            <StatBox label="100s" value={career.hundreds} />
+            <StatBox label="50s" value={career.fifties} />
+            <StatBox label="4s" value={career.fours} />
+            <StatBox label="6s" value={career.sixes} />
+            <StatBox label="Not Outs" value={career.not_outs} />
+          </div>
+
+          {career.innings_bowled > 0 && (
+            <>
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Bowling</p>
+              <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 mb-4">
+                <StatBox label="Innings" value={career.innings_bowled} />
+                <StatBox label="Overs" value={career.overs_bowled} />
+                <StatBox label="Wickets" value={career.wickets} />
+                <StatBox label="Runs" value={career.runs_conceded} />
+                <StatBox label="Best" value={career.best_bowling} />
+                <StatBox label="Economy" value={career.bowling_economy} />
+              </div>
+              <div className="grid grid-cols-3 gap-3 mb-5">
+                <StatBox label="Average" value={career.bowling_average || "-"} />
+                <StatBox label="Maidens" value={career.maidens} />
+                <StatBox label="5-Wickets" value={career.five_wicket_hauls} />
+              </div>
+            </>
+          )}
+
+          {(career.catches > 0 || career.run_outs > 0 || career.stumpings > 0) && (
+            <>
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Fielding</p>
+              <div className="grid grid-cols-3 gap-3">
+                <StatBox label="Catches" value={career.catches} />
+                <StatBox label="Run Outs" value={career.run_outs} />
+                <StatBox label="Stumpings" value={career.stumpings} />
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {!career && (
+        <div className="card p-5 text-center text-gray-400 text-sm">
+          Career stats will appear here after a completed match.
+        </div>
       )}
     </div>
   );

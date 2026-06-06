@@ -4,6 +4,7 @@ import { prisma } from "../../config/prisma";
 import { BadRequest, NotFound, Unauthorized } from "../../utils/errors";
 
 const JWT_SECRET = process.env.JWT_SECRET || "scoring-secret-change-in-prod";
+const MAIN_JWT_SECRET = process.env.MAIN_JWT_SECRET || "";
 const ACCESS_TTL = "15m";
 const REFRESH_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
@@ -95,4 +96,64 @@ export async function refresh(token: string) {
 export async function logout(token: string) {
   await prisma.refreshToken.updateMany({ where: { token }, data: { revoked: true } });
   return { ok: true };
+}
+
+// Maps Sportivox main-app roles to scoring module roles
+function mapRole(mainRole: string): "admin" | "organizer" | "scorer" | "viewer" {
+  if (mainRole === "admin") return "admin";
+  if (mainRole === "organizer") return "organizer";
+  if (mainRole === "scorer") return "scorer";
+  return "viewer";
+}
+
+export async function ssoFromMainToken(mainToken: string) {
+  if (!MAIN_JWT_SECRET) throw Unauthorized("SSO not configured");
+
+  let claims: any;
+  try {
+    claims = jwt.verify(mainToken, MAIN_JWT_SECRET);
+  } catch {
+    throw Unauthorized("Invalid or expired Sportivox token");
+  }
+
+  if (claims.type !== "access") throw Unauthorized("Invalid token type");
+
+  const email = claims.email?.toLowerCase();
+  const fullName = claims.name ?? email;
+  const role = mapRole(claims.role ?? "");
+
+  // Find or create a scoring user for this email
+  let user = await prisma.user.findUnique({ where: { email } });
+  if (user) {
+    // Sync role if it changed in the main app
+    if (user.role !== role) {
+      user = await prisma.user.update({ where: { id: user.id }, data: { role } });
+    }
+  } else {
+    // Create a scoring user — no password needed (SSO only)
+    user = await prisma.user.create({
+      data: {
+        email,
+        password_hash: "",
+        full_name: fullName,
+        role
+      }
+    });
+  }
+
+  const access_token = signAccess(user);
+  const refresh_raw = signRefresh(user.id);
+  await prisma.refreshToken.create({
+    data: {
+      user_id: user.id,
+      token: refresh_raw,
+      expires_at: new Date(Date.now() + REFRESH_TTL_MS)
+    }
+  });
+
+  return {
+    user: { id: user.id, email: user.email, full_name: user.full_name, role: user.role },
+    access_token,
+    refresh_token: refresh_raw
+  };
 }

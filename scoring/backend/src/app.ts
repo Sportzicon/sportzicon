@@ -9,8 +9,12 @@ export function createApp() {
   const app = express();
 
   app.use(helmet({ contentSecurityPolicy: false }));
+  const rawOrigin = process.env.CORS_ORIGIN || "*";
+  const corsOrigin = rawOrigin === "*"
+    ? "*"
+    : rawOrigin.split(",").map(o => o.trim());
   app.use(cors({
-    origin: process.env.CORS_ORIGIN || "*",
+    origin: corsOrigin,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Authorization", "Content-Type"]
   }));

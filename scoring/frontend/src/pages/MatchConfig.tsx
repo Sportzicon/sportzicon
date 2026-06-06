@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import { useAuthStore } from "../store/auth";
 import { ArrowLeft, Save, AlertCircle, CheckCircle } from "lucide-react";
@@ -15,6 +15,8 @@ export default function MatchConfig() {
   const navigate = useNavigate();
   const user = useAuthStore(s => s.user);
 
+  const qc = useQueryClient();
+
   const { data: match, isLoading } = useQuery({
     queryKey: ["match", matchId],
     queryFn: () => api.get(`/matches/${matchId}`).then(r => r.data.match)
@@ -22,7 +24,7 @@ export default function MatchConfig() {
 
   const { data: tournament } = useQuery({
     queryKey: ["tournament", match?.tournament_id],
-    queryFn: () => api.get(`/tournaments/${match.tournament_id}`).then(r => r.data.tournament),
+    queryFn: () => api.get(`/tournaments/${match?.tournament_id}`).then(r => r.data.tournament),
     enabled: Boolean(match?.tournament_id)
   });
 
@@ -48,7 +50,11 @@ export default function MatchConfig() {
 
   const save = useMutation({
     mutationFn: () => api.put(`/matches/${matchId}/config`, cfg),
-    onSuccess: () => setFeedback({ type: "success", msg: "Configuration saved" }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["match", matchId] });
+      qc.invalidateQueries({ queryKey: ["tournament", match?.tournament_id] });
+      setFeedback({ type: "success", msg: "Configuration saved" });
+    },
     onError: (err: any) => setFeedback({ type: "error", msg: err.response?.data?.error?.message || "Save failed" })
   });
 

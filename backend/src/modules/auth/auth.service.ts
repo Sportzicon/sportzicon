@@ -98,7 +98,9 @@ async function issueAndSendVerificationEmail(userId: string, email: string, name
     html: `<p>Hi ${escapeHtml(name)},</p>
            <p>Welcome to Sportzicon. Click the link below to verify your email and activate your account. This link expires in 24 hours.</p>
            <p><a href="${link}">Verify my email</a></p>
-           <p>If you didn't sign up, you can safely ignore this email.</p>`
+           <p>If you didn't sign up, you can safely ignore this email.</p>`,
+    user_id: userId,
+    email_type: "email_verification"
   });
   logger.info({ userId }, "verification email queued");
 }
@@ -193,7 +195,9 @@ export async function forgotPassword(email: string) {
     subject: "Reset your Sportzicon password",
     html: `<p>We received a request to reset your password. This link expires in 30 minutes:</p>
            <p><a href="${link}">Reset password</a></p>
-           <p>If you didn't request this, you can ignore this email.</p>`
+           <p>If you didn't request this, you can ignore this email.</p>`,
+    user_id: user.id,
+    email_type: "password_reset"
   });
   return { ok: true };
 }

@@ -46,6 +46,16 @@ import AdminReports from "./pages/admin/AdminReports";
 import AdminVerifications from "./pages/admin/AdminVerifications";
 import AdminAuditLog from "./pages/admin/AdminAuditLog";
 
+import LiveScores from "./pages/LiveScores";
+import LiveScoreDetail from "./pages/LiveScoreDetail";
+import ScoringHome from "./pages/scoring/ScoringHome";
+import ScoringTournaments from "./pages/scoring/ScoringTournaments";
+import ScoringNewTournament from "./pages/scoring/ScoringNewTournament";
+import ScoringTournamentDetail from "./pages/scoring/ScoringTournamentDetail";
+import ScoringMatchDetail from "./pages/scoring/ScoringMatchDetail";
+import ScoringLive from "./pages/scoring/ScoringLive";
+import ScoringInningsAnalytics from "./pages/scoring/ScoringInningsAnalytics";
+
 export default function App() {
   return (
     <>
@@ -55,6 +65,8 @@ export default function App() {
       <Route element={<PublicLayout />}>
         <Route path="/" element={<Landing key="home" />} />
         <Route path="/how-it-works" element={<Landing key="how-it-works" initialView="how-it-works" />} />
+        <Route path="/live-scores" element={<LiveScores />} />
+        <Route path="/live-scores/:matchId" element={<LiveScoreDetail />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/verify-email" element={<VerifyEmail />} />
@@ -98,6 +110,16 @@ export default function App() {
         <Route path="/admin/reports" element={<ProtectedRoute roles={["admin"]}><AdminReports /></ProtectedRoute>} />
         <Route path="/admin/verifications" element={<ProtectedRoute roles={["admin"]}><AdminVerifications /></ProtectedRoute>} />
         <Route path="/admin/audit" element={<ProtectedRoute roles={["admin"]}><AdminAuditLog /></ProtectedRoute>} />
+
+        {/* Scoring console — integrated into main app */}
+        <Route path="/scoring" element={<ProtectedRoute><ScoringHome /></ProtectedRoute>} />
+        <Route path="/scoring/tournaments" element={<ProtectedRoute><ScoringTournaments /></ProtectedRoute>} />
+        <Route path="/scoring/tournaments/new" element={<ProtectedRoute><ScoringNewTournament /></ProtectedRoute>} />
+        <Route path="/scoring/tournaments/:id/edit" element={<ProtectedRoute><ScoringNewTournament /></ProtectedRoute>} />
+        <Route path="/scoring/tournaments/:id" element={<ProtectedRoute><ScoringTournamentDetail /></ProtectedRoute>} />
+        <Route path="/scoring/matches/:matchId" element={<ProtectedRoute><ScoringMatchDetail /></ProtectedRoute>} />
+        <Route path="/scoring/matches/:matchId/score" element={<ProtectedRoute><ScoringLive /></ProtectedRoute>} />
+        <Route path="/scoring/innings/:inningsId/analytics" element={<ProtectedRoute><ScoringInningsAnalytics /></ProtectedRoute>} />
       </Route>
 
       <Route path="*" element={<div className="p-10 text-center text-slate-600">404 — not found</div>} />

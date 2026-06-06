@@ -8,7 +8,7 @@ import type { Post, User } from "../types";
 import { useSavedOpportunities } from "../store/savedOpportunities";
 import { Bookmark, Camera, FileText, Trash2, Upload, X } from "lucide-react";
 
-type Tab = "posts" | "followers" | "following" | "saved";
+type Tab = "posts" | "followers" | "following" | "saved" | "emails";
 
 const PROFILE_DOC_TYPES = [
   "Sports CV",
@@ -139,6 +139,13 @@ export default function Profile() {
     queryFn: async () => (await api.get<{ items: any[] }>(`/users/${id}/documents`)).data.items,
   });
 
+  const emailLogsQ = useQuery({
+    queryKey: ["email-logs", id],
+    queryFn: async () =>
+      (await api.get<{ items: any[]; total: number; stats: any }>(`/users/${id}/email-logs`)).data,
+    enabled: tab === "emails" && (isMe || me?.role === "admin")
+  });
+
   const uploadDoc = useMutation({
     mutationFn: async ({ file, type }: { file: File; type: string }) => {
       const form = new FormData();
@@ -197,7 +204,8 @@ export default function Profile() {
     { id: "posts", label: "Posts" },
     { id: "followers", label: `Followers (${u.follower_count})` },
     { id: "following", label: `Following (${u.following_count})` },
-    ...(isMe ? [{ id: "saved" as Tab, label: `Saved (${savedOpps.length})` }] : [])
+    ...(isMe ? [{ id: "saved" as Tab, label: `Saved (${savedOpps.length})` }] : []),
+    ...(isMe || me?.role === "admin" ? [{ id: "emails" as Tab, label: "Email History" }] : [])
   ];
 
   return (
@@ -660,6 +668,77 @@ export default function Profile() {
               )}
             </div>
           ))}
+
+        {tab === "emails" && (isMe || me?.role === "admin") && (
+          <div className="space-y-4">
+            {emailLogsQ.isLoading ? (
+              <div className="flex justify-center p-8"><Spinner className="text-brand-500" /></div>
+            ) : emailLogsQ.data ? (
+              <>
+                {/* Stats row */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {[
+                    { label: "Total sent", value: emailLogsQ.data.stats.total ?? 0 },
+                    { label: "Delivered", value: emailLogsQ.data.stats.by_status?.sent ?? 0 },
+                    { label: "Failed", value: emailLogsQ.data.stats.by_status?.failed ?? 0 },
+                    { label: "Stub (dev)", value: emailLogsQ.data.stats.by_status?.stub ?? 0 },
+                  ].map((s) => (
+                    <div key={s.label} className="card card-body text-center py-3">
+                      <div className="font-disp text-2xl text-ink">{s.value}</div>
+                      <div className="lab mt-1">{s.label}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Email log table */}
+                {emailLogsQ.data.items.length > 0 ? (
+                  <div className="card overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-[12px]">
+                        <thead>
+                          <tr className="border-b border-hair bg-fill">
+                            <th className="text-left px-4 py-2.5 lab">Date</th>
+                            <th className="text-left px-4 py-2.5 lab">Subject</th>
+                            <th className="text-left px-4 py-2.5 lab">Type</th>
+                            <th className="text-left px-4 py-2.5 lab">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {emailLogsQ.data.items.map((log: any) => (
+                            <tr key={log.id} className="border-b border-hairsoft last:border-0 hover:bg-fill/50 transition">
+                              <td className="px-4 py-3 font-mononum text-[11px] text-ink-sub whitespace-nowrap">
+                                {new Date(log.created_at).toLocaleString()}
+                              </td>
+                              <td className="px-4 py-3 text-ink max-w-[200px] truncate">{log.subject}</td>
+                              <td className="px-4 py-3">
+                                <span className="font-mononum text-[10px] uppercase tracking-wide bg-fill border border-hairsoft rounded px-1.5 py-0.5 capitalize">
+                                  {log.email_type.replace(/_/g, " ")}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3">
+                                <span className={`font-mononum text-[10px] uppercase tracking-wide rounded px-1.5 py-0.5 ${
+                                  log.status === "sent" ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                  : log.status === "failed" ? "bg-red-50 text-red-600 border border-red-200"
+                                  : "bg-amber-50 text-amber-700 border border-amber-200"
+                                }`}>
+                                  {log.status}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="card card-body text-center lab text-ink-faint py-8">No emails sent yet.</div>
+                )}
+              </>
+            ) : (
+              <div className="card card-body lab text-ink-faint text-center py-8">Could not load email history.</div>
+            )}
+          </div>
+        )}
 
         {tab === "saved" && isMe && (
           savedOpps.length ? (

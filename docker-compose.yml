@@ -54,6 +54,42 @@ services:
       gcs:
         condition: service_started
 
+  scoring-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: scoring_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    # No host port binding — only needs to be reachable by scoring-backend on the internal network.
+    # To connect via psql/Prisma Studio from host: temporarily add "5434:5432" here.
+    volumes:
+      - scoring_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  scoring-backend:
+    build:
+      context: ./scoring/backend
+      dockerfile: Dockerfile.dev
+    # No host port needed — web container reaches this via internal network as http://scoring-backend:4000
+    # To expose for direct access/debugging: add "4001:4000" here (avoids conflict with local dev on 4000)
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@scoring-db:5432/scoring_db
+      JWT_SECRET: dev-secret-change-in-prod
+      MAIN_JWT_SECRET: dev-access-secret-change-me
+      PORT: 4000
+      CORS_ORIGIN: http://localhost:5173,http://localhost:5174
+      NODE_ENV: development
+    depends_on:
+      scoring-db:
+        condition: service_healthy
+    volumes:
+      - ./scoring/backend/src:/app/src
+    command: sh -c "npx prisma db push --skip-generate && npm run dev"
+
   web:
     build:
       context: ./frontend
@@ -61,6 +97,7 @@ services:
       target: dev
     environment:
       VITE_API_BASE_URL: http://localhost:8080
+      SCORING_API_URL: http://scoring-backend:4000
     ports:
       - "5173:5173"
     volumes:
@@ -69,6 +106,8 @@ services:
       - ./frontend/index.html:/app/index.html
     depends_on:
       - api
+      - scoring-backend
 
 volumes:
   gcs-data: {}
+  scoring_pgdata: {}

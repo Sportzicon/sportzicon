@@ -10,7 +10,7 @@ const router = Router();
 
 router.get("/tournaments", optionalAuth, asyncHandler(async (req: any, res: any) => {
   const { sport, status, page, limit } = req.query;
-  const r = await svc.listTournaments(sport, status, Number(page) || 1, Number(limit) || 20);
+  const r = await svc.listTournaments(sport, status, Number(page) || 1, Number(limit) || 20, req.user?.sub, req.user?.role);
   res.json(r);
 }));
 
@@ -105,6 +105,19 @@ router.delete("/matches/:matchId", requireAuth, asyncHandler(async (req: any, re
   res.json(r);
 }));
 
+// ── Playing XI ────────────────────────────────────────────────────────────────
+
+router.get("/matches/:matchId/xi", optionalAuth, asyncHandler(async (req: any, res: any) => {
+  const r = await svc.getPlayingXI(req.params.matchId);
+  res.json(r);
+}));
+
+router.post("/matches/:matchId/xi", requireAuth, asyncHandler(async (req: any, res: any) => {
+  const { team1_player_ids = [], team2_player_ids = [] } = req.body;
+  const r = await svc.setPlayingXI(req.params.matchId, req.user.sub, req.user.role, team1_player_ids, team2_player_ids);
+  res.json(r);
+}));
+
 // Match events (football etc.)
 router.post("/matches/:matchId/events", requireAuth, asyncHandler(async (req: any, res: any) => {
   const r = await svc.addMatchEvent(req.params.matchId, req.user.sub, req.user.role, req.body);
@@ -186,7 +199,7 @@ router.post("/innings/:inningsId/fielding", requireAuth, requireRole("organizer"
 router.put("/matches/:matchId/config", requireAuth, requireRole("organizer", "admin"),
   asyncHandler(async (req: any, res: any) => {
     const r = await svc.updateMatchConfig(req.params.matchId, req.user.sub, req.user.role, req.body);
-    res.json({ tournament: r });
+    res.json({ match: r });
   })
 );
 

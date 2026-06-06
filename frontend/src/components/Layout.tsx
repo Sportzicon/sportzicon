@@ -2,7 +2,7 @@ import { Link, NavLink, Outlet, useNavigate, useLocation } from "react-router-do
 import { useAuthStore } from "../store/auth";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
-import { Bell, Home, Search, Briefcase, FileText, MessageCircle, ShieldCheck, LogOut, User as UserIcon, Menu, X, Trophy, ChevronDown, Building2 } from "lucide-react";
+import { Bell, Home, Search, Briefcase, FileText, MessageCircle, ShieldCheck, LogOut, User as UserIcon, Menu, X, Trophy, ChevronDown, Building2, Target, Activity } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 
 // ============================================================================
@@ -134,6 +134,7 @@ export function Layout() {
 
   const navItems = [
     { to: "/dashboard", icon: <Home className="h-4 w-4" />, label: "Dashboard" },
+    { to: "/live-scores", icon: <Activity className="h-4 w-4" />, label: "Live Scores" },
     { to: "/feed", icon: <FileText className="h-4 w-4" />, label: "Feed" },
     { to: "/blogs", icon: <FileText className="h-4 w-4" />, label: "Blogs" },
     { to: "/search", icon: <Search className="h-4 w-4" />, label: "Search" },
@@ -144,6 +145,9 @@ export function Layout() {
     ...(user.role === "club" || user.role === "organizer" || user.role === "admin"
       ? [{ to: "/my-organizations", icon: <Building2 className="h-4 w-4" />, label: "Organizations" }]
       : [{ to: "/organizations", icon: <Building2 className="h-4 w-4" />, label: "Organizations" }]),
+    ...(["organizer", "admin", "scorer"].includes(user.role)
+      ? [{ to: "/scoring", icon: <Target className="h-4 w-4" />, label: "Scoring" }]
+      : []),
     ...(user.role === "admin" ? [{ to: "/admin", icon: <ShieldCheck className="h-4 w-4" />, label: "Admin" }] : [])
   ];
 

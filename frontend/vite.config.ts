@@ -11,6 +11,16 @@ export default defineConfig({
       "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
       "Pragma": "no-cache",
       "Expires": "0"
+    },
+    proxy: {
+      // Scoring backend API — strips /scoring-api prefix, forwards to backend.
+      // In Docker: SCORING_API_URL=http://scoring-backend:4000
+      // Locally:   falls back to http://localhost:4000
+      "/scoring-api": {
+        target: process.env.SCORING_API_URL ?? "http://localhost:4000",
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/scoring-api/, "")
+      }
     }
   },
   build: {

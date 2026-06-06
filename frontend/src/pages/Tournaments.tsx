@@ -44,9 +44,6 @@ export default function Tournaments() {
 
   const canPost = user?.role === "club" || user?.role === "organizer" || user?.role === "admin";
   const isOrganizer = user?.role === "organizer" || user?.role === "admin";
-  // Sportivox main app links out to the dedicated cricket scoring console for organizers
-  // (cricket_features_parameters.pptx). URL is configurable per environment.
-  const scoringUrl = (import.meta as any).env?.VITE_SCORING_URL || "/scoring/";
 
   return (
     <div className="space-y-5">
@@ -56,26 +53,14 @@ export default function Tournaments() {
         action={
           <div className="flex gap-2">
             {isOrganizer && (
-              <a href={scoringUrl} target="_blank" rel="noreferrer" className="btn-secondary">
-                Cricket scoring →
-              </a>
+              <Link to="/scoring" className="btn-secondary flex items-center gap-1">
+                🎯 Scoring Console
+              </Link>
             )}
             {canPost && <Link to="/tournaments/new" className="btn-accent">+ Post tournament</Link>}
           </div>
         }
       />
-
-      {isOrganizer && (
-        <div className="panel p-4 bg-emerald-50/40 border-emerald-200">
-          <p className="text-[13px] text-ink">
-            <strong>Cricket scoring console</strong> — Configure match formats, score ball-by-ball with
-            line/length/shot capture, and view live analytics (PPTX §05).{" "}
-            <a href={scoringUrl} target="_blank" rel="noreferrer" className="text-emerald-700 underline">
-              Open scoring app
-            </a>
-          </p>
-        </div>
-      )}
 
       <div className="panel p-4 flex flex-wrap gap-3">
         <input className="input w-44" placeholder="Sport" value={sport} onChange={(e) => setSport(e.target.value)} />

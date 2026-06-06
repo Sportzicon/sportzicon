@@ -1,4 +1,4 @@
-import { useParams, Link } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import { ArrowLeft, TrendingUp, Target, Zap } from "lucide-react";
@@ -41,6 +41,7 @@ function DistributionBars({ data, kind }: { data: Counts; kind: "length" | "line
 
 export default function InningsAnalytics() {
   const { inningsId } = useParams<{ inningsId: string }>();
+  const navigate = useNavigate();
 
   const { data, isLoading } = useQuery({
     queryKey: ["innings-analytics", inningsId],
@@ -66,8 +67,8 @@ export default function InningsAnalytics() {
   }
 
   const inn = data.innings;
-  const pat = data.dismissal_patterns;
-  const phases = inn.phase;
+  const pat = data.dismissal_patterns ?? {};
+  const phases = inn?.phase ?? {};
 
   const oversFromBalls = (b: number) => `${Math.floor(b / 6)}.${b % 6}`;
   const econ = (runs: number, balls: number) => (balls > 0 ? ((runs / balls) * 6).toFixed(2) : "—");
@@ -78,17 +79,17 @@ export default function InningsAnalytics() {
         <h1 className="text-2xl font-bold flex items-center gap-2">
           <TrendingUp className="w-6 h-6" /> Innings Analytics
         </h1>
-        <Link to="/" className="text-sm text-gray-500 hover:text-gray-700 inline-flex items-center gap-1">
+        <button onClick={() => data?.innings?.match_id ? navigate(`/matches/${data.innings.match_id}`) : navigate(-1)} className="text-sm text-gray-500 hover:text-gray-700 inline-flex items-center gap-1">
           <ArrowLeft className="w-4 h-4" /> Back
-        </Link>
+        </button>
       </div>
 
       {/* PPTX § Analytics — Key Numbers */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <StatCard label="Dismissed outside off" value={`${pat.outside_off_pct}%`} hint={`${pat.total_wickets} wkts`} />
-        <StatCard label="Wkts off spin" value={`${pat.vs_spin_pct}%`} />
-        <StatCard label="Wkts off pace" value={`${pat.vs_pace_pct}%`} />
-        <StatCard label="Win probability" value={inn.win_probability != null ? `${inn.win_probability}%` : "—"} hint={`Proj ${inn.projected_score ?? "—"}`} />
+        <StatCard label="Dismissed outside off" value={pat.outside_off_pct != null ? `${pat.outside_off_pct}%` : "—"} hint={pat.total_wickets != null ? `${pat.total_wickets} wkts` : undefined} />
+        <StatCard label="Wkts off spin" value={pat.vs_spin_pct != null ? `${pat.vs_spin_pct}%` : "—"} />
+        <StatCard label="Wkts off pace" value={pat.vs_pace_pct != null ? `${pat.vs_pace_pct}%` : "—"} />
+        <StatCard label="Win probability" value={inn?.win_probability != null ? `${inn.win_probability}%` : "—"} hint={`Proj ${inn?.projected_score ?? "—"}`} />
       </div>
 
       {/* Phase splits — PPTX § Team · Phase performance */}
@@ -98,8 +99,8 @@ export default function InningsAnalytics() {
           {(["pp", "mid", "death"] as const).map(p => (
             <div key={p} className="bg-gray-50 rounded-lg p-3">
               <p className="text-xs uppercase tracking-wider text-gray-500">{p === "pp" ? "Powerplay" : p === "mid" ? "Middle" : "Death"}</p>
-              <p className="text-2xl font-bold mt-1">{phases[p].runs}/{phases[p].wickets}</p>
-              <p className="text-xs text-gray-500 mt-1">{oversFromBalls(phases[p].balls)} ov · Econ {econ(phases[p].runs, phases[p].balls)}</p>
+              <p className="text-2xl font-bold mt-1">{phases[p]?.runs ?? 0}/{phases[p]?.wickets ?? 0}</p>
+              <p className="text-xs text-gray-500 mt-1">{oversFromBalls(phases[p]?.balls ?? 0)} ov · Econ {econ(phases[p]?.runs ?? 0, phases[p]?.balls ?? 0)}</p>
             </div>
           ))}
         </div>

@@ -84,8 +84,8 @@ export default function TournamentList() {
               {t.location && <p className="text-xs text-gray-400 mb-2 truncate">📍 {t.location}</p>}
               <div className="flex items-center justify-between">
                 <div className="flex gap-3 text-xs text-gray-500">
-                  <span>{t._count.teams} teams</span>
-                  <span>{t._count.matches} matches</span>
+                  <span>{t._count?.teams ?? 0} teams</span>
+                  <span>{t._count?.matches ?? 0} matches</span>
                 </div>
                 <StatusBadge status={t.status} />
               </div>

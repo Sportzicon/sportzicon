@@ -41,4 +41,11 @@ router.post("/logout", asyncHandler(async (req: any, res: any) => {
   res.json(r);
 }));
 
+// SSO — exchange a valid Sportivox main-app JWT for a scoring JWT (no password required)
+router.post("/sso", asyncHandler(async (req: any, res: any) => {
+  const { main_token } = z.object({ main_token: z.string() }).parse(req.body);
+  const r = await svc.ssoFromMainToken(main_token);
+  res.json(r);
+}));
+
 export default router;

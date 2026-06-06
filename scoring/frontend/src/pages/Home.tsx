@@ -34,12 +34,12 @@ function LiveMatchCard({ match }: { match: any }) {
       <div className="flex items-center justify-between">
         <div className="flex flex-col gap-1 flex-1">
           <div className="flex items-center gap-2">
-            {match.team1.logo_url && <img src={match.team1.logo_url} className="w-5 h-5 rounded-full object-cover" alt="" />}
-            <span className="font-semibold text-sm">{match.team1.short_name || match.team1.name}</span>
+            {match.team1?.logo_url && <img src={match.team1.logo_url} className="w-5 h-5 rounded-full object-cover" alt="" />}
+            <span className="font-semibold text-sm">{match.team1?.short_name || match.team1?.name || "TBD"}</span>
           </div>
           <div className="flex items-center gap-2">
-            {match.team2.logo_url && <img src={match.team2.logo_url} className="w-5 h-5 rounded-full object-cover" alt="" />}
-            <span className="font-semibold text-sm">{match.team2.short_name || match.team2.name}</span>
+            {match.team2?.logo_url && <img src={match.team2.logo_url} className="w-5 h-5 rounded-full object-cover" alt="" />}
+            <span className="font-semibold text-sm">{match.team2?.short_name || match.team2?.name || "TBD"}</span>
           </div>
         </div>
         <div className="text-right">
@@ -123,8 +123,8 @@ export default function Home() {
                   </div>
                 </div>
                 <div className="flex gap-3 text-xs text-gray-500">
-                  <span>{t._count.teams} teams</span>
-                  <span>{t._count.matches} matches</span>
+                  <span>{t._count?.teams ?? 0} teams</span>
+                  <span>{t._count?.matches ?? 0} matches</span>
                 </div>
               </Link>
             ))}

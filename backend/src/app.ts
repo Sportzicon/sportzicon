@@ -27,6 +27,7 @@ import mediaRoutes from "./modules/media/media.routes";
 import verificationRoutes from "./modules/verification/verification.routes";
 import adminRoutes from "./modules/admin/admin.routes";
 import reportsRoutes from "./modules/admin/reports.routes";
+import emailLogsRoutes from "./modules/email-logs/email-logs.routes";
 
 export function createApp(): Express {
   const app = express();
@@ -92,6 +93,7 @@ export function createApp(): Express {
   app.use("/api/v1/verifications", verificationRoutes);
   app.use("/api/v1/reports", reportsRoutes);
   app.use("/api/v1/admin", adminRoutes);
+  app.use("/api/v1", emailLogsRoutes);
 
   app.use(notFound);
   app.use(errorHandler);

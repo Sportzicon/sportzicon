@@ -1,4 +1,5 @@
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { Activity } from "lucide-react";
 
 // ============================================================================
 // Shared shell for public marketing pages (Landing + HowItWorks).
@@ -50,6 +51,17 @@ export default function PublicLayout() {
             }`}
           >
             How it works
+          </Link>
+          <Link
+            to="/live-scores"
+            className={`font-mononum text-[11px] transition hidden md:inline-flex items-center gap-1 ${
+              pathname === "/live-scores"
+                ? "text-ink border-b border-brand-500 pb-px"
+                : "text-ink-70 hover:text-ink"
+            }`}
+          >
+            <Activity className="w-3 h-3 text-red-500" />
+            Live Scores
           </Link>
           <Link to="/login" className="font-mononum text-[11px] text-ink-sub">Sign in</Link>
           <Link to="/signup" className="btn-primary">Get started</Link>

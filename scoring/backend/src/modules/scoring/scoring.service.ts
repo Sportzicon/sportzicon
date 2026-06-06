@@ -10,14 +10,20 @@ function canManage(role: string) {
 async function assertManager(tournamentId: string, actorId: string, actorRole: string) {
   const t = await prisma.tournament.findUnique({ where: { id: tournamentId } });
   if (!t) throw NotFound("Tournament not found");
-  if (t.created_by !== actorId && actorRole !== "admin") throw Forbidden("Not authorized to manage this tournament");
+  // Admins and scorers can manage any tournament; organizers must own it
+  if (actorRole === "admin" || actorRole === "scorer") return t;
+  if (t.created_by !== actorId) throw Forbidden("Not authorized to manage this tournament");
   return t;
 }
 
 // ── Tournaments ───────────────────────────────────────────────────────────────
 
-export async function listTournaments(sport?: string, status?: string, page = 1, limit = 20) {
-  const where: any = { is_public: true };
+export async function listTournaments(sport?: string, status?: string, page = 1, limit = 20, actorId?: string, actorRole?: string) {
+  // Organizers and admins can see their own private tournaments
+  const canSeePrivate = actorId && (actorRole === "organizer" || actorRole === "admin");
+  const where: any = canSeePrivate
+    ? { OR: [{ is_public: true }, { created_by: actorId }] }
+    : { is_public: true };
   if (sport) where.sport = sport.toLowerCase();
   if (status) where.status = status;
 
@@ -70,6 +76,8 @@ export async function createTournament(actorId: string, actorRole: string, input
       name: input.name,
       sport: input.sport.toLowerCase(),
       format: input.format,
+      season: input.season,
+      match_type: input.match_type,
       description: input.description,
       start_date: input.start_date,
       end_date: input.end_date,
@@ -84,7 +92,7 @@ export async function createTournament(actorId: string, actorRole: string, input
 
 export async function updateTournament(id: string, actorId: string, actorRole: string, patch: any) {
   await assertManager(id, actorId, actorRole);
-  const fields = ["name", "sport", "format", "description", "start_date", "end_date", "location", "logo_url", "banner_url", "status", "is_public"];
+  const fields = ["name", "sport", "format", "season", "match_type", "description", "start_date", "end_date", "location", "logo_url", "banner_url", "status", "is_public"];
   const data: any = {};
   for (const k of fields) if (patch[k] !== undefined) data[k] = patch[k];
   return prisma.tournament.update({ where: { id }, data });
@@ -224,6 +232,49 @@ export async function getPlayerStats(playerId: string) {
       : "-"
   };
 
+  const career = await prisma.playerCareerStats.findUnique({ where: { player_id: playerId } });
+
+  const careerBatAvg = career && career.innings_batted > career.not_outs
+    ? parseFloat((career.total_runs / (career.innings_batted - career.not_outs)).toFixed(2))
+    : career?.total_runs ?? 0;
+  const careerSR = career && career.balls_faced > 0
+    ? parseFloat(((career.total_runs / career.balls_faced) * 100).toFixed(2))
+    : 0;
+  const careerBowlEcon = career && career.balls_bowled > 0
+    ? parseFloat(((career.runs_conceded / career.balls_bowled) * 6).toFixed(2))
+    : 0;
+  const careerBowlAvg = career && career.wickets > 0
+    ? parseFloat((career.runs_conceded / career.wickets).toFixed(2))
+    : 0;
+
+  const careerStats = career ? {
+    matches_played: career.matches_played,
+    innings_batted: career.innings_batted,
+    total_runs: career.total_runs,
+    balls_faced: career.balls_faced,
+    highest_score: career.highest_score,
+    not_outs: career.not_outs,
+    hundreds: career.hundreds,
+    fifties: career.fifties,
+    fours: career.fours,
+    sixes: career.sixes,
+    batting_average: careerBatAvg,
+    strike_rate: careerSR,
+    innings_bowled: career.innings_bowled,
+    balls_bowled: career.balls_bowled,
+    overs_bowled: parseFloat(`${Math.floor(career.balls_bowled / 6)}.${career.balls_bowled % 6}`),
+    runs_conceded: career.runs_conceded,
+    wickets: career.wickets,
+    maidens: career.maidens,
+    five_wicket_hauls: career.five_wicket_hauls,
+    best_bowling: career.best_bowling_wickets > 0 ? `${career.best_bowling_wickets}/${career.best_bowling_runs}` : "-",
+    bowling_average: careerBowlAvg,
+    bowling_economy: careerBowlEcon,
+    catches: career.catches,
+    run_outs: career.run_outs,
+    stumpings: career.stumpings
+  } : null;
+
   return {
     player: {
       id: player.id, name: player.name, role: player.role,
@@ -232,7 +283,8 @@ export async function getPlayerStats(playerId: string) {
       photo_url: player.photo_url, team: player.team
     },
     battingStats,
-    bowlingStats
+    bowlingStats,
+    careerStats
   };
 }
 
@@ -263,6 +315,7 @@ export async function getMatch(matchId: string) {
   const match = await prisma.match.findUnique({
     where: { id: matchId },
     include: {
+      tournament: { select: { id: true, name: true, overs_per_innings: true, format: true } },
       team1: { include: { players: { orderBy: [{ is_captain: "desc" }, { jersey_number: "asc" }] } } },
       team2: { include: { players: { orderBy: [{ is_captain: "desc" }, { jersey_number: "asc" }] } } },
       innings: {
@@ -275,6 +328,9 @@ export async function getMatch(matchId: string) {
           bowling_entries: {
             orderBy: [{ wickets: "desc" }, { runs_conceded: "asc" }],
             include: { player: { select: { id: true, name: true } } }
+          },
+          partnerships: {
+            orderBy: { wicket_number: "asc" }
           }
         }
       },
@@ -290,17 +346,237 @@ export async function getLiveMatches() {
     where: { status: "live" },
     orderBy: { updated_at: "desc" },
     include: {
-      tournament: { select: { id: true, name: true, sport: true } },
+      tournament: { select: { id: true, name: true, sport: true, overs_per_innings: true, format: true } },
       team1: { select: { id: true, name: true, short_name: true, logo_url: true, color: true } },
       team2: { select: { id: true, name: true, short_name: true, logo_url: true, color: true } },
       innings: {
-        select: {
-          innings_number: true, batting_team_id: true,
-          total_runs: true, total_wickets: true, total_balls: true, is_completed: true
+        orderBy: { innings_number: "asc" },
+        include: {
+          batting_entries: {
+            orderBy: { batting_position: "asc" },
+            include: { player: { select: { id: true, name: true, is_captain: true, is_keeper: true } } }
+          },
+          bowling_entries: {
+            where: { balls: { gt: 0 } },
+            orderBy: { balls: "desc" },
+            include: { player: { select: { id: true, name: true } } }
+          },
+          partnerships: {
+            where: { is_unbroken: true },
+            take: 1
+          }
         }
       }
     }
   });
+}
+
+export async function syncCareerStats(matchId: string) {
+  const match = await prisma.match.findUnique({
+    where: { id: matchId },
+    include: {
+      innings: {
+        include: {
+          batting_entries: true,
+          bowling_entries: true,
+          fielding_entries: true
+        }
+      }
+    }
+  });
+  if (!match) return;
+
+  // Collect per-player data across all innings in this match
+  const playerBatting = new Map<string, { runs: number; balls: number; fours: number; sixes: number; isOut: boolean; notOut: boolean }[]>();
+  const playerBowling = new Map<string, { balls: number; runs: number; wickets: number; maidens: number }[]>();
+  const playerFielding = new Map<string, { catches: number; runOuts: number; stumpings: number }[]>();
+
+  for (const inn of match.innings) {
+    for (const b of inn.batting_entries) {
+      if (b.status === "yet_to_bat") continue;
+      if (!playerBatting.has(b.player_id)) playerBatting.set(b.player_id, []);
+      playerBatting.get(b.player_id)!.push({
+        runs: b.runs,
+        balls: b.balls_faced,
+        fours: b.fours,
+        sixes: b.sixes,
+        isOut: b.status === "out",
+        notOut: b.status === "not_out" || b.status === "retired_hurt"
+      });
+    }
+    for (const b of inn.bowling_entries) {
+      if (b.balls === 0) continue;
+      if (!playerBowling.has(b.player_id)) playerBowling.set(b.player_id, []);
+      playerBowling.get(b.player_id)!.push({
+        balls: b.balls, runs: b.runs_conceded, wickets: b.wickets, maidens: b.maidens
+      });
+    }
+    for (const f of inn.fielding_entries) {
+      if (!playerFielding.has(f.player_id)) playerFielding.set(f.player_id, []);
+      playerFielding.get(f.player_id)!.push({
+        catches: f.catches,
+        runOuts: f.run_outs_direct + f.run_outs_assist,
+        stumpings: f.stumpings
+      });
+    }
+  }
+
+  // All unique player IDs who participated
+  const allPlayerIds = new Set([...playerBatting.keys(), ...playerBowling.keys(), ...playerFielding.keys()]);
+
+  for (const playerId of allPlayerIds) {
+    const batEntries = playerBatting.get(playerId) ?? [];
+    const bowlEntries = playerBowling.get(playerId) ?? [];
+    const fieldEntries = playerFielding.get(playerId) ?? [];
+
+    // Batting increments
+    const inningsBatted = batEntries.length;
+    const totalRuns = batEntries.reduce((s, e) => s + e.runs, 0);
+    const ballsFaced = batEntries.reduce((s, e) => s + e.balls, 0);
+    const highestScore = batEntries.length > 0 ? Math.max(...batEntries.map(e => e.runs)) : 0;
+    const notOuts = batEntries.filter(e => e.notOut).length;
+    const hundreds = batEntries.filter(e => e.runs >= 100).length;
+    const fifties = batEntries.filter(e => e.runs >= 50 && e.runs < 100).length;
+    const fours = batEntries.reduce((s, e) => s + e.fours, 0);
+    const sixes = batEntries.reduce((s, e) => s + e.sixes, 0);
+
+    // Bowling increments
+    const inningsBowled = bowlEntries.length;
+    const ballsBowled = bowlEntries.reduce((s, e) => s + e.balls, 0);
+    const runsConceded = bowlEntries.reduce((s, e) => s + e.runs, 0);
+    const wickets = bowlEntries.reduce((s, e) => s + e.wickets, 0);
+    const maidens = bowlEntries.reduce((s, e) => s + e.maidens, 0);
+    const fiveWicketHauls = bowlEntries.filter(e => e.wickets >= 5).length;
+    const bestInnings = bowlEntries.reduce<{ w: number; r: number } | null>((best, e) => {
+      if (!best) return { w: e.wickets, r: e.runs };
+      if (e.wickets > best.w || (e.wickets === best.w && e.runs < best.r)) return { w: e.wickets, r: e.runs };
+      return best;
+    }, null);
+
+    // Fielding increments
+    const catches = fieldEntries.reduce((s, e) => s + e.catches, 0);
+    const runOuts = fieldEntries.reduce((s, e) => s + e.runOuts, 0);
+    const stumpings = fieldEntries.reduce((s, e) => s + e.stumpings, 0);
+
+    // Upsert — increment existing career stats
+    const existing = await prisma.playerCareerStats.findUnique({ where: { player_id: playerId } });
+    if (existing) {
+      const newHighest = Math.max(existing.highest_score, highestScore);
+      const newBestW = bestInnings
+        ? (bestInnings.w > existing.best_bowling_wickets ||
+           (bestInnings.w === existing.best_bowling_wickets && bestInnings.r < existing.best_bowling_runs)
+            ? bestInnings.w : existing.best_bowling_wickets)
+        : existing.best_bowling_wickets;
+      const newBestR = bestInnings
+        ? (bestInnings.w > existing.best_bowling_wickets ||
+           (bestInnings.w === existing.best_bowling_wickets && bestInnings.r < existing.best_bowling_runs)
+            ? bestInnings.r : existing.best_bowling_runs)
+        : existing.best_bowling_runs;
+
+      await prisma.playerCareerStats.update({
+        where: { player_id: playerId },
+        data: {
+          matches_played: { increment: 1 },
+          innings_batted: { increment: inningsBatted },
+          total_runs: { increment: totalRuns },
+          balls_faced: { increment: ballsFaced },
+          highest_score: newHighest,
+          not_outs: { increment: notOuts },
+          hundreds: { increment: hundreds },
+          fifties: { increment: fifties },
+          fours: { increment: fours },
+          sixes: { increment: sixes },
+          innings_bowled: { increment: inningsBowled },
+          balls_bowled: { increment: ballsBowled },
+          runs_conceded: { increment: runsConceded },
+          wickets: { increment: wickets },
+          maidens: { increment: maidens },
+          five_wicket_hauls: { increment: fiveWicketHauls },
+          best_bowling_wickets: newBestW,
+          best_bowling_runs: newBestR,
+          catches: { increment: catches },
+          run_outs: { increment: runOuts },
+          stumpings: { increment: stumpings }
+        }
+      });
+    } else {
+      await prisma.playerCareerStats.create({
+        data: {
+          player_id: playerId,
+          matches_played: 1,
+          innings_batted: inningsBatted,
+          total_runs: totalRuns,
+          balls_faced: ballsFaced,
+          highest_score: highestScore,
+          not_outs: notOuts,
+          hundreds,
+          fifties,
+          fours,
+          sixes,
+          innings_bowled: inningsBowled,
+          balls_bowled: ballsBowled,
+          runs_conceded: runsConceded,
+          wickets,
+          maidens,
+          five_wicket_hauls: fiveWicketHauls,
+          best_bowling_wickets: bestInnings?.w ?? 0,
+          best_bowling_runs: bestInnings?.r ?? 9999,
+          catches,
+          run_outs: runOuts,
+          stumpings
+        }
+      });
+    }
+  }
+}
+
+// ── Playing XI ────────────────────────────────────────────────────────────────
+
+export async function getPlayingXI(matchId: string) {
+  const match = await prisma.match.findUnique({
+    where: { id: matchId },
+    include: {
+      playing_xi: true,
+      team1: { include: { players: { orderBy: [{ is_captain: "desc" }, { jersey_number: "asc" }] } } },
+      team2: { include: { players: { orderBy: [{ is_captain: "desc" }, { jersey_number: "asc" }] } } }
+    }
+  });
+  if (!match) throw NotFound("Match not found");
+
+  const xiIds = new Set(match.playing_xi.map((p: any) => p.player_id));
+
+  const enrich = (teamPlayers: any[], teamId: string) =>
+    teamPlayers.map(p => ({ ...p, in_xi: xiIds.has(p.id), xi_team_id: teamId }));
+
+  return {
+    match_id: matchId,
+    team1: { ...match.team1, players: enrich(match.team1.players, match.team1.id) },
+    team2: { ...match.team2, players: enrich(match.team2.players, match.team2.id) },
+    xi_locked: match.playing_xi.length > 0
+  };
+}
+
+export async function setPlayingXI(
+  matchId: string, actorId: string, actorRole: string,
+  team1PlayerIds: string[], team2PlayerIds: string[]
+) {
+  const match = await prisma.match.findUnique({
+    where: { id: matchId },
+    include: { team1: true, team2: true }
+  });
+  if (!match) throw NotFound("Match not found");
+  await assertManager(match.tournament_id, actorId, actorRole);
+
+  // Clear existing XI and replace
+  await prisma.matchPlayer.deleteMany({ where: { match_id: matchId } });
+
+  const rows = [
+    ...team1PlayerIds.map((pid, i) => ({ match_id: matchId, team_id: match.team1_id, player_id: pid, batting_position: i + 1 })),
+    ...team2PlayerIds.map((pid, i) => ({ match_id: matchId, team_id: match.team2_id, player_id: pid, batting_position: i + 1 }))
+  ];
+
+  await prisma.matchPlayer.createMany({ data: rows, skipDuplicates: true });
+  return { ok: true, count: rows.length };
 }
 
 export async function updateMatch(matchId: string, actorId: string, actorRole: string, patch: any) {
@@ -309,12 +585,18 @@ export async function updateMatch(matchId: string, actorId: string, actorRole: s
   await assertManager(match.tournament_id, actorId, actorRole);
 
   const data: any = {};
-  for (const k of ["title", "venue", "status", "winner_team_id", "result_summary", "toss_winner_id", "toss_decision"]) {
+  for (const k of ["title", "venue", "status", "winner_team_id", "result_summary", "toss_winner_id", "toss_decision", "match_type"]) {
     if (patch[k] !== undefined) data[k] = patch[k];
   }
   if (patch.scheduled_at) data.scheduled_at = new Date(patch.scheduled_at);
 
-  return prisma.match.update({ where: { id: matchId }, data });
+  const updated = await prisma.match.update({ where: { id: matchId }, data });
+
+  if (patch.status === "completed" && match.status !== "completed") {
+    await syncCareerStats(matchId);
+  }
+
+  return updated;
 }
 
 export async function deleteMatch(matchId: string, actorId: string, actorRole: string) {
@@ -351,30 +633,40 @@ export async function createInnings(matchId: string, actorId: string, actorRole:
     }
   });
 
-  // Auto-create batting lineup stubs from the batting team's players
-  const players = await prisma.player.findMany({
-    where: { team_id: input.batting_team_id },
-    orderBy: [{ is_captain: "desc" }, { jersey_number: "asc" }]
-  });
-  if (players.length > 0) {
+  // Use Playing XI if set; otherwise fall back to full squad
+  const xiRecords = await prisma.matchPlayer.findMany({ where: { match_id: matchId } });
+  const battingXI = xiRecords.filter(x => x.team_id === input.batting_team_id);
+  const bowlingXI = xiRecords.filter(x => x.team_id === input.bowling_team_id);
+
+  const battingPlayerIds = battingXI.length > 0
+    ? battingXI.sort((a, b) => (a.batting_position ?? 99) - (b.batting_position ?? 99)).map(x => x.player_id)
+    : (await prisma.player.findMany({
+        where: { team_id: input.batting_team_id },
+        orderBy: [{ is_captain: "desc" }, { jersey_number: "asc" }]
+      })).map(p => p.id);
+
+  if (battingPlayerIds.length > 0) {
     await prisma.battingEntry.createMany({
-      data: players.map((p, i) => ({
+      data: battingPlayerIds.map((pid, i) => ({
         innings_id: innings.id,
-        player_id: p.id,
+        player_id: pid,
         batting_position: i + 1
       })),
       skipDuplicates: true
     });
   }
 
-  // Auto-create bowling stubs for bowling team
-  const bowlers = await prisma.player.findMany({
-    where: { team_id: input.bowling_team_id },
-    orderBy: { jersey_number: "asc" }
-  });
-  if (bowlers.length > 0) {
+  // Bowling stubs — use XI or fall back to full squad
+  const bowlingPlayerIds = bowlingXI.length > 0
+    ? bowlingXI.map(x => x.player_id)
+    : (await prisma.player.findMany({
+        where: { team_id: input.bowling_team_id },
+        orderBy: { jersey_number: "asc" }
+      })).map(p => p.id);
+
+  if (bowlingPlayerIds.length > 0) {
     await prisma.bowlingEntry.createMany({
-      data: bowlers.map(p => ({ innings_id: innings.id, player_id: p.id })),
+      data: bowlingPlayerIds.map(pid => ({ innings_id: innings.id, player_id: pid })),
       skipDuplicates: true
     });
   }
@@ -486,9 +778,10 @@ export async function addBall(inningsId: string, actorId: string, actorRole: str
   } = input;
 
   const isLegal = !is_wide && !is_no_ball;
-  const batsmanRuns = (is_bye || is_leg_bye) ? 0 : runs;
+  // On a wide ALL runs go to extras — batsman scores nothing. On a bye/lb off a legal ball, same.
+  const batsmanRuns = (is_wide || is_bye || is_leg_bye) ? 0 : runs;
   const extraRuns = is_wide ? runs + 1 : is_no_ball ? 1 : 0;
-  const byeRuns = (is_bye || is_leg_bye) ? runs : 0;
+  const byeRuns = !is_wide && (is_bye || is_leg_bye) ? runs : 0;
   const totalRuns = batsmanRuns + extraRuns + byeRuns + (is_penalty ? 5 : 0);
   const isDot = isLegal && totalRuns === 0 && !is_wicket;
   const phase = computePhase(over_number, match.format, (tournament?.powerplay_overs as any) ?? null);
@@ -527,8 +820,8 @@ export async function addBall(inningsId: string, actorId: string, actorRole: str
       extras: { increment: extraRuns + byeRuns + (is_penalty ? 5 : 0) },
       wides: is_wide ? { increment: runs + 1 } : undefined,
       no_balls: is_no_ball ? { increment: 1 } : undefined,
-      byes: is_bye ? { increment: runs } : undefined,
-      leg_byes: is_leg_bye ? { increment: runs } : undefined,
+      byes: !is_wide && is_bye ? { increment: runs } : undefined,
+      leg_byes: !is_wide && is_leg_bye ? { increment: runs } : undefined,
       penalty_runs: is_penalty ? { increment: 5 } : undefined,
       boundary_4s: is_four ? { increment: 1 } : undefined,
       boundary_6s: is_six ? { increment: 1 } : undefined,
@@ -586,7 +879,8 @@ export async function addBall(inningsId: string, actorId: string, actorRole: str
   }
 
   // Bowler stats with phase splits
-  const bowlerRunsConceded = batsmanRuns + (is_wide ? runs + 1 : 0) + (is_no_ball ? 1 : 0);
+  // On a no-ball+bye, the bowler is charged the penalty (1) + the bye runs; on a wide all extras are already in extraRuns
+  const bowlerRunsConceded = batsmanRuns + (is_no_ball ? byeRuns : 0) + (is_wide ? runs + 1 : 0) + (is_no_ball ? 1 : 0);
   const bowlerWicket = is_wicket && !["run_out", "obstructing_field", "handled_ball", "retired_hurt"].includes(wicket_type ?? "");
   const bowlPhaseInc = (key: "pp" | "mid" | "death") => ({
     [`${key}_runs`]: phase === key ? { increment: bowlerRunsConceded } : undefined,
@@ -806,7 +1100,8 @@ export async function getInningsAnalytics(inningsId: string) {
 
   return {
     innings: {
-      id: innings.id, runs: innings.total_runs, wickets: innings.total_wickets,
+      id: innings.id, match_id: innings.match_id,
+      runs: innings.total_runs, wickets: innings.total_wickets,
       balls: innings.total_balls, projected_score: innings.projected_score,
       win_probability: innings.win_probability, momentum_index: innings.momentum_index,
       boundary_4s: innings.boundary_4s, boundary_6s: innings.boundary_6s, dot_balls: innings.dot_balls,
@@ -959,9 +1254,9 @@ export async function undoLastBall(inningsId: string, actorId: string, actorRole
 
   // Reverse the stats deltas the same way addBall applied them.
   const isLegal = !last.is_wide && !last.is_no_ball;
-  const batsmanRuns = (last.is_bye || last.is_leg_bye) ? 0 : last.runs;
+  const batsmanRuns = (last.is_wide || last.is_bye || last.is_leg_bye) ? 0 : last.runs;
   const extraRuns = last.is_wide ? last.runs + 1 : last.is_no_ball ? 1 : 0;
-  const byeRuns = (last.is_bye || last.is_leg_bye) ? last.runs : 0;
+  const byeRuns = !last.is_wide && (last.is_bye || last.is_leg_bye) ? last.runs : 0;
   const totalRuns = batsmanRuns + extraRuns + byeRuns + (last.is_penalty ? 5 : 0);
 
   await prisma.innings.update({
@@ -973,13 +1268,28 @@ export async function undoLastBall(inningsId: string, actorId: string, actorRole
       extras: { decrement: extraRuns + byeRuns + (last.is_penalty ? 5 : 0) },
       wides: last.is_wide ? { decrement: last.runs + 1 } : undefined,
       no_balls: last.is_no_ball ? { decrement: 1 } : undefined,
-      byes: last.is_bye ? { decrement: last.runs } : undefined,
-      leg_byes: last.is_leg_bye ? { decrement: last.runs } : undefined,
+      byes: !last.is_wide && last.is_bye ? { decrement: last.runs } : undefined,
+      leg_byes: !last.is_wide && last.is_leg_bye ? { decrement: last.runs } : undefined,
       boundary_4s: last.is_four ? { decrement: 1 } : undefined,
       boundary_6s: last.is_six ? { decrement: 1 } : undefined,
-      dot_balls: last.is_dot ? { decrement: 1 } : undefined
+      dot_balls: last.is_dot ? { decrement: 1 } : undefined,
+      penalty_runs: last.is_penalty ? { decrement: 5 } : undefined,
+      // Reverse phase-split counters
+      pp_runs:     last.phase === "pp"    ? { decrement: totalRuns } : undefined,
+      pp_balls:    last.phase === "pp"    && isLegal ? { decrement: 1 } : undefined,
+      pp_wickets:  last.phase === "pp"    && last.is_wicket ? { decrement: 1 } : undefined,
+      mid_runs:    last.phase === "mid"   ? { decrement: totalRuns } : undefined,
+      mid_balls:   last.phase === "mid"   && isLegal ? { decrement: 1 } : undefined,
+      mid_wickets: last.phase === "mid"   && last.is_wicket ? { decrement: 1 } : undefined,
+      death_runs:   last.phase === "death" ? { decrement: totalRuns } : undefined,
+      death_balls:  last.phase === "death" && isLegal ? { decrement: 1 } : undefined,
+      death_wickets: last.phase === "death" && last.is_wicket ? { decrement: 1 } : undefined,
     }
   });
+
+  const oneRun = batsmanRuns === 1;
+  const twoRun = batsmanRuns === 2;
+  const threeRun = batsmanRuns === 3;
 
   // Reverse batsman + bowler entries
   await prisma.battingEntry.updateMany({
@@ -989,7 +1299,10 @@ export async function undoLastBall(inningsId: string, actorId: string, actorRole
       balls_faced: isLegal ? { decrement: 1 } : undefined,
       fours: last.is_four ? { decrement: 1 } : undefined,
       sixes: last.is_six ? { decrement: 1 } : undefined,
-      dot_balls: last.is_dot ? { decrement: 1 } : undefined
+      dot_balls: last.is_dot ? { decrement: 1 } : undefined,
+      singles: oneRun ? { decrement: 1 } : undefined,
+      doubles: twoRun ? { decrement: 1 } : undefined,
+      threes: threeRun ? { decrement: 1 } : undefined,
     }
   });
 
@@ -1006,7 +1319,7 @@ export async function undoLastBall(inningsId: string, actorId: string, actorRole
     });
   }
 
-  const bowlerRunsConceded = batsmanRuns + (last.is_wide ? last.runs + 1 : 0) + (last.is_no_ball ? 1 : 0);
+  const bowlerRunsConceded = batsmanRuns + (last.is_no_ball ? byeRuns : 0) + (last.is_wide ? last.runs + 1 : 0) + (last.is_no_ball ? 1 : 0);
   const bowlerWicket = last.is_wicket && !["run_out", "obstructing_field", "handled_ball", "retired_hurt"].includes(last.wicket_type ?? "");
   await prisma.bowlingEntry.updateMany({
     where: { innings_id: inningsId, player_id: last.bowler_id },
@@ -1018,9 +1331,92 @@ export async function undoLastBall(inningsId: string, actorId: string, actorRole
       no_balls: last.is_no_ball ? { decrement: 1 } : undefined,
       dot_balls: last.is_dot ? { decrement: 1 } : undefined,
       boundaries_4s: last.is_four ? { decrement: 1 } : undefined,
-      boundaries_6s: last.is_six ? { decrement: 1 } : undefined
+      boundaries_6s: last.is_six ? { decrement: 1 } : undefined,
+      // Reverse phase-split counters
+      pp_runs:      last.phase === "pp"    ? { decrement: bowlerRunsConceded } : undefined,
+      pp_balls:     last.phase === "pp"    && isLegal ? { decrement: 1 } : undefined,
+      pp_wickets:   last.phase === "pp"    && bowlerWicket ? { decrement: 1 } : undefined,
+      mid_runs:     last.phase === "mid"   ? { decrement: bowlerRunsConceded } : undefined,
+      mid_balls:    last.phase === "mid"   && isLegal ? { decrement: 1 } : undefined,
+      mid_wickets:  last.phase === "mid"   && bowlerWicket ? { decrement: 1 } : undefined,
+      death_runs:   last.phase === "death" ? { decrement: bowlerRunsConceded } : undefined,
+      death_balls:  last.phase === "death" && isLegal ? { decrement: 1 } : undefined,
+      death_wickets: last.phase === "death" && bowlerWicket ? { decrement: 1 } : undefined,
     }
   });
+
+  // Reverse fielding entry for wicket balls
+  if (last.is_wicket && last.fielder_id) {
+    const isCatch = last.wicket_type === "caught" || last.wicket_type === "cb";
+    const isRunOut = last.wicket_type === "run_out";
+    const isStump = last.wicket_type === "stumped";
+    if (isCatch || isRunOut || isStump) {
+      await prisma.fieldingEntry.updateMany({
+        where: { innings_id: inningsId, player_id: last.fielder_id },
+        data: {
+          catches: isCatch ? { decrement: 1 } : undefined,
+          run_outs_direct: isRunOut ? { decrement: 1 } : undefined,
+          stumpings: isStump ? { decrement: 1 } : undefined,
+          direct_hits: isRunOut ? { decrement: 1 } : undefined,
+          impact_score: { decrement: 1 }
+        }
+      });
+    }
+  }
+
+  // Reverse partnership state
+  if (last.is_wicket) {
+    // Reopen the most recently closed partnership and reverse its contribution
+    const closedPship = await prisma.partnership.findFirst({
+      where: { innings_id: inningsId, is_unbroken: false },
+      orderBy: [{ ended_over: "desc" }, { ended_ball: "desc" }]
+    });
+    if (closedPship) {
+      const newRuns = closedPship.runs - totalRuns;
+      const newBalls = closedPship.balls - (isLegal ? 1 : 0);
+      if (newRuns <= 0 && newBalls <= 0) {
+        // Partnership was created and immediately closed by this ball — delete it
+        await prisma.partnership.delete({ where: { id: closedPship.id } });
+      } else {
+        await prisma.partnership.update({
+          where: { id: closedPship.id },
+          data: {
+            is_unbroken: true,
+            ended_over: null,
+            ended_ball: null,
+            runs: { decrement: totalRuns },
+            balls: isLegal ? { decrement: 1 } : undefined,
+            fours: last.is_four ? { decrement: 1 } : undefined,
+            sixes: last.is_six ? { decrement: 1 } : undefined,
+          }
+        });
+      }
+    }
+  } else {
+    // Reverse contribution to the active (unbroken) partnership
+    const activePship = await prisma.partnership.findFirst({
+      where: { innings_id: inningsId, is_unbroken: true },
+      orderBy: { wicket_number: "desc" }
+    });
+    if (activePship) {
+      const newRuns = activePship.runs - totalRuns;
+      const newBalls = activePship.balls - (isLegal ? 1 : 0);
+      if (newRuns <= 0 && newBalls <= 0) {
+        // This was the first ball of this partnership — delete it
+        await prisma.partnership.delete({ where: { id: activePship.id } });
+      } else {
+        await prisma.partnership.update({
+          where: { id: activePship.id },
+          data: {
+            runs: { decrement: totalRuns },
+            balls: isLegal ? { decrement: 1 } : undefined,
+            fours: last.is_four ? { decrement: 1 } : undefined,
+            sixes: last.is_six ? { decrement: 1 } : undefined,
+          }
+        });
+      }
+    }
+  }
 
   await prisma.ballEvent.delete({ where: { id: last.id } });
   return { deleted: last.id };

@@ -30,7 +30,9 @@ export async function createNotification(input: {
         await sendMail({
           to: user.email,
           subject: input.title,
-          html: `<p>Hi ${escapeHtml(user.full_name)},</p><p>${escapeHtml(input.body)}</p>`
+          html: `<p>Hi ${escapeHtml(user.full_name)},</p><p>${escapeHtml(input.body)}</p>`,
+          user_id: input.user_id,
+          email_type: "notification"
         });
       }
     } catch (err) {

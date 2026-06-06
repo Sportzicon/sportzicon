@@ -9,8 +9,8 @@ function oversFromBalls(balls: number) {
 }
 
 function MatchRow({ match }: { match: any }) {
-  const inn1 = match.innings?.find((i: any) => i.batting_team_id === match.team1.id);
-  const inn2 = match.innings?.find((i: any) => i.batting_team_id === match.team2.id);
+  const inn1 = match.innings?.find((i: any) => i.batting_team_id === match.team1?.id);
+  const inn2 = match.innings?.find((i: any) => i.batting_team_id === match.team2?.id);
 
   return (
     <Link to={`/matches/${match.id}`} className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
@@ -18,7 +18,7 @@ function MatchRow({ match }: { match: any }) {
         {match.match_number || "—"}
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-xs text-gray-400 mb-0.5">{match.title || `${match.team1.name} vs ${match.team2.name}`}</p>
+        <p className="text-xs text-gray-400 mb-0.5">{match.title || `${match.team1?.name ?? "TBD"} vs ${match.team2?.name ?? "TBD"}`}</p>
         <div className="flex items-center gap-4">
           <TeamScore team={match.team1} innings={inn1} />
           <span className="text-gray-300 text-xs">vs</span>
@@ -37,7 +37,7 @@ function MatchRow({ match }: { match: any }) {
 function TeamScore({ team, innings }: { team: any; innings: any }) {
   return (
     <div className="flex items-center gap-1.5">
-      <span className="text-sm font-medium">{team.short_name || team.name}</span>
+      <span className="text-sm font-medium">{team?.short_name || team?.name || "TBD"}</span>
       {innings && (
         <span className="text-sm font-mono text-gray-700">
           {innings.total_runs}/{innings.total_wickets}
@@ -114,9 +114,10 @@ export default function TournamentDetail() {
   if (isLoading) return <div className="animate-pulse space-y-4"><div className="h-40 bg-gray-100 rounded-xl" /><div className="h-64 bg-gray-100 rounded-xl" /></div>;
   if (!data) return <div className="text-center py-20 text-gray-400">Tournament not found.</div>;
 
-  const liveMatches = data.matches.filter((m: any) => m.status === "live");
-  const upcomingMatches = data.matches.filter((m: any) => m.status === "upcoming");
-  const completedMatches = data.matches.filter((m: any) => m.status === "completed");
+  const allMatches = data.matches ?? [];
+  const liveMatches = allMatches.filter((m: any) => m.status === "live");
+  const upcomingMatches = allMatches.filter((m: any) => m.status === "upcoming");
+  const completedMatches = allMatches.filter((m: any) => m.status === "completed");
 
   return (
     <div className="space-y-6">
@@ -143,7 +144,7 @@ export default function TournamentDetail() {
               <div className="flex gap-4 mt-2 text-sm text-gray-400 flex-wrap">
                 {data.location && <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" />{data.location}</span>}
                 {data.start_date && <span className="flex items-center gap-1"><Calendar className="w-3.5 h-3.5" />{data.start_date}{data.end_date ? ` – ${data.end_date}` : ""}</span>}
-                <span className="flex items-center gap-1"><Users className="w-3.5 h-3.5" />{data.teams.length} teams</span>
+                <span className="flex items-center gap-1"><Users className="w-3.5 h-3.5" />{data.teams?.length ?? 0} teams</span>
               </div>
             </div>
             {canManage && (
@@ -192,7 +193,7 @@ export default function TournamentDetail() {
             </div>
           )}
 
-          {data.matches.length === 0 && (
+          {allMatches.length === 0 && (
             <div className="card p-8 text-center text-gray-400">No matches scheduled yet.</div>
           )}
         </div>
@@ -209,7 +210,7 @@ export default function TournamentDetail() {
           <div className="card p-4">
             <h2 className="font-semibold mb-3">Teams</h2>
             <div className="space-y-2">
-              {data.teams.map((t: any) => (
+              {(data.teams ?? []).map((t: any) => (
                 <div key={t.id} className="flex items-center gap-2 py-1">
                   {t.logo_url ? (
                     <img src={t.logo_url} className="w-7 h-7 rounded-full object-cover shrink-0" alt="" />
@@ -220,7 +221,7 @@ export default function TournamentDetail() {
                   )}
                   <div>
                     <p className="text-sm font-medium">{t.name}</p>
-                    <p className="text-xs text-gray-400">{t.players.length} players</p>
+                    <p className="text-xs text-gray-400">{t.players?.length ?? 0} players</p>
                   </div>
                 </div>
               ))}

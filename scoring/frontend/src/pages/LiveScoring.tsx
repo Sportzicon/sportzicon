@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
-import { CheckCircle, AlertCircle, Undo2, BarChart3 } from "lucide-react";
+import { useAuthStore } from "../store/auth";
+import { CheckCircle, AlertCircle, Undo2, BarChart3, Eye } from "lucide-react";
 import {
   SHOT_TYPES, BALL_LINES, BALL_LENGTHS, BOWLER_TYPE_SHORT, bowlerVariantFromShort,
   WICKET_TYPES, FIELDING_POSITIONS, DISMISSAL_ZONES, BALL_TRAJECTORIES
@@ -53,6 +54,8 @@ export default function LiveScoring() {
   const { matchId } = useParams<{ matchId: string }>();
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const { user } = useAuthStore();
+  const canScore = user?.role === "admin" || user?.role === "scorer";
 
   const [activeInningsId, setActiveInningsId] = useState<string | null>(null);
   const [ball, setBall] = useState<BallInput>({ ...DEFAULT_BALL });
@@ -210,21 +213,36 @@ export default function LiveScoring() {
               <BarChart3 className="w-4 h-4" /> Analytics
             </Link>
           )}
-          <button
-            onClick={() => undoMutation.mutate()}
-            disabled={!activeInnings || undoMutation.isPending}
-            className="btn-secondary text-sm inline-flex items-center gap-1"
-          >
-            <Undo2 className="w-4 h-4" /> Undo
-          </button>
-          <button onClick={() => setShowNewInnings(true)} className="btn-secondary text-sm">
-            + New Innings
-          </button>
-          <button onClick={() => setShowResult(true)} className="btn-danger text-sm">
-            End Match
-          </button>
+          {canScore && (
+            <>
+              <button
+                onClick={() => undoMutation.mutate()}
+                disabled={!activeInningsId || undoMutation.isPending}
+                className="btn-secondary text-sm inline-flex items-center gap-1"
+              >
+                <Undo2 className="w-4 h-4" /> Undo
+              </button>
+              <button onClick={() => {
+                const nextNum = String((match.innings?.length ?? 0) + 1);
+                setNewInningsForm(f => ({ ...f, innings_number: nextNum, batting_team_id: "", bowling_team_id: "", target: "" }));
+                setShowNewInnings(true);
+              }} className="btn-secondary text-sm">
+                + New Innings
+              </button>
+              <button onClick={() => setShowResult(true)} className="btn-danger text-sm">
+                End Match
+              </button>
+            </>
+          )}
         </div>
       </div>
+
+      {!canScore && (
+        <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-amber-800 text-sm">
+          <Eye className="w-4 h-4 shrink-0" />
+          <span>You are viewing this match as a spectator. Only admins and scorers can enter scores.</span>
+        </div>
+      )}
 
       {/* Innings tabs */}
       {match.innings?.length > 0 && (
@@ -283,9 +301,11 @@ export default function LiveScoring() {
                 <p className="text-[10px] uppercase text-gray-400">RRR</p>
                 <p className="text-sm font-bold">
                   {(() => {
-                    const ballsLeft = 120 - activeInnings.total_balls;
+                    const maxOvers = match?.format === "T20" ? 20 : match?.format === "ODI" ? 50 : match?.format === "T10" ? 10 : null;
+                    const maxBalls = maxOvers ? maxOvers * 6 : null;
+                    const ballsLeft = maxBalls ? maxBalls - activeInnings.total_balls : null;
                     const need = activeInnings.target - activeInnings.total_runs;
-                    return ballsLeft > 0 && need > 0 ? ((need / ballsLeft) * 6).toFixed(2) : "—";
+                    return ballsLeft && ballsLeft > 0 && need > 0 ? ((need / ballsLeft) * 6).toFixed(2) : "—";
                   })()}
                 </p>
               </div>
@@ -327,8 +347,8 @@ export default function LiveScoring() {
         </div>
       )}
 
-      {/* Ball entry form */}
-      {activeInnings && !activeInnings.is_completed && (
+      {/* Ball entry form — admin/scorer only */}
+      {activeInnings && !activeInnings.is_completed && canScore && (
         <form onSubmit={handleBallSubmit} className="card p-4 space-y-4">
           <h2 className="font-semibold">Over {currentOver + 1} · Ball {currentBallNum}</h2>
 
@@ -514,8 +534,8 @@ export default function LiveScoring() {
         </div>
       )}
 
-      {/* New Innings modal */}
-      {showNewInnings && (
+      {/* New Innings modal — admin/scorer only */}
+      {showNewInnings && canScore && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="card w-full max-w-md p-6 space-y-4">
             <h2 className="font-bold text-lg">Start New Innings</h2>
@@ -559,8 +579,8 @@ export default function LiveScoring() {
         </div>
       )}
 
-      {/* End Match modal */}
-      {showResult && (
+      {/* End Match modal — admin/scorer only */}
+      {showResult && canScore && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="card w-full max-w-md p-6 space-y-4">
             <h2 className="font-bold text-lg">End Match</h2>
@@ -578,7 +598,10 @@ export default function LiveScoring() {
             </div>
             <div className="flex gap-3">
               <button
-                onClick={() => completeMatchMutation.mutate(matchResultForm)}
+                onClick={() => completeMatchMutation.mutate({
+                    winner_team_id: matchResultForm.winner_team_id || undefined,
+                    result_summary: matchResultForm.result_summary || undefined,
+                  })}
                 disabled={completeMatchMutation.isPending}
                 className="btn-danger"
               >

@@ -73,6 +73,8 @@ model Tournament {
   name        String
   sport       String           // "cricket", "football", "basketball"
   format      String?          // "T20", "ODI", "Test", "League", "Knockout"
+  season      String?          // "2026", "2025-26"
+  match_type  String?          // "league" · "tournament" · "friendly" · "trial" · "academy" · "knockout"
   description String?          @db.Text
   start_date  String?
   end_date    String?
@@ -117,11 +119,12 @@ model Team {
   logo_url      String?
   color         String?    // hex color for UI
 
-  tournament    Tournament @relation(fields: [tournament_id], references: [id], onDelete: Cascade)
-  players       Player[]
-  home_matches  Match[]    @relation("Team1")
-  away_matches  Match[]    @relation("Team2")
-  innings       Innings[]
+  tournament      Tournament @relation(fields: [tournament_id], references: [id], onDelete: Cascade)
+  players         Player[]
+  home_matches    Match[]    @relation("Team1")
+  away_matches    Match[]    @relation("Team2")
+  batting_innings Innings[]  @relation("BattingTeam")
+  bowling_innings Innings[]  @relation("BowlingTeam")
 
   created_at    DateTime   @default(now())
 
@@ -149,6 +152,7 @@ model Player {
   fielding_entries FieldingEntry[]
   ball_as_batsman BallEvent[] @relation("BallBatsman")
   ball_as_bowler  BallEvent[] @relation("BallBowler")
+  career_stats    PlayerCareerStats?
 
   created_at     DateTime  @default(now())
 
@@ -175,6 +179,9 @@ model Match {
   toss_winner_id String?     @db.Uuid
   toss_decision  String?     // "bat" or "bowl"
 
+  // Match context for analytics filtering
+  match_type     String?     // "league" · "friendly" · "trial" · "academy" · "knockout"
+
   // For non-cricket sports: flexible event-based score data
   match_data     Json?       // { team1_score: 0, team2_score: 0, events: [] }
 
@@ -184,12 +191,28 @@ model Match {
 
   innings        Innings[]
   events         MatchEvent[]
+  playing_xi     MatchPlayer[]
 
   created_at     DateTime    @default(now())
   updated_at     DateTime    @updatedAt
 
   @@index([tournament_id, status])
   @@index([status])
+}
+
+// ── Playing XI ────────────────────────────────────────────────────────────────
+
+model MatchPlayer {
+  id               String  @id @default(uuid()) @db.Uuid
+  match_id         String  @db.Uuid
+  team_id          String  @db.Uuid
+  player_id        String  @db.Uuid
+  batting_position Int?    // 1-11, set when XI is locked
+
+  match  Match  @relation(fields: [match_id], references: [id], onDelete: Cascade)
+
+  @@unique([match_id, player_id])
+  @@index([match_id, team_id])
 }
 
 // ── Cricket-specific ──────────────────────────────────────────────────────────
@@ -237,7 +260,8 @@ model Innings {
   is_completed    Boolean   @default(false)
 
   match           Match     @relation(fields: [match_id], references: [id], onDelete: Cascade)
-  batting_team    Team      @relation(fields: [batting_team_id], references: [id])
+  batting_team    Team      @relation("BattingTeam", fields: [batting_team_id], references: [id])
+  bowling_team    Team      @relation("BowlingTeam", fields: [bowling_team_id], references: [id])
   batting_entries BattingEntry[]
   bowling_entries BowlingEntry[]
   fielding_entries FieldingEntry[]
@@ -450,6 +474,44 @@ model BallEvent {
   @@index([innings_id, phase])
   @@index([bowler_id, ball_length])
   @@index([bowler_id, ball_line])
+}
+
+// ── Career Stats (updated on match completion) ────────────────────────────────
+
+model PlayerCareerStats {
+  id                   String   @id @default(uuid()) @db.Uuid
+  player_id            String   @unique @db.Uuid
+
+  // Batting
+  matches_played       Int      @default(0)
+  innings_batted       Int      @default(0)
+  total_runs           Int      @default(0)
+  balls_faced          Int      @default(0)
+  highest_score        Int      @default(0)
+  not_outs             Int      @default(0)
+  hundreds             Int      @default(0)
+  fifties              Int      @default(0)
+  fours                Int      @default(0)
+  sixes                Int      @default(0)
+
+  // Bowling
+  innings_bowled       Int      @default(0)
+  balls_bowled         Int      @default(0)
+  runs_conceded        Int      @default(0)
+  wickets              Int      @default(0)
+  maidens              Int      @default(0)
+  five_wicket_hauls    Int      @default(0)
+  best_bowling_wickets Int      @default(0)
+  best_bowling_runs    Int      @default(9999)
+
+  // Fielding
+  catches              Int      @default(0)
+  run_outs             Int      @default(0)
+  stumpings            Int      @default(0)
+
+  player               Player   @relation(fields: [player_id], references: [id], onDelete: Cascade)
+
+  updated_at           DateTime @updatedAt
 }
 
 // ── Generic match events (football, basketball, etc.) ─────────────────────────

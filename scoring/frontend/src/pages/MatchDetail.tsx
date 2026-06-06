@@ -9,8 +9,8 @@ function oversFromBalls(balls: number) {
 }
 
 function ScorecardHeader({ match, innings }: { match: any; innings: any }) {
-  const battingTeam = innings.batting_team_id === match.team1.id ? match.team1 : match.team2;
-  const bowlingTeam = innings.batting_team_id === match.team1.id ? match.team2 : match.team1;
+  const battingTeam = innings.batting_team_id === match.team1?.id ? match.team1 : match.team2;
+  const bowlingTeam = innings.batting_team_id === match.team1?.id ? match.team2 : match.team1;
 
   return (
     <div className="bg-gray-800 text-white rounded-t-xl p-4">
@@ -24,7 +24,7 @@ function ScorecardHeader({ match, innings }: { match: any; innings: any }) {
           <div className="text-right">
             <p className="text-xs text-gray-400">Target</p>
             <p className="text-2xl font-bold">{innings.target}</p>
-            <p className="text-xs text-gray-400">Need {innings.target - innings.total_runs} in {Math.floor((50 * 6 - innings.total_balls) / 6)} ov</p>
+            <p className="text-xs text-gray-400">Need {innings.target - innings.total_runs} in {(() => { const maxOvers = match?.format === "T20" ? 20 : match?.format === "ODI" ? 50 : match?.format === "T10" ? 10 : null; return maxOvers ? Math.max(0, Math.floor((maxOvers * 6 - innings.total_balls) / 6)) : "?"; })()} ov</p>
           </div>
         )}
       </div>
@@ -34,8 +34,9 @@ function ScorecardHeader({ match, innings }: { match: any; innings: any }) {
 }
 
 function BattingTable({ entries, match }: { entries: any[]; match: any }) {
-  const batted = entries.filter((e: any) => e.status !== "yet_to_bat");
-  const dnb = entries.filter((e: any) => e.status === "yet_to_bat");
+  const safeEntries = entries ?? [];
+  const batted = safeEntries.filter((e: any) => e.status !== "yet_to_bat");
+  const dnb = safeEntries.filter((e: any) => e.status === "yet_to_bat");
 
   return (
     <div className="overflow-x-auto">
@@ -93,7 +94,7 @@ function BattingTable({ entries, match }: { entries: any[]; match: any }) {
 }
 
 function BowlingTable({ entries }: { entries: any[] }) {
-  const bowled = entries.filter((e: any) => e.balls > 0);
+  const bowled = (entries ?? []).filter((e: any) => e.balls > 0);
   if (!bowled.length) return null;
 
   return (
@@ -144,12 +145,12 @@ function GenericScore({ match }: { match: any }) {
       <div className="bg-gray-800 text-white rounded-xl p-6">
         <div className="grid grid-cols-3 items-center text-center">
           <div>
-            <p className="font-bold text-lg">{match.team1.name}</p>
+            <p className="font-bold text-lg">{match.team1?.name ?? "TBD"}</p>
             <p className="text-4xl font-bold mt-1">{md.team1_score ?? 0}</p>
           </div>
           <div className="text-gray-400 text-sm">vs</div>
           <div>
-            <p className="font-bold text-lg">{match.team2.name}</p>
+            <p className="font-bold text-lg">{match.team2?.name ?? "TBD"}</p>
             <p className="text-4xl font-bold mt-1">{md.team2_score ?? 0}</p>
           </div>
         </div>
@@ -198,7 +199,7 @@ export default function MatchDetail() {
           <Trophy className="w-3.5 h-3.5" /> Tournament
         </Link>
         <span className="text-gray-300">›</span>
-        <h1 className="font-bold">{data.title || `${data.team1.name} vs ${data.team2.name}`}</h1>
+        <h1 className="font-bold">{data.title || `${data.team1?.name ?? "TBD"} vs ${data.team2?.name ?? "TBD"}`}</h1>
         {data.status === "live" && <span className="badge-live flex items-center gap-1"><Radio className="w-3 h-3" /> LIVE</span>}
         {canManage && data.status === "live" && (
           <Link to={`/matches/${matchId}/score`} className="btn-primary ml-auto">
@@ -220,7 +221,7 @@ export default function MatchDetail() {
       {/* Toss info */}
       {data.toss_winner_id && (
         <p className="text-sm text-gray-500">
-          Toss: {data.toss_winner_id === data.team1.id ? data.team1.name : data.team2.name} won and chose to {data.toss_decision}
+          Toss: {data.toss_winner_id === data.team1?.id ? data.team1?.name : data.team2?.name} won and chose to {data.toss_decision}
         </p>
       )}
 
@@ -232,7 +233,7 @@ export default function MatchDetail() {
       )}
 
       {/* Cricket scorecard */}
-      {isCricket && data.innings.length > 0 ? (
+      {isCricket && (data.innings?.length ?? 0) > 0 ? (
         <div className="space-y-4">
           {data.innings.map((inn: any) => (
             <div key={inn.id} className="card overflow-hidden">
