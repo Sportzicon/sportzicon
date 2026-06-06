@@ -171,6 +171,42 @@ export async function deletePlayer(tournamentId: string, teamId: string, playerI
   return { deleted: true };
 }
 
+export async function getSuggestedPlayers(tournamentId: string, teamId: string) {
+  const team = await prisma.team.findUnique({ where: { id: teamId } });
+  if (!team) throw NotFound("Team not found");
+
+  // Find other tournaments by same team (same name or same sport)
+  const otherTournaments = await prisma.tournament.findMany({
+    where: {
+      id: { not: tournamentId },
+      sport: "cricket"
+    },
+    include: {
+      teams: {
+        where: { name: team.name },
+        include: { players: true }
+      }
+    }
+  });
+
+  // Collect unique players from other tournament matches
+  const suggestedPlayerIds = new Set<string>();
+  for (const t of otherTournaments) {
+    for (const sameTeam of t.teams) {
+      for (const player of sameTeam.players) {
+        suggestedPlayerIds.add(player.id);
+      }
+    }
+  }
+
+  // Fetch actual player records
+  const players = await prisma.player.findMany({
+    where: { id: { in: Array.from(suggestedPlayerIds) } }
+  });
+
+  return players;
+}
+
 export async function getPlayerStats(playerId: string) {
   const player = await prisma.player.findUnique({
     where: { id: playerId },
@@ -297,6 +333,7 @@ export async function createMatch(tournamentId: string, actorId: string, actorRo
       tournament_id: tournamentId,
       sport: t.sport,
       format: input.format ?? t.format,
+      match_type: input.match_type ?? t.match_type,
       team1_id: input.team1_id,
       team2_id: input.team2_id,
       title: input.title,
@@ -375,6 +412,7 @@ export async function syncCareerStats(matchId: string) {
   const match = await prisma.match.findUnique({
     where: { id: matchId },
     include: {
+      playing_xi: true,
       innings: {
         include: {
           batting_entries: true,
@@ -386,6 +424,9 @@ export async function syncCareerStats(matchId: string) {
   });
   if (!match) return;
 
+  // Get XI players to count only those (not substitute fielders)
+  const xiPlayerIds = new Set(match.playing_xi.map(mp => mp.player_id));
+
   // Collect per-player data across all innings in this match
   const playerBatting = new Map<string, { runs: number; balls: number; fours: number; sixes: number; isOut: boolean; notOut: boolean }[]>();
   const playerBowling = new Map<string, { balls: number; runs: number; wickets: number; maidens: number }[]>();
@@ -394,6 +435,7 @@ export async function syncCareerStats(matchId: string) {
   for (const inn of match.innings) {
     for (const b of inn.batting_entries) {
       if (b.status === "yet_to_bat") continue;
+      if (!xiPlayerIds.has(b.player_id)) continue; // Only count XI players
       if (!playerBatting.has(b.player_id)) playerBatting.set(b.player_id, []);
       playerBatting.get(b.player_id)!.push({
         runs: b.runs,
@@ -406,12 +448,14 @@ export async function syncCareerStats(matchId: string) {
     }
     for (const b of inn.bowling_entries) {
       if (b.balls === 0) continue;
+      if (!xiPlayerIds.has(b.player_id)) continue; // Only count XI players
       if (!playerBowling.has(b.player_id)) playerBowling.set(b.player_id, []);
       playerBowling.get(b.player_id)!.push({
         balls: b.balls, runs: b.runs_conceded, wickets: b.wickets, maidens: b.maidens
       });
     }
     for (const f of inn.fielding_entries) {
+      if (!xiPlayerIds.has(f.player_id)) continue; // Only count XI players
       if (!playerFielding.has(f.player_id)) playerFielding.set(f.player_id, []);
       playerFielding.get(f.player_id)!.push({
         catches: f.catches,
@@ -421,8 +465,8 @@ export async function syncCareerStats(matchId: string) {
     }
   }
 
-  // All unique player IDs who participated
-  const allPlayerIds = new Set([...playerBatting.keys(), ...playerBowling.keys(), ...playerFielding.keys()]);
+  // All unique XI player IDs who participated
+  const allPlayerIds = new Set(xiPlayerIds);
 
   for (const playerId of allPlayerIds) {
     const batEntries = playerBatting.get(playerId) ?? [];
@@ -560,23 +604,41 @@ export async function setPlayingXI(
   matchId: string, actorId: string, actorRole: string,
   team1PlayerIds: string[], team2PlayerIds: string[]
 ) {
+  if (team1PlayerIds.length !== 11 || team2PlayerIds.length !== 11) {
+    throw BadRequest("Each team must have exactly 11 players");
+  }
+
   const match = await prisma.match.findUnique({
     where: { id: matchId },
-    include: { team1: true, team2: true }
+    include: { team1: { include: { players: true } }, team2: { include: { players: true } } }
   });
   if (!match) throw NotFound("Match not found");
+  if (match.status !== "upcoming") throw BadRequest("XI can only be set before match starts");
   await assertManager(match.tournament_id, actorId, actorRole);
 
-  // Clear existing XI and replace
-  await prisma.matchPlayer.deleteMany({ where: { match_id: matchId } });
+  // Validate all player IDs belong to their respective teams
+  const team1PlayerSet = new Set(match.team1.players.map(p => p.id));
+  const team2PlayerSet = new Set(match.team2.players.map(p => p.id));
 
-  const rows = [
-    ...team1PlayerIds.map((pid, i) => ({ match_id: matchId, team_id: match.team1_id, player_id: pid, batting_position: i + 1 })),
-    ...team2PlayerIds.map((pid, i) => ({ match_id: matchId, team_id: match.team2_id, player_id: pid, batting_position: i + 1 }))
-  ];
+  for (const pid of team1PlayerIds) {
+    if (!team1PlayerSet.has(pid)) throw BadRequest(`Player ${pid} is not in team ${match.team1.name}`);
+  }
+  for (const pid of team2PlayerIds) {
+    if (!team2PlayerSet.has(pid)) throw BadRequest(`Player ${pid} is not in team ${match.team2.name}`);
+  }
 
-  await prisma.matchPlayer.createMany({ data: rows, skipDuplicates: true });
-  return { ok: true, count: rows.length };
+  // Clear existing XI and replace in transaction
+  await prisma.$transaction([
+    prisma.matchPlayer.deleteMany({ where: { match_id: matchId } }),
+    prisma.matchPlayer.createMany({
+      data: [
+        ...team1PlayerIds.map((pid, i) => ({ match_id: matchId, team_id: match.team1_id, player_id: pid, batting_position: i + 1 })),
+        ...team2PlayerIds.map((pid, i) => ({ match_id: matchId, team_id: match.team2_id, player_id: pid, batting_position: i + 1 }))
+      ]
+    })
+  ]);
+
+  return { ok: true, count: 22 };
 }
 
 export async function updateMatch(matchId: string, actorId: string, actorRole: string, patch: any) {
@@ -610,9 +672,20 @@ export async function deleteMatch(matchId: string, actorId: string, actorRole: s
 // ── Cricket Innings ───────────────────────────────────────────────────────────
 
 export async function createInnings(matchId: string, actorId: string, actorRole: string, input: any) {
-  const match = await prisma.match.findUnique({ where: { id: matchId } });
+  const match = await prisma.match.findUnique({ where: { id: matchId }, include: { team1: true, team2: true } });
   if (!match) throw NotFound("Match not found");
   await assertManager(match.tournament_id, actorId, actorRole);
+
+  // Validate batting and bowling teams are match teams
+  if (input.batting_team_id !== match.team1_id && input.batting_team_id !== match.team2_id) {
+    throw BadRequest("Batting team is not in this match");
+  }
+  if (input.bowling_team_id !== match.team1_id && input.bowling_team_id !== match.team2_id) {
+    throw BadRequest("Bowling team is not in this match");
+  }
+  if (input.batting_team_id === input.bowling_team_id) {
+    throw BadRequest("Batting and bowling teams must be different");
+  }
 
   const existing = await prisma.innings.findUnique({
     where: { match_id_innings_number: { match_id: matchId, innings_number: input.innings_number } }

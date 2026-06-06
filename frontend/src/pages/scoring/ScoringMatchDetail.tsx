@@ -28,6 +28,59 @@ function Tile({ label, value, sub, accent }: { label: string; value: string | nu
   );
 }
 
+// ── Team XI selector ──────────────────────────────────────────────────────────
+const roleColor: Record<string, string> = {
+  "batsman": "text-blue-600", "bowler": "text-purple-600",
+  "all-rounder": "text-brand-500", "wicket-keeper": "text-amber-600"
+};
+
+function TeamXI({ team, sel, editing, teamNum, togglePlayer }: { team: any; sel: Set<string>; editing: boolean; teamNum: 1 | 2; togglePlayer: (t: 1 | 2, p: string) => void }) {
+  const players = team?.players ?? [];
+  return (
+    <div>
+      <div className="flex items-center justify-between px-3 py-2 bg-fill border-b border-hair">
+        <p className="font-semibold text-sm text-ink">{team?.name}</p>
+        <p className={`lab ${sel.size === 11 ? "text-green-700" : "text-brand-500"}`}>
+          {sel.size}/11 selected
+        </p>
+      </div>
+      <div className="divide-y divide-hairsoft">
+        {players.map((p: any) => {
+          const checked = editing ? sel.has(p.id) : p.in_xi;
+          return (
+            <button
+              key={p.id}
+              type="button"
+              disabled={!editing}
+              onClick={() => togglePlayer(teamNum, p.id)}
+              className={`w-full flex items-center gap-3 px-3 py-2 text-left transition-colors ${
+                checked ? "bg-ink text-paper" : "hover:bg-fill"
+              } ${!editing ? "cursor-default" : "cursor-pointer"}`}
+            >
+              <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-xs font-mononum font-bold ${
+                checked ? "bg-paper/20 text-paper" : "bg-fill text-ink-sub"
+              }`}>
+                {p.jersey_number ?? <User className="w-3 h-3" />}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className={`text-sm font-medium truncate ${checked ? "text-paper" : "text-ink"}`}>
+                  {p.name}
+                  {p.is_captain && <span className="text-brand-400"> (c)</span>}
+                  {p.is_keeper && <span className={checked ? "text-paper/60" : "text-ink-sub"}> †</span>}
+                </p>
+                <p className={`lab truncate ${checked ? "text-paper/50" : roleColor[p.role] ?? "text-ink-faint"}`}>
+                  {p.role?.replace(/-/g," ")}
+                </p>
+              </div>
+              {checked && <CheckCircle2 className="w-4 h-4 text-brand-400 shrink-0" />}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ── Playing XI panel ─────────────────────────────────────────────────────────
 function PlayingXIPanel({ matchId, canManage }: { matchId: string; canManage: boolean }) {
   const qc = useQueryClient();
@@ -75,53 +128,6 @@ function PlayingXIPanel({ matchId, canManage }: { matchId: string; canManage: bo
     "all-rounder": "text-brand-500", "wicket-keeper": "text-amber-600"
   };
 
-  function TeamXI({ team, sel, teamNum }: { team: any; sel: Set<string>; teamNum: 1 | 2 }) {
-    const players = team?.players ?? [];
-    return (
-      <div>
-        <div className="flex items-center justify-between px-3 py-2 bg-fill border-b border-hair">
-          <p className="font-semibold text-sm text-ink">{team?.name}</p>
-          <p className={`lab ${sel.size === 11 ? "text-green-700" : "text-brand-500"}`}>
-            {sel.size}/11 selected
-          </p>
-        </div>
-        <div className="divide-y divide-hairsoft">
-          {players.map((p: any) => {
-            const checked = editing ? sel.has(p.id) : p.in_xi;
-            return (
-              <button
-                key={p.id}
-                type="button"
-                disabled={!editing}
-                onClick={() => togglePlayer(teamNum, p.id)}
-                className={`w-full flex items-center gap-3 px-3 py-2 text-left transition-colors ${
-                  checked ? "bg-ink text-paper" : "hover:bg-fill"
-                } ${!editing ? "cursor-default" : "cursor-pointer"}`}
-              >
-                <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-xs font-mononum font-bold ${
-                  checked ? "bg-paper/20 text-paper" : "bg-fill text-ink-sub"
-                }`}>
-                  {p.jersey_number ?? <User className="w-3 h-3" />}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className={`text-sm font-medium truncate ${checked ? "text-paper" : "text-ink"}`}>
-                    {p.name}
-                    {p.is_captain && <span className="text-brand-400"> (c)</span>}
-                    {p.is_keeper && <span className={checked ? "text-paper/60" : "text-ink-sub"}> †</span>}
-                  </p>
-                  <p className={`lab truncate ${checked ? "text-paper/50" : roleColor[p.role] ?? "text-ink-faint"}`}>
-                    {p.role?.replace(/-/g," ")}
-                  </p>
-                </div>
-                {checked && <CheckCircle2 className="w-4 h-4 text-brand-400 shrink-0" />}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-    );
-  }
-
   if (isLoading) return <div className="skel h-24 rounded" />;
 
   const xiLocked = xi?.xi_locked;
@@ -167,8 +173,8 @@ function PlayingXIPanel({ matchId, canManage }: { matchId: string; canManage: bo
 
       {(xiLocked || editing) && (
         <div className="grid sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-hair">
-          <TeamXI team={xi?.team1} sel={editing ? t1Sel : new Set((xi?.team1?.players ?? []).filter((p: any) => p.in_xi).map((p: any) => p.id))} teamNum={1} />
-          <TeamXI team={xi?.team2} sel={editing ? t2Sel : new Set((xi?.team2?.players ?? []).filter((p: any) => p.in_xi).map((p: any) => p.id))} teamNum={2} />
+          <TeamXI team={xi?.team1} sel={editing ? t1Sel : new Set((xi?.team1?.players ?? []).filter((p: any) => p.in_xi).map((p: any) => p.id))} editing={editing} teamNum={1} togglePlayer={togglePlayer} />
+          <TeamXI team={xi?.team2} sel={editing ? t2Sel : new Set((xi?.team2?.players ?? []).filter((p: any) => p.in_xi).map((p: any) => p.id))} editing={editing} teamNum={2} togglePlayer={togglePlayer} />
         </div>
       )}
 

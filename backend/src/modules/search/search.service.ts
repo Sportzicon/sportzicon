@@ -186,7 +186,12 @@ function playerCard(u: User) {
           primary_sport: d.primary_sport,
           position: d.position,
           experience_level: d.experience_level,
-          availability: d.availability
+          availability: d.availability,
+          // Cricket-specific fields for scoring module
+          batting_style: d.batting_style,
+          bowling_style: d.bowling_style,
+          jersey_number: d.jersey_number,
+          cricket_role: d.cricket_role
         }
       : undefined,
     follower_count: u.follower_count

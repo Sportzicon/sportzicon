@@ -3,8 +3,10 @@ import jwt from "jsonwebtoken";
 import { prisma } from "../config/prisma";
 import { Unauthorized } from "../utils/errors";
 
-const JWT_SECRET      = process.env.JWT_SECRET      || "scoring-secret-change-in-prod";
+const JWT_SECRET      = process.env.JWT_SECRET || "";
 const MAIN_JWT_SECRET = process.env.MAIN_JWT_SECRET || "";
+
+if (!JWT_SECRET) throw new Error("JWT_SECRET environment variable is required");
 
 export interface JwtPayload {
   sub: string;
@@ -27,7 +29,7 @@ type TokenResult =
 function parseToken(token: string): TokenResult | null {
   // Scoring-native JWT
   try {
-    const p = jwt.verify(token, JWT_SECRET) as JwtPayload;
+    const p = jwt.verify(token, JWT_SECRET!) as JwtPayload;
     return { kind: "scoring", payload: p };
   } catch {}
 

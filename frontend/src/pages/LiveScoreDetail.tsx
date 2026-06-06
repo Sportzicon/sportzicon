@@ -583,14 +583,31 @@ export default function LiveScoreDetail() {
   const activeInnId = match?.innings?.slice().reverse().find((i: any) => !i.is_completed)?.id
     ?? match?.innings?.[match.innings.length - 1]?.id;
 
-  const { data: ballsData } = useQuery({
+  // Fetch balls for active innings (live updates)
+  const { data: activeBallsData } = useQuery({
     queryKey: ["live-balls", activeInnId],
     queryFn: () => scoringApi.get(`/innings/${activeInnId}/balls`).then(r => r.data.balls ?? []),
     enabled: !!activeInnId,
     refetchInterval: 5_000
   });
 
-  const balls = ballsData ?? [];
+  // For scorecard tab: fetch all balls for all innings when viewing non-active innings
+  const allBalls = useMemo(() => {
+    const result: any[] = [];
+    match?.innings?.forEach((inn: any) => {
+      if (inn.id === activeInnId) {
+        // Use live data for active innings
+        result.push(...(activeBallsData ?? []));
+      } else {
+        // For completed innings, include their ball events from match data
+        const innBalls = (inn as any).ball_events ?? [];
+        result.push(...innBalls);
+      }
+    });
+    return result;
+  }, [match?.innings, activeInnId, activeBallsData]);
+
+  const balls = activeBallsData ?? [];
 
   if (isLoading) return (
     <div className="min-h-screen bg-paper flex items-center justify-center">
@@ -654,7 +671,7 @@ export default function LiveScoreDetail() {
 
         {activeTab === "Live"
           ? <LiveTab match={match} balls={balls} />
-          : <ScorecardTab match={match} balls={balls} />
+          : <ScorecardTab match={match} balls={allBalls} />
         }
       </div>
     </div>

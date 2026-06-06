@@ -1,11 +1,12 @@
-import { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useParams } from "react-router-dom";
 import { scoringApi } from "../../api/scoringClient";
+import { api } from "../../api/client";
 import { useAuthStore } from "../../store/auth";
 import {
   Trophy, Users, Calendar, MapPin, Radio, Edit2, ChevronRight,
-  Plus, ChevronDown, ChevronUp, Trash2, User
+  Plus, ChevronDown, ChevronUp, Trash2, User, Search, X
 } from "lucide-react";
 
 const ov = (b: number) => `${Math.floor(b / 6)}.${b % 6}`;
@@ -20,7 +21,6 @@ const BOWL_STYLES = [
   "left-arm orthodox", "left-arm wrist-spin",
   "slow left-arm orthodox", "other"
 ];
-const WICKET_TYPES = ["bowled","caught","lbw","run_out","stumped","hit_wicket","handled_ball","obstructing_field","retired_hurt"];
 
 // ── Status pill ───────────────────────────────────────────────────────────────
 function StatusPill({ status }: { status: string }) {
@@ -105,77 +105,184 @@ function PlayerRow({ player, tournamentId, teamId, canManage, onDeleted }: any) 
   );
 }
 
-// ── Add player form ───────────────────────────────────────────────────────────
+// ── Select users as players form ─────────────────────────────────────────────
 function AddPlayerForm({ tournamentId, teamId, onDone }: any) {
-  const qc  = useQueryClient();
-  const [f, setF] = useState({
-    name: "", role: "batsman", batting_style: "right-hand bat", bowling_style: "",
-    jersey_number: "", is_captain: false, is_keeper: false
+  const qc = useQueryClient();
+  const [search, setSearch] = useState("");
+  const [selected, setSelected] = useState<any[]>([]);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [dropUp, setDropUp] = useState(false);
+  const inputWrapRef = useRef<HTMLDivElement>(null);
+
+  // Recalculate flip direction whenever dropdown opens
+  useEffect(() => {
+    if (!showDropdown || !inputWrapRef.current) return;
+    const rect = inputWrapRef.current.getBoundingClientRect();
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const spaceAbove = rect.top;
+    // Flip up if less than 220px below and more space above
+    setDropUp(spaceBelow < 220 && spaceAbove > spaceBelow);
+  }, [showDropdown]);
+
+  // Load only cricket athletes — strictly filtered by primary_sport=cricket
+  const { data: cricketUsers = [], isLoading: loadingUsers } = useQuery({
+    queryKey: ["cricket-athletes"],
+    queryFn: () =>
+      api.get("/search/players?sport=cricket&limit=500")
+        .then(r => r.data.items ?? []),
+    staleTime: 60_000
   });
+
+  // Existing players already in this team (to exclude from dropdown)
+  const { data: teamData } = useQuery({
+    queryKey: ["scoring-tournament", tournamentId],
+    enabled: false  // already in cache from parent
+  });
+  const existingUserIds = new Set<string>(
+    ((teamData as any)?.teams ?? [])
+      .flatMap((t: any) => t.id === teamId ? (t.players ?? []) : [])
+      .map((p: any) => p.sportivox_user_id)
+      .filter(Boolean)
+  );
+
   const mut = useMutation({
-    mutationFn: () => scoringApi.post(`/tournaments/${tournamentId}/teams/${teamId}/players`, {
-      ...f, jersey_number: f.jersey_number ? Number(f.jersey_number) : undefined
-    }),
+    mutationFn: async () => {
+      for (const athlete of selected) {
+        const ad = athlete.athlete_data as Record<string, any> | null;
+        await scoringApi.post(`/tournaments/${tournamentId}/teams/${teamId}/players`, {
+          name: athlete.full_name,
+          sportivox_user_id: athlete.id,
+          photo_url: athlete.profile_photo_url || undefined,
+          jersey_number: ad?.jersey_number ?? undefined,
+          batting_style: ad?.batting_style ?? "right-hand bat",
+          bowling_style: ad?.bowling_style ?? undefined,
+          role: ad?.cricket_role ?? ad?.position ?? "batsman"
+        });
+      }
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["scoring-tournament", tournamentId] });
-      setF({ name:"", role:"batsman", batting_style:"right-hand bat", bowling_style:"", jersey_number:"", is_captain:false, is_keeper:false });
+      setSelected([]);
+      setSearch("");
       onDone?.();
     }
   });
-  const s = (k: string, v: any) => setF(p => ({ ...p, [k]: v }));
-  const isBowler = f.role === "bowler" || f.role === "all-rounder";
+
+  // Filter dropdown: exclude already selected and already in team, then apply search text
+  const needle = search.toLowerCase();
+  const filteredUsers = cricketUsers.filter(
+    (a: any) =>
+      !selected.some(s => s.id === a.id) &&
+      !existingUserIds.has(a.id) &&
+      (needle === "" || a.full_name.toLowerCase().includes(needle))
+  );
+
+  const toggleAthlete = (athlete: any) =>
+    setSelected(s =>
+      s.some(x => x.id === athlete.id) ? s.filter(x => x.id !== athlete.id) : [...s, athlete]
+    );
 
   return (
     <div className="bg-fill rounded p-4 space-y-3 border border-hairsoft">
-      <p className="lab text-ink-sub">Add Player</p>
-      <div className="grid sm:grid-cols-2 gap-3">
-        <div className="sm:col-span-2">
-          <label className="lab block mb-1">Full Name *</label>
-          <input className="input w-full" value={f.name} onChange={e => s("name", e.target.value)} placeholder="e.g. Rohit Sharma" required />
+      <p className="lab text-ink-sub">Add Players from Sportivox</p>
+
+      {/* Search + dropdown */}
+      <div className="relative" ref={inputWrapRef}>
+        <div className="flex items-center gap-2 input px-3 py-2 focus-within:ring-2 ring-brand-500/30">
+          <Search className={`w-4 h-4 shrink-0 ${loadingUsers ? "text-brand-500 animate-pulse" : "text-ink-faint"}`} />
+          <input
+            type="text"
+            placeholder={loadingUsers ? "Loading cricket athletes…" : `Search ${cricketUsers.length} cricket athletes…`}
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            onFocus={() => setShowDropdown(true)}
+            onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
+            className="flex-1 outline-none bg-transparent text-sm"
+            autoComplete="off"
+            disabled={loadingUsers}
+          />
+          {search && (
+            <button type="button" onClick={() => setSearch("")} className="text-ink-faint hover:text-ink">
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
-        <div>
-          <label className="lab block mb-1">Jersey #</label>
-          <input className="input w-full" type="number" value={f.jersey_number} onChange={e => s("jersey_number", e.target.value)} placeholder="e.g. 45" />
-        </div>
-        <div>
-          <label className="lab block mb-1">Role</label>
-          <select className="input w-full" value={f.role} onChange={e => s("role", e.target.value)}>
-            {ROLES.map(r => <option key={r} value={r}>{r.replace(/-/g," ")}</option>)}
-          </select>
-        </div>
-        <div>
-          <label className="lab block mb-1">Batting Style</label>
-          <select className="input w-full" value={f.batting_style} onChange={e => s("batting_style", e.target.value)}>
-            {BAT_STYLES.map(s => <option key={s} value={s}>{s}</option>)}
-          </select>
-        </div>
-        {isBowler && (
-          <div>
-            <label className="lab block mb-1">Bowling Style</label>
-            <select className="input w-full" value={f.bowling_style} onChange={e => s("bowling_style", e.target.value)}>
-              <option value="">Select style</option>
-              {BOWL_STYLES.map(s => <option key={s} value={s}>{s}</option>)}
-            </select>
+
+        {showDropdown && !loadingUsers && (
+          <div className={`absolute left-0 right-0 bg-paper border border-hair rounded-lg shadow-xl z-20 max-h-56 overflow-y-auto ${
+            dropUp ? "bottom-full mb-1" : "top-full mt-1"
+          }`}>
+            {filteredUsers.length === 0 ? (
+              <div className="px-4 py-3 text-xs text-ink-faint">
+                {search ? `No cricket athletes found matching "${search}"` : "All cricket athletes already added"}
+              </div>
+            ) : (
+              filteredUsers.map((athlete: any) => {
+                const ad = athlete.athlete_data as Record<string, any> | null;
+                return (
+                  <button
+                    key={athlete.id}
+                    type="button"
+                    onMouseDown={() => toggleAthlete(athlete)}
+                    className="w-full text-left px-3 py-2.5 hover:bg-fill flex items-center gap-3 border-b border-hairsoft last:border-0 transition"
+                  >
+                    {athlete.profile_photo_url
+                      ? <img src={athlete.profile_photo_url} className="w-8 h-8 rounded-full object-cover shrink-0" alt="" />
+                      : <div className="w-8 h-8 rounded-full bg-fill2 flex items-center justify-center shrink-0 text-xs font-bold text-ink-sub">
+                          {athlete.full_name.charAt(0).toUpperCase()}
+                        </div>
+                    }
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-ink truncate">{athlete.full_name}</p>
+                      <p className="text-xs text-ink-faint">
+                        {ad?.cricket_role || ad?.position || "Athlete"}
+                        {ad?.batting_style && <span className="ml-1.5">· {ad.batting_style === "right-hand bat" ? "RHB" : "LHB"}</span>}
+                        {ad?.jersey_number && <span className="ml-1.5">· #{ad.jersey_number}</span>}
+                        {athlete.city && <span className="ml-1.5">· {athlete.city}</span>}
+                      </p>
+                    </div>
+                  </button>
+                );
+              })
+            )}
           </div>
         )}
-        {f.role === "wicket-keeper" && (
-          <div className="sm:col-span-2 flex items-center gap-2">
-            <input type="checkbox" id="is_keeper" checked={f.is_keeper} onChange={e => s("is_keeper", e.target.checked)} />
-            <label htmlFor="is_keeper" className="text-sm text-ink">Wicket-keeper</label>
-          </div>
-        )}
-        <div className="sm:col-span-2 flex items-center gap-2">
-          <input type="checkbox" id="is_captain" checked={f.is_captain} onChange={e => s("is_captain", e.target.checked)} />
-          <label htmlFor="is_captain" className="text-sm text-ink">Team Captain</label>
-        </div>
       </div>
-      <div className="flex gap-2">
-        <button onClick={() => f.name && mut.mutate()} disabled={!f.name || mut.isPending} className="btn-primary text-xs min-h-0 px-4 py-2">
-          {mut.isPending ? "Adding…" : "Add Player"}
+
+      {/* Selected chips */}
+      {selected.length > 0 && (
+        <div className="space-y-1.5">
+          <p className="lab text-ink-sub text-xs">{selected.length} selected</p>
+          <div className="flex flex-wrap gap-2">
+            {selected.map(athlete => (
+              <div key={athlete.id} className="bg-ink text-paper rounded-full px-3 py-1 text-xs flex items-center gap-1.5">
+                <span>{athlete.full_name}</span>
+                <button
+                  type="button"
+                  onClick={() => setSelected(s => s.filter(x => x.id !== athlete.id))}
+                  className="text-paper/60 hover:text-paper"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="flex gap-2 pt-1">
+        <button
+          onClick={() => mut.mutate()}
+          disabled={selected.length === 0 || mut.isPending}
+          className="btn-primary text-xs min-h-0 px-4 py-2"
+        >
+          {mut.isPending ? "Adding…" : `Add ${selected.length > 0 ? selected.length + " " : ""}Player${selected.length !== 1 ? "s" : ""}`}
         </button>
         <button onClick={onDone} className="btn-secondary text-xs min-h-0 px-4 py-2">Cancel</button>
       </div>
-      {mut.isError && <p className="text-xs text-red-600">{(mut.error as any)?.response?.data?.error?.message || "Failed"}</p>}
+      {mut.isError && (
+        <p className="text-xs text-red-600">{(mut.error as any)?.response?.data?.error?.message || "Failed to add players"}</p>
+      )}
     </div>
   );
 }
@@ -246,6 +353,41 @@ function TeamPanel({ team, tournamentId, canManage }: any) {
   );
 }
 
+// ── Create inline team form ──────────────────────────────────────────────────
+function InlineTeamForm({ tournamentId, onCreated }: { tournamentId: string; onCreated: (teamId: string) => void }) {
+  const qc = useQueryClient();
+  const [f, setF] = useState({ name: "", short_name: "" });
+  const mut = useMutation({
+    mutationFn: () => scoringApi.post(`/tournaments/${tournamentId}/teams`, f),
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ["scoring-tournament", tournamentId] });
+      const teamId = data?.data?.team?.id || data?.data?.id;
+      onCreated(teamId);
+    }
+  });
+
+  return (
+    <div className="space-y-2">
+      <input
+        className="input w-full text-sm" placeholder="Team name" value={f.name}
+        onChange={e => setF(p => ({ ...p, name: e.target.value }))}
+      />
+      <input
+        className="input w-full text-sm" placeholder="Short name (e.g., CSK)" value={f.short_name}
+        onChange={e => setF(p => ({ ...p, short_name: e.target.value }))}
+      />
+      <div className="flex gap-2">
+        <button
+          onClick={() => mut.mutate()} disabled={!f.name || mut.isPending}
+          className="btn-primary text-xs min-h-0 px-3 py-1.5 flex-1"
+        >
+          {mut.isPending ? "Creating…" : "Create Team"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ── Schedule match form ───────────────────────────────────────────────────────
 function ScheduleMatchForm({ tournament, onDone }: { tournament: any; onDone: () => void }) {
   const qc = useQueryClient();
@@ -257,10 +399,21 @@ function ScheduleMatchForm({ tournament, onDone }: { tournament: any; onDone: ()
     toss_winner_id: "", toss_decision: "bat",
     format: tournament.format ?? "T20",
     match_type: tournament.match_type ?? "league",
-    scheduled_at: ""
+    scheduled_at: "",
+    team1_players: [] as string[], team2_players: [] as string[]
   });
 
+  const [showNewTeam1, setShowNewTeam1] = useState(false);
+  const [showNewTeam2, setShowNewTeam2] = useState(false);
+
   const s = (k: string, v: any) => setF(p => ({ ...p, [k]: v }));
+  const togglePlayer = (teamNum: 1 | 2, playerId: string) => {
+    const key = teamNum === 1 ? "team1_players" : "team2_players";
+    setF(p => ({
+      ...p,
+      [key]: p[key].includes(playerId) ? p[key].filter(id => id !== playerId) : [...p[key], playerId]
+    }));
+  };
 
   const mut = useMutation({
     mutationFn: async () => {
@@ -283,6 +436,13 @@ function ScheduleMatchForm({ tournament, onDone }: { tournament: any; onDone: ()
           status: "upcoming"
         });
       }
+      // Set playing XI if players selected
+      if (matchId && (f.team1_players.length > 0 || f.team2_players.length > 0)) {
+        await scoringApi.post(`/matches/${matchId}/xi`, {
+          team1_player_ids: f.team1_players,
+          team2_player_ids: f.team2_players
+        }).catch(() => {}); // XI is optional during match creation
+      }
       return matchId;
     },
     onSuccess: () => {
@@ -291,8 +451,11 @@ function ScheduleMatchForm({ tournament, onDone }: { tournament: any; onDone: ()
     }
   });
 
-  const t1 = teams.find((t: any) => t.id === f.team1_id);
-  const t2 = teams.find((t: any) => t.id === f.team2_id);
+  // Refresh teams after creation
+  const allTeams = [...teams].filter(Boolean);
+
+  const t1 = allTeams.find((t: any) => t.id === f.team1_id);
+  const t2 = allTeams.find((t: any) => t.id === f.team2_id);
 
   return (
     <div className="card p-5 space-y-5 border-2 border-brand-500">
@@ -304,24 +467,136 @@ function ScheduleMatchForm({ tournament, onDone }: { tournament: any; onDone: ()
       {/* Teams */}
       <div className="grid sm:grid-cols-2 gap-4">
         <div>
-          <label className="lab block mb-1">Team 1 *</label>
-          <select className="input w-full" value={f.team1_id} onChange={e => s("team1_id", e.target.value)} required>
-            <option value="">Select team</option>
-            {teams.filter((t: any) => t.id !== f.team2_id).map((t: any) => (
-              <option key={t.id} value={t.id}>{t.name}</option>
-            ))}
-          </select>
+          <label className="lab block mb-2">Team 1 *</label>
+          {allTeams.length > 0 ? (
+            <>
+              <select className="input w-full mb-2" value={f.team1_id} onChange={e => s("team1_id", e.target.value)} required>
+                <option value="">Select team</option>
+                {allTeams.filter((t: any) => t.id !== f.team2_id).map((t: any) => (
+                  <option key={t.id} value={t.id}>{t.name}</option>
+                ))}
+              </select>
+              {!showNewTeam1 && (
+                <button type="button" onClick={() => setShowNewTeam1(true)} className="lab text-brand-500 text-xs hover:underline">
+                  + Add new team
+                </button>
+              )}
+            </>
+          ) : null}
+          {showNewTeam1 && (
+            <div className="bg-fill rounded p-2.5 space-y-2 border border-hairsoft">
+              <InlineTeamForm tournamentId={tournament.id} onCreated={(teamId) => {
+                qc.invalidateQueries({ queryKey: ["scoring-tournament", tournament.id] });
+                s("team1_id", teamId);
+                setShowNewTeam1(false);
+              }} />
+            </div>
+          )}
+          {allTeams.length === 0 && !showNewTeam1 && (
+            <button type="button" onClick={() => setShowNewTeam1(true)} className="btn-secondary w-full text-xs min-h-0 px-3 py-1.5">
+              Create Team 1
+            </button>
+          )}
         </div>
         <div>
-          <label className="lab block mb-1">Team 2 *</label>
-          <select className="input w-full" value={f.team2_id} onChange={e => s("team2_id", e.target.value)} required>
-            <option value="">Select team</option>
-            {teams.filter((t: any) => t.id !== f.team1_id).map((t: any) => (
-              <option key={t.id} value={t.id}>{t.name}</option>
-            ))}
-          </select>
+          <label className="lab block mb-2">Team 2 *</label>
+          {allTeams.length > 1 || (allTeams.length > 0 && f.team1_id) ? (
+            <>
+              <select className="input w-full mb-2" value={f.team2_id} onChange={e => s("team2_id", e.target.value)} required>
+                <option value="">Select team</option>
+                {allTeams.filter((t: any) => t.id !== f.team1_id).map((t: any) => (
+                  <option key={t.id} value={t.id}>{t.name}</option>
+                ))}
+              </select>
+              {!showNewTeam2 && (
+                <button type="button" onClick={() => setShowNewTeam2(true)} className="lab text-brand-500 text-xs hover:underline">
+                  + Add new team
+                </button>
+              )}
+            </>
+          ) : null}
+          {showNewTeam2 && (
+            <div className="bg-fill rounded p-2.5 space-y-2 border border-hairsoft">
+              <InlineTeamForm tournamentId={tournament.id} onCreated={(teamId) => {
+                qc.invalidateQueries({ queryKey: ["scoring-tournament", tournament.id] });
+                s("team2_id", teamId);
+                setShowNewTeam2(false);
+              }} />
+            </div>
+          )}
+          {allTeams.length < 2 && !showNewTeam2 && (
+            <button type="button" onClick={() => setShowNewTeam2(true)} className="btn-secondary w-full text-xs min-h-0 px-3 py-1.5">
+              Create Team 2
+            </button>
+          )}
         </div>
       </div>
+
+      {/* Player selection with auto-population */}
+      {f.team1_id && f.team2_id && (
+        <div className="border-t border-hairsoft pt-4">
+          <p className="lab text-ink-sub mb-3">Select Playing XI (auto-populated from team roster)</p>
+          <div className="grid sm:grid-cols-2 gap-4">
+            {[
+              { teamNum: 1 as const, teamId: f.team1_id, team: t1 },
+              { teamNum: 2 as const, teamId: f.team2_id, team: t2 }
+            ].filter(({team}) => team).map(({ teamNum, team }) => {
+              const players = team.players ?? [];
+              const selected = teamNum === 1 ? f.team1_players : f.team2_players;
+
+              // Auto-select all players from team if not yet selected
+              if (selected.length === 0 && players.length > 0) {
+                const playerIds = players.map((p: any) => p.id);
+                if (teamNum === 1) {
+                  s("team1_players", playerIds);
+                } else {
+                  s("team2_players", playerIds);
+                }
+              }
+
+              return (
+                <div key={team.id}>
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-xs font-semibold text-ink">{team.name}</p>
+                    <p className={`text-xs font-semibold ${selected.length === 11 ? "text-green-600" : selected.length > 0 ? "text-brand-500" : "text-ink-faint"}`}>
+                      {selected.length}/11
+                    </p>
+                  </div>
+                  <div className="space-y-1 max-h-48 overflow-y-auto bg-fill rounded p-2 border border-hairsoft">
+                    {players.length === 0 ? (
+                      <p className="text-xs text-ink-faint py-2">No players in team</p>
+                    ) : (
+                      players.map((p: any) => (
+                        <label key={p.id} className="flex items-center gap-2 p-1.5 rounded hover:bg-panel cursor-pointer group transition">
+                          <input
+                            type="checkbox" checked={selected.includes(p.id)}
+                            onChange={() => togglePlayer(teamNum, p.id)}
+                            className="w-4 h-4 cursor-pointer"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-medium text-ink">{p.name}</p>
+                            <p className="text-xs text-ink-faint">
+                              {p.jersey_number && <span>#{p.jersey_number}</span>}
+                              {p.batting_style && <span className="ml-1">• {p.batting_style === "right-hand bat" ? "RHB" : "LHB"}</span>}
+                            </p>
+                          </div>
+                        </label>
+                      ))
+                    )}
+                  </div>
+                  {selected.length !== players.length && selected.length > 0 && (
+                    <p className="text-xs text-ink-sub mt-1.5">
+                      <button type="button" onClick={() => s(teamNum === 1 ? "team1_players" : "team2_players", players.map((p: any) => p.id))} className="text-brand-500 hover:underline">
+                        Select all
+                      </button>
+                    </p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Toss */}
       {f.team1_id && f.team2_id && (

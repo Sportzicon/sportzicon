@@ -3,10 +3,12 @@ import jwt from "jsonwebtoken";
 import { prisma } from "../../config/prisma";
 import { BadRequest, NotFound, Unauthorized } from "../../utils/errors";
 
-const JWT_SECRET = process.env.JWT_SECRET || "scoring-secret-change-in-prod";
+const JWT_SECRET = process.env.JWT_SECRET || "";
 const MAIN_JWT_SECRET = process.env.MAIN_JWT_SECRET || "";
 const ACCESS_TTL = "15m";
 const REFRESH_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+
+if (!JWT_SECRET) throw new Error("JWT_SECRET environment variable is required");
 
 function signAccess(user: { id: string; role: string; email: string }) {
   return jwt.sign({ sub: user.id, role: user.role, email: user.email }, JWT_SECRET, { expiresIn: ACCESS_TTL });
@@ -49,7 +51,7 @@ export async function signup(input: { email: string; password: string; full_name
 
 export async function login(email: string, password: string) {
   const user = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
-  if (!user) throw Unauthorized("Invalid credentials");
+  if (!user || !user.password_hash) throw Unauthorized("Invalid credentials");
 
   const ok = await bcrypt.compare(password, user.password_hash);
   if (!ok) throw Unauthorized("Invalid credentials");
@@ -78,17 +80,19 @@ export async function refresh(token: string) {
   const user = await prisma.user.findUnique({ where: { id: stored.user_id } });
   if (!user) throw Unauthorized("User not found");
 
-  await prisma.refreshToken.update({ where: { id: stored.id }, data: { revoked: true } });
-
   const access_token = signAccess(user);
   const refresh_raw = signRefresh(user.id);
-  await prisma.refreshToken.create({
-    data: {
-      user_id: user.id,
-      token: refresh_raw,
-      expires_at: new Date(Date.now() + REFRESH_TTL_MS)
-    }
-  });
+
+  await prisma.$transaction([
+    prisma.refreshToken.update({ where: { id: stored.id }, data: { revoked: true } }),
+    prisma.refreshToken.create({
+      data: {
+        user_id: user.id,
+        token: refresh_raw,
+        expires_at: new Date(Date.now() + REFRESH_TTL_MS)
+      }
+    })
+  ]);
 
   return { access_token, refresh_token: refresh_raw };
 }
@@ -117,8 +121,9 @@ export async function ssoFromMainToken(mainToken: string) {
   }
 
   if (claims.type !== "access") throw Unauthorized("Invalid token type");
+  if (!claims.email) throw Unauthorized("Token missing email claim");
 
-  const email = claims.email?.toLowerCase();
+  const email = claims.email.toLowerCase();
   const fullName = claims.name ?? email;
   const role = mapRole(claims.role ?? "");
 

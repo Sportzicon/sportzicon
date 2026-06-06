@@ -20,7 +20,7 @@ const playerSearchQ = z.object({
   position: z.string().optional(),
   available: z.coerce.boolean().optional(),
   verified: z.coerce.boolean().optional(),
-  limit: z.coerce.number().int().min(1).max(100).default(20)
+  limit: z.coerce.number().int().min(1).max(500).default(20)
 });
 
 const clubSearchQ = z.object({

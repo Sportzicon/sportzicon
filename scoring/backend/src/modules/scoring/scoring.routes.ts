@@ -78,6 +78,11 @@ router.get("/players/:playerId/stats", optionalAuth, asyncHandler(async (req: an
   res.json(r);
 }));
 
+router.get("/tournaments/:id/teams/:teamId/suggested-players", requireAuth, asyncHandler(async (req: any, res: any) => {
+  const r = await svc.getSuggestedPlayers(req.params.id, req.params.teamId);
+  res.json({ players: r });
+}));
+
 // ── Matches ───────────────────────────────────────────────────────────────────
 
 router.get("/matches/live", optionalAuth, asyncHandler(async (_req: any, res: any) => {

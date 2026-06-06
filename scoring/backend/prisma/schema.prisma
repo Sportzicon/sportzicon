@@ -99,7 +99,7 @@ model Tournament {
   is_public   Boolean          @default(true)
 
   created_by  String           @db.Uuid
-  creator     User             @relation(fields: [created_by], references: [id])
+  creator     User             @relation(fields: [created_by], references: [id], onDelete: Cascade)
 
   teams       Team[]
   matches     Match[]
@@ -125,6 +125,7 @@ model Team {
   away_matches    Match[]    @relation("Team2")
   batting_innings Innings[]  @relation("BattingTeam")
   bowling_innings Innings[]  @relation("BowlingTeam")
+  match_players   MatchPlayer[]
 
   created_at    DateTime   @default(now())
 
@@ -146,13 +147,14 @@ model Player {
   // Link to Sportivox user (for future integration)
   sportivox_user_id String?
 
-  team           Team      @relation(fields: [team_id], references: [id], onDelete: Cascade)
+  team            Team      @relation(fields: [team_id], references: [id], onDelete: Cascade)
   batting_entries BattingEntry[]
   bowling_entries BowlingEntry[]
   fielding_entries FieldingEntry[]
   ball_as_batsman BallEvent[] @relation("BallBatsman")
   ball_as_bowler  BallEvent[] @relation("BallBowler")
   career_stats    PlayerCareerStats?
+  match_players   MatchPlayer[]
 
   created_at     DateTime  @default(now())
 
@@ -209,7 +211,9 @@ model MatchPlayer {
   player_id        String  @db.Uuid
   batting_position Int?    // 1-11, set when XI is locked
 
-  match  Match  @relation(fields: [match_id], references: [id], onDelete: Cascade)
+  match   Match   @relation(fields: [match_id], references: [id], onDelete: Cascade)
+  team    Team    @relation(fields: [team_id], references: [id], onDelete: Cascade)
+  player  Player  @relation(fields: [player_id], references: [id], onDelete: Cascade)
 
   @@unique([match_id, player_id])
   @@index([match_id, team_id])
@@ -313,7 +317,7 @@ model BattingEntry {
   scouting_notes   String?       @db.Text
 
   innings          Innings       @relation(fields: [innings_id], references: [id], onDelete: Cascade)
-  player           Player        @relation(fields: [player_id], references: [id])
+  player           Player        @relation(fields: [player_id], references: [id], onDelete: Cascade)
 
   created_at       DateTime      @default(now())
   updated_at       DateTime      @updatedAt
@@ -354,7 +358,7 @@ model BowlingEntry {
   death_wickets Int      @default(0)
 
   innings       Innings  @relation(fields: [innings_id], references: [id], onDelete: Cascade)
-  player        Player   @relation(fields: [player_id], references: [id])
+  player        Player   @relation(fields: [player_id], references: [id], onDelete: Cascade)
 
   created_at    DateTime @default(now())
   updated_at    DateTime @updatedAt
@@ -383,7 +387,7 @@ model FieldingEntry {
   impact_score        Int      @default(0)
 
   innings             Innings  @relation(fields: [innings_id], references: [id], onDelete: Cascade)
-  player              Player   @relation(fields: [player_id], references: [id])
+  player              Player   @relation(fields: [player_id], references: [id], onDelete: Cascade)
 
   created_at          DateTime @default(now())
   updated_at          DateTime @updatedAt

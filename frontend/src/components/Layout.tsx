@@ -259,10 +259,22 @@ export function Layout() {
           </nav>
         </aside>
 
-        {/* Main content — overflow-y-auto makes this the scroll container */}
-        <main ref={mainRef} className="min-w-0 flex-1 overflow-y-auto px-3 py-4 sm:px-6 sm:py-7">
-          <Outlet />
-        </main>
+        {/* Main content — scoring live page gets no padding and overflow-hidden so it can fill the viewport */}
+        {(() => {
+          const isLiveScoring = location.pathname.includes("/score");
+          return (
+            <main
+              ref={mainRef}
+              className={`min-w-0 flex-1 relative ${
+                isLiveScoring
+                  ? "overflow-hidden p-0"
+                  : "overflow-y-auto px-3 py-4 sm:px-6 sm:py-7"
+              }`}
+            >
+              <Outlet />
+            </main>
+          );
+        })()}
       </div>
     </div>
   );
