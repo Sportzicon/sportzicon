@@ -60,6 +60,9 @@ export const BOWLER_TYPE_SHORT = [
   { value: "la_wrist",  label: "LA Wrist" }
 ] as const;
 
+// Retired Hurt is NOT in WICKET_TYPES — it is not a dismissal.
+// It is handled via a separate retireHurt API that does NOT increment the wicket count.
+// Retired Out (deliberate, without consent) IS out and counts as a wicket.
 export const WICKET_TYPES = [
   { value: "bowled",        label: "Bowled" },
   { value: "caught",        label: "Caught" },
@@ -68,7 +71,7 @@ export const WICKET_TYPES = [
   { value: "run_out",       label: "Run out" },
   { value: "stumped",       label: "Stumped" },
   { value: "hit_wicket",    label: "Hit wicket" },
-  { value: "retired_hurt",  label: "Retired hurt" },
+  { value: "retired_out",   label: "Retired out (deliberate)" },
   { value: "obstruction",   label: "Obstruction / Other" }
 ] as const;
 

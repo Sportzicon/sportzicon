@@ -3,7 +3,7 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { scoringApi } from "../../api/scoringClient";
 import { useAuthStore } from "../../store/auth";
-import { CheckCircle, AlertCircle, Undo2, BarChart3, Radio, ArrowLeftRight, Trophy, Plus, X } from "lucide-react";
+import { CheckCircle, AlertCircle, Undo2, BarChart3, Radio, ArrowLeftRight, Trophy, Plus, X, HeartPulse, RotateCcw } from "lucide-react";
 import {
   SHOT_TYPES, BALL_LINES, BALL_LENGTHS, BOWLER_TYPE_SHORT,
   FIELDING_POSITIONS, DISMISSAL_ZONES, BALL_TRAJECTORIES, WICKET_TYPES,
@@ -96,6 +96,7 @@ interface BallInput {
   batsman_id: string; bowler_id: string; non_striker_id: string;
   runs: number; is_wide: boolean; is_no_ball: boolean; is_bye: boolean;
   is_leg_bye: boolean; is_wicket: boolean; is_four: boolean; is_six: boolean; is_free_hit: boolean;
+  is_ret_hurt: boolean; ret_hurt_player_id: string;
   ball_length: string; ball_line: string; bowler_type_short: string; shot_type: string;
   wicket_type: string; dismissed_player_id: string;
   fielder_id: string; fielder_name: string;
@@ -106,6 +107,7 @@ const DEFAULT_BALL: BallInput = {
   batsman_id:"", bowler_id:"", non_striker_id:"", runs:0,
   is_wide:false, is_no_ball:false, is_bye:false, is_leg_bye:false,
   is_wicket:false, is_four:false, is_six:false, is_free_hit:false,
+  is_ret_hurt:false, ret_hurt_player_id:"",
   ball_length:"", ball_line:"", bowler_type_short:"", shot_type:"",
   wicket_type:"", dismissed_player_id:"", fielder_id:"", fielder_name:"",
   fielding_position:"", dismissal_zone:"", ball_trajectory:""
@@ -118,9 +120,9 @@ function BatterStat({ entry, isStriker, milestone }: { entry: any; isStriker: bo
   const balls = entry?.balls_faced ?? 0;
   const fours = entry?.fours ?? 0;
   const sixes = entry?.sixes ?? 0;
+
   return (
     <div className={`rounded-lg px-3 py-2.5 ${isStriker ? "bg-ink text-paper" : "bg-fill"}`}>
-      {/* Name row */}
       <div className="flex items-center gap-2 mb-1.5">
         <span className={`w-2 h-2 rounded-full shrink-0 ${isStriker ? "bg-brand-400" : "bg-transparent border border-hair"}`} />
         <p className={`text-sm font-semibold flex-1 truncate ${isStriker ? "text-paper" : "text-ink"}`}>
@@ -134,8 +136,7 @@ function BatterStat({ entry, isStriker, milestone }: { entry: any; isStriker: bo
           </span>
         )}
       </div>
-      {/* Stats row */}
-      {entry && (
+      {entry ? (
         <div className="flex items-baseline gap-3">
           <span className={`font-mononum font-black text-2xl leading-none ${isStriker ? "text-brand-300" : "text-ink"}`}>{runs}</span>
           <span className={`font-mononum text-xs ${isStriker ? "text-paper/50" : "text-ink-faint"}`}>({balls})</span>
@@ -145,8 +146,7 @@ function BatterStat({ entry, isStriker, milestone }: { entry: any; isStriker: bo
             {"  "}6s <span className={isStriker ? "text-brand-300" : "text-brand-500"}>{sixes}</span>
           </span>
         </div>
-      )}
-      {!entry && (
+      ) : (
         <p className={`text-xs ${isStriker ? "text-paper/30" : "text-ink-faint"}`}>
           {isStriker ? "ON STRIKE" : "NON STRIKER"}
         </p>
@@ -210,7 +210,16 @@ function ScoringLiveInner() {
     return all.filter((p: any) => ids.has(p.id));
   };
 
-  const battingPlayers = filteredXI(battingTeam?.id ?? "", battingTeam?.players ?? []);
+  // Build a status map from batting entries so we can exclude "out" players from dropdowns
+  const battingStatusMap = new Map<string, string>(
+    (activeInnings?.batting_entries ?? []).map((e: any) => [e.player_id, e.status])
+  );
+
+  // Batting dropdowns: exclude players already dismissed (status "out")
+  // "yet_to_bat", "not_out", "retired_hurt" are all still selectable
+  const battingPlayers = filteredXI(battingTeam?.id ?? "", battingTeam?.players ?? [])
+    .filter((p: any) => battingStatusMap.get(p.id) !== "out");
+
   const bowlingPlayers = filteredXI(bowlingTeam?.id ?? "", bowlingTeam?.players ?? []);
 
   const currentOver    = activeInnings ? Math.floor(activeInnings.total_balls / 6) : 0;
@@ -229,6 +238,7 @@ function ScoringLiveInner() {
     qc.invalidateQueries({ queryKey: ["scoring-match-live", matchId] });
     qc.invalidateQueries({ queryKey: ["scoring-match", matchId] });
     qc.invalidateQueries({ queryKey: ["scoring-balls-live", activeInningsId] });
+    qc.invalidateQueries({ queryKey: ["scoring-retired-hurt", activeInningsId] });
   };
 
   const fb = (type: "success"|"error", msg: string) => {
@@ -261,7 +271,15 @@ function ScoringLiveInner() {
         swap = runs % 2 === 1 || (!input.is_wicket && currentBallNum === 6);
       }
       setBall(prev => {
-        const next = { ...DEFAULT_BALL, bowler_id: prev.bowler_id, batsman_id: prev.batsman_id, non_striker_id: prev.non_striker_id, bowler_type_short: prev.bowler_type_short };
+        const next: BallInput = {
+          ...DEFAULT_BALL,
+          bowler_id:       prev.bowler_id,
+          batsman_id:      prev.batsman_id,
+          non_striker_id:  prev.non_striker_id,
+          bowler_type_short: prev.bowler_type_short,
+          // Auto-enable free hit on the very next delivery after a no-ball
+          is_free_hit: input.is_no_ball === true
+        };
         if (swap) { next.batsman_id = prev.non_striker_id; next.non_striker_id = prev.batsman_id; }
         if (input.is_wicket) next.batsman_id = "";
         return next;
@@ -297,6 +315,34 @@ function ScoringLiveInner() {
     onSuccess: () => { invalidate(); navigate(`/scoring/matches/${matchId}`); }
   });
 
+  const retireHurtMutation = useMutation({
+    mutationFn: (playerId: string) => scoringApi.post(`/innings/${activeInningsId}/retire-hurt`, { player_id: playerId }),
+    onSuccess: (_, playerId) => {
+      invalidate();
+      // Clear the retired player from crease so scorer must select incoming batsman
+      setBall(prev => ({
+        ...prev,
+        batsman_id:     prev.batsman_id    === playerId ? "" : prev.batsman_id,
+        non_striker_id: prev.non_striker_id === playerId ? "" : prev.non_striker_id
+      }));
+      fb("success", "Retired hurt — player can return later. No wicket recorded.");
+    },
+    onError: (err: any) => fb("error", err.response?.data?.error?.message || "Failed to retire hurt")
+  });
+
+  const returnFromRetiredHurtMutation = useMutation({
+    mutationFn: (playerId: string) => scoringApi.post(`/innings/${activeInningsId}/return-from-retired-hurt`, { player_id: playerId }),
+    onSuccess: () => { invalidate(); fb("success", "Player returned from retired hurt."); },
+    onError: (err: any) => fb("error", err.response?.data?.error?.message || "Failed to return player")
+  });
+
+  // Retired hurt players for this innings
+  const { data: retiredHurtData } = useQuery({
+    queryKey: ["scoring-retired-hurt", activeInningsId],
+    queryFn: () => scoringApi.get(`/innings/${activeInningsId}/retired-hurt`).then(r => r.data.players ?? []),
+    enabled: !!activeInningsId
+  });
+
   function set(k: keyof BallInput, v: any) {
     setBall(prev => {
       const next = { ...prev, [k]: v };
@@ -309,7 +355,17 @@ function ScoringLiveInner() {
 
   function submitBall(e: React.FormEvent) {
     e.preventDefault();
-    if (!activeInningsId || !ball.batsman_id || !ball.bowler_id) {
+    if (!activeInningsId) return;
+
+    // Retired Hurt — not a ball delivery, handled separately
+    if (ball.is_ret_hurt) {
+      const pid = ball.ret_hurt_player_id || ball.batsman_id;
+      if (!pid) { fb("error", "Select which batsman is retiring hurt"); return; }
+      retireHurtMutation.mutate(pid);
+      return;
+    }
+
+    if (!ball.batsman_id || !ball.bowler_id) {
       fb("error", "Select batsman and bowler first");
       return;
     }
@@ -454,14 +510,13 @@ function ScoringLiveInner() {
                 </p>
                 <div className="space-y-1 relative">
                   <BatterStat entry={strikerEntry} isStriker={true} milestone={strikerMilestone ?? null} />
-                  {/* Swap button sits between the two cards */}
+                  {/* Swap ends button between the two batter cards */}
                   <div className="flex items-center gap-2 py-0.5">
                     <div className="flex-1 border-t border-dashed border-hairsoft" />
                     <button
                       type="button"
                       onClick={() => setBall(prev => ({ ...prev, batsman_id: prev.non_striker_id, non_striker_id: prev.batsman_id }))}
                       className="flex items-center gap-1 px-2.5 py-1 rounded-full border border-hair bg-panel hover:bg-fill2 hover:border-ink-sub transition text-ink-sub hover:text-ink"
-                      title="Swap ends"
                     >
                       <ArrowLeftRight className="w-3 h-3" />
                       <span className="lab text-[10px]">SWAP ENDS</span>
@@ -536,6 +591,34 @@ function ScoringLiveInner() {
               </div>
             )}
 
+            {/* Retired Hurt players — can return to bat */}
+            {retiredHurtData && retiredHurtData.length > 0 && (
+              <div className="border-t border-hairsoft pt-3">
+                <p className="lab text-[10px] text-amber-600 mb-2 uppercase tracking-wider flex items-center gap-1">
+                  <HeartPulse className="w-3 h-3" /> Retired Hurt
+                </p>
+                <div className="space-y-1.5">
+                  {retiredHurtData.map((entry: any) => (
+                    <div key={entry.player_id} className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded px-2.5 py-2">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-ink truncate">{entry.player?.name}</p>
+                        <p className="lab text-[9px] text-amber-600">Can return to bat</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => returnFromRetiredHurtMutation.mutate(entry.player_id)}
+                        disabled={returnFromRetiredHurtMutation.isPending}
+                        className="flex items-center gap-1 lab text-[10px] px-2 py-1 rounded bg-amber-500 hover:bg-amber-600 text-white transition shrink-0"
+                        title="Return to batting"
+                      >
+                        <RotateCcw className="w-3 h-3" /> Return
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Innings complete */}
             {isCompleted && (
               <div className="border-t border-hairsoft pt-3">
@@ -562,17 +645,30 @@ function ScoringLiveInner() {
               {/* ── Player selectors ── */}
               <div className="grid grid-cols-3 gap-2 items-end shrink-0">
                 <div>
-                  <label className="lab block mb-0.5 text-[10px]">STRIKER *</label>
+                  <div className="flex items-center justify-between mb-0.5">
+                    <label className="lab text-[10px]">STRIKER *</label>
+                    <span className="lab text-[9px] text-ink-faint">
+                      {battingPlayers.length} available
+                    </span>
+                  </div>
                   <select className="input w-full text-sm" value={ball.batsman_id} onChange={e => set("batsman_id", e.target.value)} required>
                     <option value="">Select…</option>
-                    {battingPlayers.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                    {battingPlayers.map((p: any) => {
+                      const status = battingStatusMap.get(p.id);
+                      const suffix = status === "retired_hurt" ? " (ret. hurt)" : status === "yet_to_bat" ? "" : "";
+                      return <option key={p.id} value={p.id}>{p.name}{suffix}</option>;
+                    })}
                   </select>
                 </div>
                 <div>
                   <label className="lab block mb-0.5 text-[10px]">NON-STRIKER</label>
                   <select className="input w-full text-sm" value={ball.non_striker_id} onChange={e => set("non_striker_id", e.target.value)}>
                     <option value="">Select…</option>
-                    {battingPlayers.filter((p: any) => p.id !== ball.batsman_id).map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                    {battingPlayers.filter((p: any) => p.id !== ball.batsman_id).map((p: any) => {
+                      const status = battingStatusMap.get(p.id);
+                      const suffix = status === "retired_hurt" ? " (ret. hurt)" : "";
+                      return <option key={p.id} value={p.id}>{p.name}{suffix}</option>;
+                    })}
                   </select>
                 </div>
                 <div>
@@ -620,21 +716,52 @@ function ScoringLiveInner() {
               {/* ── Extras / Events ── */}
               <div className="shrink-0">
                 <label className="lab block mb-1 text-[10px]">EXTRAS / EVENTS</label>
-                <div className="flex gap-1.5">
+                <div className="flex flex-wrap gap-1.5">
                   {/* Penalty extras */}
-                  <Pill label="Wide"     active={ball.is_wide}     onClick={() => toggleFlag("is_wide")}    color="amber" />
-                  <Pill label="No-Ball"  active={ball.is_no_ball}  onClick={() => toggleFlag("is_no_ball")} color="amber" />
+                  <Pill label="Wide"      active={ball.is_wide}      onClick={() => toggleFlag("is_wide")}    color="amber" />
+                  <Pill label="No-Ball"   active={ball.is_no_ball}   onClick={() => toggleFlag("is_no_ball")} color="amber" />
                   <span className="w-px bg-hair self-stretch" />
-                  {/* Running extras — visually distinct from each other */}
-                  <Pill label="Bye"      active={ball.is_bye}      onClick={() => toggleFlag("is_bye")}     />
-                  <Pill label="Leg-Bye"  active={ball.is_leg_bye}  onClick={() => toggleFlag("is_leg_bye")} color="blue" />
+                  {/* Running extras */}
+                  <Pill label="Bye"       active={ball.is_bye}       onClick={() => toggleFlag("is_bye")}      />
+                  <Pill label="Leg-Bye"   active={ball.is_leg_bye}   onClick={() => toggleFlag("is_leg_bye")}  color="blue" />
                   <span className="w-px bg-hair self-stretch" />
                   {/* Scoring events */}
-                  <Pill label="Four"     active={ball.is_four}     onClick={() => { set("runs", ball.is_four ? 0 : 4); }}        color="blue" />
-                  <Pill label="Six"      active={ball.is_six}      onClick={() => { set("runs", ball.is_six  ? 0 : 6); }}        color="brand" />
-                  <Pill label="Wicket"   active={ball.is_wicket}   onClick={() => toggleFlag("is_wicket")}                       color="red" />
-                  <Pill label="Free Hit" active={ball.is_free_hit} onClick={() => toggleFlag("is_free_hit")}                     color="green" />
+                  <Pill label="Four"      active={ball.is_four}      onClick={() => { set("runs", ball.is_four ? 0 : 4); }}  color="blue" />
+                  <Pill label="Six"       active={ball.is_six}       onClick={() => { set("runs", ball.is_six  ? 0 : 6); }} color="brand" />
+                  <Pill label="Wicket"    active={ball.is_wicket}    onClick={() => toggleFlag("is_wicket")}                 color="red" />
+                  <Pill label="Free Hit"  active={ball.is_free_hit}  onClick={() => toggleFlag("is_free_hit")}               color="green" />
+                  <span className="w-px bg-hair self-stretch" />
+                  {/* Retired Hurt — not a wicket */}
+                  <Pill label="Ret. Hurt" active={ball.is_ret_hurt}  onClick={() => setBall(prev => ({ ...prev, is_ret_hurt: !prev.is_ret_hurt, ret_hurt_player_id: "" }))} color="amber" />
                 </div>
+
+                {/* Inline player selector when Ret. Hurt is toggled */}
+                {ball.is_ret_hurt && (
+                  <div className="mt-2 flex items-center gap-2 bg-amber-50 border border-amber-200 rounded px-3 py-2">
+                    <HeartPulse className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                    <p className="lab text-[10px] text-amber-700 shrink-0">Who is retiring hurt?</p>
+                    <div className="flex gap-1.5 flex-1">
+                      {[
+                        ball.batsman_id     ? { id: ball.batsman_id,     label: `${strikerEntry?.player?.name    ?? "Striker"} (on strike)` }    : null,
+                        ball.non_striker_id ? { id: ball.non_striker_id, label: `${nonStrikerEntry?.player?.name ?? "Non-striker"} (non-strike)` } : null,
+                      ].filter(Boolean).map((p: any) => (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => set("ret_hurt_player_id", ball.ret_hurt_player_id === p.id ? "" : p.id)}
+                          className={`flex-1 px-2 py-1 rounded text-xs font-medium border transition ${
+                            ball.ret_hurt_player_id === p.id
+                              ? "bg-amber-500 text-white border-amber-500"
+                              : "bg-panel border-hair text-ink-sub hover:border-amber-400"
+                          }`}
+                        >
+                          {p.label}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="lab text-[9px] text-amber-600 shrink-0">Not a wicket</p>
+                  </div>
+                )}
               </div>
 
               {/* ── Ball analytics ── */}
@@ -662,7 +789,13 @@ function ScoringLiveInner() {
                       <label className="lab block mb-1 text-[9px]">DISMISSED</label>
                       <select className="input w-full text-xs py-1" value={ball.dismissed_player_id} onChange={e => set("dismissed_player_id", e.target.value)}>
                         <option value="">Striker (default)</option>
-                        {battingPlayers.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                        {/* Only the two batsmen at the crease can be dismissed */}
+                        {[
+                          ball.batsman_id     ? { id: ball.batsman_id,     label: `${strikerEntry?.player?.name     ?? "Striker"}  · on strike` }     : null,
+                          ball.non_striker_id ? { id: ball.non_striker_id, label: `${nonStrikerEntry?.player?.name ?? "Non-striker"}  · non-striker` } : null,
+                        ].filter(Boolean).map((p: any) => (
+                          <option key={p.id} value={p.id}>{p.label}</option>
+                        ))}
                       </select>
                     </div>
                     <div>
@@ -702,6 +835,7 @@ function ScoringLiveInner() {
               {/* ── Submit ── */}
               {(() => {
                 const parts: string[] = [];
+                if (ball.is_ret_hurt) parts.push("RETIRED HURT");
                 if (ball.is_wicket)  parts.push("WICKET");
                 if (ball.is_wide)    parts.push("WIDE");
                 if (ball.is_no_ball) parts.push("NO-BALL");

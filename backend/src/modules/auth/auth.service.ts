@@ -6,6 +6,7 @@ import { BadRequest, Conflict, NotFound, Unauthorized } from "../../utils/errors
 import { omitSensitive } from "../../utils/user";
 import {
   comparePassword,
+  generateToken,
   hashPassword,
   issueRefreshToken,
   revokeAllRefreshTokensForUser,
@@ -84,7 +85,7 @@ export async function signup(input: {
 }
 
 async function issueAndSendVerificationEmail(userId: string, email: string, name: string) {
-  const token = crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, "");
+  const token = generateToken();
   const expiresAt = new Date(Date.now() + VERIFY_TTL_MS);
 
   await prisma.emailVerification.create({
@@ -96,9 +97,13 @@ async function issueAndSendVerificationEmail(userId: string, email: string, name
     to: email,
     subject: "Verify your Sportzicon account",
     html: `<p>Hi ${escapeHtml(name)},</p>
-           <p>Welcome to Sportzicon. Click the link below to verify your email and activate your account. This link expires in 24 hours.</p>
-           <p><a href="${link}">Verify my email</a></p>
-           <p>If you didn't sign up, you can safely ignore this email.</p>`,
+           <p>Welcome to Sportzicon! Click the link below to verify your email and activate your account. This link expires in <strong>24 hours</strong>.</p>
+           <p><a href="${link}" style="display:inline-block;padding:10px 20px;background:#FA4D14;color:#fff;text-decoration:none;border-radius:4px;font-weight:bold;">Verify my email</a></p>
+           <p>If the button above doesn't work, copy and paste this link into your browser:</p>
+           <p style="word-break:break-all;color:#555;">${link}</p>
+           <p>If you didn't sign up for Sportzicon, you can safely ignore this email.</p>
+           <p style="color:#888;font-size:12px;">Didn't receive this email? Check your <strong>spam or junk folder</strong>.</p>`,
+    text: `Hi ${name},\n\nWelcome to Sportzicon! Click the link below to verify your email and activate your account. This link expires in 24 hours.\n\nVerify my email:\n${link}\n\nIf you didn't sign up for Sportzicon, you can safely ignore this email.\n\nDidn't receive this email? Check your spam or junk folder.`,
     user_id: userId,
     email_type: "email_verification"
   });
@@ -180,26 +185,36 @@ export async function logout(refreshToken?: string) {
 export async function forgotPassword(email: string) {
   const user = await prisma.user.findUnique({
     where: { email_lower: email.trim().toLowerCase() },
-    select: { id: true, email: true }
+    select: { id: true, email: true, full_name: true }
   });
-  if (!user) return { ok: true };
+  if (!user) return { ok: true, found: false };
 
-  const token = crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, "");
+  const token = generateToken();
   await prisma.passwordReset.create({
     data: { user_id: user.id, token, expires_at: new Date(Date.now() + RESET_TTL_MS) }
   });
 
   const link = `${env.WEB_APP_URL.replace(/\/$/, "")}/reset-password?token=${encodeURIComponent(token)}`;
-  await sendMail({
-    to: user.email,
-    subject: "Reset your Sportzicon password",
-    html: `<p>We received a request to reset your password. This link expires in 30 minutes:</p>
-           <p><a href="${link}">Reset password</a></p>
-           <p>If you didn't request this, you can ignore this email.</p>`,
-    user_id: user.id,
-    email_type: "password_reset"
-  });
-  return { ok: true };
+  try {
+    await sendMail({
+      to: user.email,
+      subject: "Reset your Sportzicon password",
+      html: `<p>Hi ${escapeHtml(user.full_name)},</p>
+             <p>We received a request to reset your Sportzicon password. Click the link below to set a new password. This link expires in <strong>30 minutes</strong>.</p>
+             <p><a href="${link}" style="display:inline-block;padding:10px 20px;background:#FA4D14;color:#fff;text-decoration:none;border-radius:4px;font-weight:bold;">Reset my password</a></p>
+             <p>If the button above doesn't work, copy and paste this link into your browser:</p>
+             <p style="word-break:break-all;color:#555;">${link}</p>
+             <p>If you didn't request a password reset, you can safely ignore this email.</p>
+             <p style="color:#888;font-size:12px;">Didn't receive this email? Check your <strong>spam or junk folder</strong>.</p>`,
+      text: `Hi ${user.full_name},\n\nWe received a request to reset your Sportzicon password. This link expires in 30 minutes.\n\nReset my password:\n${link}\n\nIf you didn't request a password reset, you can safely ignore this email.\n\nDidn't receive this email? Check your spam or junk folder.`,
+      user_id: user.id,
+      email_type: "password_reset"
+    });
+  } catch (err) {
+    logger.error({ err, userId: user.id }, "Failed to send password reset email");
+    throw BadRequest("We couldn't send the reset email. Please try again in a moment.");
+  }
+  return { ok: true, found: true };
 }
 
 export async function resetPassword(token: string, password: string) {

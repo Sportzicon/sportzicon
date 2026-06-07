@@ -548,6 +548,9 @@ export default function Signup() {
                 <p className="text-sm text-ink-sub mt-4 leading-relaxed max-w-xs mx-auto">
                   We sent a verification link to <strong className="text-ink">{d.email}</strong>. Your account stays inactive until you confirm — this keeps the network trustworthy.
                 </p>
+                <p className="text-sm text-ink-sub mt-2 leading-relaxed max-w-xs mx-auto">
+                  Don't see it? Check your <strong className="text-ink">spam or junk folder</strong>.
+                </p>
                 <div className="flex gap-3 justify-center mt-5">
                   <button className="btn-primary" onClick={() => navigate("/login")}>I've verified — sign in →</button>
                 </div>
@@ -557,7 +560,7 @@ export default function Signup() {
                     Didn't get it? Resend link
                   </button>
                 ) : (
-                  <p className="lab mt-3 text-emerald-600">✓ Verification email resent</p>
+                  <p className="lab mt-3 text-emerald-600">✓ Verification email resent — check your inbox and spam/junk folder</p>
                 )}
               </div>
               <div className="flex justify-between mt-5">

@@ -9,6 +9,14 @@ function ScrollToTop() {
 import { Layout } from "./components/Layout";
 import PublicLayout from "./components/PublicLayout";
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import { useAuthStore } from "./store/auth";
+
+// Renders the authenticated Layout when logged in, PublicLayout otherwise.
+// Used for pages that are public but should keep session context (e.g. Live Scores).
+function AdaptiveLayout() {
+  const user = useAuthStore(s => s.user);
+  return user ? <Layout /> : <PublicLayout />;
+}
 
 import Landing from "./pages/Landing";
 import Login from "./pages/Login";
@@ -65,13 +73,17 @@ export default function App() {
       <Route element={<PublicLayout />}>
         <Route path="/" element={<Landing key="home" />} />
         <Route path="/how-it-works" element={<Landing key="how-it-works" initialView="how-it-works" />} />
-        <Route path="/live-scores" element={<LiveScores />} />
-        <Route path="/live-scores/:matchId" element={<LiveScoreDetail />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/verify-email" element={<VerifyEmail />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
+      </Route>
+
+      {/* Live Scores — public page but keeps session when logged in */}
+      <Route element={<AdaptiveLayout />}>
+        <Route path="/live-scores" element={<LiveScores />} />
+        <Route path="/live-scores/:matchId" element={<LiveScoreDetail />} />
       </Route>
 
       {/* Authenticated routes (with chrome) */}

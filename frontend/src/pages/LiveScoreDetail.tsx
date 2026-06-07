@@ -29,9 +29,179 @@ function ballCls(b: any) {
   if (b.is_wicket)  return "bg-red-600 text-white";
   if (b.is_six)     return "bg-brand-500 text-white";
   if (b.is_four)    return "bg-ink text-paper";
-  if (b.is_wide || b.is_no_ball) return "bg-fill2 text-ink-sub border border-hair";
+  if (b.is_wide || b.is_no_ball) return "bg-amber-400 text-white";
   if (b.runs === 0) return "bg-fill text-ink-faint border border-hair";
-  return "bg-ink-70 text-paper";
+  return "bg-fill2 text-ink border border-hair";
+}
+
+// ── Rich ball-by-ball commentary generator ────────────────────────────────────
+const ORDINALS = ["1st","2nd","3rd","4th","5th","6th","7th","8th","9th","10th"];
+
+function generateCommentary(
+  b: any,
+  battingEntries?: any[],
+  bowlingEntries?: any[]
+): { headline: string; scorecard: string | null; detail: string | null; type: "wicket" | "six" | "four" | "extra" | "run" | "dot" } {
+  const bowler  = b.bowler?.name  ?? "Bowler";
+  const batsman = b.batsman?.name ?? "Batsman";
+  const runs    = b.runs ?? 0;
+
+  // Dismissed batsman's innings figures
+  const dismissedEntry = battingEntries
+    ? battingEntries.find((e: any) => e.player_id === (b.dismissed_player_id ?? b.batsman_id))
+    : null;
+
+  // Scorecard-style figures: "23(15) [4s-2, 6s-1]" — mirrors Cricbuzz exactly
+  const scorecardFigures = dismissedEntry
+    ? (() => {
+        const r = dismissedEntry.runs;
+        const bl = dismissedEntry.balls_faced;
+        const f4 = dismissedEntry.fours ?? 0;
+        const s6 = dismissedEntry.sixes ?? 0;
+        const parts = [f4 > 0 ? `4s-${f4}` : null, s6 > 0 ? `6s-${s6}` : null].filter(Boolean);
+        return `${r}(${bl})${parts.length ? ` [${parts.join(", ")}]` : ""}`;
+      })()
+    : null;
+
+  // Which wicket is this for the bowler? e.g. "Second wicket for Bumrah!"
+  const bowlerEntry = bowlingEntries?.find((e: any) => e.player_id === b.bowler_id);
+  const bowlerWickets = bowlerEntry?.wickets ?? 0;
+  const wicketOrdinal = ORDINALS[Math.max(0, bowlerWickets - 1)] ?? `${bowlerWickets}th`;
+
+  // Dismissal short form for the scorecard line
+  const fielder = b.fielder_name || b.fielder?.name;
+  function scorecardLine(type: string): string | null {
+    const name = dismissedEntry?.player?.name ?? batsman;
+    switch (type) {
+      case "bowled":      return `${name} b ${bowler} ${scorecardFigures ?? ""}`;
+      case "caught":      return `${name} c ${fielder ?? "fielder"} b ${bowler} ${scorecardFigures ?? ""}`;
+      case "cb":          return `${name} c & b ${bowler} ${scorecardFigures ?? ""}`;
+      case "lbw":         return `${name} lbw b ${bowler} ${scorecardFigures ?? ""}`;
+      case "stumped":     return `${name} st ${fielder ?? "†keeper"} b ${bowler} ${scorecardFigures ?? ""}`;
+      case "run_out":     return `${name} run out (${fielder ?? "fielder"}) ${scorecardFigures ?? ""}`;
+      case "hit_wicket":  return `${name} hit wkt b ${bowler} ${scorecardFigures ?? ""}`;
+      default:            return scorecardFigures ? `${name} ${scorecardFigures}` : null;
+    }
+  }
+
+  const lengthMap: Record<string, string> = {
+    yorker: "a toe-crushing yorker", full: "a full delivery", good_length: "a good length ball",
+    back_of_length: "a back-of-length delivery", short: "a short-pitched delivery", bouncer: "a bouncer"
+  };
+  const lineMap: Record<string, string> = {
+    outside_off_wide: "outside off (wide)", outside_off: "outside off",
+    off_stump: "on off stump", middle: "on middle stump", leg_stump: "on leg stump",
+    outside_leg: "outside leg", down_leg_wide: "down leg (wide)"
+  };
+  const shotMap: Record<string, string> = {
+    defensive: "defended", drive: "drove", cut: "cut", pull: "pulled",
+    sweep: "swept", flick: "flicked", lofted: "lofted", edge: "edged", no_shot: "left"
+  };
+
+  const lengthPhrase = b.ball_length ? lengthMap[b.ball_length] ?? b.ball_length.replace(/_/g," ") : null;
+  const linePhrase   = b.ball_line   ? lineMap[b.ball_line]     ?? b.ball_line.replace(/_/g," ")   : null;
+  const shotPhrase   = b.shot_type   ? shotMap[b.shot_type]     ?? b.shot_type.replace(/_/g," ")   : null;
+  const deliveryDesc = [lengthPhrase, linePhrase].filter(Boolean).join(", ");
+
+  if (b.is_wicket) {
+    const wType = b.wicket_type ?? "";
+
+    // Cricbuzz-style headline: "Bowler to Batsman, out Bowled!! Nth wicket for Bowler!"
+    const dismissalLabel: Record<string, string> = {
+      bowled: "Bowled", caught: "Caught", cb: "Caught and Bowled",
+      lbw: "LBW", run_out: "Run Out", stumped: "Stumped",
+      hit_wicket: "Hit Wicket", retired_out: "Retired Out", obstruction: "Obstructing the Field"
+    };
+    const label = dismissalLabel[wType] ?? "Out";
+
+    // Count if bowler gets credit
+    const bowlerCredit = !["run_out","obstruction","retired_out"].includes(wType);
+    const wicketNote   = bowlerCredit && bowlerWickets > 0
+      ? ` ${wicketOrdinal} wicket for ${bowler}!`
+      : "";
+
+    const headline = `${bowler} to ${batsman}, out ${label}!!${wicketNote}`;
+    const sc = scorecardLine(wType);
+    const detail = deliveryDesc
+      ? `${lengthPhrase ?? ""}${linePhrase ? ` ${linePhrase}` : ""}${shotPhrase ? `, ${batsman} ${shotPhrase}` : ""}.`
+      : null;
+
+    return { headline, scorecard: sc, detail, type: "wicket" };
+  }
+
+  if (b.is_six) {
+    const shot = shotPhrase ?? "hit";
+    const where = linePhrase ? `over ${linePhrase}` : "over the boundary";
+    return {
+      headline: `${bowler} to ${batsman}, SIX! ${batsman} ${shot} it ${where}!`,
+      scorecard: null,
+      detail: deliveryDesc || null,
+      type: "six"
+    };
+  }
+
+  if (b.is_four) {
+    const shot = shotPhrase ?? "stroked";
+    return {
+      headline: `${bowler} to ${batsman}, FOUR! ${batsman} ${shot} it to the boundary!`,
+      scorecard: null,
+      detail: deliveryDesc || null,
+      type: "four"
+    };
+  }
+
+  if (b.is_wide) {
+    const extra = runs > 0 ? `, ${runs + 1} runs (${runs} extra run${runs !== 1 ? "s" : ""})` : ", 1 run";
+    return {
+      headline: `${bowler} to ${batsman}, Wide${extra}.`,
+      scorecard: null,
+      detail: linePhrase ? `Down ${linePhrase}.` : null,
+      type: "extra"
+    };
+  }
+
+  if (b.is_no_ball) {
+    const bat = runs > 0 ? `, ${batsman} scores ${runs}. Free hit next ball!` : ". Free hit next ball!";
+    return {
+      headline: `${bowler} to ${batsman}, No Ball${bat}`,
+      scorecard: null,
+      detail: lengthPhrase ? `Overstepped — ${lengthPhrase}.` : null,
+      type: "extra"
+    };
+  }
+
+  if (b.is_bye || b.is_leg_bye) {
+    const type = b.is_leg_bye ? "Leg bye" : "Bye";
+    return {
+      headline: `${bowler} to ${batsman}, ${runs > 0 ? `${runs} ${type.toLowerCase()}${runs !== 1 ? "s" : ""}` : `${type.toLowerCase()}`}.`,
+      scorecard: null,
+      detail: deliveryDesc || null,
+      type: "run"
+    };
+  }
+
+  if (runs === 0) {
+    const dotDesc = shotPhrase === "left" ? `${batsman} leaves it.` :
+      shotPhrase ? `${batsman} ${shotPhrase}s, no run.` :
+      "Dot ball.";
+    return {
+      headline: `${bowler} to ${batsman}, no run. ${dotDesc}`,
+      scorecard: null,
+      detail: deliveryDesc || null,
+      type: "dot"
+    };
+  }
+
+  // 1-3 runs
+  if (true) {
+    const runDesc = runs === 1 ? "1 run" : runs === 2 ? "2 runs" : runs === 3 ? "3 runs" : `${runs} runs`;
+    return {
+      headline: `${bowler} to ${batsman}, ${runDesc}${shotPhrase ? `. ${batsman} ${shotPhrase}s it.` : "."}`,
+      scorecard: null,
+      detail: deliveryDesc || null,
+      type: "run"
+    };
+  }
 }
 
 // ── Tab bar ───────────────────────────────────────────────────────────────────
@@ -108,8 +278,34 @@ function LiveTab({ match, balls }: { match: any; balls: any[] }) {
 
   const currentOver     = activeInn.total_balls > 0 ? Math.floor((activeInn.total_balls - 1) / 6) : 0;
   const currentOverBalls= balls.filter((b: any) => b.over_number === currentOver);
-  const recentBalls     = balls.slice(-20).reverse();
   const lastWicketBall  = balls.filter((b: any) => b.is_wicket).slice(-1)[0];
+
+  // Build virtual commentary events for retired hurt players — inject into ball feed
+  // dismissal_desc is stored as "retired_hurt_at:{over}.{ball}:runs:{runs}"
+  const retiredHurtEvents: any[] = (activeInn.batting_entries ?? [])
+    .filter((e: any) => e.status === "retired_hurt" && e.dismissal_desc?.startsWith("retired_hurt_at:"))
+    .map((e: any) => {
+      const [, at, , runsStr] = e.dismissal_desc.split(":");
+      const [overNum, ballNum] = at.split(".").map(Number);
+      return {
+        _type: "retired_hurt",
+        over_number: overNum,
+        ball_number: ballNum,
+        player_name: e.player?.name ?? "Batsman",
+        runs: Number(runsStr ?? e.runs ?? 0)
+      };
+    });
+
+  // Merge ball events + retired hurt events, sort newest first, take last 20
+  const allCommentaryItems = [
+    ...balls.map(b => ({ ...b, _type: "ball" })),
+    ...retiredHurtEvents
+  ]
+    .sort((a, b) => a.over_number !== b.over_number ? a.over_number - b.over_number : a.ball_number - b.ball_number)
+    .slice(-20)
+    .reverse();
+
+  const recentBalls = balls.slice(-20).reverse();
 
   const activeCRR = crr(activeInn.total_runs, activeInn.total_balls);
   const activeRRR = activeInn.target ? rrr(activeInn.target, activeInn.total_runs, activeInn.total_balls, maxBalls) : null;
@@ -321,50 +517,207 @@ function LiveTab({ match, balls }: { match: any; balls: any[] }) {
 
       {/* ── Ball-by-ball commentary ───────────────────────────────────────── */}
       <div className="bg-panel">
-        <div className="px-4 py-2 bg-fill border-b border-hair">
-          <p className="lab text-ink-sub">Ball by Ball</p>
+        <div className="px-4 py-2.5 bg-fill border-b border-hair flex items-center justify-between">
+          <p className="lab text-ink-sub">Ball-by-Ball Commentary</p>
+          <p className="lab text-ink-faint text-[10px]">Latest {recentBalls.length} balls</p>
         </div>
-        {recentBalls.length === 0 ? (
+        {allCommentaryItems.length === 0 ? (
           <p className="px-4 py-8 lab text-ink-faint text-center">
             No balls bowled yet — commentary will appear here.
           </p>
         ) : (
           <div className="divide-y divide-hairsoft">
-            {recentBalls.map((b: any, i: number) => (
-              <div key={i} className="flex items-start gap-3 px-4 py-2.5">
-                <span className="font-mononum text-xs text-ink-faint w-10 shrink-0 pt-0.5">
-                  {b.over_number + 1}.{b.ball_number}
-                </span>
-                <span className={`inline-flex items-center justify-center w-6 h-6 rounded text-[11px] font-mononum font-bold shrink-0 ${ballCls(b)}`}>
-                  {ballLabel(b)}
-                </span>
-                <p className="text-sm text-ink flex-1">
-                  <span className="font-semibold">{b.bowler?.name}</span>
-                  {" to "}
-                  <span className="font-semibold">{b.batsman?.name}</span>
-                  {b.is_wicket && <span className="text-red-600 font-bold"> WICKET!</span>}
-                  {b.commentary
-                    ? <span className="text-ink-sub">, {b.commentary}</span>
-                    : (
-                      <span className="text-ink-faint">
-                        {b.is_wide && ", wide"}
-                        {b.is_no_ball && ", no ball"}
-                        {b.is_four && ", FOUR!"}
-                        {b.is_six && ", SIX!"}
-                        {!b.is_wide && !b.is_no_ball && !b.is_four && !b.is_six && !b.is_wicket && (
-                          b.runs === 0 ? ", dot ball" : `, ${b.runs} run${b.runs !== 1 ? "s" : ""}`
+            {allCommentaryItems.map((b: any, i: number) => {
+              // ── Retired Hurt virtual event ──
+              if (b._type === "retired_hurt") {
+                return (
+                  <div key={`rh-${i}`} className="flex items-start gap-3 px-4 py-3 border-l-4 border-amber-400 bg-amber-50/60">
+                    <span className="font-mononum text-[11px] text-amber-600 w-9 shrink-0 pt-0.5 text-right">
+                      {b.over_number + 1}.{b.ball_number}
+                    </span>
+                    <span className="inline-flex items-center justify-center w-7 h-7 rounded text-xs font-mononum font-black shrink-0 mt-0.5 bg-amber-400 text-white">
+                      RH
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-amber-800 leading-snug">
+                        RETIRED HURT — {b.player_name} leaves the field hurt having scored {b.runs} run{b.runs !== 1 ? "s" : ""}.
+                        This is NOT a wicket. {b.player_name} may return to bat if they recover.
+                      </p>
+                      <p className="lab text-amber-600 mt-0.5 text-[11px]">
+                        Wicket count unchanged · Player can resume batting later in this innings
+                      </p>
+                    </div>
+                  </div>
+                );
+              }
+
+              const { headline, scorecard, detail, type } = generateCommentary(
+                b, activeInn?.batting_entries, activeInn?.bowling_entries
+              );
+              const accent =
+                type === "wicket" ? "border-l-4 border-red-500 bg-red-50/70" :
+                type === "six"    ? "border-l-4 border-brand-500 bg-brand-50/40" :
+                type === "four"   ? "border-l-4 border-ink/30 bg-fill/40" :
+                type === "extra"  ? "border-l-4 border-amber-400 bg-amber-50/30" :
+                "";
+
+              // After a wicket, find who came in next (next batsman entry by batting_position)
+              const nextBatsman = type === "wicket" ? (() => {
+                const entries = activeInn?.batting_entries ?? [];
+                const dismissed = b.dismissed_player_id ?? b.batsman_id;
+                const dismissedEntry = entries.find((e: any) => e.player_id === dismissed);
+                const dismissedPos = dismissedEntry?.batting_position ?? 0;
+                const nextEntry = entries
+                  .filter((e: any) => e.batting_position > dismissedPos && e.status !== "yet_to_bat")
+                  .sort((a: any, z: any) => a.batting_position - z.batting_position)[0];
+                return nextEntry?.player ?? null;
+              })() : null;
+
+              return (
+                <div key={i}>
+                  {/* New batsman announcement — above the wicket ball */}
+                  {nextBatsman && (
+                    <div className="px-4 py-2 bg-fill border-b border-hairsoft flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-green-500 shrink-0" />
+                      <p className="text-xs text-ink-sub italic">
+                        <span className="font-semibold text-ink">{nextBatsman.name}</span>
+                        {nextBatsman.is_captain && <span className="text-brand-500"> (c)</span>}
+                        {nextBatsman.is_keeper && <span className="text-ink-sub"> †</span>}
+                        {" "}comes to the crease
+                      </p>
+                    </div>
+                  )}
+
+                <div className={`flex items-start gap-3 px-4 py-3 ${accent}`}>
+                  {/* Over.ball */}
+                  <span className="font-mononum text-[11px] text-ink-faint w-9 shrink-0 pt-0.5 leading-tight text-right">
+                    {b.over_number + 1}.{b.ball_number}
+                  </span>
+
+                  {/* Ball badge */}
+                  <span className={`inline-flex items-center justify-center w-7 h-7 rounded text-xs font-mononum font-black shrink-0 mt-0.5 ${ballCls(b)}`}>
+                    {ballLabel(b)}
+                  </span>
+
+                  {/* Commentary text */}
+                  <div className="flex-1 min-w-0">
+                    <p className={`text-sm leading-snug font-medium ${
+                      type === "wicket" ? "text-red-700 font-semibold" :
+                      type === "six"    ? "text-brand-600 font-semibold" :
+                      type === "four"   ? "text-ink" :
+                      "text-ink"
+                    }`}>
+                      {headline}
+                    </p>
+                    {/* Cricbuzz-style scorecard line: "Batsman b Bowler 23(15) [4s-2]" */}
+                    {scorecard && (
+                      <p className="font-semibold text-red-800 text-sm mt-0.5 font-mono">{scorecard}</p>
+                    )}
+                    {detail && (
+                      <p className="lab text-ink-faint mt-0.5">{detail}</p>
+                    )}
+                    {/* Wicket context chips */}
+                    {type === "wicket" && (
+                      <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1">
+                        {b.wicket_type && (
+                          <span className="lab text-[10px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded">
+                            {b.wicket_type.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase())}
+                          </span>
                         )}
-                      </span>
-                    )
-                  }
-                </p>
-              </div>
-            ))}
+                        {(b.fielder_name || b.fielder?.name) && (
+                          <span className="lab text-[10px] text-ink-faint">
+                            Fielder: {b.fielder_name || b.fielder?.name}
+                            {b.fielding_position ? ` (${b.fielding_position.replace(/_/g," ")})` : ""}
+                          </span>
+                        )}
+                        {b.dismissal_zone && (
+                          <span className="lab text-[10px] text-ink-faint">
+                            Zone: {b.dismissal_zone.replace(/_/g," ")}
+                          </span>
+                        )}
+                        {b.ball_trajectory && (
+                          <span className="lab text-[10px] text-ink-faint">
+                            Trajectory: {b.ball_trajectory.replace(/_/g," ")}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                    {/* Six/Four delivery tags */}
+                    {(type === "six" || type === "four") && (b.ball_length || b.ball_line || b.shot_type) && (
+                      <div className="flex flex-wrap gap-x-2 mt-0.5">
+                        {b.ball_length && <span className="lab text-[10px] text-ink-faint">{b.ball_length.replace(/_/g," ")}</span>}
+                        {b.ball_line   && <span className="lab text-[10px] text-ink-faint">· {b.ball_line.replace(/_/g," ")}</span>}
+                        {b.shot_type   && <span className="lab text-[10px] text-ink-faint">· {b.shot_type.replace(/_/g," ")}</span>}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
     </div>
   );
+}
+
+// ── Dismissal formatter ───────────────────────────────────────────────────────
+// Produces cricket-standard dismissal strings: "c Smith b Bumrah", "b Sharma", etc.
+function formatDismissal(e: any, playerMap: Map<string, any>): { short: string; full: string } | null {
+  if (e.status === "not_out") return null;
+  if (e.status === "retired_hurt") return { short: "retired hurt", full: "Retired hurt — not out, may return" };
+  if (e.status === "retired_out")  return { short: "retired out",  full: "Retired out" };
+
+  const type   = e.dismissal_type ?? "";
+  const bowler = e.dismissed_by_id ? playerMap.get(e.dismissed_by_id)?.name : null;
+  const fielder = e.fielder_id     ? playerMap.get(e.fielder_id)?.name     : null;
+  const isKeeper = e.fielder_id    ? playerMap.get(e.fielder_id)?.is_keeper : false;
+  const fielderLabel = fielder ? (isKeeper ? `†${fielder}` : fielder) : null;
+
+  switch (type) {
+    case "bowled":
+      return {
+        short: bowler ? `b ${bowler}` : "bowled",
+        full:  bowler ? `Bowled by ${bowler}` : "Bowled"
+      };
+    case "caught":
+      return {
+        short: [fielderLabel && `c ${fielderLabel}`, bowler && `b ${bowler}`].filter(Boolean).join(" ") || "caught",
+        full:  [fielderLabel && `Caught by ${fielderLabel}`, bowler && `bowled ${bowler}`].filter(Boolean).join(", ") || "Caught"
+      };
+    case "cb":
+      return {
+        short: bowler ? `c & b ${bowler}` : "c & b",
+        full:  bowler ? `Caught and bowled by ${bowler}` : "Caught and bowled"
+      };
+    case "lbw":
+      return {
+        short: bowler ? `lbw b ${bowler}` : "lbw",
+        full:  bowler ? `LBW bowled ${bowler}` : "Leg Before Wicket"
+      };
+    case "stumped":
+      return {
+        short: [fielderLabel && `st ${fielderLabel}`, bowler && `b ${bowler}`].filter(Boolean).join(" ") || "stumped",
+        full:  [fielderLabel && `Stumped by ${fielderLabel}`, bowler && `off ${bowler}`].filter(Boolean).join(", ") || "Stumped"
+      };
+    case "run_out":
+      return {
+        short: fielderLabel ? `run out (${fielderLabel})` : "run out",
+        full:  fielderLabel ? `Run out — direct hit by ${fielderLabel}` : "Run out"
+      };
+    case "hit_wicket":
+      return {
+        short: bowler ? `hit wkt b ${bowler}` : "hit wicket",
+        full:  bowler ? `Hit wicket off ${bowler}` : "Hit wicket"
+      };
+    case "obstruction":
+      return { short: "obstructing the field", full: "Obstructing the field" };
+    case "retired_out":
+      return { short: "retired out", full: "Retired out" };
+    default:
+      return { short: type.replace(/_/g, " ") || "out", full: type.replace(/_/g, " ") || "out" };
+  }
 }
 
 // ── SCORECARD TAB ─────────────────────────────────────────────────────────────
@@ -376,6 +729,13 @@ function ScorecardTab({ match, balls }: { match: any; balls: any[] }) {
 
   const inn = innings.find((i: any) => i.id === selectedId);
   const battingTeam = inn ? (inn.batting_team_id === match.team1.id ? match.team1 : match.team2) : null;
+
+  // Build a single map of all players across both teams for dismissal lookup
+  const playerMap = useMemo(() => {
+    const m = new Map<string, any>();
+    [...(match.team1?.players ?? []), ...(match.team2?.players ?? [])].forEach((p: any) => m.set(p.id, p));
+    return m;
+  }, [match.team1?.players, match.team2?.players]);
 
   const batted = (inn?.batting_entries ?? []).filter((e: any) => e.status !== "yet_to_bat");
   const dnb    = (inn?.batting_entries ?? []).filter((e: any) => e.status === "yet_to_bat");
@@ -432,23 +792,44 @@ function ScorecardTab({ match, balls }: { match: any; balls: any[] }) {
           </thead>
           <tbody className="divide-y divide-hairsoft">
             {batted.map((e: any) => {
-              const notOut = e.status === "not_out" || e.status === "retired_hurt";
+              const isNotOut     = e.status === "not_out";
+              const isRetiredHurt = e.status === "retired_hurt";
+              const dismissal    = isNotOut ? null : formatDismissal(e, playerMap);
               return (
-                <tr key={e.id} className={notOut ? "bg-fill/30" : ""}>
-                  <td className="px-4 py-2.5">
-                    <p className={`font-semibold ${notOut ? "text-ink" : "text-ink"}`}>
+                <tr key={e.id} className={isNotOut || isRetiredHurt ? "bg-fill/30" : ""}>
+                  <td className="px-4 py-2.5 max-w-[160px]">
+                    <p className="font-semibold text-ink truncate">
                       {e.player?.name}
                       {e.player?.is_captain && <span className="text-brand-500"> (c)</span>}
-                      {e.player?.is_keeper && <span className="text-ink-sub"> (wk)</span>}
+                      {e.player?.is_keeper  && <span className="text-ink-sub"> †</span>}
                     </p>
+                    {/* Mobile: dismissal below name */}
                     <p className="lab sm:hidden mt-0.5">
-                      {notOut ? <span className="text-green-700">batting</span> : e.dismissal_type?.replace(/_/g, " ") || "out"}
+                      {isNotOut
+                        ? <span className="text-green-600 font-medium">not out</span>
+                        : isRetiredHurt
+                        ? <span className="text-amber-600">retired hurt</span>
+                        : <span className="text-ink-sub">{dismissal?.short ?? "out"}</span>
+                      }
                     </p>
                   </td>
-                  <td className="px-3 py-2.5 text-xs text-ink-sub hidden sm:table-cell">
-                    {notOut ? <span className="text-green-700 font-medium">batting</span> : e.dismissal_type?.replace(/_/g, " ") || "out"}
+
+                  {/* Desktop dismissal column */}
+                  <td className="px-3 py-2.5 hidden sm:table-cell" style={{ minWidth: 200, maxWidth: 280 }}>
+                    {isNotOut ? (
+                      <span className="text-green-600 font-medium text-xs">not out</span>
+                    ) : isRetiredHurt ? (
+                      <span className="text-amber-600 text-xs italic">retired hurt</span>
+                    ) : dismissal ? (
+                      <div title={dismissal.full}>
+                        <span className="text-xs text-ink font-mono">{dismissal.short}</span>
+                      </div>
+                    ) : (
+                      <span className="text-xs text-ink-faint">—</span>
+                    )}
                   </td>
-                  <td className="px-3 py-2.5 text-right font-mononum font-black text-ink text-base">{e.runs}</td>
+
+                  <td className="px-3 py-2.5 text-right font-mononum font-black text-ink text-base">{e.runs}{isNotOut && <span className="text-green-600 text-xs">*</span>}</td>
                   <td className="px-3 py-2.5 text-right font-mononum text-ink-sub">{e.balls_faced}</td>
                   <td className="px-3 py-2.5 text-right font-mononum text-ink">{e.fours}</td>
                   <td className="px-3 py-2.5 text-right font-mononum text-brand-500 font-semibold">{e.sixes}</td>

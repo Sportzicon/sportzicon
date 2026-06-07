@@ -68,6 +68,7 @@ export async function sendMail(input: SendMailInput): Promise<void> {
   } catch (err: any) {
     logger.error({ err, to: input.to, subject: input.subject }, "sendMail failed");
     await writeLog(input, "failed", String(err?.message ?? err));
+    throw err;
   }
 }
 

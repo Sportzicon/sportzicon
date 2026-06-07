@@ -171,6 +171,98 @@ export async function deletePlayer(tournamentId: string, teamId: string, playerI
   return { deleted: true };
 }
 
+// Look up all player entries linked to a Sportivox user ID and aggregate stats
+export async function getPlayerStatsByUserId(sportivoxUserId: string) {
+  const players = await prisma.player.findMany({
+    where: { sportivox_user_id: sportivoxUserId },
+    include: {
+      team: { select: { id: true, name: true, short_name: true } },
+      career_stats: true,
+      batting_entries: {
+        include: { innings: { select: { match_id: true, innings_number: true } } }
+      },
+      bowling_entries: {
+        include: { innings: { select: { match_id: true } } }
+      }
+    }
+  });
+
+  if (players.length === 0) return null;
+
+  // Aggregate across all player records for this user
+  const allBat  = players.flatMap(p => p.batting_entries.filter(b => b.status !== "yet_to_bat"));
+  const allBowl = players.flatMap(p => p.bowling_entries.filter(b => b.balls > 0));
+
+  const matchIds = new Set([
+    ...allBat.map(b => b.innings.match_id),
+    ...allBowl.map(b => b.innings.match_id)
+  ]);
+
+  const inningsBatted  = allBat.length;
+  const totalRuns      = allBat.reduce((s, b) => s + b.runs, 0);
+  const ballsFaced     = allBat.reduce((s, b) => s + b.balls_faced, 0);
+  const fours          = allBat.reduce((s, b) => s + b.fours, 0);
+  const sixes          = allBat.reduce((s, b) => s + b.sixes, 0);
+  const dismissals     = allBat.filter(b => b.status === "out").length;
+  const notOuts        = allBat.filter(b => b.status === "not_out" || b.status === "retired_hurt").length;
+  const highestScore   = allBat.length > 0 ? Math.max(...allBat.map(b => b.runs)) : 0;
+  const highestNotOut  = allBat.find(b => b.runs === highestScore && b.status !== "out");
+  const fifties        = allBat.filter(b => b.runs >= 50 && b.runs < 100).length;
+  const hundreds       = allBat.filter(b => b.runs >= 100).length;
+  const batAvg         = dismissals > 0 ? parseFloat((totalRuns / dismissals).toFixed(2)) : (totalRuns > 0 ? totalRuns : 0);
+  const batSR          = ballsFaced > 0 ? parseFloat(((totalRuns / ballsFaced) * 100).toFixed(2)) : 0;
+
+  const ballsBowled    = allBowl.reduce((s, b) => s + b.balls, 0);
+  const runsConceded   = allBowl.reduce((s, b) => s + b.runs_conceded, 0);
+  const wickets        = allBowl.reduce((s, b) => s + b.wickets, 0);
+  const maidens        = allBowl.reduce((s, b) => s + b.maidens, 0);
+  const fiveWickets    = allBowl.filter(b => b.wickets >= 5).length;
+  const economy        = ballsBowled > 0 ? parseFloat(((runsConceded / ballsBowled) * 6).toFixed(2)) : 0;
+  const bowlAvg        = wickets > 0 ? parseFloat((runsConceded / wickets).toFixed(2)) : 0;
+  const bowlSR         = wickets > 0 ? parseFloat((ballsBowled / wickets).toFixed(2)) : 0;
+  const bestBowling    = allBowl.reduce<{ w: number; r: number } | null>((best, e) => {
+    if (!best) return { w: e.wickets, r: e.runs_conceded };
+    if (e.wickets > best.w || (e.wickets === best.w && e.runs_conceded < best.r)) return { w: e.wickets, r: e.runs_conceded };
+    return best;
+  }, null);
+
+  // Use career_stats if available (persisted after match completion)
+  const careerStats = players.find(p => p.career_stats)?.career_stats;
+
+  return {
+    players: players.map(p => ({ id: p.id, name: p.name, team: p.team })),
+    batting: {
+      matches:      matchIds.size,
+      innings:      inningsBatted,
+      not_outs:     notOuts,
+      runs:         totalRuns,
+      highest_score: `${highestScore}${highestNotOut ? "*" : ""}`,
+      average:      batAvg,
+      strike_rate:  batSR,
+      hundreds,
+      fifties,
+      fours,
+      sixes,
+      balls_faced:  ballsFaced
+    },
+    bowling: ballsBowled > 0 ? {
+      matches:     matchIds.size,
+      innings:     allBowl.length,
+      balls:       ballsBowled,
+      overs:       `${Math.floor(ballsBowled / 6)}.${ballsBowled % 6}`,
+      runs:        runsConceded,
+      wickets,
+      maidens,
+      best_bowling: bestBowling ? `${bestBowling.w}/${bestBowling.r}` : "–",
+      average:     bowlAvg,
+      economy,
+      strike_rate: bowlSR,
+      five_wickets: fiveWickets
+    } : null,
+    career: careerStats ?? null
+  };
+}
+
 export async function getSuggestedPlayers(tournamentId: string, teamId: string) {
   const team = await prisma.team.findUnique({ where: { id: teamId } });
   if (!team) throw NotFound("Team not found");
@@ -745,6 +837,81 @@ export async function createInnings(matchId: string, actorId: string, actorRole:
   }
 
   return innings;
+}
+
+// ── Retired Hurt ──────────────────────────────────────────────────────────────
+// Retired hurt is NOT a dismissal — the wicket count does not increase.
+// The batsman can return to bat later in the same innings.
+
+export async function retireHurt(inningsId: string, actorId: string, actorRole: string, playerId: string) {
+  const innings = await prisma.innings.findUnique({ where: { id: inningsId } });
+  if (!innings) throw NotFound("Innings not found");
+  const match = await prisma.match.findUnique({ where: { id: innings.match_id } });
+  if (!match) throw NotFound("Match not found");
+  await assertManager(match.tournament_id, actorId, actorRole);
+
+  // Ensure the player has a batting entry in this innings
+  const entry = await prisma.battingEntry.findUnique({
+    where: { innings_id_player_id: { innings_id: inningsId, player_id: playerId } }
+  });
+  if (!entry) throw NotFound("Batting entry not found for this player in this innings");
+  if (entry.status === "out") throw BadRequest("Player is already out and cannot retire hurt");
+
+  // Record current over so commentary can be positioned correctly
+  const currentOver = Math.floor(innings.total_balls / 6);
+  const currentBall = innings.total_balls % 6;
+
+  // Mark as retired_hurt — NOT a wicket, wicket count stays the same
+  await prisma.battingEntry.update({
+    where: { innings_id_player_id: { innings_id: inningsId, player_id: playerId } },
+    data: {
+      status: "retired_hurt",
+      dismissal_type: "retired_hurt",
+      dismissal_desc: `retired_hurt_at:${currentOver}.${currentBall}:runs:${entry.runs}`
+    }
+  });
+
+  return {
+    ok: true,
+    player_id: playerId,
+    status: "retired_hurt",
+    at_over: currentOver,
+    at_ball: currentBall,
+    runs: entry.runs
+  };
+}
+
+export async function returnFromRetiredHurt(inningsId: string, actorId: string, actorRole: string, playerId: string) {
+  const innings = await prisma.innings.findUnique({ where: { id: inningsId } });
+  if (!innings) throw NotFound("Innings not found");
+  const match = await prisma.match.findUnique({ where: { id: innings.match_id } });
+  if (!match) throw NotFound("Match not found");
+  await assertManager(match.tournament_id, actorId, actorRole);
+
+  const entry = await prisma.battingEntry.findUnique({
+    where: { innings_id_player_id: { innings_id: inningsId, player_id: playerId } }
+  });
+  if (!entry) throw NotFound("Batting entry not found");
+  if (entry.status !== "retired_hurt") throw BadRequest("Player is not currently retired hurt");
+
+  // Restore to not_out — clear dismissal fields so scorecard is accurate
+  await prisma.battingEntry.update({
+    where: { innings_id_player_id: { innings_id: inningsId, player_id: playerId } },
+    data: {
+      status: "not_out",
+      dismissal_type: null,
+      dismissal_desc: null
+    }
+  });
+
+  return { ok: true, player_id: playerId, status: "not_out" };
+}
+
+export async function getRetiredHurtPlayers(inningsId: string) {
+  return prisma.battingEntry.findMany({
+    where: { innings_id: inningsId, status: "retired_hurt" },
+    include: { player: { select: { id: true, name: true, jersey_number: true } } }
+  });
 }
 
 export async function updateInnings(inningsId: string, actorId: string, actorRole: string, patch: any) {

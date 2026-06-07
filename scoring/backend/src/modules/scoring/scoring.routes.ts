@@ -78,6 +78,12 @@ router.get("/players/:playerId/stats", optionalAuth, asyncHandler(async (req: an
   res.json(r);
 }));
 
+// Look up a player's stats by their Sportivox main-app user ID
+router.get("/players/by-user/:userId/stats", optionalAuth, asyncHandler(async (req: any, res: any) => {
+  const r = await svc.getPlayerStatsByUserId(req.params.userId);
+  res.json(r);
+}));
+
 router.get("/tournaments/:id/teams/:teamId/suggested-players", requireAuth, asyncHandler(async (req: any, res: any) => {
   const r = await svc.getSuggestedPlayers(req.params.id, req.params.teamId);
   res.json({ players: r });
@@ -139,6 +145,26 @@ router.post("/matches/:matchId/innings", requireAuth, asyncHandler(async (req: a
 router.put("/innings/:inningsId", requireAuth, asyncHandler(async (req: any, res: any) => {
   const r = await svc.updateInnings(req.params.inningsId, req.user.sub, req.user.role, req.body);
   res.json({ innings: r });
+}));
+
+// ── Retired Hurt (NOT a dismissal — wicket count unchanged) ──────────────────
+router.get("/innings/:inningsId/retired-hurt", requireAuth, asyncHandler(async (req: any, res: any) => {
+  const r = await svc.getRetiredHurtPlayers(req.params.inningsId);
+  res.json({ players: r });
+}));
+
+router.post("/innings/:inningsId/retire-hurt", requireAuth, asyncHandler(async (req: any, res: any) => {
+  const { player_id } = req.body;
+  if (!player_id) throw new Error("player_id is required");
+  const r = await svc.retireHurt(req.params.inningsId, req.user.sub, req.user.role, player_id);
+  res.json(r);
+}));
+
+router.post("/innings/:inningsId/return-from-retired-hurt", requireAuth, asyncHandler(async (req: any, res: any) => {
+  const { player_id } = req.body;
+  if (!player_id) throw new Error("player_id is required");
+  const r = await svc.returnFromRetiredHurt(req.params.inningsId, req.user.sub, req.user.role, player_id);
+  res.json(r);
 }));
 
 // Ball-by-ball scoring

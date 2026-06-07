@@ -71,6 +71,10 @@ export async function revokeAllRefreshTokensForUser(userId: string): Promise<voi
   });
 }
 
+export function generateToken(): string {
+  return crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, "");
+}
+
 export function hashPassword(plain: string): Promise<string> {
   return bcrypt.hash(plain, env.BCRYPT_ROUNDS);
 }

@@ -2,11 +2,143 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { useState, useRef } from "react";
 import { api, getApiError, humanizeError } from "../api/client";
+import { scoringApi } from "../api/scoringClient";
 import { useAuthStore } from "../store/auth";
 import { Spinner, VerifiedBadge, Avatar, SectionHead, Kicker, StatCard, Placeholder, Tabs, Badge, StatusPill } from "../components/UI";
 import type { Post, User } from "../types";
 import { useSavedOpportunities } from "../store/savedOpportunities";
 import { Bookmark, Camera, FileText, Trash2, Upload, X } from "lucide-react";
+
+// ── Cricbuzz-style cricket stats table ───────────────────────────────────────
+function CricketStatRow({ label, values }: { label: string; values: (string | number)[] }) {
+  return (
+    <tr className="border-b border-hairsoft last:border-0 hover:bg-fill/50 transition">
+      <td className="py-2.5 px-3 lab text-ink-sub text-left font-medium">{label}</td>
+      {values.map((v, i) => (
+        <td key={i} className={`py-2.5 px-3 font-mononum text-right text-sm ${i === 0 ? "text-ink font-bold text-base" : "text-ink-sub"}`}>
+          {v ?? "—"}
+        </td>
+      ))}
+    </tr>
+  );
+}
+
+function CricketStatsSection({ userId, sport }: { userId: string; sport?: string }) {
+  const { data, isLoading } = useQuery({
+    queryKey: ["cricket-stats-by-user", userId],
+    queryFn: () => scoringApi.get(`/players/by-user/${userId}/stats`).then(r => r.data),
+    enabled: !!userId && sport?.toLowerCase() === "cricket"
+  });
+
+  if (!sport || sport.toLowerCase() !== "cricket") return null;
+  if (isLoading) return <div className="skel h-48 rounded" />;
+  if (!data) return (
+    <div className="card card-body text-center border-dashed">
+      <p className="lab text-ink-faint">No match statistics recorded yet</p>
+    </div>
+  );
+
+  const bat  = data.batting;
+  const bowl = data.bowling;
+
+  return (
+    <div className="space-y-4">
+      {/* Batting */}
+      <div className="card overflow-hidden">
+        <div className="px-4 py-2.5 bg-ink text-paper flex items-center justify-between">
+          <p className="lab tracking-wider text-sm font-semibold">BATTING</p>
+          <p className="lab text-paper/50 text-xs">{bat.matches} match{bat.matches !== 1 ? "es" : ""}</p>
+        </div>
+
+        {/* Headline stats row — big numbers */}
+        <div className="grid grid-cols-3 sm:grid-cols-6 divide-x divide-hair border-b border-hair">
+          {[
+            { label: "RUNS",  value: bat.runs,         accent: true },
+            { label: "HS",    value: bat.highest_score, accent: false },
+            { label: "AVG",   value: bat.average,       accent: false },
+            { label: "SR",    value: bat.strike_rate,   accent: false },
+            { label: "100s",  value: bat.hundreds,      accent: false },
+            { label: "50s",   value: bat.fifties,       accent: false },
+          ].map(({ label, value, accent }) => (
+            <div key={label} className="px-3 py-3 text-center">
+              <p className="lab text-[9px] text-ink-faint mb-1">{label}</p>
+              <p className={`font-mononum font-black ${accent ? "text-2xl text-brand-500" : "text-lg text-ink"}`}>{value ?? "—"}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Detailed table */}
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="bg-fill border-b border-hair">
+              <th className="text-left py-2 px-3 lab text-ink-faint"></th>
+              <th className="text-right py-2 px-3 lab text-ink-faint">Inn</th>
+              <th className="text-right py-2 px-3 lab text-ink-faint">NO</th>
+              <th className="text-right py-2 px-3 lab text-ink-faint">Runs</th>
+              <th className="text-right py-2 px-3 lab text-ink-faint">Balls</th>
+              <th className="text-right py-2 px-3 lab text-ink-faint">4s</th>
+              <th className="text-right py-2 px-3 lab text-ink-faint">6s</th>
+            </tr>
+          </thead>
+          <tbody>
+            <CricketStatRow
+              label="Overall"
+              values={[bat.innings, bat.not_outs, bat.runs, bat.balls_faced, bat.fours, bat.sixes]}
+            />
+          </tbody>
+        </table>
+      </div>
+
+      {/* Bowling */}
+      {bowl && (
+        <div className="card overflow-hidden">
+          <div className="px-4 py-2.5 bg-ink text-paper flex items-center justify-between">
+            <p className="lab tracking-wider text-sm font-semibold">BOWLING</p>
+            <p className="lab text-paper/50 text-xs">{bowl.matches} match{bowl.matches !== 1 ? "es" : ""}</p>
+          </div>
+
+          {/* Headline stats row */}
+          <div className="grid grid-cols-3 sm:grid-cols-6 divide-x divide-hair border-b border-hair">
+            {[
+              { label: "WKTS",  value: bowl.wickets,     accent: true },
+              { label: "BBI",   value: bowl.best_bowling, accent: false },
+              { label: "AVG",   value: bowl.average,      accent: false },
+              { label: "ECO",   value: bowl.economy,      accent: false },
+              { label: "SR",    value: bowl.strike_rate,  accent: false },
+              { label: "5W",    value: bowl.five_wickets, accent: false },
+            ].map(({ label, value, accent }) => (
+              <div key={label} className="px-3 py-3 text-center">
+                <p className="lab text-[9px] text-ink-faint mb-1">{label}</p>
+                <p className={`font-mononum font-black ${accent ? "text-2xl text-brand-500" : "text-lg text-ink"}`}>{value ?? "—"}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Detailed table */}
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-fill border-b border-hair">
+                <th className="text-left py-2 px-3 lab text-ink-faint"></th>
+                <th className="text-right py-2 px-3 lab text-ink-faint">Inn</th>
+                <th className="text-right py-2 px-3 lab text-ink-faint">Overs</th>
+                <th className="text-right py-2 px-3 lab text-ink-faint">Mdns</th>
+                <th className="text-right py-2 px-3 lab text-ink-faint">Runs</th>
+                <th className="text-right py-2 px-3 lab text-ink-faint">Wkts</th>
+                <th className="text-right py-2 px-3 lab text-ink-faint">ECO</th>
+              </tr>
+            </thead>
+            <tbody>
+              <CricketStatRow
+                label="Overall"
+                values={[bowl.innings, bowl.overs, bowl.maidens, bowl.runs, bowl.wickets, bowl.economy]}
+              />
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
 
 type Tab = "posts" | "followers" | "following" | "saved" | "emails";
 
@@ -348,8 +480,16 @@ export default function Profile() {
         </div>
       )}
 
-      {/* ── ZONE 02 — Detailed statistics ─────────────────────── */}
-      {isAthlete && (
+      {/* ── ZONE 02 — Cricket match statistics (live from scoring module) ── */}
+      {isAthlete && sport?.toLowerCase() === "cricket" && (
+        <div>
+          <SectionHead n="02" title="Match Statistics" sub="From recorded matches on Sportzicon" />
+          <CricketStatsSection userId={id} sport={sport} />
+        </div>
+      )}
+
+      {/* ── ZONE 02b — Detailed statistics (non-cricket) ──────── */}
+      {isAthlete && sport?.toLowerCase() !== "cricket" && (
         <div>
           <SectionHead n="02" title="Detailed statistics" sub="By format" />
           <div className="card card-body text-center border-dashed">
