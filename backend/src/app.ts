@@ -4,6 +4,7 @@ import helmet from "helmet";
 import pinoHttp from "pino-http";
 import { logger } from "./config/logger";
 import { corsOrigins, env } from "./config/env";
+import { bootstrapEventHandlers } from "./events/bootstrap";
 import { requestId } from "./middleware/requestId";
 import { apiLimiter } from "./middleware/rateLimit";
 import { errorHandler } from "./middleware/errorHandler";
@@ -30,6 +31,7 @@ import reportsRoutes from "./modules/admin/reports.routes";
 import emailLogsRoutes from "./modules/email-logs/email-logs.routes";
 
 export function createApp(): Express {
+  bootstrapEventHandlers();
   const app = express();
 
   // Behind a load balancer in Cloud Run — trust the first proxy for X-Forwarded-* headers.

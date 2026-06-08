@@ -1,13 +1,15 @@
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import ReactMarkdown from "react-markdown";
-import { api } from "../api/client";
+import { useBlog } from "../hooks";
+import { blogService } from "../services";
 import { Spinner, StatusPill, Kicker } from "../components/UI";
 import { CommentSection } from "../components/CommentSection";
 import { useAuthStore } from "../store/auth";
 import { Trash2, Pencil, MoreVertical, Heart } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
-import type { Blog } from "../types";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "../hooks";
+import type { Blog } from "../models";
 
 export default function BlogDetail() {
   const navigate = useNavigate();
@@ -26,25 +28,11 @@ export default function BlogDetail() {
     return () => document.removeEventListener("mousedown", onClickOutside);
   }, []);
 
-  const q = useQuery({
-    queryKey: ["blog", idOrSlug],
-    queryFn: async () => (await api.get<{ blog: Blog }>(`/blogs/${idOrSlug}`)).data.blog
-  });
+  const { detail: q, remove: deleteBlog } = useBlog(idOrSlug, { onDeleteSuccess: () => navigate("/blogs") });
 
   const likeMutation = useMutation({
-    mutationFn: async (id: string) => api.post(`/blogs/${id}/like`),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["blog", idOrSlug] })
-  });
-
-  const deleteBlog = useMutation({
-    mutationFn: async (id: string) => api.delete(`/blogs/${id}`),
-    onSuccess: async () => {
-      await Promise.all([
-        qc.invalidateQueries({ queryKey: ["blog"] }),
-        qc.invalidateQueries({ queryKey: ["blogs"] }),
-      ]);
-      navigate("/blogs");
-    }
+    mutationFn: (id: string) => blogService.like(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.blog(idOrSlug) }),
   });
 
   if (q.isLoading) return <div className="flex justify-center p-12"><Spinner className="text-brand-500" /></div>;
@@ -100,7 +88,7 @@ export default function BlogDetail() {
         {pendingDelete && (
           <div className="mt-4 flex items-center gap-4 rounded bg-red-50 border border-red-200 p-4">
             <div className="flex-1"><p className="font-semibold text-red-900">Delete this blog?</p><p className="text-sm text-red-700 mt-0.5">This cannot be undone.</p></div>
-            <button onClick={() => deleteBlog.mutate(b.id)} disabled={deleteBlog.isPending} className="btn-danger">Confirm delete</button>
+            <button onClick={() => deleteBlog.mutate()} disabled={deleteBlog.isPending} className="btn-danger">Confirm delete</button>
             <button onClick={() => setPendingDelete(false)} className="btn-secondary">Cancel</button>
           </div>
         )}

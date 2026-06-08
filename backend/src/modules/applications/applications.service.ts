@@ -1,23 +1,33 @@
-import { prisma } from "../../config/prisma";
+import { repositories } from "../../repositories";
+import { eventBus } from "../../lib/EventBus";
+import { StateMachine } from "../../lib/StateMachine";
+import { APPLICATION_TRANSITIONS } from "../../workflows/applicationWorkflow";
+import { OPPORTUNITY_TRANSITIONS } from "../../workflows/opportunityWorkflow";
 import { BadRequest, Conflict, Forbidden, NotFound } from "../../utils/errors";
-import { createNotification } from "../notifications/notifications.service";
 import { logger } from "../../config/logger";
+import {
+  APP_APPLIED,
+  APP_TRANSITIONED,
+  type ApplicationAppliedEvent,
+  type ApplicationTransitionedEvent,
+} from "../../events/types";
 import type { ApplicationStatus, Role } from "../../types/domain";
 
-const transitions: Record<ApplicationStatus, ApplicationStatus[]> = {
-  pending: ["shortlisted", "rejected", "withdrawn"],
-  shortlisted: ["selected", "rejected", "withdrawn"],
-  selected: ["withdrawn"],
-  rejected: [],
-  withdrawn: []
-};
+// ─── Apply ───────────────────────────────────────────────────────────────────
 
-export async function apply(applicantId: string, opportunityId: string, input: { cover_note?: string; documents?: string[] }) {
+export async function apply(
+  applicantId: string,
+  opportunityId: string,
+  input: { cover_note?: string; documents?: string[] }
+) {
   const [opp, user] = await Promise.all([
-    prisma.opportunity.findUnique({ where: { id: opportunityId } }),
-    prisma.user.findUnique({ where: { id: applicantId }, select: { id: true, full_name: true, dob: true, gender: true } })
+    repositories.opportunity.findById(opportunityId),
+    repositories.user.findById(applicantId, {
+      id: true, full_name: true, dob: true, gender: true,
+    }),
   ]);
-  if (!opp) throw NotFound("Opportunity not found");
+
+  if (!opp)  throw NotFound("Opportunity not found");
   if (!user) throw NotFound("Applicant not found");
 
   if (opp.status !== "open") throw BadRequest("This opportunity is no longer accepting applications");
@@ -31,35 +41,23 @@ export async function apply(applicantId: string, opportunityId: string, input: {
   if (opp.gender_eligibility !== "all" && user.gender && user.gender !== opp.gender_eligibility)
     throw BadRequest("Gender eligibility not met");
 
-  const existing = await prisma.application.findUnique({
-    where: { opportunity_id_applicant_user_id: { opportunity_id: opportunityId, applicant_user_id: applicantId } },
-    select: { id: true }
-  });
+  const existing = await repositories.application.findByOpportunityAndApplicant(opportunityId, applicantId);
   if (existing) throw Conflict("You have already applied to this opportunity");
 
-  const [application] = await prisma.$transaction([
-    prisma.application.create({
-      data: {
-        opportunity_id: opportunityId,
-        applicant_user_id: applicantId,
-        cover_note: input.cover_note,
-        documents: input.documents ?? [],
-        history: [{ status: "pending", at: new Date(), by: applicantId }] as object[]
-      }
-    }),
-    prisma.opportunity.update({
-      where: { id: opportunityId },
-      data: { application_count: { increment: 1 } }
-    })
-  ]);
+  const application = await repositories.application.create({
+    opportunity_id: opportunityId,
+    applicant_user_id: applicantId,
+    cover_note: input.cover_note,
+    documents: input.documents ?? [],
+  });
 
-  await createNotification({
-    user_id: opp.posted_by_user_id,
-    type: "new_application",
-    title: "New application received",
-    body: `${user.full_name} applied to "${opp.title}".`,
-    link: `/opportunities/${opp.id}/applicants`,
-    email: true
+  eventBus.emit<ApplicationAppliedEvent>(APP_APPLIED, {
+    applicationId: application.id,
+    applicantId,
+    applicantName: user.full_name,
+    opportunityId,
+    opportunityTitle: opp.title,
+    posterId: opp.posted_by_user_id,
   });
 
   return {
@@ -67,10 +65,12 @@ export async function apply(applicantId: string, opportunityId: string, input: {
     opportunity_title: opp.title,
     org_id: opp.org_id,
     applicant_name: user.full_name,
-    applied_at: application.applied_at.getTime(),
-    updated_at: application.updated_at.getTime()
+    applied_at: (application.applied_at as unknown as Date).getTime(),
+    updated_at: (application.updated_at as unknown as Date).getTime(),
   };
 }
+
+// ─── Transition ──────────────────────────────────────────────────────────────
 
 export async function transition(
   appId: string,
@@ -78,159 +78,121 @@ export async function transition(
   next: ApplicationStatus,
   reason?: string
 ) {
-  const app = await prisma.application.findUnique({ where: { id: appId } });
+  const app = await repositories.application.findById(appId);
   if (!app) throw NotFound("Application not found");
 
-  const opp = await prisma.opportunity.findUnique({ where: { id: app.opportunity_id } });
+  const opp = await repositories.opportunity.findById(app.opportunity_id);
   if (!opp) throw NotFound("Opportunity not found");
 
   const isApplicant = actor.id === app.applicant_user_id;
-  const isPoster = actor.id === opp.posted_by_user_id;
-  const isAdmin = actor.role === "admin";
+  const isPoster    = actor.id === opp.posted_by_user_id;
+  const isAdmin     = actor.role === "admin";
 
   if (next === "withdrawn" && !isApplicant && !isAdmin)
     throw Forbidden("Only the applicant can withdraw");
   if (next !== "withdrawn" && !isPoster && !isAdmin)
     throw Forbidden("Only the opportunity poster can change this status");
 
-  const current = app.status as ApplicationStatus;
-  if (!transitions[current].includes(next))
-    throw BadRequest(`Illegal transition from ${current} to ${next}`);
+  // ── StateMachine validates the transition ──────────────────────────────────
+  const machine = new StateMachine<ApplicationStatus>(
+    app.status as ApplicationStatus,
+    APPLICATION_TRANSITIONS
+  );
 
-  const newHistory = [
-    ...(app.history as object[]),
-    { status: next, at: new Date(), by: actor.id, ...(reason ? { reason } : {}) }
-  ];
-
-  const [updated] = await prisma.$transaction([
-    prisma.application.update({
-      where: { id: appId },
-      data: {
-        status: next,
-        rejection_reason: next === "rejected" ? reason : app.rejection_reason ?? undefined,
-        history: newHistory as object[]
+  // Register vacancy/status side-effects on the machine before transitioning
+  machine.on("selected", async () => {
+    if (opp.vacancies) {
+      const updated = await repositories.opportunity.updateVacanciesFilled(opp.id, 1);
+      if (updated.vacancies_filled >= (opp.vacancies ?? 0)) {
+        const oppMachine = new StateMachine("open", OPPORTUNITY_TRANSITIONS);
+        await oppMachine.transition("filled");
+        await repositories.opportunity.updateStatus(opp.id, "filled");
       }
-    }),
-    ...(next === "selected" && opp.vacancies
-      ? [prisma.opportunity.update({
-          where: { id: opp.id },
-          data: {
-            vacancies_filled: { increment: 1 },
-            status: (opp.vacancies_filled + 1 >= opp.vacancies) ? "filled" : opp.status
-          }
-        })]
-      : []),
-    ...(next === "withdrawn" && current === "selected" && opp.vacancies
-      ? [prisma.opportunity.update({
-          where: { id: opp.id },
-          data: { vacancies_filled: { decrement: 1 }, status: "open" }
-        })]
-      : [])
-  ]);
+    }
+  });
 
-  const notifyMap: Record<string, { title: string; body: string; email: boolean }> = {
-    shortlisted: { title: "You've been shortlisted", body: `Your application for "${opp.title}" has been shortlisted.`, email: true },
-    selected: { title: "You've been selected!", body: `Congratulations — you've been selected for "${opp.title}".`, email: true },
-    rejected: { title: "Application update", body: `Your application for "${opp.title}" was not successful.${reason ? " Reason: " + reason : ""}`, email: false }
-  };
-  const n = notifyMap[next];
-  if (n) {
-    await createNotification({
-      user_id: app.applicant_user_id,
-      type: `application_${next}`,
-      title: n.title,
-      body: n.body,
-      // Link to the opportunity detail page — athlete can see org contact + full details.
-      // (There is no /applications/:id route, so the old link caused a 404.)
-      link: `/opportunities/${opp.id}`,
-      email: n.email
-    });
-  }
-
-  // When selected, mark athlete as no longer available so their profile reflects it.
-  if (next === "selected") {
+  machine.on("selected", async () => {
     try {
-      const user = await prisma.user.findUnique({
-        where: { id: app.applicant_user_id },
-        select: { athlete_data: true }
-      });
-      if (user?.athlete_data) {
-        await prisma.user.update({
-          where: { id: app.applicant_user_id },
-          data: {
-            athlete_data: { ...(user.athlete_data as object), availability: "not_available" }
-          }
-        });
-      }
+      await repositories.user.updateAthleteData(app.applicant_user_id, { availability: "not_available" });
     } catch (err) {
       logger.warn({ err }, "failed to update athlete availability after selection");
     }
-  }
+  });
+
+  machine.on("withdrawn", async () => {
+    if (app.status === "selected" && opp.vacancies) {
+      const updated = await repositories.opportunity.updateVacanciesFilled(opp.id, -1);
+      if (updated.vacancies_filled < (opp.vacancies ?? 0)) {
+        await repositories.opportunity.updateStatus(opp.id, "open");
+      }
+    }
+  });
+
+  await machine.transition(next, { actor, app, opp });
+
+  // ── Persist the new state and history ─────────────────────────────────────
+  const newHistory = [
+    ...(app.history as object[]),
+    { status: next, at: new Date(), by: actor.id, ...(reason ? { reason } : {}) },
+  ];
+
+  const updated = await repositories.application.update(appId, {
+    status: next,
+    rejection_reason: next === "rejected" ? reason : (app.rejection_reason ?? null),
+    history: newHistory,
+  });
+
+  // ── Emit domain event — notification handler will react ───────────────────
+  eventBus.emit<ApplicationTransitionedEvent>(APP_TRANSITIONED, {
+    applicationId: appId,
+    applicantId: app.applicant_user_id,
+    opportunityId: opp.id,
+    opportunityTitle: opp.title,
+    from: app.status as ApplicationStatus,
+    to: next,
+    reason,
+    actorId: actor.id,
+  });
 
   return updated;
 }
 
+// ─── Queries ─────────────────────────────────────────────────────────────────
+
 export async function listMyApplications(userId: string, limit = 50) {
-  const rows = await prisma.application.findMany({
-    where: { applicant_user_id: userId },
-    orderBy: { applied_at: "desc" },
-    take: limit,
-    include: { opportunity: { select: { title: true, org_id: true, type: true, sport: true, status: true } } }
-  });
-  return rows.map(({ opportunity, applied_at, updated_at, ...r }) => ({
+  const rows = await repositories.application.findManyByApplicant(userId, limit);
+  return rows.map((r) => ({
     ...r,
-    opportunity_title: opportunity.title,
-    org_id: opportunity.org_id,
-    applied_at: applied_at.getTime(),
-    updated_at: updated_at.getTime()
+    applied_at: (r.applied_at as unknown as Date).getTime(),
+    updated_at: (r.updated_at as unknown as Date).getTime(),
   }));
 }
 
-export async function listApplicantsForOpportunity(opportunityId: string, actor: { id: string; role: Role }) {
-  const opp = await prisma.opportunity.findUnique({ where: { id: opportunityId }, select: { posted_by_user_id: true } });
+export async function listApplicantsForOpportunity(
+  opportunityId: string,
+  actor: { id: string; role: Role }
+) {
+  const opp = await repositories.opportunity.findById(opportunityId);
   if (!opp) throw NotFound("Opportunity not found");
   if (opp.posted_by_user_id !== actor.id && actor.role !== "admin")
     throw Forbidden("Only the poster or an admin can view applicants");
 
-  const rows = await prisma.application.findMany({
-    where: { opportunity_id: opportunityId },
-    orderBy: { applied_at: "desc" },
-    include: {
-      applicant: {
-        select: {
-          id: true, full_name: true, profile_photo_url: true,
-          country: true, city: true, athlete_data: true,
-          verification_status: true, verification_badges: true
-        }
-      }
-    }
-  });
-  return rows.map(({ applicant, applied_at, updated_at, ...r }) => ({
+  const rows = await repositories.application.findManyByOpportunity(opportunityId);
+  return rows.map((r) => ({
     ...r,
-    applicant_name: applicant.full_name,
-    applicant: {
-      ...applicant,
-      athlete: applicant.athlete_data,
-      verification: { status: applicant.verification_status, badges: applicant.verification_badges },
-      athlete_data: undefined,
-      verification_status: undefined,
-      verification_badges: undefined
-    },
-    applied_at: applied_at.getTime(),
-    updated_at: updated_at.getTime()
+    applied_at: (r.applied_at as unknown as Date).getTime(),
+    updated_at: (r.updated_at as unknown as Date).getTime(),
   }));
 }
 
 export async function getApplication(appId: string, actor: { id: string; role: Role }) {
-  const app = await prisma.application.findUnique({ where: { id: appId } });
+  const app = await repositories.application.findById(appId);
   if (!app) throw NotFound("Application not found");
 
   if (app.applicant_user_id !== actor.id && actor.role !== "admin") {
-    const opp = await prisma.opportunity.findUnique({
-      where: { id: app.opportunity_id },
-      select: { posted_by_user_id: true }
-    });
+    const opp = await repositories.opportunity.findById(app.opportunity_id);
     if (opp?.posted_by_user_id !== actor.id) throw Forbidden("Not allowed to view this application");
   }
+
   return app;
 }

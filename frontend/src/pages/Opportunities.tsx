@@ -1,13 +1,13 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "../api/client";
+import { opportunityService } from "../services";
 import { useAuthStore } from "../store/auth";
 import { PageHeader, Spinner, EmptyState, StatusPill, Kicker, SectionHead, Pagination } from "../components/UI";
 
 const PAGE_SIZE = 10;
 import { Trash2, Pencil, MoreVertical, Bookmark } from "lucide-react";
-import type { Opportunity } from "../types";
+import type { Opportunity, OpportunityFilters } from "../models";
 import { useSavedOpportunities } from "../store/savedOpportunities";
 
 const TYPE_LABELS: Record<string, string> = {
@@ -82,26 +82,25 @@ export default function Opportunities() {
     return () => document.removeEventListener("mousedown", onClickOutside);
   }, []);
 
-  const params: any = { status: "open" };
-  if (type) params.type = type;
-  if (sport !== "All sports") params.sport = sport;
-  if (verifiedOnly) params.verified_org = true;
-  if (q) params.q = q;
+  const filters: OpportunityFilters = { status: "open" };
+  if (type) filters.type = type;
+  if (sport !== "All sports") filters.sport = sport;
+  if (verifiedOnly) filters.verified_org = true;
 
-  const q2 = useQuery({
-    queryKey: ["opportunities", params],
-    queryFn: async () => (await api.get<{ items: Opportunity[] }>("/opportunities", { params })).data.items
+  const oppsQuery = useQuery({
+    queryKey: ["opportunities", filters],
+    queryFn: () => opportunityService.list(filters)
   });
 
   const deleteOpp = useMutation({
-    mutationFn: async (id: string) => api.delete(`/opportunities/${id}`),
+    mutationFn: (id: string) => opportunityService.delete(id),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["opportunities"] }); setPendingDeleteId(null); }
   });
 
   const { toggle: toggleSave, isSaved } = useSavedOpportunities();
   const canPost = user?.role === "club" || user?.role === "organizer" || user?.role === "admin";
 
-  const results = (q2.data ?? [])
+  const results = (oppsQuery.data ?? [])
     .filter((o) => !q || o.title.toLowerCase().includes(q.toLowerCase()) || (o.org_name ?? "").toLowerCase().includes(q.toLowerCase()))
     .sort((a, b) => {
       if (sort === "deadline") return new Date(a.application_deadline).getTime() - new Date(b.application_deadline).getTime();
@@ -159,7 +158,7 @@ export default function Opportunities() {
             </select>
           </div>
 
-          {q2.isLoading ? (
+          {oppsQuery.isLoading ? (
             <div className="panel p-8 flex justify-center"><Spinner className="text-brand-500" /></div>
           ) : !results.length ? (
             <EmptyState
@@ -170,7 +169,7 @@ export default function Opportunities() {
           ) : (
             <>
             <div className="flex flex-col gap-3">
-              {results.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE).map((o) => {
+              {results.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE).map((o: Opportunity) => {
                 const isPoster = user?.id === o.posted_by_user_id;
                 const deadline = deadlineDays(o.application_deadline);
 

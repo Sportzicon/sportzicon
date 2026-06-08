@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, Page } from "@playwright/test";
 
 // Auth happy and unhappy paths. Uses the seeded demo accounts from `make seed`.
 // If seed isn't loaded the tests skip with a clear message.
@@ -12,7 +12,7 @@ const ACCOUNTS = [
   { email: "scout@demo.sportivox", role: "scout" }
 ];
 
-async function login(page, email: string, password: string) {
+async function login(page: Page, email: string, password: string) {
   await page.goto("/login");
   await page.getByLabel(/email/i).fill(email);
   await page.getByLabel(/password/i).fill(password);

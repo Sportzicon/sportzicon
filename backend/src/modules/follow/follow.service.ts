@@ -1,6 +1,7 @@
 import { prisma } from "../../config/prisma";
 import { BadRequest, NotFound } from "../../utils/errors";
-import { createNotification } from "../notifications/notifications.service";
+import { eventBus } from "../../lib/EventBus";
+import { USER_FOLLOWED, type UserFollowedEvent } from "../../events/types";
 
 export async function follow(followerId: string, followeeId: string) {
   if (followerId === followeeId) throw BadRequest("You cannot follow yourself");
@@ -24,12 +25,10 @@ export async function follow(followerId: string, followeeId: string) {
     prisma.user.update({ where: { id: followerId }, data: { following_count: { increment: 1 } } })
   ]);
 
-  await createNotification({
-    user_id: followeeId,
-    type: "new_follower",
-    title: "New follower",
-    body: `${follower.full_name} started following you.`,
-    link: `/profile/${followerId}`
+  eventBus.emit<UserFollowedEvent>(USER_FOLLOWED, {
+    followerId,
+    followerName: follower.full_name,
+    followeeId,
   });
 
   return { ok: true };

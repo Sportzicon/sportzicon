@@ -8,7 +8,7 @@ import { Target, Loader2 } from "lucide-react";
 // When a Sportivox user is logged in, auto-exchanges their JWT for a scoring JWT (SSO).
 // Falls back to a manual login form only if SSO fails.
 export default function ScoringGate({ children }: { children: React.ReactNode }) {
-  const { user: scoringUser, setSession } = useScoringAuthStore();
+  const { scoringUser, setSession } = useScoringAuthStore();
   const { user: mainUser, accessToken: mainToken } = useAuthStore();
 
   const [ssoState, setSsoState] = useState<"pending" | "done" | "failed">("pending");

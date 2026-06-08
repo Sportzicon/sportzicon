@@ -1,8 +1,8 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, Page } from "@playwright/test";
 
 const DEMO_PASSWORD = process.env.SVOX_DEMO_PASSWORD || "Demo1234!";
 
-async function loginAs(page, email: string) {
+async function loginAs(page: Page, email: string) {
   await page.goto("/login");
   await page.getByLabel(/email/i).fill(email);
   await page.getByLabel(/password/i).fill(DEMO_PASSWORD);

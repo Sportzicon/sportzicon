@@ -1,11 +1,12 @@
 import { useState, useRef, useEffect } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
-import { api, humanizeError } from "../api/client";
+import { opportunityService, applicationService } from "../services";
+import { humanizeError } from "../api/client";
 import { useAuthStore } from "../store/auth";
 import { Spinner, StatusPill, SectionHead, Kicker } from "../components/UI";
 import { Trash2, Pencil, MoreVertical } from "lucide-react";
-import type { Opportunity } from "../types";
+import type { Opportunity, ApplyRequest } from "../models";
 
 const TYPE_LABELS: Record<string, string> = {
   trial: "Trial", recruitment: "Recruitment", scholarship: "Scholarship",
@@ -70,9 +71,9 @@ function ApplyModal({ opp, onClose, onSuccess }: { opp: Opportunity; onClose: ()
           form.append(`extra_doc_type_${i}`, d.type);
           form.append(`extra_doc_file_${i}`, d.file);
         });
-        await api.post(`/opportunities/${opp.id}/apply`, form, { headers: { "Content-Type": "multipart/form-data" } });
+        await opportunityService.apply(opp.id, form);
       } else {
-        await api.post(`/opportunities/${opp.id}/apply`, { cover_note: note });
+        await opportunityService.apply(opp.id, { cover_note: note } as ApplyRequest);
       }
       qc.invalidateQueries({ queryKey: ["my-apps"] });
       onSuccess();
@@ -81,12 +82,10 @@ function ApplyModal({ opp, onClose, onSuccess }: { opp: Opportunity; onClose: ()
     } finally { setBusy(false); }
   }
 
-  // close on backdrop click
   function onBackdrop(e: React.MouseEvent<HTMLDivElement>) {
     if (e.target === e.currentTarget) onClose();
   }
 
-  // close on Escape
   useEffect(() => {
     function onKey(e: KeyboardEvent) { if (e.key === "Escape") onClose(); }
     document.addEventListener("keydown", onKey);
@@ -151,7 +150,6 @@ function ApplyModal({ opp, onClose, onSuccess }: { opp: Opportunity; onClose: ()
           {step === 1 && (
             <div className="animate-fadein space-y-3">
               <div className="lab text-ink mb-3">Documents for this listing</div>
-              {/* Standard docs — auto-inferred from opportunity */}
               {[
                 { label: "Sports CV (PDF)", status: "attached", note: "Linked from your profile" },
                 { label: "Government ID", status: "review", note: "Submitted via verification" },
@@ -171,11 +169,8 @@ function ApplyModal({ opp, onClose, onSuccess }: { opp: Opportunity; onClose: ()
                 </div>
               ))}
 
-              {/* Additional / other documents */}
               <div className="border border-dashed border-hair rounded p-4 space-y-3">
                 <div className="lab text-ink text-[11px]">Additional documents (optional)</div>
-
-                {/* Uploaded extra docs list */}
                 {extraDocs.map((d, i) => (
                   <div key={i} className="flex items-center gap-3 panel p-3">
                     <span style={{ color: "#2E7D52", fontSize: 16 }}>✓</span>
@@ -188,8 +183,6 @@ function ApplyModal({ opp, onClose, onSuccess }: { opp: Opportunity; onClose: ()
                     </button>
                   </div>
                 ))}
-
-                {/* Dropdown + file picker row */}
                 <div className="flex gap-2 items-center flex-wrap">
                   <select
                     className="input font-mononum flex-1 min-w-[180px]"
@@ -205,7 +198,6 @@ function ApplyModal({ opp, onClose, onSuccess }: { opp: Opportunity; onClose: ()
                       <option key={t} value={t}>{t}</option>
                     ))}
                   </select>
-
                   <label className={`flex-shrink-0 ${!extraType ? "opacity-40 pointer-events-none" : "cursor-pointer"}`}>
                     <input
                       ref={extraInputRef}
@@ -218,13 +210,10 @@ function ApplyModal({ opp, onClose, onSuccess }: { opp: Opportunity; onClose: ()
                         if (file) addExtraDoc(file);
                       }}
                     />
-                    <span className="btn-secondary text-[11px] px-3 py-1.5 whitespace-nowrap">
-                      + Upload file
-                    </span>
+                    <span className="btn-secondary text-[11px] px-3 py-1.5 whitespace-nowrap">+ Upload file</span>
                   </label>
                 </div>
               </div>
-
               <p className="font-mononum text-[10.5px] text-ink-faint mt-3">
                 Private documents are shared with this club only via signed time-limited links.
               </p>
@@ -291,11 +280,11 @@ export default function OpportunityDetail() {
 
   const q = useQuery({
     queryKey: ["opp", id],
-    queryFn: async () => (await api.get<{ opportunity: Opportunity }>(`/opportunities/${id}`)).data.opportunity
+    queryFn: () => opportunityService.get(id)
   });
 
   const deleteOpp = useMutation({
-    mutationFn: async (oppId: string) => api.delete(`/opportunities/${oppId}`),
+    mutationFn: (oppId: string) => opportunityService.delete(oppId),
     onSuccess: () => navigate("/opportunities")
   });
 
@@ -309,7 +298,6 @@ export default function OpportunityDetail() {
 
   return (
     <div className="space-y-5 max-w-5xl">
-      {/* back link */}
       <button onClick={() => navigate(-1)} className="btn-ghost text-[12.5px]">← Opportunities</button>
 
       {/* header panel */}
@@ -359,7 +347,6 @@ export default function OpportunityDetail() {
             )}
           </div>
 
-          {/* stat strip */}
           <div className="mt-5 pt-5 border-t border-hairsoft grid grid-cols-2 sm:grid-cols-4 gap-4">
             <div><div className="lab">Applications</div><div className="font-mononum text-2xl text-ink mt-1">{o.application_count}</div></div>
             {o.vacancies != null && (
@@ -385,16 +372,12 @@ export default function OpportunityDetail() {
       )}
 
       <div className="grid gap-5 lg:grid-cols-3">
-        {/* main content — 2/3 */}
         <div className="lg:col-span-2 space-y-5">
-
-          {/* Zone 01 — About */}
           <div className="panel p-6">
             <SectionHead n="01" title="About this opportunity" />
             <p className="text-[14.5px] text-ink-70 leading-relaxed whitespace-pre-wrap mt-4">{o.description}</p>
           </div>
 
-          {/* Zone 02 — Eligibility */}
           {o.eligibility && (
             <div className="panel p-6">
               <SectionHead n="02" title="Eligibility" />
@@ -407,19 +390,15 @@ export default function OpportunityDetail() {
             </div>
           )}
 
-          {/* Zone 03 — Documents */}
           <div className="panel p-6">
             <SectionHead n="03" title="Documents required" />
             <div className="mt-4 flex flex-wrap gap-2">
               {["Sports CV (PDF)", "Government ID", "Coach endorsement (optional)"].map((d) => (
-                <span key={d} className="badge">
-                  <span className="text-brand-500 mr-1">▭</span> {d}
-                </span>
+                <span key={d} className="badge"><span className="text-brand-500 mr-1">▭</span> {d}</span>
               ))}
             </div>
           </div>
 
-          {/* applied success */}
           {applied && (
             <div className="panel p-6 text-center animate-fadein">
               <div className="w-14 h-14 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center text-2xl mx-auto">✓</div>
@@ -432,10 +411,8 @@ export default function OpportunityDetail() {
           )}
         </div>
 
-        {/* sidebar — 1/3 sticky */}
         <aside>
           <div className="panel p-5 sticky top-4 space-y-4">
-            {/* Large deadline countdown (zip 2 pattern) */}
             {!deadline.closed && (
               <div>
                 <div className="font-disp text-5xl leading-none" style={{ color: deadline.urgent ? "#FA4D14" : "#14110D" }}>
@@ -447,10 +424,7 @@ export default function OpportunityDetail() {
             {deadline.closed && (
               <div className="font-disp text-3xl text-ink-sub">Applications closed</div>
             )}
-
             <div className="h-px bg-hair" />
-
-            {/* detail rows */}
             <div>
               <DetailRow label="Vacancies" value={o.vacancies ? `${(o.vacancies - (o.vacancies_filled ?? 0))} of ${o.vacancies} open` : undefined} />
               <DetailRow label="Applicants" value={o.application_count} />
@@ -463,8 +437,6 @@ export default function OpportunityDetail() {
               <DetailRow label="End" value={o.end_date} />
               {o.contact_email && <DetailRow label="Contact" value={o.contact_email} />}
             </div>
-
-            {/* CTA buttons */}
             {isPoster ? (
               <Link to={`/opportunities/${o.id}/applicants`} className="btn-primary w-full text-center">
                 Review {o.application_count} applicants →
@@ -472,18 +444,12 @@ export default function OpportunityDetail() {
             ) : applied ? (
               <Link to="/applications" className="btn-secondary w-full text-center">View in tracker →</Link>
             ) : canApply ? (
-              <button className="btn-accent w-full" onClick={() => setApplyOpen(true)}>
-                Apply now →
-              </button>
+              <button className="btn-accent w-full" onClick={() => setApplyOpen(true)}>Apply now →</button>
             ) : deadline.closed ? (
               <button className="btn-secondary w-full" disabled>Applications closed</button>
             ) : !user ? (
-              <Link to="/login" className="btn-primary w-full text-center inline-flex justify-center">
-                Sign in to apply
-              </Link>
+              <Link to="/login" className="btn-primary w-full text-center inline-flex justify-center">Sign in to apply</Link>
             ) : null}
-
-            {/* ☆ Save (zip 2 pattern) */}
             {user && !isPoster && (
               <button
                 onClick={() => setSaved((s) => !s)}
@@ -496,7 +462,6 @@ export default function OpportunityDetail() {
         </aside>
       </div>
 
-      {/* Apply Modal */}
       {applyOpen && (
         <ApplyModal
           opp={o}

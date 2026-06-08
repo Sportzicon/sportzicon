@@ -1,10 +1,10 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, Page } from "@playwright/test";
 import { inputByType, fieldByLabel } from "../_helpers/labels";
 
 const ADMIN_EMAIL = process.env.SCORING_ADMIN_EMAIL || "admin@scoring.local";
 const ADMIN_PASSWORD = process.env.SCORING_ADMIN_PASSWORD || "Demo1234!";
 
-async function loginScoring(page) {
+async function loginScoring(page: Page) {
   await page.goto("/login");
   await inputByType(page, "email").fill(ADMIN_EMAIL);
   await inputByType(page, "password").fill(ADMIN_PASSWORD);

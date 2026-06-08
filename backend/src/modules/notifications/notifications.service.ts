@@ -1,4 +1,4 @@
-import { prisma } from "../../config/prisma";
+import { repositories } from "../../repositories";
 import { logger } from "../../config/logger";
 import { sendMail } from "../../config/mailer";
 
@@ -10,27 +10,22 @@ export async function createNotification(input: {
   link?: string;
   email?: boolean;
 }) {
-  const notification = await prisma.notification.create({
-    data: {
-      user_id: input.user_id,
-      type: input.type,
-      title: input.title,
-      body: input.body,
-      link: input.link
-    }
+  const notification = await repositories.notification.create({
+    user_id: input.user_id,
+    type: input.type,
+    title: input.title,
+    body: input.body,
+    link: input.link,
   });
 
   if (input.email) {
     try {
-      const user = await prisma.user.findUnique({
-        where: { id: input.user_id },
-        select: { email: true, full_name: true }
-      });
+      const user = await repositories.user.findById(input.user_id, { email: true, full_name: true });
       if (user) {
         await sendMail({
-          to: user.email,
+          to: (user as any).email,
           subject: input.title,
-          html: `<p>Hi ${escapeHtml(user.full_name)},</p><p>${escapeHtml(input.body)}</p>`,
+          html: `<p>Hi ${escapeHtml((user as any).full_name)},</p><p>${escapeHtml(input.body)}</p>`,
           user_id: input.user_id,
           email_type: "notification"
         });
@@ -44,30 +39,15 @@ export async function createNotification(input: {
 }
 
 export async function listForUser(userId: string, limit = 50, unreadOnly = false) {
-  return prisma.notification.findMany({
-    where: { user_id: userId, ...(unreadOnly ? { read: false } : {}) },
-    orderBy: { created_at: "desc" },
-    take: limit
-  });
+  return repositories.notification.findManyByUser(userId, limit, unreadOnly);
 }
 
 export async function countUnread(userId: string) {
-  return prisma.notification.count({ where: { user_id: userId, read: false } });
+  return repositories.notification.countUnread(userId);
 }
 
 export async function markRead(userId: string, ids: string[]) {
-  if (ids.length === 0) {
-    const result = await prisma.notification.updateMany({
-      where: { user_id: userId, read: false },
-      data: { read: true }
-    });
-    return { updated: result.count };
-  }
-  const result = await prisma.notification.updateMany({
-    where: { id: { in: ids }, user_id: userId },
-    data: { read: true }
-  });
-  return { updated: result.count };
+  return repositories.notification.markRead(userId, ids.length ? ids : undefined);
 }
 
 function escapeHtml(s: string): string {

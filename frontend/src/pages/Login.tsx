@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { api, getApiError } from "../api/client";
+import { getApiError } from "../api/client";
+import { authService } from "../services";
 import { useAuthStore } from "../store/auth";
 
 export default function Login() {
@@ -20,8 +21,8 @@ export default function Login() {
     setEmailUnverified(false);
     setResendSent(false);
     try {
-      const r = await api.post("/auth/login", { email, password });
-      setSession({ user: r.data.user, accessToken: r.data.access_token, refreshToken: r.data.refresh_token });
+      const r = await authService.login({ email, password });
+      setSession({ user: r.user, accessToken: r.access_token, refreshToken: r.refresh_token });
       navigate("/dashboard", { replace: true });
     } catch (e) {
       const apiErr = getApiError(e);
@@ -38,7 +39,7 @@ export default function Login() {
 
   async function resendVerification() {
     try {
-      await api.post("/auth/resend-verification", { email });
+      await authService.resendVerification(email);
       setResendSent(true);
     } catch { /* ignore */ }
   }

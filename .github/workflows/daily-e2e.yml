@@ -1,7 +1,9 @@
 name: Daily Playwright e2e
 
 # Runs the Playwright suite against staging every day at 03:00 UTC.
-# On regression: fails the run and (optionally) updates a tracking issue.
+# When no staging secrets are configured, falls back to localhost and
+# auto-starts both Vite dev servers via the webServer config in
+# playwright.config.ts — so the suite always executes.
 # HTML + JUnit reports are uploaded as artifacts and committed under reports/e2e/.
 
 on:
@@ -10,17 +12,19 @@ on:
   workflow_dispatch:
     inputs:
       base_url_svox:
-        description: "Sportivox base URL"
+        description: "Sportivox base URL (leave blank to use staging secret or localhost)"
         required: false
         default: ""
       base_url_scoring:
-        description: "Scoring base URL"
+        description: "Scoring base URL (leave blank to use staging secret or localhost)"
         required: false
         default: ""
   push:
     branches: [main]
     paths:
       - "e2e/**"
+      - "frontend/src/**"
+      - "scoring/frontend/src/**"
       - ".github/workflows/daily-e2e.yml"
 
 permissions:
@@ -48,22 +52,38 @@ jobs:
           cache: "npm"
           cache-dependency-path: e2e/package-lock.json
 
+      # ── E2E test runner ────────────────────────────────────────────────────
       - name: Install e2e deps
         working-directory: e2e
-        run: npm ci || npm install
+        run: npm ci
 
-      - name: Install Chromium
+      - name: Install Playwright Chromium + system deps
         working-directory: e2e
         run: npx playwright install --with-deps chromium
 
+      # ── Sportivox frontend (needed when SVOX_BASE_URL is localhost) ────────
+      - name: Install Sportivox frontend deps
+        working-directory: frontend
+        run: npm install --no-audit --no-fund
+
+      # ── Scoring frontend (needed when SCORING_BASE_URL is localhost) ───────
+      - name: Install Scoring frontend deps
+        working-directory: scoring/frontend
+        run: npm install --no-audit --no-fund
+
+      # ── Run tests ──────────────────────────────────────────────────────────
+      # playwright.config.ts will auto-start whichever Vite servers are needed
+      # (localhost URLs only). set +e so we capture the exit code manually and
+      # can still upload reports and commit the summary even on failure.
       - name: Run Playwright
         id: pw
         working-directory: e2e
         run: |
           set +e
-          npx playwright test --reporter=list,html,json,junit
+          npx playwright test
           echo "exit_code=$?" >> "$GITHUB_OUTPUT"
 
+      # ── Artifacts ──────────────────────────────────────────────────────────
       - name: Upload HTML report
         if: always()
         uses: actions/upload-artifact@v4
@@ -82,6 +102,7 @@ jobs:
             e2e/reports/results.json
           retention-days: 30
 
+      # ── Commit daily summary ───────────────────────────────────────────────
       - name: Commit summary report
         if: github.event_name != 'pull_request' && always()
         run: |
@@ -91,17 +112,19 @@ jobs:
           cp e2e/reports/junit.xml   "reports/e2e/$DATE/" 2>/dev/null || true
           node -e "
             const fs = require('fs');
-            const d = JSON.parse(fs.readFileSync('reports/e2e/$DATE/results.json','utf8') || '{}');
+            let raw = '';
+            try { raw = fs.readFileSync('reports/e2e/$DATE/results.json', 'utf8'); } catch {}
+            const d = raw ? JSON.parse(raw) : {};
             const stats = d.stats || {};
             const total = (stats.expected||0) + (stats.unexpected||0) + (stats.flaky||0) + (stats.skipped||0);
             const md = [
-              '# Playwright e2e — $DATE','',
-              '| Outcome | Count |','|---|---|',
-              '| Passed | '+(stats.expected||0)+' |',
-              '| Failed | '+(stats.unexpected||0)+' |',
-              '| Flaky  | '+(stats.flaky||0)+' |',
-              '| Skipped | '+(stats.skipped||0)+' |',
-              '| **Total** | **'+total+'** |',
+              '# Playwright e2e — $DATE', '',
+              '| Outcome | Count |', '|---|---|',
+              '| Passed  | ' + (stats.expected  || 0) + ' |',
+              '| Failed  | ' + (stats.unexpected || 0) + ' |',
+              '| Flaky   | ' + (stats.flaky      || 0) + ' |',
+              '| Skipped | ' + (stats.skipped    || 0) + ' |',
+              '| **Total** | **' + total + '** |',
               '',
               'Artifacts: see GitHub Actions run ${{ github.run_id }}.',
               ''
@@ -120,16 +143,17 @@ jobs:
           git commit -m "chore(e2e): daily report $DATE"
           git push
 
+      # ── Update rolling tracking issue ──────────────────────────────────────
       - name: Update tracking issue
         if: github.event_name != 'pull_request' && always()
         uses: actions/github-script@v7
         with:
           script: |
             const fs = require("fs");
-            const DATE = new Date().toISOString().slice(0,10);
+            const DATE = new Date().toISOString().slice(0, 10);
             const path = `reports/e2e/${DATE}/summary.md`;
             let body = `Playwright run ${process.env.GITHUB_RUN_ID} — see Actions for HTML report.`;
-            if (fs.existsSync(path)) body = fs.readFileSync(path, "utf8");
+            try { body = fs.readFileSync(path, "utf8"); } catch {}
             const title = "🧪 Daily Playwright e2e tracker";
 
             const { data: issues } = await github.rest.issues.listForRepo({
@@ -142,6 +166,7 @@ jobs:
               await github.rest.issues.create({ ...context.repo, title, body, labels: ["e2e"] });
             }
 
+      # ── Fail the run if any test failed ───────────────────────────────────
       - name: Fail run if any test failed
         if: steps.pw.outputs.exit_code != '0'
         run: |

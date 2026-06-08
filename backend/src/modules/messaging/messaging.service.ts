@@ -1,6 +1,7 @@
 import { prisma } from "../../config/prisma";
 import { BadRequest, Forbidden, NotFound } from "../../utils/errors";
-import { createNotification } from "../notifications/notifications.service";
+import { eventBus } from "../../lib/EventBus";
+import { MESSAGE_SENT, type MessageSentEvent } from "../../events/types";
 
 export async function sendMessage(senderId: string, recipientId: string, body: string) {
   if (senderId === recipientId) throw BadRequest("Cannot message yourself");
@@ -10,11 +11,10 @@ export async function sendMessage(senderId: string, recipientId: string, body: s
     prisma.user.findUnique({ where: { id: senderId }, select: { id: true, full_name: true } }),
     prisma.user.findUnique({ where: { id: recipientId }, select: { id: true, status: true } })
   ]);
-  if (!sender) throw NotFound("Sender not found");
+  if (!sender)    throw NotFound("Sender not found");
   if (!recipient) throw NotFound("Recipient not found");
   if (recipient.status === "suspended") throw Forbidden("Recipient cannot receive messages");
 
-  // Find or create the 1:1 conversation.
   let conversation = await prisma.conversation.findFirst({
     where: { participant_ids: { hasEvery: [senderId, recipientId] } },
     select: { id: true, unread_counts: true }
@@ -31,33 +31,26 @@ export async function sendMessage(senderId: string, recipientId: string, body: s
     });
   } else {
     const counts = (conversation.unread_counts as Record<string, number>) ?? {};
-    const updatedCounts = { ...counts, [recipientId]: (counts[recipientId] ?? 0) + 1 };
     await prisma.conversation.update({
       where: { id: conversation.id },
       data: {
         last_message: { body, sender_id: senderId, at: new Date() },
-        unread_counts: updatedCounts
+        unread_counts: { ...counts, [recipientId]: (counts[recipientId] ?? 0) + 1 }
       }
     });
   }
 
   const message = await prisma.message.create({
-    data: {
-      conversation_id: conversation.id,
-      sender_id: senderId,
-      recipient_id: recipientId,
-      body
-    }
+    data: { conversation_id: conversation.id, sender_id: senderId, recipient_id: recipientId, body }
   });
 
-  await createNotification({
-    user_id: recipientId,
-    type: "new_message",
-    title: `New message from ${sender.full_name}`,
-    body: body.length > 120 ? body.slice(0, 117) + "..." : body,
-    // Messages page opens a thread via ?to=userId, not via the conversation ID path param
-    link: `/messages?to=${senderId}`,
-    email: true
+  eventBus.emit<MessageSentEvent>(MESSAGE_SENT, {
+    messageId: message.id,
+    senderId,
+    senderName: sender.full_name,
+    recipientId,
+    conversationId: conversation.id,
+    bodyPreview: body.length > 120 ? body.slice(0, 117) + "..." : body,
   });
 
   return { conversation_id: conversation.id, id: message.id };
@@ -70,7 +63,6 @@ export async function listConversations(userId: string, limit = 50) {
     take: limit
   });
 
-  // Collect unique IDs of the other participants
   const otherIds = [...new Set(
     convs.flatMap((c) => c.participant_ids.filter((p) => p !== userId))
   )];
@@ -86,12 +78,8 @@ export async function listConversations(userId: string, limit = 50) {
 
   return convs.map((c) => {
     const otherId = c.participant_ids.find((p) => p !== userId);
-    const other = otherId ? userMap[otherId] : null;
-    return {
-      ...c,
-      _other_name: other?.full_name ?? null,
-      _other_sub: other?.role ?? null
-    };
+    const other   = otherId ? userMap[otherId] : null;
+    return { ...c, _other_name: other?.full_name ?? null, _other_sub: other?.role ?? null };
   });
 }
 
@@ -111,11 +99,8 @@ export async function listMessages(userId: string, conversationId: string, limit
   });
 
   const hasMore = items.length > limit;
-  const page = hasMore ? items.slice(0, limit) : items;
-  return {
-    items: page.reverse(),
-    next_cursor: hasMore ? page[page.length - 1].id : null
-  };
+  const page    = hasMore ? items.slice(0, limit) : items;
+  return { items: page.reverse(), next_cursor: hasMore ? page[page.length - 1].id : null };
 }
 
 export async function markRead(userId: string, conversationId: string) {

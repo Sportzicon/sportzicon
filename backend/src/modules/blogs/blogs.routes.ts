@@ -4,7 +4,7 @@ import { asyncHandler } from "../../utils/async";
 import { requireAuth, optionalAuth } from "../../middleware/auth";
 import { validate } from "../../middleware/validate";
 import * as svc from "./blogs.service";
-import { addComment, listComments } from "../posts/posts.service";
+import { addComment, listComments } from "../posts/comments.service";
 
 const router = Router();
 

@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api } from "../api/client";
+import { useQueryClient } from "@tanstack/react-query";
+import { useApplicants } from "../hooks";
+import { queryKeys } from "../hooks";
 import { PageHeader, Spinner, EmptyState, StatusPill, Avatar, Tabs } from "../components/UI";
 import { MapPin, Calendar, Users } from "lucide-react";
-import type { Application } from "../types";
+import type { Application } from "../models";
 
 const NEXT: Record<string, string[]> = {
   pending: ["shortlisted", "rejected"],
@@ -49,33 +50,21 @@ export default function Applicants() {
   const [expandedNoteId, setExpandedNoteId] = useState<string | null>(null);
   const [reason, setReason] = useState("");
 
-  const q = useQuery({
-    queryKey: ["applicants", id],
-    queryFn: async () => (await api.get<{ items: Application[] }>(`/opportunities/${id}/applicants`)).data.items
-  });
+  const { opportunity: oppQ, applicants: q, updateStatus: m } = useApplicants(id ?? "");
 
-  // Also fetch opportunity for vacancy info
-  const oppQ = useQuery({
-    queryKey: ["opp", id],
-    queryFn: async () => (await api.get(`/opportunities/${id}`)).data.opportunity
-  });
-
-  const m = useMutation({
-    mutationFn: async (vars: { id: string; status: string; reason?: string }) =>
-      api.patch(`/applications/${vars.id}/status`, { status: vars.status, reason: vars.reason }),
-    onSuccess: (_data, vars) => {
-      qc.invalidateQueries({ queryKey: ["applicants", id] });
-      qc.invalidateQueries({ queryKey: ["opp", id] });
-      // Invalidate the applicant's profile cache so availability shows immediately
-      if (vars.status === "selected" || vars.status === "rejected") {
-        const app = q.data?.find((a) => a.id === vars.id);
-        if (app?.applicant_user_id) {
-          qc.invalidateQueries({ queryKey: ["user", app.applicant_user_id] });
+  const handleStatusUpdate = (appId: string, status: string, reason?: string) => {
+    m.mutate({ id: appId, status, reason }, {
+      onSuccess: (_data, vars) => {
+        if (vars.status === "selected" || vars.status === "rejected") {
+          const app = q.data?.find((a: Application) => a.id === vars.id);
+          if (app?.applicant_user_id) {
+            qc.invalidateQueries({ queryKey: queryKeys.user(app.applicant_user_id) });
+          }
         }
+        setRejectingId(null); setReason("");
       }
-      setRejectingId(null); setReason("");
-    }
-  });
+    });
+  };
 
   if (q.isLoading) return <div className="flex justify-center p-12"><Spinner className="text-brand-500" /></div>;
 
@@ -233,7 +222,7 @@ export default function Applicants() {
                           </button>
                         ) : (
                           <button key={s} className="btn-accent text-[12.5px]" disabled={m.isPending}
-                            onClick={() => m.mutate({ id: a.id, status: s })}>
+                            onClick={() => handleStatusUpdate(a.id, s)}>
                             {s === "shortlisted" ? "Shortlist →" : "Select ✓"}
                           </button>
                         )
@@ -262,7 +251,7 @@ export default function Applicants() {
                         value={reason} onChange={(e) => setReason(e.target.value)} />
                       <div className="flex gap-2">
                         <button className="btn-danger" disabled={m.isPending}
-                          onClick={() => m.mutate({ id: a.id, status: "rejected", reason: reason || undefined })}>
+                          onClick={() => handleStatusUpdate(a.id, "rejected", reason || undefined)}>
                           Confirm rejection
                         </button>
                         <button className="btn-secondary" onClick={() => { setRejectingId(null); setReason(""); }}>Cancel</button>

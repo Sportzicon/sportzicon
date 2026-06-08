@@ -1,9 +1,10 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { api } from "../api/client";
+import { userService } from "../services";
+import { useFeed, useOpportunities, useMyApplications } from "../hooks";
 import { useAuthStore } from "../store/auth";
 import { PageHeader, StatusPill, Spinner, EmptyState, Kicker, SectionHead, Avatar } from "../components/UI";
-import type { Application, Opportunity, Post } from "../types";
+import type { Application, Opportunity, Post } from "../models";
 
 function Metric({ k, v, accent = false }: { k: string; v: React.ReactNode; accent?: boolean }) {
   return (
@@ -16,44 +17,24 @@ function Metric({ k, v, accent = false }: { k: string; v: React.ReactNode; accen
 
 export default function Dashboard() {
   const { user, setUser } = useAuthStore();
-  const qc = useQueryClient();
   const role = user?.role;
 
-  const feed = useQuery({
-    queryKey: ["feed"],
-    queryFn: async () => (await api.get<{ items: Post[] }>("/posts/feed", { params: { limit: 10 } })).data.items
-  });
-  const myApps = useQuery({
-    queryKey: ["my-apps"],
-    enabled: role === "athlete",
-    queryFn: async () => (await api.get<{ items: Application[] }>("/applications/mine")).data.items
-  });
-  // Gap 9 — matched opportunities (filtered by athlete's sport)
   const sport = user?.athlete?.primary_sport;
-  const matchedOpps = useQuery({
-    queryKey: ["matched-opps", sport],
-    enabled: role === "athlete",
-    queryFn: async () => (await api.get<{ items: Opportunity[] }>("/opportunities", {
-      params: { limit: 4, status: "open", sport: sport || undefined }
-    })).data.items
-  });
-  const opportunities = useQuery({
-    queryKey: ["opp-recent"],
-    queryFn: async () => (await api.get<{ items: Opportunity[] }>("/opportunities", { params: { limit: 5, status: "open" } })).data.items
-  });
+  const { feed } = useFeed(10);
+  const { list: myApps } = useMyApplications();
+  const { list: matchedOpps } = useOpportunities(role === "athlete" ? { limit: 4, status: "open", sport: sport || undefined } : {});
+  const { list: opportunities } = useOpportunities({ limit: 5, status: "open" });
 
-  // Gap 8 — availability dropdown mutation
   const updateAvail = useMutation({
-    mutationFn: async (availability: string) => (await api.put("/users/me/athlete", { availability })).data.user,
-    onSuccess: (updated) => { setUser(updated); qc.invalidateQueries({ queryKey: ["feed"] }); }
+    mutationFn: (availability: string) => userService.updateAthleteProfile({ availability }),
+    onSuccess: (updated) => { setUser(updated); },
   });
 
-  const activeApps = myApps.data?.filter((a) => ["pending", "shortlisted", "selected"].includes(a.status)) ?? [];
+  const activeApps = myApps.data?.filter((a: Application) => ["pending", "shortlisted", "selected"].includes(a.status)) ?? [];
   const avail = user?.athlete?.availability ?? "available";
 
   return (
     <div className="space-y-6">
-      {/* Gap 8 — availability in page header */}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <div className="lab text-brand-500">Your Sportzicon desk</div>
@@ -110,7 +91,7 @@ export default function Dashboard() {
               <div className="panel p-6"><Spinner className="text-brand-500" /></div>
             ) : feed.data && feed.data.length > 0 ? (
               <ul className="panel divide-y divide-hairsoft">
-                {feed.data.map((p) => (
+                {feed.data.map((p: Post) => (
                   <li key={p.id} className="p-4">
                     <div className="flex items-center gap-3">
                       <Avatar name={p.author_name} src={p.author?.profile_photo_url} size={36} />
@@ -129,7 +110,6 @@ export default function Dashboard() {
             )}
           </div>
 
-          {/* Gap 9 — matched opportunities for athletes */}
           {role === "athlete" && (
             <div>
               <SectionHead n="02" title="Matched for you"
@@ -139,7 +119,7 @@ export default function Dashboard() {
                 <div className="panel p-4 flex justify-center"><Spinner className="text-brand-500" /></div>
               ) : matchedOpps.data?.length ? (
                 <ul className="panel divide-y divide-hairsoft">
-                  {matchedOpps.data.map((o) => {
+                  {matchedOpps.data.map((o: Opportunity) => {
                     const days = Math.ceil((new Date(o.application_deadline).getTime() - Date.now()) / 86400_000);
                     const urgent = days >= 0 && days <= 5;
                     return (
@@ -166,14 +146,13 @@ export default function Dashboard() {
             </div>
           )}
 
-          {/* athlete applications */}
           {role === "athlete" && (
             <div>
               <SectionHead n="03" title="Your applications" sub={`${activeApps.length} active`}
                 right={<Link to="/applications" className="btn-secondary">View tracker →</Link>} />
               {myApps.data?.length ? (
                 <ul className="panel divide-y divide-hairsoft">
-                  {myApps.data.slice(0, 5).map((a) => (
+                  {myApps.data.slice(0, 5).map((a: Application) => (
                     <li key={a.id} className="flex items-center gap-3 p-4">
                       <Avatar name={a.opportunity_title} size={36} />
                       <Link to={`/opportunities/${a.opportunity_id}`}
@@ -194,7 +173,7 @@ export default function Dashboard() {
           <div>
             <SectionHead title="Open opportunities" />
             <ul className="panel divide-y divide-hairsoft">
-              {opportunities.data?.slice(0, 5).map((o) => (
+              {opportunities.data?.slice(0, 5).map((o: Opportunity) => (
                 <li key={o.id}>
                   <Link to={`/opportunities/${o.id}`}
                     className="flex items-center gap-3 p-3.5 transition hover:bg-fill">

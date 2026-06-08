@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { api } from "../api/client";
+import { messageService, userService } from "../services";
 import { useAuthStore } from "../store/auth";
 import { PageHeader, Spinner, Avatar } from "../components/UI";
 import { Send } from "lucide-react";
+import type { Conversation, Message } from "../models";
 
 
 function makeDemoData(meId: string) {
@@ -74,8 +75,6 @@ export default function Messages() {
   const [mobileView, setMobileView] = useState<"list" | "thread">(initialTo ? "thread" : "list");
   const [sending, setSending] = useState(false);
 
-  // When a notification link navigates to /messages?to=userId while already mounted,
-  // useState won't re-initialise — update recipient so the conv-sync effect picks it up.
   useEffect(() => {
     const to = params.get("to");
     if (to && to !== recipient) {
@@ -90,42 +89,37 @@ export default function Messages() {
 
   const convs = useQuery({
     queryKey: ["conversations"],
-    queryFn: async () => (await api.get<{ items: any[] }>("/conversations")).data.items,
+    queryFn: () => messageService.getConversations(),
     refetchInterval: 15_000
   });
 
   const isDemo = !convs.isLoading && !convs.data?.length;
 
-  // After conversations load, find the real conversation ID for the recipient from URL
   useEffect(() => {
     if (!convs.data || !recipient) return;
-    const existing = convs.data.find((c: any) => c.participant_ids.includes(recipient));
+    const existing = convs.data.find((c: Conversation) => c.participant_ids.includes(recipient));
     if (existing && activeId !== existing.id) setActiveId(existing.id);
   }, [convs.data, recipient]);
 
-  // Fetch recipient profile for new conversations (no existing conv yet)
   const recipientProfile = useQuery({
     queryKey: ["user", recipient],
-    queryFn: async () => (await api.get<{ user: any }>(`/users/${recipient}`)).data.user,
+    queryFn: () => userService.get(recipient!),
     enabled: !!recipient && !activeId && !isDemo,
   });
 
   const messages = useQuery({
     queryKey: ["msgs", activeId],
-    queryFn: async () =>
-      activeId ? (await api.get<{ items: any[] }>(`/conversations/${activeId}/messages`)).data.items : [],
+    queryFn: () => messageService.getMessages(activeId!),
     enabled: !!activeId,
     refetchInterval: 5_000
   });
 
-  // scroll to bottom when messages load/update
   useEffect(() => {
     if (endRef.current) endRef.current.scrollTop = endRef.current.scrollHeight;
   }, [messages.data?.length, activeId]);
 
-  // mark read on open
   useEffect(() => {
-    if (activeId) api.post(`/conversations/${activeId}/read`).catch(() => undefined);
+    if (activeId) messageService.markRead(activeId).catch(() => undefined);
   }, [activeId, messages.data?.length]);
 
   async function send(e?: React.FormEvent) {
@@ -133,7 +127,7 @@ export default function Messages() {
     if (!text.trim() || !recipient || sending) return;
     setSending(true);
     try {
-      await api.post("/messages", { recipient_id: recipient, body: text });
+      await messageService.send({ recipient_id: recipient, body: text });
       setText("");
       qc.invalidateQueries({ queryKey: ["msgs", activeId] });
       qc.invalidateQueries({ queryKey: ["conversations"] });
@@ -160,10 +154,8 @@ export default function Messages() {
   const displayConvs = isDemo ? demo.convs : (convs.data ?? []);
   const displayMessages = isDemoConv ? (demo.msgs[activeId ?? ""] ?? []) : (messages.data ?? []);
 
-  // derive active conv metadata
   const activeConv = displayConvs.find((c: any) => c.id === activeId);
   const activeOtherId = activeConv?.participant_ids?.find((p: string) => p !== me.id);
-  // For new conversations (no existing conv), fall back to the fetched recipient profile name
   const activeDisplayName =
     (activeConv as any)?._other_name ??
     (activeOtherId ? activeOtherId.slice(0, 16) : undefined) ??
@@ -247,7 +239,6 @@ export default function Messages() {
 
         {/* ── message thread ─────────────────────────────────── */}
         <section className={`${mobileView === "list" ? "hidden sm:flex" : "flex"} flex-col overflow-hidden min-w-0`}>
-          {/* thread header */}
           {(activeConv || recipient) ? (
             <div className="px-3 sm:px-[22px] py-3.5 border-b border-hair bg-panel flex items-center gap-3 flex-shrink-0">
               <button
@@ -279,7 +270,6 @@ export default function Messages() {
             </div>
           )}
 
-          {/* messages */}
           <div ref={endRef} className="flex-1 overflow-y-auto px-[22px] py-6 flex flex-col gap-3 bg-fill/30">
             {!isDemoConv && messages.isLoading ? (
               <div className="flex justify-center pt-8"><Spinner className="text-brand-500" /></div>
@@ -288,15 +278,13 @@ export default function Messages() {
                 <div className="lab text-center mb-2">
                   {new Date(displayMessages[0].created_at).toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}
                 </div>
-                {displayMessages.map((m: any) => {
+                {displayMessages.map((m: Message) => {
                   const isMe = m.sender_id === me.id;
                   return (
                     <div key={m.id} className={`flex ${isMe ? "justify-end" : "justify-start"}`}>
                       <div className="max-w-[62%]">
                         <div className={`px-[14px] py-[11px] text-[13.5px] leading-snug rounded-[10px] ${isMe ? "bg-ink text-paper" : "bg-panel text-ink border border-hair"}`}
-                          style={{
-                            borderRadius: isMe ? "10px 10px 2px 10px" : "10px 10px 10px 2px"
-                          }}>
+                          style={{ borderRadius: isMe ? "10px 10px 2px 10px" : "10px 10px 10px 2px" }}>
                           {m.body}
                         </div>
                         <div className={`lab mt-1 text-[10.5px] ${isMe ? "text-right" : "text-left"}`}>
@@ -314,7 +302,6 @@ export default function Messages() {
             )}
           </div>
 
-          {/* compose */}
           <form onSubmit={send} className="px-3 sm:px-[22px] py-3.5 border-t border-hair bg-panel flex gap-2 items-end flex-shrink-0">
             <textarea
               className="input flex-1 resize-none"

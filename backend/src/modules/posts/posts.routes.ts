@@ -4,6 +4,7 @@ import { asyncHandler } from "../../utils/async";
 import { requireAuth } from "../../middleware/auth";
 import { validate } from "../../middleware/validate";
 import * as svc from "./posts.service";
+import * as commentSvc from "./comments.service";
 
 const router = Router();
 
@@ -104,7 +105,7 @@ router.get(
   requireAuth,
   validate(z.object({ id: z.string().min(8) }), "params"),
   asyncHandler(async (req, res) => {
-    const items = await svc.listComments("post", req.params.id);
+    const items = await commentSvc.listComments("post", req.params.id);
     res.json({ items });
   })
 );
@@ -115,7 +116,7 @@ router.post(
   validate(z.object({ id: z.string().min(8) }), "params"),
   validate(z.object({ text: z.string().min(1).max(2000) })),
   asyncHandler(async (req, res) => {
-    const r = await svc.addComment({ type: "post", id: req.params.id }, req.user!.sub, req.body.text);
+    const r = await commentSvc.addComment({ type: "post", id: req.params.id }, req.user!.sub, req.body.text);
     res.status(201).json({ comment: r });
   })
 );

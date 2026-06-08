@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { api, humanizeError } from "../api/client";
+import { opportunityService, organizationService } from "../services";
+import { humanizeError } from "../api/client";
 import { useAuthStore } from "../store/auth";
 import { PageHeader, Spinner, SectionHead } from "../components/UI";
+import type { CreateOpportunityRequest } from "../models";
 
 const TYPES = ["trial", "recruitment", "scholarship", "tournament", "coaching_job"];
 const TYPE_LABELS: Record<string, string> = {
@@ -31,20 +33,20 @@ export default function NewOpportunity() {
 
   const orgsQ = useQuery({
     queryKey: ["my-orgs"],
-    queryFn: async () => (await api.get("/organizations/mine")).data.items as any[]
+    queryFn: () => organizationService.getMine()
   });
   const oppQ = useQuery({
     queryKey: ["opp", id],
-    queryFn: async () => (await api.get(`/opportunities/${id}`)).data.opportunity,
+    queryFn: () => opportunityService.get(id!),
     enabled: !!id
   });
 
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<Omit<CreateOpportunityRequest, "org_id"> & { org_id: string; vacancies?: number }>({
     org_id: "", title: "", type: "trial", sport: "", description: "",
     eligibility: "", age_min: 14, age_max: 35, gender_eligibility: "all",
     experience_level_required: "any", country: "India", state: "", city: "",
     start_date: "", end_date: "", application_deadline: "",
-    vacancies: undefined as number | undefined
+    vacancies: undefined
   });
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -78,12 +80,14 @@ export default function NewOpportunity() {
       if (payload.vacancies) payload.vacancies = Number(payload.vacancies);
       payload.age_min = Number(payload.age_min);
       payload.age_max = Number(payload.age_max);
-      const r = isEdit
-        ? await api.put(`/opportunities/${id}`, payload)
-        : await api.post("/opportunities", payload);
+
+      const saved = isEdit
+        ? await opportunityService.update(id!, payload)
+        : await opportunityService.create(payload);
+
       await qc.invalidateQueries({ queryKey: ["opp"] });
       await qc.invalidateQueries({ queryKey: ["opportunities"] });
-      navigate(`/opportunities/${r.data.opportunity.id}`);
+      navigate(`/opportunities/${saved.id}`);
     } catch (e) {
       setErr(humanizeError(e));
     } finally { setBusy(false); }

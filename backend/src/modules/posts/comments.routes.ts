@@ -3,7 +3,7 @@ import { z } from "zod";
 import { asyncHandler } from "../../utils/async";
 import { requireAuth } from "../../middleware/auth";
 import { validate } from "../../middleware/validate";
-import * as svc from "./posts.service";
+import * as svc from "./comments.service";
 
 const router = Router();
 
