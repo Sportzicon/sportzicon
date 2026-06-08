@@ -12,24 +12,24 @@
     "maxFailures": 0,
     "metadata": {
       "ci": {
-        "commitHref": "https://github.com/Sportzicon/sportzicon/commit/c5d3629b17277b72ed0c619eb33fa3eedecbdbb6",
-        "commitHash": "c5d3629b17277b72ed0c619eb33fa3eedecbdbb6",
-        "buildHref": "https://github.com/Sportzicon/sportzicon/actions/runs/27116383542"
+        "commitHref": "https://github.com/Sportzicon/sportzicon/commit/67d7ee68d9e7efa9474a777164bdbc246d69ceca",
+        "commitHash": "67d7ee68d9e7efa9474a777164bdbc246d69ceca",
+        "buildHref": "https://github.com/Sportzicon/sportzicon/actions/runs/27153334960"
       },
       "gitCommit": {
-        "shortHash": "c5d3629",
-        "hash": "c5d3629b17277b72ed0c619eb33fa3eedecbdbb6",
-        "subject": "Merge branch 'main' of https://github.com/Sportzicon/sportzicon",
-        "body": "Merge branch 'main' of https://github.com/Sportzicon/sportzicon\n",
+        "shortHash": "67d7ee6",
+        "hash": "67d7ee68d9e7efa9474a777164bdbc246d69ceca",
+        "subject": "chore(e2e): daily report 2026-06-08",
+        "body": "chore(e2e): daily report 2026-06-08\n",
         "author": {
-          "name": "gitusrmahesh",
-          "email": "singarimahesh0@gmail.com",
-          "time": 1780893555000
+          "name": "github-actions[bot]",
+          "email": "github-actions[bot]@users.noreply.github.com",
+          "time": 1780893734000
         },
         "committer": {
-          "name": "gitusrmahesh",
-          "email": "singarimahesh0@gmail.com",
-          "time": 1780893555000
+          "name": "github-actions[bot]",
+          "email": "github-actions[bot]@users.noreply.github.com",
+          "time": 1780893734000
         },
         "branch": "main"
       },
@@ -43,24 +43,24 @@
         "retries": 2,
         "metadata": {
           "ci": {
-            "commitHref": "https://github.com/Sportzicon/sportzicon/commit/c5d3629b17277b72ed0c619eb33fa3eedecbdbb6",
-            "commitHash": "c5d3629b17277b72ed0c619eb33fa3eedecbdbb6",
-            "buildHref": "https://github.com/Sportzicon/sportzicon/actions/runs/27116383542"
+            "commitHref": "https://github.com/Sportzicon/sportzicon/commit/67d7ee68d9e7efa9474a777164bdbc246d69ceca",
+            "commitHash": "67d7ee68d9e7efa9474a777164bdbc246d69ceca",
+            "buildHref": "https://github.com/Sportzicon/sportzicon/actions/runs/27153334960"
           },
           "gitCommit": {
-            "shortHash": "c5d3629",
-            "hash": "c5d3629b17277b72ed0c619eb33fa3eedecbdbb6",
-            "subject": "Merge branch 'main' of https://github.com/Sportzicon/sportzicon",
-            "body": "Merge branch 'main' of https://github.com/Sportzicon/sportzicon\n",
+            "shortHash": "67d7ee6",
+            "hash": "67d7ee68d9e7efa9474a777164bdbc246d69ceca",
+            "subject": "chore(e2e): daily report 2026-06-08",
+            "body": "chore(e2e): daily report 2026-06-08\n",
             "author": {
-              "name": "gitusrmahesh",
-              "email": "singarimahesh0@gmail.com",
-              "time": 1780893555000
+              "name": "github-actions[bot]",
+              "email": "github-actions[bot]@users.noreply.github.com",
+              "time": 1780893734000
             },
             "committer": {
-              "name": "gitusrmahesh",
-              "email": "singarimahesh0@gmail.com",
-              "time": 1780893555000
+              "name": "github-actions[bot]",
+              "email": "github-actions[bot]@users.noreply.github.com",
+              "time": 1780893734000
             },
             "branch": "main"
           },
@@ -81,24 +81,24 @@
         "retries": 2,
         "metadata": {
           "ci": {
-            "commitHref": "https://github.com/Sportzicon/sportzicon/commit/c5d3629b17277b72ed0c619eb33fa3eedecbdbb6",
-            "commitHash": "c5d3629b17277b72ed0c619eb33fa3eedecbdbb6",
-            "buildHref": "https://github.com/Sportzicon/sportzicon/actions/runs/27116383542"
+            "commitHref": "https://github.com/Sportzicon/sportzicon/commit/67d7ee68d9e7efa9474a777164bdbc246d69ceca",
+            "commitHash": "67d7ee68d9e7efa9474a777164bdbc246d69ceca",
+            "buildHref": "https://github.com/Sportzicon/sportzicon/actions/runs/27153334960"
           },
           "gitCommit": {
-            "shortHash": "c5d3629",
-            "hash": "c5d3629b17277b72ed0c619eb33fa3eedecbdbb6",
-            "subject": "Merge branch 'main' of https://github.com/Sportzicon/sportzicon",
-            "body": "Merge branch 'main' of https://github.com/Sportzicon/sportzicon\n",
+            "shortHash": "67d7ee6",
+            "hash": "67d7ee68d9e7efa9474a777164bdbc246d69ceca",
+            "subject": "chore(e2e): daily report 2026-06-08",
+            "body": "chore(e2e): daily report 2026-06-08\n",
             "author": {
-              "name": "gitusrmahesh",
-              "email": "singarimahesh0@gmail.com",
-              "time": 1780893555000
+              "name": "github-actions[bot]",
+              "email": "github-actions[bot]@users.noreply.github.com",
+              "time": 1780893734000
             },
             "committer": {
-              "name": "gitusrmahesh",
-              "email": "singarimahesh0@gmail.com",
-              "time": 1780893555000
+              "name": "github-actions[bot]",
+              "email": "github-actions[bot]@users.noreply.github.com",
+              "time": 1780893734000
             },
             "branch": "main"
           },
@@ -119,24 +119,24 @@
         "retries": 2,
         "metadata": {
           "ci": {
-            "commitHref": "https://github.com/Sportzicon/sportzicon/commit/c5d3629b17277b72ed0c619eb33fa3eedecbdbb6",
-            "commitHash": "c5d3629b17277b72ed0c619eb33fa3eedecbdbb6",
-            "buildHref": "https://github.com/Sportzicon/sportzicon/actions/runs/27116383542"
+            "commitHref": "https://github.com/Sportzicon/sportzicon/commit/67d7ee68d9e7efa9474a777164bdbc246d69ceca",
+            "commitHash": "67d7ee68d9e7efa9474a777164bdbc246d69ceca",
+            "buildHref": "https://github.com/Sportzicon/sportzicon/actions/runs/27153334960"
           },
           "gitCommit": {
-            "shortHash": "c5d3629",
-            "hash": "c5d3629b17277b72ed0c619eb33fa3eedecbdbb6",
-            "subject": "Merge branch 'main' of https://github.com/Sportzicon/sportzicon",
-            "body": "Merge branch 'main' of https://github.com/Sportzicon/sportzicon\n",
+            "shortHash": "67d7ee6",
+            "hash": "67d7ee68d9e7efa9474a777164bdbc246d69ceca",
+            "subject": "chore(e2e): daily report 2026-06-08",
+            "body": "chore(e2e): daily report 2026-06-08\n",
             "author": {
-              "name": "gitusrmahesh",
-              "email": "singarimahesh0@gmail.com",
-              "time": 1780893555000
+              "name": "github-actions[bot]",
+              "email": "github-actions[bot]@users.noreply.github.com",
+              "time": 1780893734000
             },
             "committer": {
-              "name": "gitusrmahesh",
-              "email": "singarimahesh0@gmail.com",
-              "time": 1780893555000
+              "name": "github-actions[bot]",
+              "email": "github-actions[bot]@users.noreply.github.com",
+              "time": 1780893734000
             },
             "branch": "main"
           },
@@ -237,12 +237,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "skipped",
-                      "duration": 12012,
+                      "duration": 12798,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-08T04:40:11.029Z",
+                      "startTime": "2026-06-08T16:55:16.816Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -294,12 +294,12 @@
                       "workerIndex": 1,
                       "parallelIndex": 1,
                       "status": "skipped",
-                      "duration": 12206,
+                      "duration": 13024,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-08T04:40:11.060Z",
+                      "startTime": "2026-06-08T16:55:16.697Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -351,12 +351,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "skipped",
-                      "duration": 11853,
+                      "duration": 11883,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-08T04:40:24.130Z",
+                      "startTime": "2026-06-08T16:55:30.596Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -408,12 +408,12 @@
                       "workerIndex": 1,
                       "parallelIndex": 1,
                       "status": "skipped",
-                      "duration": 11946,
+                      "duration": 14402,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-08T04:40:24.346Z",
+                      "startTime": "2026-06-08T16:55:30.847Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -454,7 +454,7 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "failed",
-                      "duration": 2257,
+                      "duration": 1972,
                       "error": {
                         "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoMatch\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected pattern: \u001b[32m/invalid|wrong|incorrect|error|denied|unable|unreach|server/i\u001b[39m\nReceived string:  \u001b[31m\"\u001b[39m\n\u001b[31m    EST. 2026For AthletesFor ClubsHow it worksLive ScoresSign inGet startedThe verified sports recruitment networkPune · Mumbai · London · Melbourne · Cape TownWelcomeback.The verified sports recruitment network. Sign in to your account to access opportunities, messages and your profile.◆Verified profilesEvery badge-holder is identity-checked.◆Structured workflowPending → Shortlisted → Selected.◆Real opportunitiesTrials, scholarships, coaching jobs.Account accessSign inNew here? Create an account →EmailPasswordForgot?Signing in…© 2026 Sportzicon — All rights reservedVerified sports recruitment·········\u001b[39m\n\u001b[31m\"\u001b[39m",
                         "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoMatch\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected pattern: \u001b[32m/invalid|wrong|incorrect|error|denied|unable|unreach|server/i\u001b[39m\nReceived string:  \u001b[31m\"\u001b[39m\n\u001b[31m    EST. 2026For AthletesFor ClubsHow it worksLive ScoresSign inGet startedThe verified sports recruitment networkPune · Mumbai · London · Melbourne · Cape TownWelcomeback.The verified sports recruitment network. Sign in to your account to access opportunities, messages and your profile.◆Verified profilesEvery badge-holder is identity-checked.◆Structured workflowPending → Shortlisted → Selected.◆Real opportunitiesTrials, scholarships, coaching jobs.Account accessSign inNew here? Create an account →EmailPasswordForgot?Signing in…© 2026 Sportzicon — All rights reservedVerified sports recruitment·········\u001b[39m\n\u001b[31m\"\u001b[39m\n    at /home/runner/work/sportzicon/sportzicon/e2e/tests/sportivox/auth.spec.ts:40:23",
@@ -478,7 +478,7 @@
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-08T04:40:36.003Z",
+                      "startTime": "2026-06-08T16:55:42.500Z",
                       "annotations": [],
                       "attachments": [
                         {
@@ -512,7 +512,7 @@
                       "workerIndex": 2,
                       "parallelIndex": 0,
                       "status": "failed",
-                      "duration": 2097,
+                      "duration": 2479,
                       "error": {
                         "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoMatch\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected pattern: \u001b[32m/invalid|wrong|incorrect|error|denied|unable|unreach|server/i\u001b[39m\nReceived string:  \u001b[31m\"\u001b[39m\n\u001b[31m    EST. 2026For AthletesFor ClubsHow it worksLive ScoresSign inGet startedThe verified sports recruitment networkPune · Mumbai · London · Melbourne · Cape TownWelcomeback.The verified sports recruitment network. Sign in to your account to access opportunities, messages and your profile.◆Verified profilesEvery badge-holder is identity-checked.◆Structured workflowPending → Shortlisted → Selected.◆Real opportunitiesTrials, scholarships, coaching jobs.Account accessSign inNew here? Create an account →EmailPasswordForgot?Signing in…© 2026 Sportzicon — All rights reservedVerified sports recruitment·········\u001b[39m\n\u001b[31m\"\u001b[39m",
                         "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoMatch\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected pattern: \u001b[32m/invalid|wrong|incorrect|error|denied|unable|unreach|server/i\u001b[39m\nReceived string:  \u001b[31m\"\u001b[39m\n\u001b[31m    EST. 2026For AthletesFor ClubsHow it worksLive ScoresSign inGet startedThe verified sports recruitment networkPune · Mumbai · London · Melbourne · Cape TownWelcomeback.The verified sports recruitment network. Sign in to your account to access opportunities, messages and your profile.◆Verified profilesEvery badge-holder is identity-checked.◆Structured workflowPending → Shortlisted → Selected.◆Real opportunitiesTrials, scholarships, coaching jobs.Account accessSign inNew here? Create an account →EmailPasswordForgot?Signing in…© 2026 Sportzicon — All rights reservedVerified sports recruitment·········\u001b[39m\n\u001b[31m\"\u001b[39m\n    at /home/runner/work/sportzicon/sportzicon/e2e/tests/sportivox/auth.spec.ts:40:23",
@@ -536,7 +536,7 @@
                       "stdout": [],
                       "stderr": [],
                       "retry": 1,
-                      "startTime": "2026-06-08T04:40:38.768Z",
+                      "startTime": "2026-06-08T16:55:45.255Z",
                       "annotations": [],
                       "attachments": [
                         {
@@ -570,7 +570,7 @@
                       "workerIndex": 3,
                       "parallelIndex": 0,
                       "status": "failed",
-                      "duration": 1924,
+                      "duration": 2029,
                       "error": {
                         "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoMatch\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected pattern: \u001b[32m/invalid|wrong|incorrect|error|denied|unable|unreach|server/i\u001b[39m\nReceived string:  \u001b[31m\"\u001b[39m\n\u001b[31m    EST. 2026For AthletesFor ClubsHow it worksLive ScoresSign inGet startedThe verified sports recruitment networkPune · Mumbai · London · Melbourne · Cape TownWelcomeback.The verified sports recruitment network. Sign in to your account to access opportunities, messages and your profile.◆Verified profilesEvery badge-holder is identity-checked.◆Structured workflowPending → Shortlisted → Selected.◆Real opportunitiesTrials, scholarships, coaching jobs.Account accessSign inNew here? Create an account →EmailPasswordForgot?Signing in…© 2026 Sportzicon — All rights reservedVerified sports recruitment·········\u001b[39m\n\u001b[31m\"\u001b[39m",
                         "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoMatch\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected pattern: \u001b[32m/invalid|wrong|incorrect|error|denied|unable|unreach|server/i\u001b[39m\nReceived string:  \u001b[31m\"\u001b[39m\n\u001b[31m    EST. 2026For AthletesFor ClubsHow it worksLive ScoresSign inGet startedThe verified sports recruitment networkPune · Mumbai · London · Melbourne · Cape TownWelcomeback.The verified sports recruitment network. Sign in to your account to access opportunities, messages and your profile.◆Verified profilesEvery badge-holder is identity-checked.◆Structured workflowPending → Shortlisted → Selected.◆Real opportunitiesTrials, scholarships, coaching jobs.Account accessSign inNew here? Create an account →EmailPasswordForgot?Signing in…© 2026 Sportzicon — All rights reservedVerified sports recruitment·········\u001b[39m\n\u001b[31m\"\u001b[39m\n    at /home/runner/work/sportzicon/sportzicon/e2e/tests/sportivox/auth.spec.ts:40:23",
@@ -594,7 +594,7 @@
                       "stdout": [],
                       "stderr": [],
                       "retry": 2,
-                      "startTime": "2026-06-08T04:40:41.433Z",
+                      "startTime": "2026-06-08T16:55:48.430Z",
                       "annotations": [],
                       "attachments": [
                         {
@@ -661,12 +661,12 @@
                       "workerIndex": 1,
                       "parallelIndex": 1,
                       "status": "skipped",
-                      "duration": 11744,
+                      "duration": 11988,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-08T04:40:36.328Z",
+                      "startTime": "2026-06-08T16:55:45.280Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -725,12 +725,12 @@
                       "workerIndex": 4,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 981,
+                      "duration": 1086,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-08T04:40:43.926Z",
+                      "startTime": "2026-06-08T16:55:51.128Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -761,12 +761,12 @@
                       "workerIndex": 4,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 949,
+                      "duration": 1011,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-08T04:40:44.993Z",
+                      "startTime": "2026-06-08T16:55:52.316Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -797,12 +797,12 @@
                       "workerIndex": 4,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 976,
+                      "duration": 1078,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-08T04:40:45.953Z",
+                      "startTime": "2026-06-08T16:55:53.342Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -833,12 +833,12 @@
                       "workerIndex": 4,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 1017,
+                      "duration": 992,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-08T04:40:46.941Z",
+                      "startTime": "2026-06-08T16:55:54.435Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -869,12 +869,12 @@
                       "workerIndex": 4,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 1523,
+                      "duration": 4709,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-08T04:40:47.970Z",
+                      "startTime": "2026-06-08T16:55:55.441Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -903,12 +903,12 @@
                       "workerIndex": 1,
                       "parallelIndex": 1,
                       "status": "passed",
-                      "duration": 903,
+                      "duration": 695,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-08T04:40:48.112Z",
+                      "startTime": "2026-06-08T16:55:57.292Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -938,14 +938,14 @@
                   "results": [
                     {
                       "workerIndex": 7,
-                      "parallelIndex": 0,
+                      "parallelIndex": 1,
                       "status": "passed",
-                      "duration": 1052,
+                      "duration": 1167,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-08T04:42:06.852Z",
+                      "startTime": "2026-06-08T16:57:18.269Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -974,14 +974,14 @@
                   "results": [
                     {
                       "workerIndex": 7,
-                      "parallelIndex": 0,
+                      "parallelIndex": 1,
                       "status": "passed",
-                      "duration": 985,
+                      "duration": 1039,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-08T04:42:07.985Z",
+                      "startTime": "2026-06-08T16:57:19.536Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1010,14 +1010,14 @@
                   "results": [
                     {
                       "workerIndex": 7,
-                      "parallelIndex": 0,
+                      "parallelIndex": 1,
                       "status": "passed",
-                      "duration": 1057,
+                      "duration": 1112,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-08T04:42:08.981Z",
+                      "startTime": "2026-06-08T16:57:20.588Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1046,14 +1046,14 @@
                   "results": [
                     {
                       "workerIndex": 7,
-                      "parallelIndex": 0,
+                      "parallelIndex": 1,
                       "status": "passed",
-                      "duration": 1002,
+                      "duration": 1010,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-08T04:42:10.050Z",
+                      "startTime": "2026-06-08T16:57:21.725Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1082,14 +1082,14 @@
                   "results": [
                     {
                       "workerIndex": 7,
-                      "parallelIndex": 0,
+                      "parallelIndex": 1,
                       "status": "passed",
-                      "duration": 1247,
+                      "duration": 1293,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-08T04:42:11.060Z",
+                      "startTime": "2026-06-08T16:57:22.749Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1115,15 +1115,15 @@
                   "projectName": "mobile-chrome",
                   "results": [
                     {
-                      "workerIndex": 7,
+                      "workerIndex": 8,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 689,
+                      "duration": 1266,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-08T04:42:12.322Z",
+                      "startTime": "2026-06-08T16:57:24.553Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1181,12 +1181,12 @@
                       "workerIndex": 1,
                       "parallelIndex": 1,
                       "status": "skipped",
-                      "duration": 11802,
+                      "duration": 11657,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-08T04:40:49.036Z",
+                      "startTime": "2026-06-08T16:55:58.008Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -1237,12 +1237,12 @@
                       "workerIndex": 4,
                       "parallelIndex": 0,
                       "status": "skipped",
-                      "duration": 11799,
+                      "duration": 11675,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-08T04:40:49.525Z",
+                      "startTime": "2026-06-08T16:56:00.170Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -1291,12 +1291,12 @@
                       "workerIndex": 1,
                       "parallelIndex": 1,
                       "status": "skipped",
-                      "duration": 11874,
+                      "duration": 11638,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-08T04:41:00.850Z",
+                      "startTime": "2026-06-08T16:56:09.678Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -1345,12 +1345,12 @@
                       "workerIndex": 4,
                       "parallelIndex": 0,
                       "status": "skipped",
-                      "duration": 11809,
+                      "duration": 11603,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-08T04:41:01.343Z",
+                      "startTime": "2026-06-08T16:56:11.859Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -1418,12 +1418,12 @@
                       "workerIndex": 1,
                       "parallelIndex": 1,
                       "status": "skipped",
-                      "duration": 11850,
+                      "duration": 15121,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-08T04:41:12.745Z",
+                      "startTime": "2026-06-08T16:56:21.336Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -1474,12 +1474,12 @@
                       "workerIndex": 4,
                       "parallelIndex": 0,
                       "status": "skipped",
-                      "duration": 11979,
+                      "duration": 11569,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-08T04:41:13.180Z",
+                      "startTime": "2026-06-08T16:56:23.492Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -1527,15 +1527,15 @@
                   "projectName": "sportivox-chromium",
                   "results": [
                     {
-                      "workerIndex": 1,
-                      "parallelIndex": 1,
+                      "workerIndex": 4,
+                      "parallelIndex": 0,
                       "status": "skipped",
-                      "duration": 11943,
+                      "duration": 11712,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-08T04:41:24.609Z",
+                      "startTime": "2026-06-08T16:56:35.079Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -1583,15 +1583,15 @@
                   "projectName": "sportivox-chromium",
                   "results": [
                     {
-                      "workerIndex": 4,
-                      "parallelIndex": 0,
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
                       "status": "skipped",
-                      "duration": 11878,
+                      "duration": 11797,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-08T04:41:25.191Z",
+                      "startTime": "2026-06-08T16:56:36.469Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -1639,15 +1639,15 @@
                   "projectName": "sportivox-chromium",
                   "results": [
                     {
-                      "workerIndex": 1,
-                      "parallelIndex": 1,
+                      "workerIndex": 4,
+                      "parallelIndex": 0,
                       "status": "skipped",
-                      "duration": 11833,
+                      "duration": 11808,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-08T04:41:36.564Z",
+                      "startTime": "2026-06-08T16:56:46.806Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -1693,15 +1693,15 @@
                   "projectName": "sportivox-chromium",
                   "results": [
                     {
-                      "workerIndex": 4,
-                      "parallelIndex": 0,
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
                       "status": "skipped",
-                      "duration": 11760,
+                      "duration": 11736,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-08T04:41:37.086Z",
+                      "startTime": "2026-06-08T16:56:48.279Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -1768,14 +1768,14 @@
                   "results": [
                     {
                       "workerIndex": 5,
-                      "parallelIndex": 1,
+                      "parallelIndex": 0,
                       "status": "skipped",
                       "duration": 0,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-08T04:41:48.979Z",
+                      "startTime": "2026-06-08T16:56:59.172Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -1824,14 +1824,14 @@
                   "results": [
                     {
                       "workerIndex": 5,
-                      "parallelIndex": 1,
+                      "parallelIndex": 0,
                       "status": "skipped",
                       "duration": 0,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-08T04:41:49.658Z",
+                      "startTime": "2026-06-08T16:56:59.881Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -1879,7 +1879,7 @@
                   "projectName": "scoring-chromium",
                   "results": [
                     {
-                      "workerIndex": 6,
+                      "workerIndex": 5,
                       "parallelIndex": 0,
                       "status": "skipped",
                       "duration": 0,
@@ -1887,7 +1887,7 @@
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-08T04:41:49.342Z",
+                      "startTime": "2026-06-08T16:56:59.884Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -1942,15 +1942,15 @@
                   "projectName": "scoring-chromium",
                   "results": [
                     {
-                      "workerIndex": 5,
+                      "workerIndex": 6,
                       "parallelIndex": 1,
                       "status": "passed",
-                      "duration": 533,
+                      "duration": 780,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-08T04:41:49.666Z",
+                      "startTime": "2026-06-08T16:57:00.575Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1978,15 +1978,15 @@
                   "projectName": "scoring-chromium",
                   "results": [
                     {
-                      "workerIndex": 6,
+                      "workerIndex": 5,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 617,
+                      "duration": 751,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-08T04:41:50.050Z",
+                      "startTime": "2026-06-08T16:57:00.552Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -2025,14 +2025,14 @@
                   "results": [
                     {
                       "workerIndex": 5,
-                      "parallelIndex": 1,
+                      "parallelIndex": 0,
                       "status": "skipped",
-                      "duration": 11072,
+                      "duration": 11245,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-08T04:41:50.267Z",
+                      "startTime": "2026-06-08T16:57:01.398Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -2069,14 +2069,14 @@
                   "results": [
                     {
                       "workerIndex": 6,
-                      "parallelIndex": 0,
+                      "parallelIndex": 1,
                       "status": "passed",
-                      "duration": 1299,
+                      "duration": 1525,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-08T04:41:50.750Z",
+                      "startTime": "2026-06-08T16:57:01.517Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -2133,14 +2133,14 @@
                   "results": [
                     {
                       "workerIndex": 6,
-                      "parallelIndex": 0,
+                      "parallelIndex": 1,
                       "status": "skipped",
                       "duration": 0,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-08T04:41:52.081Z",
+                      "startTime": "2026-06-08T16:57:03.078Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -2190,14 +2190,14 @@
                   "results": [
                     {
                       "workerIndex": 6,
-                      "parallelIndex": 0,
+                      "parallelIndex": 1,
                       "status": "skipped",
                       "duration": 0,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-08T04:41:52.707Z",
+                      "startTime": "2026-06-08T16:57:03.725Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -2247,14 +2247,14 @@
                   "results": [
                     {
                       "workerIndex": 6,
-                      "parallelIndex": 0,
+                      "parallelIndex": 1,
                       "status": "skipped",
                       "duration": 0,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-08T04:41:52.707Z",
+                      "startTime": "2026-06-08T16:57:03.725Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -2304,14 +2304,14 @@
                   "results": [
                     {
                       "workerIndex": 6,
-                      "parallelIndex": 0,
+                      "parallelIndex": 1,
                       "status": "skipped",
                       "duration": 0,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-08T04:41:52.713Z",
+                      "startTime": "2026-06-08T16:57:03.731Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -2360,14 +2360,14 @@
                   "results": [
                     {
                       "workerIndex": 6,
-                      "parallelIndex": 0,
+                      "parallelIndex": 1,
                       "status": "skipped",
                       "duration": 0,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-08T04:41:53.339Z",
+                      "startTime": "2026-06-08T16:57:04.366Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -2434,14 +2434,14 @@
                   "results": [
                     {
                       "workerIndex": 6,
-                      "parallelIndex": 0,
+                      "parallelIndex": 1,
                       "status": "skipped",
                       "duration": 0,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-08T04:41:53.349Z",
+                      "startTime": "2026-06-08T16:57:04.383Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -2490,14 +2490,14 @@
                   "results": [
                     {
                       "workerIndex": 6,
-                      "parallelIndex": 0,
+                      "parallelIndex": 1,
                       "status": "skipped",
                       "duration": 0,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-08T04:41:53.978Z",
+                      "startTime": "2026-06-08T16:57:05.023Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -2553,14 +2553,14 @@
                   "results": [
                     {
                       "workerIndex": 6,
-                      "parallelIndex": 0,
+                      "parallelIndex": 1,
                       "status": "passed",
-                      "duration": 415,
+                      "duration": 489,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-08T04:41:54.611Z",
+                      "startTime": "2026-06-08T16:57:05.667Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -2599,14 +2599,14 @@
                   "results": [
                     {
                       "workerIndex": 6,
-                      "parallelIndex": 0,
+                      "parallelIndex": 1,
                       "status": "skipped",
-                      "duration": 10921,
+                      "duration": 11075,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-08T04:41:55.039Z",
+                      "startTime": "2026-06-08T16:57:06.170Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -2655,14 +2655,14 @@
                   "results": [
                     {
                       "workerIndex": 5,
-                      "parallelIndex": 1,
+                      "parallelIndex": 0,
                       "status": "skipped",
-                      "duration": 11093,
+                      "duration": 11350,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-08T04:42:01.367Z",
+                      "startTime": "2026-06-08T16:57:12.679Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -2709,14 +2709,14 @@
                   "results": [
                     {
                       "workerIndex": 6,
-                      "parallelIndex": 0,
+                      "parallelIndex": 1,
                       "status": "skipped",
-                      "duration": 441,
+                      "duration": 483,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-08T04:42:05.974Z",
+                      "startTime": "2026-06-08T16:57:17.261Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -2746,8 +2746,8 @@
   ],
   "errors": [],
   "stats": {
-    "startTime": "2026-06-08T04:40:06.887Z",
-    "duration": 126210.72,
+    "startTime": "2026-06-08T16:55:12.619Z",
+    "duration": 133369.738,
     "expected": 16,
     "skipped": 29,
     "unexpected": 1,
