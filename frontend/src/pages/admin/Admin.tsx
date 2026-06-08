@@ -9,7 +9,10 @@ export default function Admin() {
     queryFn: async () => (await api.get("/admin/analytics")).data
   });
   const sections = [
-    { to: "/admin/users", title: "Users", desc: "View and moderate user accounts" },
+    { to: "/admin/users", title: "Users", desc: "View, edit profiles and moderate accounts" },
+    { to: "/admin/opportunities", title: "Opportunities", desc: "Manage all tournaments, trials and listings" },
+    { to: "/admin/organizations", title: "Organizations", desc: "View and edit all clubs and academies" },
+    { to: "/admin/applications", title: "Applications", desc: "Override application status on behalf of users" },
     { to: "/admin/verifications", title: "Verifications", desc: "Approve KYC and badges" },
     { to: "/admin/reports", title: "Reports", desc: "Abuse and dispute reports" },
     { to: "/admin/audit", title: "Audit log", desc: "Every moderation action with timestamp" }

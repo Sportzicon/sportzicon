@@ -1,13 +1,15 @@
 import { useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { api } from "../../api/client";
 import { PageHeader, Spinner, StatusPill, Badge, Pagination } from "../../components/UI";
-import { Trash2 } from "lucide-react";
+import { Trash2, Pencil } from "lucide-react";
 
 const PAGE_SIZE = 10;
 
 export default function AdminUsers() {
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [roleFilter, setRoleFilter] = useState<string>("");
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
@@ -82,6 +84,13 @@ export default function AdminUsers() {
                       </div>
                     ) : (
                       <div className="flex gap-2 flex-wrap">
+                        <button
+                          onClick={() => navigate(`/admin/users/${u.id}`)}
+                          className="btn-secondary btn-sm"
+                          title="Edit user profile"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </button>
                         {u.status !== "suspended" && <button className="btn-danger" onClick={() => setStatus.mutate({ id: u.id, status: "suspended" })}>Suspend</button>}
                         {u.status !== "active" && <button className="btn-primary" onClick={() => setStatus.mutate({ id: u.id, status: "active" })}>Activate</button>}
                         <button

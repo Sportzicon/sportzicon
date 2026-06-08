@@ -244,5 +244,23 @@
       "Bash(echo \"Frontend: $?\")",
       "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5173/)"
     ]
+  },
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "shell": "powershell",
+            "command": "& 'f:/My Project/sportivox-main/sportivox-main/.claude/hooks/update-claude-md.ps1'",
+            "asyncRewake": true,
+            "rewakeMessage": "New TypeScript source files were created during this session. If a new feature or module was implemented, please update CLAUDE.md now — add it to the module list, document any new patterns, update route counts, or note architectural changes introduced. Only update if the changes are feature-level (new module, new service, new hook, new component). Skip for bug fixes or refactors.",
+            "rewakeSummary": "New feature files detected — checking if CLAUDE.md needs updating",
+            "statusMessage": "Scanning for new feature files...",
+            "timeout": 20
+          }
+        ]
+      }
+    ]
   }
 }

@@ -50,9 +50,13 @@ import Organizations from "./pages/Organizations";
 import AITips from "./pages/AITips";
 import Admin from "./pages/admin/Admin";
 import AdminUsers from "./pages/admin/AdminUsers";
+import AdminUserDetail from "./pages/admin/AdminUserDetail";
 import AdminReports from "./pages/admin/AdminReports";
 import AdminVerifications from "./pages/admin/AdminVerifications";
 import AdminAuditLog from "./pages/admin/AdminAuditLog";
+import AdminOpportunities from "./pages/admin/AdminOpportunities";
+import AdminOrganizations from "./pages/admin/AdminOrganizations";
+import AdminApplications from "./pages/admin/AdminApplications";
 
 import LiveScores from "./pages/LiveScores";
 import LiveScoreDetail from "./pages/LiveScoreDetail";
@@ -119,6 +123,10 @@ export default function App() {
 
         <Route path="/admin" element={<ProtectedRoute roles={["admin"]}><Admin /></ProtectedRoute>} />
         <Route path="/admin/users" element={<ProtectedRoute roles={["admin"]}><AdminUsers /></ProtectedRoute>} />
+        <Route path="/admin/users/:id" element={<ProtectedRoute roles={["admin"]}><AdminUserDetail /></ProtectedRoute>} />
+        <Route path="/admin/opportunities" element={<ProtectedRoute roles={["admin"]}><AdminOpportunities /></ProtectedRoute>} />
+        <Route path="/admin/organizations" element={<ProtectedRoute roles={["admin"]}><AdminOrganizations /></ProtectedRoute>} />
+        <Route path="/admin/applications" element={<ProtectedRoute roles={["admin"]}><AdminApplications /></ProtectedRoute>} />
         <Route path="/admin/reports" element={<ProtectedRoute roles={["admin"]}><AdminReports /></ProtectedRoute>} />
         <Route path="/admin/verifications" element={<ProtectedRoute roles={["admin"]}><AdminVerifications /></ProtectedRoute>} />
         <Route path="/admin/audit" element={<ProtectedRoute roles={["admin"]}><AdminAuditLog /></ProtectedRoute>} />
