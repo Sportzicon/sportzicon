@@ -1,0 +1,2756 @@
+{
+  "config": {
+    "configFile": "/home/runner/work/sportzicon/sportzicon/e2e/playwright.config.ts",
+    "rootDir": "/home/runner/work/sportzicon/sportzicon/e2e/tests",
+    "forbidOnly": true,
+    "fullyParallel": true,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "ci": {
+        "commitHref": "https://github.com/Sportzicon/sportzicon/commit/2734f34205d3d7c6de9de234cf22a076a2ef3ad7",
+        "commitHash": "2734f34205d3d7c6de9de234cf22a076a2ef3ad7",
+        "buildHref": "https://github.com/Sportzicon/sportzicon/actions/runs/27209872715"
+      },
+      "gitCommit": {
+        "shortHash": "2734f34",
+        "hash": "2734f34205d3d7c6de9de234cf22a076a2ef3ad7",
+        "subject": "chore(gap-analysis): daily report 2026-06-08",
+        "body": "chore(gap-analysis): daily report 2026-06-08\n",
+        "author": {
+          "name": "github-actions[bot]",
+          "email": "github-actions[bot]@users.noreply.github.com",
+          "time": 1780942214000
+        },
+        "committer": {
+          "name": "github-actions[bot]",
+          "email": "github-actions[bot]@users.noreply.github.com",
+          "time": 1780942214000
+        },
+        "branch": "main"
+      },
+      "actualWorkers": 2
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "/home/runner/work/sportzicon/sportzicon/e2e/test-results",
+        "repeatEach": 1,
+        "retries": 2,
+        "metadata": {
+          "ci": {
+            "commitHref": "https://github.com/Sportzicon/sportzicon/commit/2734f34205d3d7c6de9de234cf22a076a2ef3ad7",
+            "commitHash": "2734f34205d3d7c6de9de234cf22a076a2ef3ad7",
+            "buildHref": "https://github.com/Sportzicon/sportzicon/actions/runs/27209872715"
+          },
+          "gitCommit": {
+            "shortHash": "2734f34",
+            "hash": "2734f34205d3d7c6de9de234cf22a076a2ef3ad7",
+            "subject": "chore(gap-analysis): daily report 2026-06-08",
+            "body": "chore(gap-analysis): daily report 2026-06-08\n",
+            "author": {
+              "name": "github-actions[bot]",
+              "email": "github-actions[bot]@users.noreply.github.com",
+              "time": 1780942214000
+            },
+            "committer": {
+              "name": "github-actions[bot]",
+              "email": "github-actions[bot]@users.noreply.github.com",
+              "time": 1780942214000
+            },
+            "branch": "main"
+          },
+          "actualWorkers": 2
+        },
+        "id": "sportivox-chromium",
+        "name": "sportivox-chromium",
+        "testDir": "/home/runner/work/sportzicon/sportzicon/e2e/tests/sportivox",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 60000
+      },
+      {
+        "outputDir": "/home/runner/work/sportzicon/sportzicon/e2e/test-results",
+        "repeatEach": 1,
+        "retries": 2,
+        "metadata": {
+          "ci": {
+            "commitHref": "https://github.com/Sportzicon/sportzicon/commit/2734f34205d3d7c6de9de234cf22a076a2ef3ad7",
+            "commitHash": "2734f34205d3d7c6de9de234cf22a076a2ef3ad7",
+            "buildHref": "https://github.com/Sportzicon/sportzicon/actions/runs/27209872715"
+          },
+          "gitCommit": {
+            "shortHash": "2734f34",
+            "hash": "2734f34205d3d7c6de9de234cf22a076a2ef3ad7",
+            "subject": "chore(gap-analysis): daily report 2026-06-08",
+            "body": "chore(gap-analysis): daily report 2026-06-08\n",
+            "author": {
+              "name": "github-actions[bot]",
+              "email": "github-actions[bot]@users.noreply.github.com",
+              "time": 1780942214000
+            },
+            "committer": {
+              "name": "github-actions[bot]",
+              "email": "github-actions[bot]@users.noreply.github.com",
+              "time": 1780942214000
+            },
+            "branch": "main"
+          },
+          "actualWorkers": 2
+        },
+        "id": "scoring-chromium",
+        "name": "scoring-chromium",
+        "testDir": "/home/runner/work/sportzicon/sportzicon/e2e/tests/scoring",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 60000
+      },
+      {
+        "outputDir": "/home/runner/work/sportzicon/sportzicon/e2e/test-results",
+        "repeatEach": 1,
+        "retries": 2,
+        "metadata": {
+          "ci": {
+            "commitHref": "https://github.com/Sportzicon/sportzicon/commit/2734f34205d3d7c6de9de234cf22a076a2ef3ad7",
+            "commitHash": "2734f34205d3d7c6de9de234cf22a076a2ef3ad7",
+            "buildHref": "https://github.com/Sportzicon/sportzicon/actions/runs/27209872715"
+          },
+          "gitCommit": {
+            "shortHash": "2734f34",
+            "hash": "2734f34205d3d7c6de9de234cf22a076a2ef3ad7",
+            "subject": "chore(gap-analysis): daily report 2026-06-08",
+            "body": "chore(gap-analysis): daily report 2026-06-08\n",
+            "author": {
+              "name": "github-actions[bot]",
+              "email": "github-actions[bot]@users.noreply.github.com",
+              "time": 1780942214000
+            },
+            "committer": {
+              "name": "github-actions[bot]",
+              "email": "github-actions[bot]@users.noreply.github.com",
+              "time": 1780942214000
+            },
+            "branch": "main"
+          },
+          "actualWorkers": 2
+        },
+        "id": "mobile-chrome",
+        "name": "mobile-chrome",
+        "testDir": "/home/runner/work/sportzicon/sportzicon/e2e/tests/sportivox",
+        "testIgnore": [],
+        "testMatch": [
+          "landing.spec.ts"
+        ],
+        "timeout": 60000
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "list",
+        null
+      ],
+      [
+        "html",
+        {
+          "outputFolder": "reports/html",
+          "open": "never"
+        }
+      ],
+      [
+        "json",
+        {
+          "outputFile": "reports/results.json"
+        }
+      ],
+      [
+        "junit",
+        {
+          "outputFile": "reports/junit.xml"
+        }
+      ],
+      [
+        "github",
+        null
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.60.0",
+    "workers": 2,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "sportivox/auth.spec.ts",
+      "file": "sportivox/auth.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "@auth Sportivox authentication",
+          "file": "sportivox/auth.spec.ts",
+          "line": 22,
+          "column": 6,
+          "specs": [
+            {
+              "title": "@critical admin can sign in",
+              "ok": true,
+              "tags": [
+                "auth",
+                "critical"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "description": "Seed missing for admin@sportivox.local — load demo data with `make seed`",
+                      "location": {
+                        "file": "/home/runner/work/sportzicon/sportzicon/e2e/tests/sportivox/auth.spec.ts",
+                        "line": 28,
+                        "column": 27
+                      }
+                    }
+                  ],
+                  "expectedStatus": "skipped",
+                  "projectId": "sportivox-chromium",
+                  "projectName": "sportivox-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "skipped",
+                      "duration": 12467,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-09T13:35:20.784Z",
+                      "annotations": [
+                        {
+                          "type": "skip",
+                          "description": "Seed missing for admin@sportivox.local — load demo data with `make seed`",
+                          "location": {
+                            "file": "/home/runner/work/sportzicon/sportzicon/e2e/tests/sportivox/auth.spec.ts",
+                            "line": 28,
+                            "column": 27
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d748ac400d08b85935ef-8a41b0ebbd5d7ca73e9d",
+              "file": "sportivox/auth.spec.ts",
+              "line": 24,
+              "column": 5
+            },
+            {
+              "title": "@critical athlete can sign in",
+              "ok": true,
+              "tags": [
+                "auth",
+                "critical"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "description": "Seed missing for athlete@demo.sportivox — load demo data with `make seed`",
+                      "location": {
+                        "file": "/home/runner/work/sportzicon/sportzicon/e2e/tests/sportivox/auth.spec.ts",
+                        "line": 28,
+                        "column": 27
+                      }
+                    }
+                  ],
+                  "expectedStatus": "skipped",
+                  "projectId": "sportivox-chromium",
+                  "projectName": "sportivox-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "skipped",
+                      "duration": 12821,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-09T13:35:20.707Z",
+                      "annotations": [
+                        {
+                          "type": "skip",
+                          "description": "Seed missing for athlete@demo.sportivox — load demo data with `make seed`",
+                          "location": {
+                            "file": "/home/runner/work/sportzicon/sportzicon/e2e/tests/sportivox/auth.spec.ts",
+                            "line": 28,
+                            "column": 27
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d748ac400d08b85935ef-6c121acd7d6f4bf04202",
+              "file": "sportivox/auth.spec.ts",
+              "line": 24,
+              "column": 5
+            },
+            {
+              "title": "@critical club can sign in",
+              "ok": true,
+              "tags": [
+                "auth",
+                "critical"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "description": "Seed missing for club@demo.sportivox — load demo data with `make seed`",
+                      "location": {
+                        "file": "/home/runner/work/sportzicon/sportzicon/e2e/tests/sportivox/auth.spec.ts",
+                        "line": 28,
+                        "column": 27
+                      }
+                    }
+                  ],
+                  "expectedStatus": "skipped",
+                  "projectId": "sportivox-chromium",
+                  "projectName": "sportivox-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "skipped",
+                      "duration": 12168,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-09T13:35:35.369Z",
+                      "annotations": [
+                        {
+                          "type": "skip",
+                          "description": "Seed missing for club@demo.sportivox — load demo data with `make seed`",
+                          "location": {
+                            "file": "/home/runner/work/sportzicon/sportzicon/e2e/tests/sportivox/auth.spec.ts",
+                            "line": 28,
+                            "column": 27
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d748ac400d08b85935ef-8cb3d4acc4ab9b2772f3",
+              "file": "sportivox/auth.spec.ts",
+              "line": 24,
+              "column": 5
+            },
+            {
+              "title": "@critical scout can sign in",
+              "ok": true,
+              "tags": [
+                "auth",
+                "critical"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "description": "Seed missing for scout@demo.sportivox — load demo data with `make seed`",
+                      "location": {
+                        "file": "/home/runner/work/sportzicon/sportzicon/e2e/tests/sportivox/auth.spec.ts",
+                        "line": 28,
+                        "column": 27
+                      }
+                    }
+                  ],
+                  "expectedStatus": "skipped",
+                  "projectId": "sportivox-chromium",
+                  "projectName": "sportivox-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "skipped",
+                      "duration": 12200,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-09T13:35:35.717Z",
+                      "annotations": [
+                        {
+                          "type": "skip",
+                          "description": "Seed missing for scout@demo.sportivox — load demo data with `make seed`",
+                          "location": {
+                            "file": "/home/runner/work/sportzicon/sportzicon/e2e/tests/sportivox/auth.spec.ts",
+                            "line": 28,
+                            "column": 27
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d748ac400d08b85935ef-7ef60edc81632e2dde7b",
+              "file": "sportivox/auth.spec.ts",
+              "line": 24,
+              "column": 5
+            },
+            {
+              "title": "invalid credentials show an inline error",
+              "ok": false,
+              "tags": [
+                "auth"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "sportivox-chromium",
+                  "projectName": "sportivox-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 2462,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoMatch\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected pattern: \u001b[32m/invalid|wrong|incorrect|error|denied|unable|unreach|server/i\u001b[39m\nReceived string:  \u001b[31m\"\u001b[39m\n\u001b[31m    EST. 2026For AthletesFor ClubsHow it worksLive ScoresSign inGet startedThe verified sports recruitment networkPune · Mumbai · London · Melbourne · Cape TownWelcomeback.The verified sports recruitment network. Sign in to your account to access opportunities, messages and your profile.◆Verified profilesEvery badge-holder is identity-checked.◆Structured workflowPending → Shortlisted → Selected.◆Real opportunitiesTrials, scholarships, coaching jobs.Account accessSign inNew here? Create an account →EmailPasswordForgot?Signing in…© 2026 Sportzicon — All rights reservedVerified sports recruitment·········\u001b[39m\n\u001b[31m\"\u001b[39m",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoMatch\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected pattern: \u001b[32m/invalid|wrong|incorrect|error|denied|unable|unreach|server/i\u001b[39m\nReceived string:  \u001b[31m\"\u001b[39m\n\u001b[31m    EST. 2026For AthletesFor ClubsHow it worksLive ScoresSign inGet startedThe verified sports recruitment networkPune · Mumbai · London · Melbourne · Cape TownWelcomeback.The verified sports recruitment network. Sign in to your account to access opportunities, messages and your profile.◆Verified profilesEvery badge-holder is identity-checked.◆Structured workflowPending → Shortlisted → Selected.◆Real opportunitiesTrials, scholarships, coaching jobs.Account accessSign inNew here? Create an account →EmailPasswordForgot?Signing in…© 2026 Sportzicon — All rights reservedVerified sports recruitment·········\u001b[39m\n\u001b[31m\"\u001b[39m\n    at /home/runner/work/sportzicon/sportzicon/e2e/tests/sportivox/auth.spec.ts:40:23",
+                        "location": {
+                          "file": "/home/runner/work/sportzicon/sportzicon/e2e/tests/sportivox/auth.spec.ts",
+                          "column": 23,
+                          "line": 40
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 38 |\u001b[39m     \u001b[36mconst\u001b[39m errorText \u001b[33m=\u001b[39m \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mlocator(\u001b[32m\"body\"\u001b[39m)\u001b[33m.\u001b[39mtextContent()\u001b[33m;\u001b[39m\n \u001b[90m 39 |\u001b[39m     \u001b[90m// Tolerate either a credential rejection OR a backend-down error — both prove the login didn't succeed.\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 40 |\u001b[39m     expect(errorText)\u001b[33m.\u001b[39mtoMatch(\u001b[35m/invalid|wrong|incorrect|error|denied|unable|unreach|server/i\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                       \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 41 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 42 |\u001b[39m\n \u001b[90m 43 |\u001b[39m   test(\u001b[32m\"logout returns to landing\"\u001b[39m\u001b[33m,\u001b[39m \u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/home/runner/work/sportzicon/sportzicon/e2e/tests/sportivox/auth.spec.ts",
+                            "column": 23,
+                            "line": 40
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoMatch\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected pattern: \u001b[32m/invalid|wrong|incorrect|error|denied|unable|unreach|server/i\u001b[39m\nReceived string:  \u001b[31m\"\u001b[39m\n\u001b[31m    EST. 2026For AthletesFor ClubsHow it worksLive ScoresSign inGet startedThe verified sports recruitment networkPune · Mumbai · London · Melbourne · Cape TownWelcomeback.The verified sports recruitment network. Sign in to your account to access opportunities, messages and your profile.◆Verified profilesEvery badge-holder is identity-checked.◆Structured workflowPending → Shortlisted → Selected.◆Real opportunitiesTrials, scholarships, coaching jobs.Account accessSign inNew here? Create an account →EmailPasswordForgot?Signing in…© 2026 Sportzicon — All rights reservedVerified sports recruitment·········\u001b[39m\n\u001b[31m\"\u001b[39m\n\n  38 |     const errorText = await page.locator(\"body\").textContent();\n  39 |     // Tolerate either a credential rejection OR a backend-down error — both prove the login didn't succeed.\n> 40 |     expect(errorText).toMatch(/invalid|wrong|incorrect|error|denied|unable|unreach|server/i);\n     |                       ^\n  41 |   });\n  42 |\n  43 |   test(\"logout returns to landing\", async ({ page }) => {\n    at /home/runner/work/sportzicon/sportzicon/e2e/tests/sportivox/auth.spec.ts:40:23"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-09T13:35:47.565Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/home/runner/work/sportzicon/sportzicon/e2e/test-results/auth--auth-Sportivox-authe-9e4a7-ntials-show-an-inline-error-sportivox-chromium/test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/home/runner/work/sportzicon/sportzicon/e2e/test-results/auth--auth-Sportivox-authe-9e4a7-ntials-show-an-inline-error-sportivox-chromium/video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/home/runner/work/sportzicon/sportzicon/e2e/test-results/auth--auth-Sportivox-authe-9e4a7-ntials-show-an-inline-error-sportivox-chromium/error-context.md"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "/home/runner/work/sportzicon/sportzicon/e2e/test-results/auth--auth-Sportivox-authe-9e4a7-ntials-show-an-inline-error-sportivox-chromium/trace.zip"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/home/runner/work/sportzicon/sportzicon/e2e/tests/sportivox/auth.spec.ts",
+                        "column": 23,
+                        "line": 40
+                      }
+                    },
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 2136,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoMatch\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected pattern: \u001b[32m/invalid|wrong|incorrect|error|denied|unable|unreach|server/i\u001b[39m\nReceived string:  \u001b[31m\"\u001b[39m\n\u001b[31m    EST. 2026For AthletesFor ClubsHow it worksLive ScoresSign inGet startedThe verified sports recruitment networkPune · Mumbai · London · Melbourne · Cape TownWelcomeback.The verified sports recruitment network. Sign in to your account to access opportunities, messages and your profile.◆Verified profilesEvery badge-holder is identity-checked.◆Structured workflowPending → Shortlisted → Selected.◆Real opportunitiesTrials, scholarships, coaching jobs.Account accessSign inNew here? Create an account →EmailPasswordForgot?Signing in…© 2026 Sportzicon — All rights reservedVerified sports recruitment·········\u001b[39m\n\u001b[31m\"\u001b[39m",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoMatch\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected pattern: \u001b[32m/invalid|wrong|incorrect|error|denied|unable|unreach|server/i\u001b[39m\nReceived string:  \u001b[31m\"\u001b[39m\n\u001b[31m    EST. 2026For AthletesFor ClubsHow it worksLive ScoresSign inGet startedThe verified sports recruitment networkPune · Mumbai · London · Melbourne · Cape TownWelcomeback.The verified sports recruitment network. Sign in to your account to access opportunities, messages and your profile.◆Verified profilesEvery badge-holder is identity-checked.◆Structured workflowPending → Shortlisted → Selected.◆Real opportunitiesTrials, scholarships, coaching jobs.Account accessSign inNew here? Create an account →EmailPasswordForgot?Signing in…© 2026 Sportzicon — All rights reservedVerified sports recruitment·········\u001b[39m\n\u001b[31m\"\u001b[39m\n    at /home/runner/work/sportzicon/sportzicon/e2e/tests/sportivox/auth.spec.ts:40:23",
+                        "location": {
+                          "file": "/home/runner/work/sportzicon/sportzicon/e2e/tests/sportivox/auth.spec.ts",
+                          "column": 23,
+                          "line": 40
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 38 |\u001b[39m     \u001b[36mconst\u001b[39m errorText \u001b[33m=\u001b[39m \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mlocator(\u001b[32m\"body\"\u001b[39m)\u001b[33m.\u001b[39mtextContent()\u001b[33m;\u001b[39m\n \u001b[90m 39 |\u001b[39m     \u001b[90m// Tolerate either a credential rejection OR a backend-down error — both prove the login didn't succeed.\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 40 |\u001b[39m     expect(errorText)\u001b[33m.\u001b[39mtoMatch(\u001b[35m/invalid|wrong|incorrect|error|denied|unable|unreach|server/i\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                       \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 41 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 42 |\u001b[39m\n \u001b[90m 43 |\u001b[39m   test(\u001b[32m\"logout returns to landing\"\u001b[39m\u001b[33m,\u001b[39m \u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/home/runner/work/sportzicon/sportzicon/e2e/tests/sportivox/auth.spec.ts",
+                            "column": 23,
+                            "line": 40
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoMatch\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected pattern: \u001b[32m/invalid|wrong|incorrect|error|denied|unable|unreach|server/i\u001b[39m\nReceived string:  \u001b[31m\"\u001b[39m\n\u001b[31m    EST. 2026For AthletesFor ClubsHow it worksLive ScoresSign inGet startedThe verified sports recruitment networkPune · Mumbai · London · Melbourne · Cape TownWelcomeback.The verified sports recruitment network. Sign in to your account to access opportunities, messages and your profile.◆Verified profilesEvery badge-holder is identity-checked.◆Structured workflowPending → Shortlisted → Selected.◆Real opportunitiesTrials, scholarships, coaching jobs.Account accessSign inNew here? Create an account →EmailPasswordForgot?Signing in…© 2026 Sportzicon — All rights reservedVerified sports recruitment·········\u001b[39m\n\u001b[31m\"\u001b[39m\n\n  38 |     const errorText = await page.locator(\"body\").textContent();\n  39 |     // Tolerate either a credential rejection OR a backend-down error — both prove the login didn't succeed.\n> 40 |     expect(errorText).toMatch(/invalid|wrong|incorrect|error|denied|unable|unreach|server/i);\n     |                       ^\n  41 |   });\n  42 |\n  43 |   test(\"logout returns to landing\", async ({ page }) => {\n    at /home/runner/work/sportzicon/sportzicon/e2e/tests/sportivox/auth.spec.ts:40:23"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 1,
+                      "startTime": "2026-06-09T13:35:50.713Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/home/runner/work/sportzicon/sportzicon/e2e/test-results/auth--auth-Sportivox-authe-9e4a7-ntials-show-an-inline-error-sportivox-chromium-retry1/test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/home/runner/work/sportzicon/sportzicon/e2e/test-results/auth--auth-Sportivox-authe-9e4a7-ntials-show-an-inline-error-sportivox-chromium-retry1/video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/home/runner/work/sportzicon/sportzicon/e2e/test-results/auth--auth-Sportivox-authe-9e4a7-ntials-show-an-inline-error-sportivox-chromium-retry1/error-context.md"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "/home/runner/work/sportzicon/sportzicon/e2e/test-results/auth--auth-Sportivox-authe-9e4a7-ntials-show-an-inline-error-sportivox-chromium-retry1/trace.zip"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/home/runner/work/sportzicon/sportzicon/e2e/tests/sportivox/auth.spec.ts",
+                        "column": 23,
+                        "line": 40
+                      }
+                    },
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 2171,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoMatch\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected pattern: \u001b[32m/invalid|wrong|incorrect|error|denied|unable|unreach|server/i\u001b[39m\nReceived string:  \u001b[31m\"\u001b[39m\n\u001b[31m    EST. 2026For AthletesFor ClubsHow it worksLive ScoresSign inGet startedThe verified sports recruitment networkPune · Mumbai · London · Melbourne · Cape TownWelcomeback.The verified sports recruitment network. Sign in to your account to access opportunities, messages and your profile.◆Verified profilesEvery badge-holder is identity-checked.◆Structured workflowPending → Shortlisted → Selected.◆Real opportunitiesTrials, scholarships, coaching jobs.Account accessSign inNew here? Create an account →EmailPasswordForgot?Signing in…© 2026 Sportzicon — All rights reservedVerified sports recruitment·········\u001b[39m\n\u001b[31m\"\u001b[39m",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoMatch\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected pattern: \u001b[32m/invalid|wrong|incorrect|error|denied|unable|unreach|server/i\u001b[39m\nReceived string:  \u001b[31m\"\u001b[39m\n\u001b[31m    EST. 2026For AthletesFor ClubsHow it worksLive ScoresSign inGet startedThe verified sports recruitment networkPune · Mumbai · London · Melbourne · Cape TownWelcomeback.The verified sports recruitment network. Sign in to your account to access opportunities, messages and your profile.◆Verified profilesEvery badge-holder is identity-checked.◆Structured workflowPending → Shortlisted → Selected.◆Real opportunitiesTrials, scholarships, coaching jobs.Account accessSign inNew here? Create an account →EmailPasswordForgot?Signing in…© 2026 Sportzicon — All rights reservedVerified sports recruitment·········\u001b[39m\n\u001b[31m\"\u001b[39m\n    at /home/runner/work/sportzicon/sportzicon/e2e/tests/sportivox/auth.spec.ts:40:23",
+                        "location": {
+                          "file": "/home/runner/work/sportzicon/sportzicon/e2e/tests/sportivox/auth.spec.ts",
+                          "column": 23,
+                          "line": 40
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 38 |\u001b[39m     \u001b[36mconst\u001b[39m errorText \u001b[33m=\u001b[39m \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mlocator(\u001b[32m\"body\"\u001b[39m)\u001b[33m.\u001b[39mtextContent()\u001b[33m;\u001b[39m\n \u001b[90m 39 |\u001b[39m     \u001b[90m// Tolerate either a credential rejection OR a backend-down error — both prove the login didn't succeed.\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 40 |\u001b[39m     expect(errorText)\u001b[33m.\u001b[39mtoMatch(\u001b[35m/invalid|wrong|incorrect|error|denied|unable|unreach|server/i\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                       \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 41 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 42 |\u001b[39m\n \u001b[90m 43 |\u001b[39m   test(\u001b[32m\"logout returns to landing\"\u001b[39m\u001b[33m,\u001b[39m \u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/home/runner/work/sportzicon/sportzicon/e2e/tests/sportivox/auth.spec.ts",
+                            "column": 23,
+                            "line": 40
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoMatch\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected pattern: \u001b[32m/invalid|wrong|incorrect|error|denied|unable|unreach|server/i\u001b[39m\nReceived string:  \u001b[31m\"\u001b[39m\n\u001b[31m    EST. 2026For AthletesFor ClubsHow it worksLive ScoresSign inGet startedThe verified sports recruitment networkPune · Mumbai · London · Melbourne · Cape TownWelcomeback.The verified sports recruitment network. Sign in to your account to access opportunities, messages and your profile.◆Verified profilesEvery badge-holder is identity-checked.◆Structured workflowPending → Shortlisted → Selected.◆Real opportunitiesTrials, scholarships, coaching jobs.Account accessSign inNew here? Create an account →EmailPasswordForgot?Signing in…© 2026 Sportzicon — All rights reservedVerified sports recruitment·········\u001b[39m\n\u001b[31m\"\u001b[39m\n\n  38 |     const errorText = await page.locator(\"body\").textContent();\n  39 |     // Tolerate either a credential rejection OR a backend-down error — both prove the login didn't succeed.\n> 40 |     expect(errorText).toMatch(/invalid|wrong|incorrect|error|denied|unable|unreach|server/i);\n     |                       ^\n  41 |   });\n  42 |\n  43 |   test(\"logout returns to landing\", async ({ page }) => {\n    at /home/runner/work/sportzicon/sportzicon/e2e/tests/sportivox/auth.spec.ts:40:23"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 2,
+                      "startTime": "2026-06-09T13:35:53.578Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/home/runner/work/sportzicon/sportzicon/e2e/test-results/auth--auth-Sportivox-authe-9e4a7-ntials-show-an-inline-error-sportivox-chromium-retry2/test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/home/runner/work/sportzicon/sportzicon/e2e/test-results/auth--auth-Sportivox-authe-9e4a7-ntials-show-an-inline-error-sportivox-chromium-retry2/video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/home/runner/work/sportzicon/sportzicon/e2e/test-results/auth--auth-Sportivox-authe-9e4a7-ntials-show-an-inline-error-sportivox-chromium-retry2/error-context.md"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "/home/runner/work/sportzicon/sportzicon/e2e/test-results/auth--auth-Sportivox-authe-9e4a7-ntials-show-an-inline-error-sportivox-chromium-retry2/trace.zip"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/home/runner/work/sportzicon/sportzicon/e2e/tests/sportivox/auth.spec.ts",
+                        "column": 23,
+                        "line": 40
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "d748ac400d08b85935ef-95911d2e61b20f1da218",
+              "file": "sportivox/auth.spec.ts",
+              "line": 33,
+              "column": 3
+            },
+            {
+              "title": "logout returns to landing",
+              "ok": true,
+              "tags": [
+                "auth"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "description": "Seed missing",
+                      "location": {
+                        "file": "/home/runner/work/sportzicon/sportzicon/e2e/tests/sportivox/auth.spec.ts",
+                        "line": 46,
+                        "column": 25
+                      }
+                    }
+                  ],
+                  "expectedStatus": "skipped",
+                  "projectId": "sportivox-chromium",
+                  "projectName": "sportivox-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "skipped",
+                      "duration": 12096,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-09T13:35:47.941Z",
+                      "annotations": [
+                        {
+                          "type": "skip",
+                          "description": "Seed missing",
+                          "location": {
+                            "file": "/home/runner/work/sportzicon/sportzicon/e2e/tests/sportivox/auth.spec.ts",
+                            "line": 46,
+                            "column": 25
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d748ac400d08b85935ef-645d0c8fba1fd3c799aa",
+              "file": "sportivox/auth.spec.ts",
+              "line": 43,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "sportivox/landing.spec.ts",
+      "file": "sportivox/landing.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Sportivox landing & public surfaces",
+          "file": "sportivox/landing.spec.ts",
+          "line": 6,
+          "column": 6,
+          "specs": [
+            {
+              "title": "@smoke @critical landing page renders headline and CTA",
+              "ok": true,
+              "tags": [
+                "smoke",
+                "critical"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "sportivox-chromium",
+                  "projectName": "sportivox-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 4,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1202,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-09T13:35:56.567Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "4e5b49d369fd48ca0656-da4b495a867f2dba01dd",
+              "file": "sportivox/landing.spec.ts",
+              "line": 7,
+              "column": 3
+            },
+            {
+              "title": "@smoke login page accepts inputs",
+              "ok": true,
+              "tags": [
+                "smoke"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "sportivox-chromium",
+                  "projectName": "sportivox-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 4,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1138,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-09T13:35:57.883Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "4e5b49d369fd48ca0656-8014b5538c0a0c08635d",
+              "file": "sportivox/landing.spec.ts",
+              "line": 15,
+              "column": 3
+            },
+            {
+              "title": "@smoke signup page loads (multi-step)",
+              "ok": true,
+              "tags": [
+                "smoke"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "sportivox-chromium",
+                  "projectName": "sportivox-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 4,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1541,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-09T13:35:59.034Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "4e5b49d369fd48ca0656-d7c2cc17d34e0e875e2d",
+              "file": "sportivox/landing.spec.ts",
+              "line": 22,
+              "column": 3
+            },
+            {
+              "title": "@smoke forgot password page exists",
+              "ok": true,
+              "tags": [
+                "smoke"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "sportivox-chromium",
+                  "projectName": "sportivox-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 1713,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-09T13:36:00.067Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "4e5b49d369fd48ca0656-d861ba2af6d4a5edeb38",
+              "file": "sportivox/landing.spec.ts",
+              "line": 31,
+              "column": 3
+            },
+            {
+              "title": "@critical browse opportunities works unauthenticated",
+              "ok": true,
+              "tags": [
+                "critical"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "sportivox-chromium",
+                  "projectName": "sportivox-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 4,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2178,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-09T13:36:00.591Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "4e5b49d369fd48ca0656-f1a2b7ef20ce0bc938c4",
+              "file": "sportivox/landing.spec.ts",
+              "line": 36,
+              "column": 3
+            },
+            {
+              "title": "404 handler returns a friendly page",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "sportivox-chromium",
+                  "projectName": "sportivox-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 1022,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-09T13:36:01.796Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "4e5b49d369fd48ca0656-75fe589c9a8f46d9773b",
+              "file": "sportivox/landing.spec.ts",
+              "line": 42,
+              "column": 3
+            },
+            {
+              "title": "@smoke @critical landing page renders headline and CTA",
+              "ok": true,
+              "tags": [
+                "smoke",
+                "critical"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "mobile-chrome",
+                  "projectName": "mobile-chrome",
+                  "results": [
+                    {
+                      "workerIndex": 7,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1315,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-09T13:37:23.387Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "4e5b49d369fd48ca0656-a825b4689923f3c76dd2",
+              "file": "sportivox/landing.spec.ts",
+              "line": 7,
+              "column": 3
+            },
+            {
+              "title": "@smoke login page accepts inputs",
+              "ok": true,
+              "tags": [
+                "smoke"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "mobile-chrome",
+                  "projectName": "mobile-chrome",
+                  "results": [
+                    {
+                      "workerIndex": 7,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1151,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-09T13:37:24.810Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "4e5b49d369fd48ca0656-dfe315447e39ce92c61c",
+              "file": "sportivox/landing.spec.ts",
+              "line": 15,
+              "column": 3
+            },
+            {
+              "title": "@smoke signup page loads (multi-step)",
+              "ok": true,
+              "tags": [
+                "smoke"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "mobile-chrome",
+                  "projectName": "mobile-chrome",
+                  "results": [
+                    {
+                      "workerIndex": 7,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1210,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-09T13:37:25.973Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "4e5b49d369fd48ca0656-adf03079950bc9794c68",
+              "file": "sportivox/landing.spec.ts",
+              "line": 22,
+              "column": 3
+            },
+            {
+              "title": "@smoke forgot password page exists",
+              "ok": true,
+              "tags": [
+                "smoke"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "mobile-chrome",
+                  "projectName": "mobile-chrome",
+                  "results": [
+                    {
+                      "workerIndex": 7,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1266,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-09T13:37:27.200Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "4e5b49d369fd48ca0656-bd9ca3bff3f5436085b6",
+              "file": "sportivox/landing.spec.ts",
+              "line": 31,
+              "column": 3
+            },
+            {
+              "title": "@critical browse opportunities works unauthenticated",
+              "ok": true,
+              "tags": [
+                "critical"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "mobile-chrome",
+                  "projectName": "mobile-chrome",
+                  "results": [
+                    {
+                      "workerIndex": 7,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1863,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-09T13:37:28.482Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "4e5b49d369fd48ca0656-60babf928d27ebaff5a7",
+              "file": "sportivox/landing.spec.ts",
+              "line": 36,
+              "column": 3
+            },
+            {
+              "title": "404 handler returns a friendly page",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "mobile-chrome",
+                  "projectName": "mobile-chrome",
+                  "results": [
+                    {
+                      "workerIndex": 8,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 930,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-09T13:37:29.762Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "4e5b49d369fd48ca0656-df1a0517402077b605d3",
+              "file": "sportivox/landing.spec.ts",
+              "line": 42,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "sportivox/opportunities.spec.ts",
+      "file": "sportivox/opportunities.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Opportunities flow",
+          "file": "sportivox/opportunities.spec.ts",
+          "line": 14,
+          "column": 6,
+          "specs": [
+            {
+              "title": "@critical athlete can browse and open an opportunity",
+              "ok": true,
+              "tags": [
+                "critical"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "description": "Seed missing",
+                      "location": {
+                        "file": "/home/runner/work/sportzicon/sportzicon/e2e/tests/sportivox/opportunities.spec.ts",
+                        "line": 11,
+                        "column": 23
+                      }
+                    }
+                  ],
+                  "expectedStatus": "skipped",
+                  "projectId": "sportivox-chromium",
+                  "projectName": "sportivox-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 4,
+                      "parallelIndex": 0,
+                      "status": "skipped",
+                      "duration": 12613,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-09T13:36:02.797Z",
+                      "annotations": [
+                        {
+                          "type": "skip",
+                          "description": "Seed missing",
+                          "location": {
+                            "file": "/home/runner/work/sportzicon/sportzicon/e2e/tests/sportivox/opportunities.spec.ts",
+                            "line": 11,
+                            "column": 23
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "9497c3bb8f9083f6a365-15b3e89aaf3650acb021",
+              "file": "sportivox/opportunities.spec.ts",
+              "line": 15,
+              "column": 3
+            },
+            {
+              "title": "@critical club user sees post-opportunity CTA",
+              "ok": true,
+              "tags": [
+                "critical"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "description": "Seed missing",
+                      "location": {
+                        "file": "/home/runner/work/sportzicon/sportzicon/e2e/tests/sportivox/opportunities.spec.ts",
+                        "line": 11,
+                        "column": 23
+                      }
+                    }
+                  ],
+                  "expectedStatus": "skipped",
+                  "projectId": "sportivox-chromium",
+                  "projectName": "sportivox-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "skipped",
+                      "duration": 12332,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-09T13:36:02.861Z",
+                      "annotations": [
+                        {
+                          "type": "skip",
+                          "description": "Seed missing",
+                          "location": {
+                            "file": "/home/runner/work/sportzicon/sportzicon/e2e/tests/sportivox/opportunities.spec.ts",
+                            "line": 11,
+                            "column": 23
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "9497c3bb8f9083f6a365-79bb8f8674b80bc76877",
+              "file": "sportivox/opportunities.spec.ts",
+              "line": 29,
+              "column": 3
+            },
+            {
+              "title": "scout can search and filter",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "description": "Seed missing",
+                      "location": {
+                        "file": "/home/runner/work/sportzicon/sportzicon/e2e/tests/sportivox/opportunities.spec.ts",
+                        "line": 11,
+                        "column": 23
+                      }
+                    }
+                  ],
+                  "expectedStatus": "skipped",
+                  "projectId": "sportivox-chromium",
+                  "projectName": "sportivox-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "skipped",
+                      "duration": 12168,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-09T13:36:15.211Z",
+                      "annotations": [
+                        {
+                          "type": "skip",
+                          "description": "Seed missing",
+                          "location": {
+                            "file": "/home/runner/work/sportzicon/sportzicon/e2e/tests/sportivox/opportunities.spec.ts",
+                            "line": 11,
+                            "column": 23
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "9497c3bb8f9083f6a365-4086cc6cfd3c35fe36ca",
+              "file": "sportivox/opportunities.spec.ts",
+              "line": 36,
+              "column": 3
+            },
+            {
+              "title": "organizer Tournaments page shows cricket scoring link",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "description": "Seed missing",
+                      "location": {
+                        "file": "/home/runner/work/sportzicon/sportzicon/e2e/tests/sportivox/opportunities.spec.ts",
+                        "line": 11,
+                        "column": 23
+                      }
+                    }
+                  ],
+                  "expectedStatus": "skipped",
+                  "projectId": "sportivox-chromium",
+                  "projectName": "sportivox-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 4,
+                      "parallelIndex": 0,
+                      "status": "skipped",
+                      "duration": 12313,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-09T13:36:15.442Z",
+                      "annotations": [
+                        {
+                          "type": "skip",
+                          "description": "Seed missing",
+                          "location": {
+                            "file": "/home/runner/work/sportzicon/sportzicon/e2e/tests/sportivox/opportunities.spec.ts",
+                            "line": 11,
+                            "column": 23
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "9497c3bb8f9083f6a365-b45f8a39a05e6e744ef5",
+              "file": "sportivox/opportunities.spec.ts",
+              "line": 42,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "sportivox/social.spec.ts",
+      "file": "sportivox/social.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Social surfaces",
+          "file": "sportivox/social.spec.ts",
+          "line": 14,
+          "column": 6,
+          "specs": [
+            {
+              "title": "@smoke feed renders",
+              "ok": true,
+              "tags": [
+                "smoke"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "description": "Seed missing",
+                      "location": {
+                        "file": "/home/runner/work/sportzicon/sportzicon/e2e/tests/sportivox/social.spec.ts",
+                        "line": 11,
+                        "column": 23
+                      }
+                    }
+                  ],
+                  "expectedStatus": "skipped",
+                  "projectId": "sportivox-chromium",
+                  "projectName": "sportivox-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "skipped",
+                      "duration": 12150,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-09T13:36:27.415Z",
+                      "annotations": [
+                        {
+                          "type": "skip",
+                          "description": "Seed missing",
+                          "location": {
+                            "file": "/home/runner/work/sportzicon/sportzicon/e2e/tests/sportivox/social.spec.ts",
+                            "line": 11,
+                            "column": 23
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "3bd26b923e159664f17e-2b75b8948c75f14ebe22",
+              "file": "sportivox/social.spec.ts",
+              "line": 15,
+              "column": 3
+            },
+            {
+              "title": "@smoke reels page loads without error",
+              "ok": true,
+              "tags": [
+                "smoke"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "description": "Seed missing",
+                      "location": {
+                        "file": "/home/runner/work/sportzicon/sportzicon/e2e/tests/sportivox/social.spec.ts",
+                        "line": 11,
+                        "column": 23
+                      }
+                    }
+                  ],
+                  "expectedStatus": "skipped",
+                  "projectId": "sportivox-chromium",
+                  "projectName": "sportivox-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 4,
+                      "parallelIndex": 0,
+                      "status": "skipped",
+                      "duration": 12197,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-09T13:36:27.805Z",
+                      "annotations": [
+                        {
+                          "type": "skip",
+                          "description": "Seed missing",
+                          "location": {
+                            "file": "/home/runner/work/sportzicon/sportzicon/e2e/tests/sportivox/social.spec.ts",
+                            "line": 11,
+                            "column": 23
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "3bd26b923e159664f17e-509428e8f8bb72285ab0",
+              "file": "sportivox/social.spec.ts",
+              "line": 21,
+              "column": 3
+            },
+            {
+              "title": "@smoke blogs index loads",
+              "ok": true,
+              "tags": [
+                "smoke"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "description": "Seed missing",
+                      "location": {
+                        "file": "/home/runner/work/sportzicon/sportzicon/e2e/tests/sportivox/social.spec.ts",
+                        "line": 11,
+                        "column": 23
+                      }
+                    }
+                  ],
+                  "expectedStatus": "skipped",
+                  "projectId": "sportivox-chromium",
+                  "projectName": "sportivox-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "skipped",
+                      "duration": 12143,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-09T13:36:39.583Z",
+                      "annotations": [
+                        {
+                          "type": "skip",
+                          "description": "Seed missing",
+                          "location": {
+                            "file": "/home/runner/work/sportzicon/sportzicon/e2e/tests/sportivox/social.spec.ts",
+                            "line": 11,
+                            "column": 23
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "3bd26b923e159664f17e-0ba179ee9b0d78c6bd3b",
+              "file": "sportivox/social.spec.ts",
+              "line": 27,
+              "column": 3
+            },
+            {
+              "title": "@smoke notifications page loads",
+              "ok": true,
+              "tags": [
+                "smoke"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "description": "Seed missing",
+                      "location": {
+                        "file": "/home/runner/work/sportzicon/sportzicon/e2e/tests/sportivox/social.spec.ts",
+                        "line": 11,
+                        "column": 23
+                      }
+                    }
+                  ],
+                  "expectedStatus": "skipped",
+                  "projectId": "sportivox-chromium",
+                  "projectName": "sportivox-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 4,
+                      "parallelIndex": 0,
+                      "status": "skipped",
+                      "duration": 12190,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-09T13:36:40.019Z",
+                      "annotations": [
+                        {
+                          "type": "skip",
+                          "description": "Seed missing",
+                          "location": {
+                            "file": "/home/runner/work/sportzicon/sportzicon/e2e/tests/sportivox/social.spec.ts",
+                            "line": 11,
+                            "column": 23
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "3bd26b923e159664f17e-7edc1a78b0a3329faee2",
+              "file": "sportivox/social.spec.ts",
+              "line": 33,
+              "column": 3
+            },
+            {
+              "title": "@smoke messages page loads",
+              "ok": true,
+              "tags": [
+                "smoke"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "description": "Seed missing",
+                      "location": {
+                        "file": "/home/runner/work/sportzicon/sportzicon/e2e/tests/sportivox/social.spec.ts",
+                        "line": 11,
+                        "column": 23
+                      }
+                    }
+                  ],
+                  "expectedStatus": "skipped",
+                  "projectId": "sportivox-chromium",
+                  "projectName": "sportivox-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "skipped",
+                      "duration": 12182,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-09T13:36:51.741Z",
+                      "annotations": [
+                        {
+                          "type": "skip",
+                          "description": "Seed missing",
+                          "location": {
+                            "file": "/home/runner/work/sportzicon/sportzicon/e2e/tests/sportivox/social.spec.ts",
+                            "line": 11,
+                            "column": 23
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "3bd26b923e159664f17e-31daa30aac91fe60d9a3",
+              "file": "sportivox/social.spec.ts",
+              "line": 39,
+              "column": 3
+            },
+            {
+              "title": "profile shows user info",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "description": "Seed missing",
+                      "location": {
+                        "file": "/home/runner/work/sportzicon/sportzicon/e2e/tests/sportivox/social.spec.ts",
+                        "line": 11,
+                        "column": 23
+                      }
+                    }
+                  ],
+                  "expectedStatus": "skipped",
+                  "projectId": "sportivox-chromium",
+                  "projectName": "sportivox-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 4,
+                      "parallelIndex": 0,
+                      "status": "skipped",
+                      "duration": 12111,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-09T13:36:52.233Z",
+                      "annotations": [
+                        {
+                          "type": "skip",
+                          "description": "Seed missing",
+                          "location": {
+                            "file": "/home/runner/work/sportzicon/sportzicon/e2e/tests/sportivox/social.spec.ts",
+                            "line": 11,
+                            "column": 23
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "3bd26b923e159664f17e-68c11b132b8fd1d605f2",
+              "file": "sportivox/social.spec.ts",
+              "line": 45,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "scoring/analytics.spec.ts",
+      "file": "scoring/analytics.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "@scoring Analytics dashboard",
+          "file": "scoring/analytics.spec.ts",
+          "line": 68,
+          "column": 6,
+          "specs": [
+            {
+              "title": "@critical analytics page renders all sections",
+              "ok": true,
+              "tags": [
+                "scoring",
+                "critical"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "description": "Scoring API unreachable",
+                      "location": {
+                        "file": "/home/runner/work/sportzicon/sportzicon/e2e/tests/scoring/analytics.spec.ts",
+                        "line": 73,
+                        "column": 22
+                      }
+                    }
+                  ],
+                  "expectedStatus": "skipped",
+                  "projectId": "scoring-chromium",
+                  "projectName": "scoring-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 5,
+                      "parallelIndex": 1,
+                      "status": "skipped",
+                      "duration": 0,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-09T13:37:04.604Z",
+                      "annotations": [
+                        {
+                          "type": "skip",
+                          "description": "Scoring API unreachable",
+                          "location": {
+                            "file": "/home/runner/work/sportzicon/sportzicon/e2e/tests/scoring/analytics.spec.ts",
+                            "line": 73,
+                            "column": 22
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "634c82c6846b68aa8d60-12a3985e0e06d55cbdf8",
+              "file": "scoring/analytics.spec.ts",
+              "line": 90,
+              "column": 3
+            },
+            {
+              "title": "partnership row appears after the wicket",
+              "ok": true,
+              "tags": [
+                "scoring"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "description": "Scoring API unreachable",
+                      "location": {
+                        "file": "/home/runner/work/sportzicon/sportzicon/e2e/tests/scoring/analytics.spec.ts",
+                        "line": 73,
+                        "column": 22
+                      }
+                    }
+                  ],
+                  "expectedStatus": "skipped",
+                  "projectId": "scoring-chromium",
+                  "projectName": "scoring-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 5,
+                      "parallelIndex": 1,
+                      "status": "skipped",
+                      "duration": 0,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-09T13:37:05.296Z",
+                      "annotations": [
+                        {
+                          "type": "skip",
+                          "description": "Scoring API unreachable",
+                          "location": {
+                            "file": "/home/runner/work/sportzicon/sportzicon/e2e/tests/scoring/analytics.spec.ts",
+                            "line": 73,
+                            "column": 22
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "634c82c6846b68aa8d60-c7ed21970ced3734277b",
+              "file": "scoring/analytics.spec.ts",
+              "line": 103,
+              "column": 3
+            },
+            {
+              "title": "fielding leaderboard shows the catcher",
+              "ok": true,
+              "tags": [
+                "scoring"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "description": "Scoring API unreachable",
+                      "location": {
+                        "file": "/home/runner/work/sportzicon/sportzicon/e2e/tests/scoring/analytics.spec.ts",
+                        "line": 73,
+                        "column": 22
+                      }
+                    }
+                  ],
+                  "expectedStatus": "skipped",
+                  "projectId": "scoring-chromium",
+                  "projectName": "scoring-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 6,
+                      "parallelIndex": 0,
+                      "status": "skipped",
+                      "duration": 0,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-09T13:37:04.983Z",
+                      "annotations": [
+                        {
+                          "type": "skip",
+                          "description": "Scoring API unreachable",
+                          "location": {
+                            "file": "/home/runner/work/sportzicon/sportzicon/e2e/tests/scoring/analytics.spec.ts",
+                            "line": 73,
+                            "column": 22
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "634c82c6846b68aa8d60-094b1cbf1be6f81af45a",
+              "file": "scoring/analytics.spec.ts",
+              "line": 109,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "scoring/auth.spec.ts",
+      "file": "scoring/auth.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Scoring console — auth",
+          "file": "scoring/auth.spec.ts",
+          "line": 7,
+          "column": 6,
+          "specs": [
+            {
+              "title": "@smoke login page renders",
+              "ok": true,
+              "tags": [
+                "smoke"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "scoring-chromium",
+                  "projectName": "scoring-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 5,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 737,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-09T13:37:05.312Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d748ac400d08b85935ef-9d350f489cb7593496cd",
+              "file": "scoring/auth.spec.ts",
+              "line": 8,
+              "column": 3
+            },
+            {
+              "title": "@smoke signup page renders",
+              "ok": true,
+              "tags": [
+                "smoke"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "scoring-chromium",
+                  "projectName": "scoring-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 6,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 733,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-09T13:37:05.698Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d748ac400d08b85935ef-cca926b46e348ac0f471",
+              "file": "scoring/auth.spec.ts",
+              "line": 15,
+              "column": 3
+            },
+            {
+              "title": "@critical admin/organizer can sign in",
+              "ok": true,
+              "tags": [
+                "critical"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "description": "Scoring seed/account missing — start scoring backend with seed",
+                      "location": {
+                        "file": "/home/runner/work/sportzicon/sportzicon/e2e/tests/scoring/auth.spec.ts",
+                        "line": 28,
+                        "column": 28
+                      }
+                    }
+                  ],
+                  "expectedStatus": "skipped",
+                  "projectId": "scoring-chromium",
+                  "projectName": "scoring-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 5,
+                      "parallelIndex": 1,
+                      "status": "skipped",
+                      "duration": 11371,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-09T13:37:06.144Z",
+                      "annotations": [
+                        {
+                          "type": "skip",
+                          "description": "Scoring seed/account missing — start scoring backend with seed",
+                          "location": {
+                            "file": "/home/runner/work/sportzicon/sportzicon/e2e/tests/scoring/auth.spec.ts",
+                            "line": 28,
+                            "column": 28
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d748ac400d08b85935ef-84f12a301ed9933b03f2",
+              "file": "scoring/auth.spec.ts",
+              "line": 21,
+              "column": 3
+            },
+            {
+              "title": "rejected credentials stay on login",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "scoring-chromium",
+                  "projectName": "scoring-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 6,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1481,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-09T13:37:06.545Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d748ac400d08b85935ef-371ec07a65e449a8ab74",
+              "file": "scoring/auth.spec.ts",
+              "line": 32,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "scoring/live-scoring.spec.ts",
+      "file": "scoring/live-scoring.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "@scoring Live scoring — PPTX Level 1 + Level 2",
+          "file": "scoring/live-scoring.spec.ts",
+          "line": 78,
+          "column": 6,
+          "specs": [
+            {
+              "title": "@critical scorer can record a Level 1 ball",
+              "ok": true,
+              "tags": [
+                "scoring",
+                "critical"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "description": "Scoring API/seed not reachable",
+                      "location": {
+                        "file": "/home/runner/work/sportzicon/sportzicon/e2e/tests/scoring/live-scoring.spec.ts",
+                        "line": 83,
+                        "column": 22
+                      }
+                    }
+                  ],
+                  "expectedStatus": "skipped",
+                  "projectId": "scoring-chromium",
+                  "projectName": "scoring-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 6,
+                      "parallelIndex": 0,
+                      "status": "skipped",
+                      "duration": 0,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-09T13:37:08.063Z",
+                      "annotations": [
+                        {
+                          "type": "skip",
+                          "description": "Scoring API/seed not reachable",
+                          "location": {
+                            "file": "/home/runner/work/sportzicon/sportzicon/e2e/tests/scoring/live-scoring.spec.ts",
+                            "line": 83,
+                            "column": 22
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "3bc4af42d3ce13ec4570-1ea733c27cad60fe14a4",
+              "file": "scoring/live-scoring.spec.ts",
+              "line": 101,
+              "column": 3
+            },
+            {
+              "title": "@critical scorer can record a 4 and innings boundary counter updates",
+              "ok": true,
+              "tags": [
+                "scoring",
+                "critical"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "description": "Scoring API/seed not reachable",
+                      "location": {
+                        "file": "/home/runner/work/sportzicon/sportzicon/e2e/tests/scoring/live-scoring.spec.ts",
+                        "line": 83,
+                        "column": 22
+                      }
+                    }
+                  ],
+                  "expectedStatus": "skipped",
+                  "projectId": "scoring-chromium",
+                  "projectName": "scoring-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 6,
+                      "parallelIndex": 0,
+                      "status": "skipped",
+                      "duration": 0,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-09T13:37:08.696Z",
+                      "annotations": [
+                        {
+                          "type": "skip",
+                          "description": "Scoring API/seed not reachable",
+                          "location": {
+                            "file": "/home/runner/work/sportzicon/sportzicon/e2e/tests/scoring/live-scoring.spec.ts",
+                            "line": 83,
+                            "column": 22
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "3bc4af42d3ce13ec4570-67d94a3c6aa6458b8c10",
+              "file": "scoring/live-scoring.spec.ts",
+              "line": 134,
+              "column": 3
+            },
+            {
+              "title": "@critical scorer can record a Level 2 wicket (caught)",
+              "ok": true,
+              "tags": [
+                "scoring",
+                "critical"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "description": "Scoring API/seed not reachable",
+                      "location": {
+                        "file": "/home/runner/work/sportzicon/sportzicon/e2e/tests/scoring/live-scoring.spec.ts",
+                        "line": 83,
+                        "column": 22
+                      }
+                    }
+                  ],
+                  "expectedStatus": "skipped",
+                  "projectId": "scoring-chromium",
+                  "projectName": "scoring-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 6,
+                      "parallelIndex": 0,
+                      "status": "skipped",
+                      "duration": 0,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-09T13:37:08.696Z",
+                      "annotations": [
+                        {
+                          "type": "skip",
+                          "description": "Scoring API/seed not reachable",
+                          "location": {
+                            "file": "/home/runner/work/sportzicon/sportzicon/e2e/tests/scoring/live-scoring.spec.ts",
+                            "line": 83,
+                            "column": 22
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "3bc4af42d3ce13ec4570-2f46000c93c6850ab4d6",
+              "file": "scoring/live-scoring.spec.ts",
+              "line": 158,
+              "column": 3
+            },
+            {
+              "title": "@critical scorer can undo last ball",
+              "ok": true,
+              "tags": [
+                "scoring",
+                "critical"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "description": "Scoring API/seed not reachable",
+                      "location": {
+                        "file": "/home/runner/work/sportzicon/sportzicon/e2e/tests/scoring/live-scoring.spec.ts",
+                        "line": 83,
+                        "column": 22
+                      }
+                    }
+                  ],
+                  "expectedStatus": "skipped",
+                  "projectId": "scoring-chromium",
+                  "projectName": "scoring-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 6,
+                      "parallelIndex": 0,
+                      "status": "skipped",
+                      "duration": 0,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-09T13:37:08.701Z",
+                      "annotations": [
+                        {
+                          "type": "skip",
+                          "description": "Scoring API/seed not reachable",
+                          "location": {
+                            "file": "/home/runner/work/sportzicon/sportzicon/e2e/tests/scoring/live-scoring.spec.ts",
+                            "line": 83,
+                            "column": 22
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "3bc4af42d3ce13ec4570-01610d1092814dae35e3",
+              "file": "scoring/live-scoring.spec.ts",
+              "line": 198,
+              "column": 3
+            },
+            {
+              "title": "derived metrics strip renders on scoreboard",
+              "ok": true,
+              "tags": [
+                "scoring"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "description": "Scoring API/seed not reachable",
+                      "location": {
+                        "file": "/home/runner/work/sportzicon/sportzicon/e2e/tests/scoring/live-scoring.spec.ts",
+                        "line": 83,
+                        "column": 22
+                      }
+                    }
+                  ],
+                  "expectedStatus": "skipped",
+                  "projectId": "scoring-chromium",
+                  "projectName": "scoring-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 6,
+                      "parallelIndex": 0,
+                      "status": "skipped",
+                      "duration": 0,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-09T13:37:09.332Z",
+                      "annotations": [
+                        {
+                          "type": "skip",
+                          "description": "Scoring API/seed not reachable",
+                          "location": {
+                            "file": "/home/runner/work/sportzicon/sportzicon/e2e/tests/scoring/live-scoring.spec.ts",
+                            "line": 83,
+                            "column": 22
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "3bc4af42d3ce13ec4570-334237e4e9d143abcf11",
+              "file": "scoring/live-scoring.spec.ts",
+              "line": 211,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "scoring/match-config.spec.ts",
+      "file": "scoring/match-config.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "@scoring Match configuration",
+          "file": "scoring/match-config.spec.ts",
+          "line": 30,
+          "column": 6,
+          "specs": [
+            {
+              "title": "@critical config screen renders all PPTX sections",
+              "ok": true,
+              "tags": [
+                "scoring",
+                "critical"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "description": "Scoring API unreachable",
+                      "location": {
+                        "file": "/home/runner/work/sportzicon/sportzicon/e2e/tests/scoring/match-config.spec.ts",
+                        "line": 35,
+                        "column": 22
+                      }
+                    }
+                  ],
+                  "expectedStatus": "skipped",
+                  "projectId": "scoring-chromium",
+                  "projectName": "scoring-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 6,
+                      "parallelIndex": 0,
+                      "status": "skipped",
+                      "duration": 0,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-09T13:37:09.343Z",
+                      "annotations": [
+                        {
+                          "type": "skip",
+                          "description": "Scoring API unreachable",
+                          "location": {
+                            "file": "/home/runner/work/sportzicon/sportzicon/e2e/tests/scoring/match-config.spec.ts",
+                            "line": 35,
+                            "column": 22
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d511e8d27d34b6d88751-5b3e9b14ac848f4cc0f7",
+              "file": "scoring/match-config.spec.ts",
+              "line": 52,
+              "column": 3
+            },
+            {
+              "title": "organizer can save configuration",
+              "ok": true,
+              "tags": [
+                "scoring"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "description": "Scoring API unreachable",
+                      "location": {
+                        "file": "/home/runner/work/sportzicon/sportzicon/e2e/tests/scoring/match-config.spec.ts",
+                        "line": 35,
+                        "column": 22
+                      }
+                    }
+                  ],
+                  "expectedStatus": "skipped",
+                  "projectId": "scoring-chromium",
+                  "projectName": "scoring-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 6,
+                      "parallelIndex": 0,
+                      "status": "skipped",
+                      "duration": 0,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-09T13:37:09.981Z",
+                      "annotations": [
+                        {
+                          "type": "skip",
+                          "description": "Scoring API unreachable",
+                          "location": {
+                            "file": "/home/runner/work/sportzicon/sportzicon/e2e/tests/scoring/match-config.spec.ts",
+                            "line": 35,
+                            "column": 22
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d511e8d27d34b6d88751-32c1def7846b98115c23",
+              "file": "scoring/match-config.spec.ts",
+              "line": 66,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "scoring/tournaments.spec.ts",
+      "file": "scoring/tournaments.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Scoring console — tournaments",
+          "file": "scoring/tournaments.spec.ts",
+          "line": 17,
+          "column": 6,
+          "specs": [
+            {
+              "title": "@smoke unauthenticated tournament list loads",
+              "ok": true,
+              "tags": [
+                "smoke"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "scoring-chromium",
+                  "projectName": "scoring-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 6,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 526,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-09T13:37:10.623Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "5bd92c42dc0041d58f14-0e17c9eb2191d7346712",
+              "file": "scoring/tournaments.spec.ts",
+              "line": 18,
+              "column": 3
+            },
+            {
+              "title": "@critical organizer can open the new tournament form",
+              "ok": true,
+              "tags": [
+                "critical"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "description": "Scoring seed missing — start scoring backend with admin@scoring.local",
+                      "location": {
+                        "file": "/home/runner/work/sportzicon/sportzicon/e2e/tests/scoring/tournaments.spec.ts",
+                        "line": 14,
+                        "column": 17
+                      }
+                    }
+                  ],
+                  "expectedStatus": "skipped",
+                  "projectId": "scoring-chromium",
+                  "projectName": "scoring-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 6,
+                      "parallelIndex": 0,
+                      "status": "skipped",
+                      "duration": 11112,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-09T13:37:11.166Z",
+                      "annotations": [
+                        {
+                          "type": "skip",
+                          "description": "Scoring seed missing — start scoring backend with admin@scoring.local",
+                          "location": {
+                            "file": "/home/runner/work/sportzicon/sportzicon/e2e/tests/scoring/tournaments.spec.ts",
+                            "line": 14,
+                            "column": 17
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "5bd92c42dc0041d58f14-d4a7d880393793c68ce7",
+              "file": "scoring/tournaments.spec.ts",
+              "line": 23,
+              "column": 3
+            },
+            {
+              "title": "@critical organizer can create a tournament",
+              "ok": true,
+              "tags": [
+                "critical"
+              ],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "description": "Scoring seed missing — start scoring backend with admin@scoring.local",
+                      "location": {
+                        "file": "/home/runner/work/sportzicon/sportzicon/e2e/tests/scoring/tournaments.spec.ts",
+                        "line": 14,
+                        "column": 17
+                      }
+                    }
+                  ],
+                  "expectedStatus": "skipped",
+                  "projectId": "scoring-chromium",
+                  "projectName": "scoring-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 5,
+                      "parallelIndex": 1,
+                      "status": "skipped",
+                      "duration": 11531,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-09T13:37:17.553Z",
+                      "annotations": [
+                        {
+                          "type": "skip",
+                          "description": "Scoring seed missing — start scoring backend with admin@scoring.local",
+                          "location": {
+                            "file": "/home/runner/work/sportzicon/sportzicon/e2e/tests/scoring/tournaments.spec.ts",
+                            "line": 14,
+                            "column": 17
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "5bd92c42dc0041d58f14-0f90721535059c33a6ab",
+              "file": "scoring/tournaments.spec.ts",
+              "line": 30,
+              "column": 3
+            },
+            {
+              "title": "tournament detail page renders teams section",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "description": "No tournaments seeded",
+                      "location": {
+                        "file": "/home/runner/work/sportzicon/sportzicon/e2e/tests/scoring/tournaments.spec.ts",
+                        "line": 58,
+                        "column": 12
+                      }
+                    }
+                  ],
+                  "expectedStatus": "skipped",
+                  "projectId": "scoring-chromium",
+                  "projectName": "scoring-chromium",
+                  "results": [
+                    {
+                      "workerIndex": 6,
+                      "parallelIndex": 0,
+                      "status": "skipped",
+                      "duration": 522,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-09T13:37:22.294Z",
+                      "annotations": [
+                        {
+                          "type": "skip",
+                          "description": "No tournaments seeded",
+                          "location": {
+                            "file": "/home/runner/work/sportzicon/sportzicon/e2e/tests/scoring/tournaments.spec.ts",
+                            "line": 58,
+                            "column": 12
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "5bd92c42dc0041d58f14-2a9f9f86538d05121bcd",
+              "file": "scoring/tournaments.spec.ts",
+              "line": 49,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-06-09T13:35:16.231Z",
+    "duration": 134649.304,
+    "expected": 16,
+    "skipped": 29,
+    "unexpected": 1,
+    "flaky": 0
+  }
+}
