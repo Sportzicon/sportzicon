@@ -194,11 +194,130 @@ resource "google_cloud_run_v2_service" "web" {
   }
 }
 
+resource "google_cloud_run_v2_service" "scoring_api" {
+  name     = "sportivox-scoring-api-${var.env}"
+  location = var.region
+  ingress  = "INGRESS_TRAFFIC_ALL"
+
+  template {
+    service_account = data.google_service_account.runtime.email
+
+    scaling {
+      min_instance_count = var.min_instances_api
+      max_instance_count = var.max_instances_api
+    }
+
+    containers {
+      image = var.scoring_api_image
+
+      resources {
+        limits = {
+          cpu    = "1"
+          memory = "512Mi"
+        }
+        cpu_idle = true
+      }
+
+      ports {
+        container_port = 4000
+      }
+
+      startup_probe {
+        http_get {
+          path = "/healthz"
+        }
+        initial_delay_seconds = 2
+        period_seconds        = 5
+        timeout_seconds       = 3
+        failure_threshold     = 5
+      }
+
+      liveness_probe {
+        http_get {
+          path = "/healthz"
+        }
+        period_seconds  = 30
+        timeout_seconds = 5
+      }
+
+      env {
+        name  = "NODE_ENV"
+        value = "production"
+      }
+      env {
+        name  = "DATABASE_URL"
+        value = var.database_url
+      }
+      env {
+        name  = "DIRECT_URL"
+        value = var.direct_url
+      }
+      env {
+        name  = "JWT_SECRET"
+        value_source {
+          secret_key_ref {
+            secret  = google_secret_manager_secret.this["JWT_SECRET"].secret_id
+            version = "latest"
+          }
+        }
+      }
+      env {
+        name = "MAIN_JWT_SECRET"
+        value_source {
+          secret_key_ref {
+            secret  = google_secret_manager_secret.this["MAIN_JWT_SECRET"].secret_id
+            version = "latest"
+          }
+        }
+      }
+      env {
+        name  = "CORS_ORIGIN"
+        value = var.scoring_cors_origin
+      }
+      env {
+        name  = "LOG_LEVEL"
+        value = "info"
+      }
+
+      dynamic "env" {
+        for_each = var.optional_scoring_secrets
+        content {
+          name = env.key
+          value_source {
+            secret_key_ref {
+              secret  = google_secret_manager_secret.this[env.key].secret_id
+              version = "latest"
+            }
+          }
+        }
+      }
+    }
+  }
+
+  traffic {
+    type    = "TRAFFIC_TARGET_ALLOCATION_TYPE_LATEST"
+    percent = 100
+  }
+
+  depends_on = [
+    google_project_service.apis,
+    google_secret_manager_secret_version.this
+  ]
+}
+
 # Both services are public — Cloud Run handles HTTPS automatically.
 resource "google_cloud_run_v2_service_iam_member" "api_public" {
   project  = var.project_id
   location = var.region
   name     = google_cloud_run_v2_service.api.name
+  role     = "roles/run.invoker"
+  member   = "allUsers"
+}
+
+resource "google_cloud_run_v2_service_iam_member" "scoring_api_public" {
+  project  = var.project_id
+  location = var.region
+  name     = google_cloud_run_v2_service.scoring_api.name
   role     = "roles/run.invoker"
   member   = "allUsers"
 }

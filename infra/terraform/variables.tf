@@ -211,3 +211,21 @@ variable "environment" {
   description = "Environment name (staging, production)."
   default     = "staging"
 }
+
+variable "scoring_api_image" {
+  type        = string
+  description = "Full image ref for the scoring API container (e.g. asia-south1-docker.pkg.dev/PROJECT/sportivox/scoring-api:TAG)."
+  default     = ""
+}
+
+variable "scoring_cors_origin" {
+  type        = string
+  description = "CORS origin URL for the scoring API."
+  default     = "*"
+}
+
+variable "optional_scoring_secrets" {
+  type        = set(string)
+  default     = []
+  description = "Names of optional secrets to create for scoring API: JWT_SECRET, MAIN_JWT_SECRET"
+}
