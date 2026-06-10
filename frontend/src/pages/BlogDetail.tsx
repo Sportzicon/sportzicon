@@ -106,7 +106,7 @@ export default function BlogDetail() {
         <div className="mt-8 pt-6 border-t border-hairsoft flex items-center gap-6">
           <button
             onClick={() => likeMutation.mutate(b.id)}
-            className="font-mononum text-[11px] uppercase tracking-[0.08em] text-ink-sub hover:text-brand-500 flex items-center gap-2 transition"
+            className="font-mononum text-[11px] uppercase tracking-[0.08em] text-ink-sub hover:text-brand-500 active:text-brand-500 flex items-center gap-2 transition py-2 px-1 -mx-1"
           >
             <Heart className="h-4 w-4" /> {b.like_count} likes
           </button>

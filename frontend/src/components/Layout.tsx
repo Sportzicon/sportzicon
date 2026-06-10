@@ -3,7 +3,7 @@ import { useAuthStore } from "../store/auth";
 import { useQueryClient } from "@tanstack/react-query";
 import { authService } from "../services";
 import { useNotificationCount } from "../hooks";
-import { Bell, Home, Search, Briefcase, FileText, MessageCircle, ShieldCheck, LogOut, User as UserIcon, Menu, X, Trophy, ChevronDown, Building2, Target, Activity } from "lucide-react";
+import { Bell, Home, Search, Briefcase, FileText, MessageCircle, ShieldCheck, LogOut, User as UserIcon, Menu, X, Trophy, ChevronDown, Building2, Target, Activity, Film } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 
 function GlobalSearch({ user, inputRef }: { user: any; inputRef: React.RefObject<HTMLInputElement> }) {
@@ -54,6 +54,7 @@ export function Layout() {
   const [isDesktop, setIsDesktop] = useState(() => window.innerWidth >= 1024);
   const [sidebarOpen, setSidebarOpen] = useState(() => window.innerWidth >= 1024);
   const [sidebarHovered, setSidebarHovered] = useState(false);
+  const touchStartXRef = useRef<number | null>(null);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -100,9 +101,9 @@ export function Layout() {
     { to: "/dashboard",    icon: <Home className="h-4 w-4" />,          label: "Dashboard" },
     { to: "/live-scores",  icon: <Activity className="h-4 w-4" />,      label: "Live Scores" },
     { to: "/feed",         icon: <FileText className="h-4 w-4" />,      label: "Feed" },
+    { to: "/reels",        icon: <Film className="h-4 w-4" />,          label: "Reels" },
     { to: "/blogs",        icon: <FileText className="h-4 w-4" />,      label: "Blogs" },
     { to: "/search",       icon: <Search className="h-4 w-4" />,        label: "Search" },
-    { to: "/opportunities",icon: <Briefcase className="h-4 w-4" />,     label: "Opportunities" },
     { to: "/tournaments",  icon: <Trophy className="h-4 w-4" />,        label: "Tournaments" },
     { to: "/messages",     icon: <MessageCircle className="h-4 w-4" />, label: "Messages" },
     ...(user.role === "athlete" ? [{ to: "/applications", icon: <Briefcase className="h-4 w-4" />, label: "My Applications" }] : []),
@@ -164,6 +165,14 @@ export function Layout() {
       </header>
 
       <div className="flex flex-1 min-h-0 overflow-hidden">
+        {/* Mobile backdrop — tap to close sidebar */}
+        {!isDesktop && sidebarOpen && (
+          <div
+            className="fixed inset-0 z-[19] bg-black/40"
+            onClick={() => setSidebarOpen(false)}
+            aria-hidden="true"
+          />
+        )}
         <aside onMouseEnter={() => setSidebarHovered(true)} onMouseLeave={() => setSidebarHovered(false)}
           className="h-full shrink-0 overflow-y-auto overflow-x-hidden border-r border-hair bg-panel transition-all duration-200 flex flex-col z-20"
           style={{ width: isDesktop ? (sidebarHovered ? 240 : 64) : (sidebarOpen ? 240 : 0) }}>
@@ -196,8 +205,20 @@ export function Layout() {
         {(() => {
           const isLiveScoring = location.pathname.startsWith("/scoring") || /^\/score(\/|$)/.test(location.pathname);
           return (
-            <main ref={mainRef} className={`min-w-0 flex-1 relative ${
-              isLiveScoring ? "overflow-hidden p-0" : "overflow-y-auto px-3 py-4 sm:px-6 sm:py-7"}`}>
+            <main
+              ref={mainRef}
+              onTouchStart={(e) => { touchStartXRef.current = e.touches[0].clientX; }}
+              onTouchEnd={(e) => {
+                if (touchStartXRef.current === null) return;
+                const dx = e.changedTouches[0].clientX - touchStartXRef.current;
+                if (!isDesktop) {
+                  if (dx > 60 && touchStartXRef.current < 40) setSidebarOpen(true);
+                  if (dx < -60 && sidebarOpen) setSidebarOpen(false);
+                }
+                touchStartXRef.current = null;
+              }}
+              className={`min-w-0 flex-1 relative ${
+                isLiveScoring ? "overflow-hidden p-0" : "overflow-y-auto px-3 py-4 sm:px-6 sm:py-7"}`}>
               <Outlet />
             </main>
           );

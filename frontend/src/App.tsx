@@ -37,7 +37,7 @@ import NewTournament from "./pages/NewTournament";
 import Applicants from "./pages/Applicants";
 import MyApplications from "./pages/MyApplications";
 import Feed from "./pages/Feed";
-// import Reels from "./pages/Reels"; // Disabled
+import Reels from "./pages/Reels";
 import Blogs from "./pages/Blogs";
 import BlogDetail from "./pages/BlogDetail";
 import NewBlog from "./pages/NewBlog";
@@ -106,7 +106,7 @@ export default function App() {
         <Route path="/tournaments/:id/edit" element={<ProtectedRoute roles={["club", "organizer", "admin"]}><NewTournament /></ProtectedRoute>} />
         <Route path="/applications" element={<ProtectedRoute roles={["athlete"]}><MyApplications /></ProtectedRoute>} />
         <Route path="/feed" element={<ProtectedRoute><Feed /></ProtectedRoute>} />
-        {/* <Route path="/reels" element={<ProtectedRoute><Reels /></ProtectedRoute>} /> */}
+        <Route path="/reels" element={<ProtectedRoute><Reels /></ProtectedRoute>} />
         <Route path="/blogs" element={<ProtectedRoute><Blogs /></ProtectedRoute>} />
         <Route path="/blogs/new" element={<ProtectedRoute><NewBlog /></ProtectedRoute>} />
         <Route path="/blogs/:id/edit" element={<ProtectedRoute><NewBlog /></ProtectedRoute>} />

@@ -180,10 +180,10 @@ export default function NewTournament() {
         <SectionHead n="02" title="Eligibility" />
         <div className="grid sm:grid-cols-2 gap-4">
           <Field label="Age min">
-            <input className="input font-mononum" type="number" value={form.age_min} onChange={(e) => set("age_min", Number(e.target.value))} />
+            <input className="input font-mononum" type="text" inputMode="numeric" pattern="[0-9]*" value={form.age_min} onChange={(e) => set("age_min", e.target.value)} />
           </Field>
           <Field label="Age max">
-            <input className="input font-mononum" type="number" value={form.age_max} onChange={(e) => set("age_max", Number(e.target.value))} />
+            <input className="input font-mononum" type="text" inputMode="numeric" pattern="[0-9]*" value={form.age_max} onChange={(e) => set("age_max", e.target.value)} />
           </Field>
           <Field label="Gender">
             <select className="input" value={form.gender_eligibility} onChange={(e) => set("gender_eligibility", e.target.value)}>

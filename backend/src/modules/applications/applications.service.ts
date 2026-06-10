@@ -23,7 +23,7 @@ export async function apply(
   const [opp, user] = await Promise.all([
     repositories.opportunity.findById(opportunityId),
     repositories.user.findById(applicantId, {
-      id: true, full_name: true, dob: true, gender: true,
+      id: true, full_name: true, dob: true, gender: true, role: true, athlete_data: true,
     }),
   ]);
 
@@ -40,6 +40,18 @@ export async function apply(
   }
   if (opp.gender_eligibility !== "all" && user.gender && user.gender !== opp.gender_eligibility)
     throw BadRequest("Gender eligibility not met");
+
+  // Sport compatibility check — athletes must match the opportunity's sport
+  if (opp.sport && user.role === "athlete") {
+    const athleteData = user.athlete_data as { primary_sport?: string } | null;
+    const athleteSport = athleteData?.primary_sport?.toLowerCase().trim();
+    const oppSport = opp.sport.toLowerCase().trim();
+    if (athleteSport && athleteSport !== oppSport) {
+      throw BadRequest(
+        `Your primary sport (${athleteData?.primary_sport}) does not match this opportunity's sport (${opp.sport})`
+      );
+    }
+  }
 
   const existing = await repositories.application.findByOpportunityAndApplicant(opportunityId, applicantId);
   if (existing && existing.status !== "withdrawn") throw Conflict("You have already applied to this opportunity");
