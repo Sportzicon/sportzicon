@@ -103,6 +103,7 @@ export function Layout() {
     { to: "/feed",         icon: <FileText className="h-4 w-4" />,      label: "Feed" },
     { to: "/blogs",        icon: <FileText className="h-4 w-4" />,      label: "Blogs" },
     { to: "/search",       icon: <Search className="h-4 w-4" />,        label: "Search" },
+    { to: "/opportunities",icon: <Briefcase className="h-4 w-4" />,     label: "Opportunities" },
     { to: "/tournaments",  icon: <Trophy className="h-4 w-4" />,        label: "Tournaments" },
     { to: "/messages",     icon: <MessageCircle className="h-4 w-4" />, label: "Messages" },
     ...(user.role === "athlete" ? [{ to: "/applications", icon: <Briefcase className="h-4 w-4" />, label: "My Applications" }] : []),
