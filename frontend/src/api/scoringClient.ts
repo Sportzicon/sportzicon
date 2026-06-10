@@ -13,3 +13,9 @@ scoringApi.interceptors.request.use((cfg) => {
   if (token) cfg.headers.Authorization = `Bearer ${token}`;
   return cfg;
 });
+
+// Reject errors without triggering the main app's auth logout flow
+scoringApi.interceptors.response.use(
+  (r) => r,
+  (err) => Promise.reject(err)
+);

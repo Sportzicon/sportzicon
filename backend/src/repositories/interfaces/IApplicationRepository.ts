@@ -24,6 +24,8 @@ export interface UpdateApplicationData {
   status?: ApplicationStatus;
   rejection_reason?: string | null;
   history?: object[];
+  cover_note?: string | null;
+  documents?: string[];
 }
 
 export interface IApplicationRepository {
@@ -31,7 +33,7 @@ export interface IApplicationRepository {
   findByOpportunityAndApplicant(
     opportunityId: string,
     applicantId: string
-  ): Promise<Pick<ApplicationRecord, "id"> | null>;
+  ): Promise<Pick<ApplicationRecord, "id" | "status"> | null>;
   findManyByApplicant(userId: string, limit?: number): Promise<ApplicationRecord[]>;
   findManyByOpportunity(opportunityId: string): Promise<ApplicationRecord[]>;
   create(data: CreateApplicationData): Promise<ApplicationRecord>;

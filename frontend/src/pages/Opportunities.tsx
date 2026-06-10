@@ -121,6 +121,13 @@ export default function Opportunities() {
         <div className="panel p-[18px] lg:sticky lg:top-4">
           <SectionHead title="Filters" />
 
+          <FilterGroup label="Sport">
+            <select className="input font-mononum" style={{ fontSize: 12, height: 34 }}
+              value={sport} onChange={(e) => setSport(e.target.value)}>
+              {SPORTS.map((s) => <option key={s}>{s}</option>)}
+            </select>
+          </FilterGroup>
+
           <FilterGroup label="Search">
             <input className="input font-mononum" style={{ fontSize: 12, height: 34 }}
               placeholder="Title or club…" value={q} onChange={(e) => setQ(e.target.value)} />
@@ -130,13 +137,6 @@ export default function Opportunities() {
             {TYPES.map((t) => (
               <RadioItem key={t || "all"} label={t ? TYPE_LABELS[t] : "All types"} on={type === t} onClick={() => setType(t)} />
             ))}
-          </FilterGroup>
-
-          <FilterGroup label="Sport">
-            <select className="input font-mononum" style={{ fontSize: 12, height: 34 }}
-              value={sport} onChange={(e) => setSport(e.target.value)}>
-              {SPORTS.map((s) => <option key={s}>{s}</option>)}
-            </select>
           </FilterGroup>
 
           <Toggle on={verifiedOnly} onChange={setVerifiedOnly} label="Verified clubs only" />

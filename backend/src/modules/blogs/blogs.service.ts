@@ -72,7 +72,8 @@ export async function listBlogs(q: {
   cursor?: string;
 }) {
   const where: Record<string, unknown> = {};
-  if (q.status) where.status = q.status;
+  // Default to published only; allow explicit status filter to override
+  where.status = q.status ?? "published";
   if (q.author_id) where.author_id = q.author_id;
   if (q.sport) where.sport = { contains: q.sport, mode: "insensitive" };
   if (q.tag) where.tags = { has: q.tag };

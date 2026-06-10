@@ -11,7 +11,7 @@ const router = Router();
 router.post(
   "/",
   requireAuth,
-  requireRole("club", "organizer"),
+  requireRole("club", "organizer", "admin"),
   validate(createOrgSchema),
   asyncHandler(async (req, res) => {
     const r = await svc.createOrganization(req.user!.sub, req.user!.role, req.body);

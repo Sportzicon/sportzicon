@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { api, humanizeError } from "../api/client";
 import { COUNTRIES, COUNTRY_PHONE, statesForCountry } from "../data/geo";
+import { Eye, EyeOff } from "lucide-react";
 
 const ROLES = [
   { value: "athlete", label: "Athlete / Player", hint: "Build a profile, upload stats, get discovered and apply to trials." },
@@ -138,6 +139,9 @@ function PhoneInput({ country, value, onChange }: {
   );
 }
 
+// Sports where a playing position is not meaningful
+const SPORTS_WITHOUT_POSITION = ["swimming", "gymnastics", "crossfit", "cycling", "rowing", "skiing"];
+
 export default function Signup() {
   const navigate = useNavigate();
   const [d, setDraft] = useState<Draft>(DEFAULT);
@@ -146,6 +150,7 @@ export default function Signup() {
   const [emailExists, setEmailExists] = useState(false);
   const [resumedUserId, setResumedUserId] = useState<string | null>(null);
   const [resendSent, setResendSent] = useState(false);
+  const [showPwd, setShowPwd] = useState(false);
 
   // Restore from localStorage on mount; clear it when user navigates away
   useEffect(() => {
@@ -184,6 +189,8 @@ export default function Signup() {
     if (!d.full_name || !d.email || !d.phone || !d.password || !d.country || !d.state || !d.city) {
       setErr("Please fill all required fields."); return;
     }
+    const phoneDigits = d.phone.replace(/\D/g, "");
+    if (phoneDigits.length < 10) { setErr("Phone number must be at least 10 digits."); return; }
     const pwdErr = validatePassword(d.password);
     if (pwdErr) { setErr(pwdErr); return; }
     setErr(null);
@@ -228,7 +235,8 @@ export default function Signup() {
       setDraft((p) => ({ ...p, step: 1 }));
       return;
     }
-    if (isAthlete && (!d.play_role || !d.level)) {
+    const requiresPosition = !SPORTS_WITHOUT_POSITION.includes(d.primary_sport?.toLowerCase() ?? "");
+    if (isAthlete && (requiresPosition && !d.play_role || !d.level)) {
       setErr("Please select your playing role and experience level."); return;
     }
     if (!isAthlete && (!d.org_name || !d.org_type)) {
@@ -357,7 +365,13 @@ export default function Signup() {
                   />
                 </Field>
                 <Field label="Password" req>
-                  <input className="input" type="password" value={d.password} onChange={(e) => patch({ password: e.target.value })} minLength={8} />
+                  <div className="relative">
+                    <input className="input pr-9" type={showPwd ? "text" : "password"} value={d.password} onChange={(e) => patch({ password: e.target.value })} minLength={8} />
+                    <button type="button" onClick={() => setShowPwd((v) => !v)}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-ink-faint hover:text-ink transition" tabIndex={-1}>
+                      {showPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
                   <div className="mt-2 space-y-1">
                     <PasswordRequirement met={d.password.length >= 8} text="At least 8 characters" />
                     <PasswordRequirement met={/[A-Z]/.test(d.password)} text="One uppercase letter" />
@@ -386,7 +400,9 @@ export default function Signup() {
                 </Field>
                 {isAthlete && (
                   <Field label="Date of birth" req hint="Age is used for opportunity filters.">
-                    <input className="input font-mononum" type="date" value={d.dob} onChange={(e) => patch({ dob: e.target.value })} />
+                    <input className="input font-mononum" type="date" value={d.dob}
+                      max={new Date().toISOString().split("T")[0]}
+                      onChange={(e) => patch({ dob: e.target.value })} />
                   </Field>
                 )}
               </div>

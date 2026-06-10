@@ -32,8 +32,10 @@ export default function NewOpportunity() {
   const isEdit = !!id;
 
   const orgsQ = useQuery({
-    queryKey: ["my-orgs"],
-    queryFn: () => organizationService.getMine()
+    queryKey: ["my-orgs", isAdmin],
+    queryFn: () => isAdmin
+      ? organizationService.list()
+      : organizationService.getMine()
   });
   const oppQ = useQuery({
     queryKey: ["opp", id],
@@ -126,13 +128,12 @@ export default function NewOpportunity() {
       {/* Section 01 — Basics */}
       <div className="panel p-6 space-y-4">
         <SectionHead n="01" title="Basics" />
-        {!isAdmin && (
-          <Field label="Organization">
-            <select className="input" value={form.org_id} onChange={(e) => set("org_id", e.target.value)}>
-              {orgsQ.data!.map((o) => <option key={o.id} value={o.id}>{o.org_name}</option>)}
-            </select>
-          </Field>
-        )}
+        <Field label="Organization">
+          <select className="input" value={form.org_id} onChange={(e) => set("org_id", e.target.value)}>
+            {isAdmin && <option value="">Select organization…</option>}
+            {(orgsQ.data ?? []).map((o: any) => <option key={o.id} value={o.id}>{o.org_name}</option>)}
+          </select>
+        </Field>
         <Field label="Title *">
           <input className="input" value={form.title} onChange={(e) => set("title", e.target.value)} required placeholder="e.g. Senior Men's Trial — Season 2026" />
         </Field>
@@ -204,13 +205,20 @@ export default function NewOpportunity() {
         <SectionHead n="03" title="Dates & location" />
         <div className="grid sm:grid-cols-3 gap-4">
           <Field label="Start date *">
-            <input className="input font-mononum" type="date" value={form.start_date} onChange={(e) => set("start_date", e.target.value)} required />
+            <input className="input font-mononum" type="date" value={form.start_date}
+              min={new Date().toISOString().split("T")[0]}
+              onChange={(e) => set("start_date", e.target.value)} required />
           </Field>
           <Field label="End date *">
-            <input className="input font-mononum" type="date" value={form.end_date} onChange={(e) => set("end_date", e.target.value)} required />
+            <input className="input font-mononum" type="date" value={form.end_date}
+              min={form.start_date || new Date().toISOString().split("T")[0]}
+              onChange={(e) => set("end_date", e.target.value)} required />
           </Field>
           <Field label="Application deadline *" hint="Auto-closes at midnight on this date.">
-            <input className="input font-mononum" type="date" value={form.application_deadline} onChange={(e) => set("application_deadline", e.target.value)} required />
+            <input className="input font-mononum" type="date" value={form.application_deadline}
+              min={new Date().toISOString().split("T")[0]}
+              max={form.start_date || undefined}
+              onChange={(e) => set("application_deadline", e.target.value)} required />
           </Field>
         </div>
         <div className="grid sm:grid-cols-3 gap-4">

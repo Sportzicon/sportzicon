@@ -9,7 +9,7 @@ import type { Blog, BlogFilters } from "../models";
 
 export default function Blogs() {
   const user = useAuthStore((s) => s.user);
-  const canWrite = user?.role !== "athlete";
+  const canWrite = !!user;
   const [sport, setSport] = useState("");
   const [tag, setTag] = useState("");
   const [status, setStatus] = useState("");

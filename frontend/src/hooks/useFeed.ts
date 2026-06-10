@@ -31,14 +31,25 @@ export function useFeed(limit = 30) {
   const toggleLike = useMutation({
     mutationFn: (id: string) =>
       likedPosts.has(id) ? postService.unlike(id) : postService.like(id),
-    onMutate: (id: string) => {
+    onMutate: async (id: string) => {
+      await qc.cancelQueries({ queryKey: queryKeys.feed(limit) });
+      const prevFeed = qc.getQueryData(queryKeys.feed(limit));
+      const isLiked = likedPosts.has(id);
+      qc.setQueryData(queryKeys.feed(limit), (old: any[]) =>
+        old?.map((p: any) => p.id === id
+          ? { ...p, like_count: Math.max(0, p.like_count + (isLiked ? -1 : 1)) }
+          : p
+        )
+      );
       setLikedPosts((prev) => {
         const next = new Set(prev);
         next.has(id) ? next.delete(id) : next.add(id);
         return next;
       });
+      return { prevFeed, wasLiked: isLiked };
     },
-    onError: (_err: unknown, id: string) => {
+    onError: (_err: unknown, id: string, ctx: any) => {
+      if (ctx?.prevFeed) qc.setQueryData(queryKeys.feed(limit), ctx.prevFeed);
       setLikedPosts((prev) => {
         const next = new Set(prev);
         next.has(id) ? next.delete(id) : next.add(id);

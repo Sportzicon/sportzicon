@@ -43,6 +43,8 @@ export default function BlogDetail() {
 
   return (
     <article className="max-w-3xl space-y-0">
+      <button onClick={() => navigate(-1)} className="btn-ghost text-[12.5px] mb-3">← Blogs</button>
+
       {/* cover */}
       {b.cover_image_url && (
         <img src={b.cover_image_url} alt="" className="w-full h-64 object-cover rounded-t border-x border-t border-hair" />

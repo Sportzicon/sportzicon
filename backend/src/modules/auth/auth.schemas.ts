@@ -22,7 +22,10 @@ export const signupSchema = z.object({
   country: z.string().max(80).optional(),
   state: z.string().max(80).optional(),
   city: z.string().max(80).optional(),
-  dob: z.string().max(20).optional(),
+  dob: z.string().max(20).optional().refine(
+    (v) => !v || new Date(v) <= new Date(),
+    "Date of birth cannot be in the future"
+  ),
   gender: z.string().max(30).optional(),
   // optional fields from onboarding step 3 (sport profile / org)
   primary_sport: z.string().max(60).optional(),
@@ -78,7 +81,10 @@ export const registerBasicSchema = z.object({
   country: z.string().max(80).optional(),
   state: z.string().max(80).optional(),
   city: z.string().max(80).optional(),
-  dob: z.string().max(20).optional(),
+  dob: z.string().max(20).optional().refine(
+    (v) => !v || new Date(v) <= new Date(),
+    "Date of birth cannot be in the future"
+  ),
   gender: z.string().max(30).optional()
 });
 

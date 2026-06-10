@@ -42,14 +42,23 @@ export async function apply(
     throw BadRequest("Gender eligibility not met");
 
   const existing = await repositories.application.findByOpportunityAndApplicant(opportunityId, applicantId);
-  if (existing) throw Conflict("You have already applied to this opportunity");
+  if (existing && existing.status !== "withdrawn") throw Conflict("You have already applied to this opportunity");
 
-  const application = await repositories.application.create({
-    opportunity_id: opportunityId,
-    applicant_user_id: applicantId,
-    cover_note: input.cover_note,
-    documents: input.documents ?? [],
-  });
+  // Allow reapplication after withdrawal: reset existing record to pending with new cover note
+  const application = existing?.status === "withdrawn"
+    ? await repositories.application.update(existing.id, {
+        status: "pending",
+        cover_note: input.cover_note ?? null,
+        documents: input.documents ?? [],
+        rejection_reason: null,
+        history: [],
+      })
+    : await repositories.application.create({
+        opportunity_id: opportunityId,
+        applicant_user_id: applicantId,
+        cover_note: input.cover_note,
+        documents: input.documents ?? [],
+      });
 
   eventBus.emit<ApplicationAppliedEvent>(APP_APPLIED, {
     applicationId: application.id,

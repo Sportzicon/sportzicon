@@ -16,7 +16,7 @@ const idParam = z.object({ id: z.string().min(8) });
 router.post(
   "/",
   requireAuth,
-  requireRole("club", "organizer"),
+  requireRole("club", "organizer", "admin"),
   validate(createOpportunitySchema),
   asyncHandler(async (req, res) => {
     const r = await svc.createOpportunity(req.user!.sub, req.user!.role, req.body);

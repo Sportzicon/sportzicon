@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { getApiError } from "../api/client";
 import { authService } from "../services";
 import { useAuthStore } from "../store/auth";
+import { Eye, EyeOff } from "lucide-react";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -13,6 +14,7 @@ export default function Login() {
   const [err, setErr] = useState<string | null>(null);
   const [emailUnverified, setEmailUnverified] = useState(false);
   const [resendSent, setResendSent] = useState(false);
+  const [showPwd, setShowPwd] = useState(false);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -90,7 +92,13 @@ export default function Login() {
                 <span className="label" style={{ marginBottom: 0 }}>Password</span>
                 <Link to="/forgot-password" className="font-mononum text-[10px] text-brand-500 uppercase tracking-[0.1em]">Forgot?</Link>
               </div>
-              <input className="input" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+              <div className="relative">
+                <input className="input pr-9" type={showPwd ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} required />
+                <button type="button" onClick={() => setShowPwd((v) => !v)}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-ink-faint hover:text-ink transition" tabIndex={-1}>
+                  {showPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
             </label>
 
             {err && <div className="rounded bg-red-50 border border-red-200 p-3 text-sm text-red-800">{err}</div>}

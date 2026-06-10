@@ -293,7 +293,7 @@ export default function OpportunityDetail() {
   if (!o) return <div className="panel p-8 text-center font-disp text-xl text-ink-70">Opportunity not found.</div>;
 
   const isPoster = user?.id === o.posted_by_user_id;
-  const canApply = user?.role === "athlete" && o.status === "open" && !applied;
+  const canApply = (user?.role === "athlete" || user?.role === "scout") && o.status === "open" && !applied;
   const deadline = deadlineInfo(o.application_deadline);
 
   return (

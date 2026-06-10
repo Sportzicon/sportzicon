@@ -194,7 +194,7 @@ export function Layout() {
         </aside>
 
         {(() => {
-          const isLiveScoring = location.pathname.includes("/score");
+          const isLiveScoring = location.pathname.startsWith("/scoring") || /^\/score(\/|$)/.test(location.pathname);
           return (
             <main ref={mainRef} className={`min-w-0 flex-1 relative ${
               isLiveScoring ? "overflow-hidden p-0" : "overflow-y-auto px-3 py-4 sm:px-6 sm:py-7"}`}>

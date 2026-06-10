@@ -304,11 +304,13 @@ export default function EditProfile() {
                 </select>
               </Field>
               <Field label="Height (cm)">
-                <input className="input font-mononum" type="number" value={athlete.height_cm as any}
+                <input className="input font-mononum" type="number" min={50} max={300}
+                  value={athlete.height_cm as any}
                   onChange={(e) => setAthlete({ ...athlete, height_cm: e.target.value as any })} />
               </Field>
               <Field label="Weight (kg)">
-                <input className="input font-mononum" type="number" value={athlete.weight_kg as any}
+                <input className="input font-mononum" type="number" min={20} max={300}
+                  value={athlete.weight_kg as any}
                   onChange={(e) => setAthlete({ ...athlete, weight_kg: e.target.value as any })} />
               </Field>
             </div>

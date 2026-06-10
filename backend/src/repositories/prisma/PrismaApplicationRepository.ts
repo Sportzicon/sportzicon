@@ -24,7 +24,7 @@ export class PrismaApplicationRepository implements IApplicationRepository {
           applicant_user_id: applicantId,
         },
       },
-      select: { id: true },
+      select: { id: true, status: true },
     });
   }
 

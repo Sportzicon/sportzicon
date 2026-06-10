@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 const dateIso = z.string().regex(/^\d{4}-\d{2}-\d{2}/, "Use ISO date YYYY-MM-DD");
+const today = () => new Date().toISOString().split("T")[0];
 
 export const createOpportunitySchema = z
   .object({
@@ -33,6 +34,10 @@ export const createOpportunitySchema = z
   .refine((v) => v.end_date >= v.start_date, { message: "end_date must be >= start_date", path: ["end_date"] })
   .refine((v) => v.application_deadline <= v.start_date, {
     message: "application_deadline must be on or before start_date",
+    path: ["application_deadline"]
+  })
+  .refine((v) => v.application_deadline >= today(), {
+    message: "application_deadline cannot be in the past",
     path: ["application_deadline"]
   });
 

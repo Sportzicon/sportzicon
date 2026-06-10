@@ -119,7 +119,11 @@ export default function Messages() {
   }, [messages.data?.length, activeId]);
 
   useEffect(() => {
-    if (activeId) messageService.markRead(activeId).catch(() => undefined);
+    if (activeId) {
+      messageService.markRead(activeId)
+        .then(() => qc.invalidateQueries({ queryKey: ["conversations"] }))
+        .catch(() => undefined);
+    }
   }, [activeId, messages.data?.length]);
 
   async function send(e?: React.FormEvent) {
