@@ -4,6 +4,7 @@ export interface ApplicationRecord {
   id: string;
   opportunity_id: string;
   applicant_user_id: string;
+  poster_user_id?: string;
   cover_note?: string | null;
   documents: string[];
   status: ApplicationStatus;

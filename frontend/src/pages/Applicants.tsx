@@ -200,6 +200,11 @@ export default function Applicants() {
                       <Link to={`/profile/${a.applicant_user_id}`} className="btn-ghost text-[12px]">
                         Profile
                       </Link>
+                      {(a.status === "shortlisted" || a.status === "selected") && (
+                        <Link to={`/messages?to=${a.applicant_user_id}`} className="btn-ghost text-[12px]">
+                          Message
+                        </Link>
+                      )}
                       {a.cover_note && (
                         <button
                           onClick={() => setExpandedNoteId(expandedNoteId === a.id ? null : a.id)}

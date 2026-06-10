@@ -174,8 +174,8 @@ export default function MyApplications() {
                         {isExpanded ? "Hide history ▴" : "View history ▾"}
                       </button>
                       <div className="flex gap-2">
-                        {a.status === "selected" && (
-                          <button className="btn-secondary text-[12.5px]" onClick={() => navigate("/messages")}>
+                        {(a.status === "shortlisted" || a.status === "selected") && a.poster_user_id && (
+                          <button className="btn-secondary text-[12.5px]" onClick={() => navigate(`/messages?to=${a.poster_user_id}`)}>
                             Message club
                           </button>
                         )}

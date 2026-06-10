@@ -20,8 +20,8 @@ export const createOpportunitySchema = z
     country: z.string().min(2).max(80),
     state: z.string().min(1).max(80),
     city: z.string().min(1).max(80),
-    start_date: dateIso,
-    end_date: dateIso,
+    start_date: dateIso.optional(),
+    end_date: dateIso.optional(),
     application_deadline: dateIso,
     entry_fee: z.number().nonnegative().optional(),
     documents_required: z.array(z.string().max(120)).max(20).optional(),
@@ -31,8 +31,10 @@ export const createOpportunitySchema = z
   })
   .strict()
   .refine((v) => v.age_max >= v.age_min, { message: "age_max must be >= age_min", path: ["age_max"] })
-  .refine((v) => v.end_date >= v.start_date, { message: "end_date must be >= start_date", path: ["end_date"] })
-  .refine((v) => v.application_deadline <= v.start_date, {
+  .refine((v) => v.type === "coaching_job" || !!v.start_date, { message: "start_date is required", path: ["start_date"] })
+  .refine((v) => v.type === "coaching_job" || !!v.end_date, { message: "end_date is required", path: ["end_date"] })
+  .refine((v) => !v.start_date || !v.end_date || v.end_date >= v.start_date, { message: "end_date must be >= start_date", path: ["end_date"] })
+  .refine((v) => !v.start_date || v.application_deadline <= v.start_date, {
     message: "application_deadline must be on or before start_date",
     path: ["application_deadline"]
   })

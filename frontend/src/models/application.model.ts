@@ -12,6 +12,7 @@ export interface Application {
   opportunity_id: string;
   opportunity_title?: string;
   org_id?: string;
+  poster_user_id?: string;
   applicant_user_id: string;
   applicant_name?: string;
   cover_note?: string;

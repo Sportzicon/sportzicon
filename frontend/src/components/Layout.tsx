@@ -3,7 +3,7 @@ import { useAuthStore } from "../store/auth";
 import { useQueryClient } from "@tanstack/react-query";
 import { authService } from "../services";
 import { useNotificationCount } from "../hooks";
-import { Bell, Home, Search, Briefcase, FileText, MessageCircle, ShieldCheck, LogOut, User as UserIcon, Menu, X, Trophy, ChevronDown, Building2, Target, Activity, Film } from "lucide-react";
+import { Bell, Home, Search, Briefcase, FileText, MessageCircle, ShieldCheck, LogOut, User as UserIcon, Menu, X, Trophy, ChevronDown, Building2, Target, Activity } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 
 function GlobalSearch({ user, inputRef }: { user: any; inputRef: React.RefObject<HTMLInputElement> }) {
@@ -101,7 +101,6 @@ export function Layout() {
     { to: "/dashboard",    icon: <Home className="h-4 w-4" />,          label: "Dashboard" },
     { to: "/live-scores",  icon: <Activity className="h-4 w-4" />,      label: "Live Scores" },
     { to: "/feed",         icon: <FileText className="h-4 w-4" />,      label: "Feed" },
-    { to: "/reels",        icon: <Film className="h-4 w-4" />,          label: "Reels" },
     { to: "/blogs",        icon: <FileText className="h-4 w-4" />,      label: "Blogs" },
     { to: "/search",       icon: <Search className="h-4 w-4" />,        label: "Search" },
     { to: "/tournaments",  icon: <Trophy className="h-4 w-4" />,        label: "Tournaments" },

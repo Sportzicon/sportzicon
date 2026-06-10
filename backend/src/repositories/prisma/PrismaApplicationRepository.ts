@@ -35,7 +35,7 @@ export class PrismaApplicationRepository implements IApplicationRepository {
       take: limit,
       include: {
         opportunity: {
-          select: { title: true, org_id: true, type: true, sport: true, status: true },
+          select: { title: true, org_id: true, type: true, sport: true, status: true, posted_by_user_id: true },
         },
       },
     });
@@ -44,6 +44,7 @@ export class PrismaApplicationRepository implements IApplicationRepository {
       ...r,
       opportunity_title: opportunity.title,
       org_id: opportunity.org_id,
+      poster_user_id: opportunity.posted_by_user_id,
     })) as unknown as ApplicationRecord[];
   }
 

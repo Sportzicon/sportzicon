@@ -204,20 +204,24 @@ export default function NewOpportunity() {
       <div className="panel p-6 space-y-4">
         <SectionHead n="03" title="Dates & location" />
         <div className="grid sm:grid-cols-3 gap-4">
-          <Field label="Start date *">
-            <input className="input font-mononum" type="date" value={form.start_date}
-              min={new Date().toISOString().split("T")[0]}
-              onChange={(e) => set("start_date", e.target.value)} required />
-          </Field>
-          <Field label="End date *">
-            <input className="input font-mononum" type="date" value={form.end_date}
-              min={form.start_date || new Date().toISOString().split("T")[0]}
-              onChange={(e) => set("end_date", e.target.value)} required />
-          </Field>
+          {form.type !== "coaching_job" && (
+            <>
+              <Field label="Start date *">
+                <input className="input font-mononum" type="date" value={form.start_date}
+                  min={new Date().toISOString().split("T")[0]}
+                  onChange={(e) => set("start_date", e.target.value)} required />
+              </Field>
+              <Field label="End date *">
+                <input className="input font-mononum" type="date" value={form.end_date}
+                  min={form.start_date || new Date().toISOString().split("T")[0]}
+                  onChange={(e) => set("end_date", e.target.value)} required />
+              </Field>
+            </>
+          )}
           <Field label="Application deadline *" hint="Auto-closes at midnight on this date.">
             <input className="input font-mononum" type="date" value={form.application_deadline}
               min={new Date().toISOString().split("T")[0]}
-              max={form.start_date || undefined}
+              max={form.type !== "coaching_job" ? (form.start_date || undefined) : undefined}
               onChange={(e) => set("application_deadline", e.target.value)} required />
           </Field>
         </div>
