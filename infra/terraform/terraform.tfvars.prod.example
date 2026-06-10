@@ -7,8 +7,9 @@ region     = "asia-south1"
 env        = "prod"
 
 # Docker image URLs (updated by CI/CD pipeline on each tag)
-api_image = "asia-south1-docker.pkg.dev/sportzicon-app/sportivox/api:latest"
-web_image = "asia-south1-docker.pkg.dev/sportzicon-app/sportivox/web:latest"
+api_image           = "asia-south1-docker.pkg.dev/sportzicon-app/sportivox/api:latest"
+web_image           = "asia-south1-docker.pkg.dev/sportzicon-app/sportivox/web:latest"
+scoring_api_image   = "asia-south1-docker.pkg.dev/sportzicon-app/sportivox/scoring-api:latest"
 
 # Cloud Run scaling (production)
 min_instances_api = 1
@@ -47,3 +48,7 @@ bootstrap_admin_password = ""
 
 # GCP Terraform state bucket
 gcs_bucket_terraform_state = "sportivox-terraform-state-sportzicon-app"
+
+# Scoring API Configuration
+scoring_cors_origin     = "*"
+optional_scoring_secrets = []

@@ -8,6 +8,11 @@ output "web_url" {
   description = "Public URL of the Cloud Run web service."
 }
 
+output "scoring_api_url" {
+  value       = google_cloud_run_v2_service.scoring_api.uri
+  description = "Public URL of the Cloud Run scoring API service."
+}
+
 output "artifact_registry" {
   value       = "${var.region}-docker.pkg.dev/${var.project_id}/sportivox"
   description = "Push images here. Tag: <registry>/api:<tag> and <registry>/web:<tag>."
