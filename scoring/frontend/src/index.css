@@ -3,13 +3,11 @@
 @tailwind utilities;
 
 @layer base {
-  html {
-    overflow-y: scroll;    /* always reserve scrollbar space — prevents layout shift */
-    min-height: 100%;
+  html, body {
+    height: 100%;
   }
   body {
     @apply bg-gray-50 text-gray-900 antialiased;
-    min-height: 100%;
   }
 }
 

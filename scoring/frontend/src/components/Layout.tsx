@@ -19,9 +19,9 @@ export default function Layout() {
   const canManage = user && ["organizer", "admin", "scorer"].includes(user.role);
 
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col h-screen">
       {/* Top nav */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-40">
+      <header className="bg-white border-b border-gray-200 shrink-0 z-40">
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center gap-4">
           <Link to="/" className="flex items-center gap-2 font-bold text-emerald-600 text-lg shrink-0">
             <Trophy className="w-5 h-5" />
@@ -67,11 +67,13 @@ export default function Layout() {
         )}
       </header>
 
-      <main className="flex-1 w-full max-w-6xl mx-auto px-4 py-6 overflow-y-auto">
-        <Outlet />
+      <main className="flex-1 overflow-y-auto w-full">
+        <div className="max-w-6xl mx-auto px-4 py-6">
+          <Outlet />
+        </div>
       </main>
 
-      <footer className="border-t border-gray-200 py-4 text-center text-xs text-gray-400">
+      <footer className="shrink-0 border-t border-gray-200 py-4 text-center text-xs text-gray-400">
         ScoreBoard — Local Tournament Scoring Platform
       </footer>
     </div>
