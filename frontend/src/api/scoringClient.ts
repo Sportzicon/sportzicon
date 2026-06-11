@@ -1,9 +1,11 @@
 import axios from "axios";
 import { useAuthStore } from "../store/auth";
 
-// Axios instance pointing at the scoring backend via Vite proxy (/scoring-api → localhost:4000)
+// In dev, Vite proxies /scoring-api → localhost:4000 (vite.config.ts).
+// In production, VITE_SCORING_API_URL is baked in at build time pointing to the scoring backend directly.
+// Falls back to the proxy path so local dev still works without setting the env var.
 export const scoringApi = axios.create({
-  baseURL: "/scoring-api/api",
+  baseURL: (import.meta.env.VITE_SCORING_API_URL as string | undefined) ?? "/scoring-api/api",
   headers: { "Content-Type": "application/json" }
 });
 

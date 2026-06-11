@@ -357,6 +357,38 @@ export default function Signup() {
                     onChange={(e) => { patch({ email: e.target.value }); setEmailExists(false); setResumedUserId(null); }}
                   />
                 </Field>
+                <Field label="Country" req>
+                  <select className="input" value={d.country} onChange={(e) => {
+                    const newCountry = e.target.value;
+                    const oldInfo = COUNTRY_PHONE[d.country];
+                    const newInfo = COUNTRY_PHONE[newCountry];
+                    // Preserve local digits when switching between two known countries
+                    let newPhone = "";
+                    if (oldInfo && newInfo && d.phone) {
+                      const localDigits = d.phone.startsWith(oldInfo.dial)
+                        ? d.phone.slice(oldInfo.dial.length)
+                        : d.phone.replace(/\D/g, "");
+                      newPhone = newInfo.dial + localDigits;
+                    }
+                    patch({ country: newCountry, state: "", phone: newPhone });
+                  }}>
+                    <option value="">Select country</option>
+                    {COUNTRIES.map((c) => <option key={c}>{c}</option>)}
+                  </select>
+                </Field>
+                <Field label="State" req>
+                  {statesForCountry(d.country) ? (
+                    <select className="input" value={d.state} onChange={(e) => patch({ state: e.target.value })}>
+                      <option value="">Select state…</option>
+                      {statesForCountry(d.country)!.map((s) => <option key={s}>{s}</option>)}
+                    </select>
+                  ) : (
+                    <input className="input" placeholder="e.g. Maharashtra" value={d.state} onChange={(e) => patch({ state: e.target.value })} />
+                  )}
+                </Field>
+                <Field label="City" req>
+                  <input className="input" placeholder="e.g. Pune" value={d.city} onChange={(e) => patch({ city: e.target.value })} />
+                </Field>
                 <Field label="Phone" req hint="For OTP verification.">
                   <PhoneInput
                     country={d.country}
@@ -378,25 +410,6 @@ export default function Signup() {
                     <PasswordRequirement met={/[a-z]/.test(d.password)} text="One lowercase letter" />
                     <PasswordRequirement met={/[0-9]/.test(d.password)} text="One digit" />
                   </div>
-                </Field>
-                <Field label="Country" req>
-                  <select className="input" value={d.country} onChange={(e) => patch({ country: e.target.value, state: "", phone: "" })}>
-                    <option value="">Select country</option>
-                    {COUNTRIES.map((c) => <option key={c}>{c}</option>)}
-                  </select>
-                </Field>
-                <Field label="State" req>
-                  {statesForCountry(d.country) ? (
-                    <select className="input" value={d.state} onChange={(e) => patch({ state: e.target.value })}>
-                      <option value="">Select state…</option>
-                      {statesForCountry(d.country)!.map((s) => <option key={s}>{s}</option>)}
-                    </select>
-                  ) : (
-                    <input className="input" placeholder="e.g. Maharashtra" value={d.state} onChange={(e) => patch({ state: e.target.value })} />
-                  )}
-                </Field>
-                <Field label="City" req>
-                  <input className="input" placeholder="e.g. Pune" value={d.city} onChange={(e) => patch({ city: e.target.value })} />
                 </Field>
                 {isAthlete && (
                   <Field label="Date of birth" req hint="Age is used for opportunity filters.">

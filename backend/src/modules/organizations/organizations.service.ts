@@ -4,8 +4,8 @@ import { formatOrg } from "../../utils/org";
 import type { Role } from "../../types/domain";
 
 export async function createOrganization(ownerId: string, ownerRole: Role, input: Record<string, unknown>) {
-  if (ownerRole !== "club" && ownerRole !== "organizer")
-    throw Forbidden("Only club or organizer accounts can create an organization");
+  if (ownerRole !== "club" && ownerRole !== "organizer" && ownerRole !== "admin")
+    throw Forbidden("Only club, organizer, or admin accounts can create an organization");
 
   const org = await prisma.organization.create({
     data: {

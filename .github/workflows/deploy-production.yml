@@ -125,6 +125,7 @@ jobs:
           push: true
           build-args: |
             VITE_API_BASE_URL=https://api.sportzicon.com
+            VITE_SCORING_API_URL=https://scoring-api.sportzicon.com/api
           tags: |
             ${{ env.AR_IMAGE }}/web:${{ github.ref_name }}
             ${{ env.AR_IMAGE }}/web:latest

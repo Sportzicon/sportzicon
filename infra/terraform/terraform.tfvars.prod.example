@@ -42,7 +42,6 @@ optional_secrets = []
 
 # Secret values — only used when name is in optional_secrets above
 openai_api_key           = ""
-sendgrid_api_key         = ""
 bootstrap_admin_email    = ""
 bootstrap_admin_password = ""
 
