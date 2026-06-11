@@ -1,6 +1,7 @@
 import { prisma } from "../../config/prisma";
-import { BadRequest, NotFound } from "../../utils/errors";
+import { BadRequest, Conflict, NotFound } from "../../utils/errors";
 import { omitSensitive } from "../../utils/user";
+import { hashPassword } from "../auth/tokens";
 import type { AccountStatus, Role, ReportStatus } from "../../types/domain";
 
 export async function audit(input: {
@@ -334,6 +335,144 @@ export async function listAdminApplications(filter: {
   return { items, next_cursor: hasMore ? items[items.length - 1].id : null };
 }
 
+export async function adminCreateUser(
+  actor: { id: string; role: Role },
+  input: {
+    email: string;
+    password: string;
+    full_name: string;
+    role: Role;
+    phone?: string;
+    country?: string;
+    state?: string;
+    city?: string;
+  }
+) {
+  const emailLower = input.email.trim().toLowerCase();
+  const existing = await prisma.user.findFirst({ where: { email_lower: emailLower }, select: { id: true } });
+  if (existing) throw Conflict("Email already in use");
+  const password_hash = await hashPassword(input.password);
+  const user = await prisma.user.create({
+    data: {
+      email: input.email.trim(),
+      email_lower: emailLower,
+      email_verified: true,
+      phone: input.phone ?? null,
+      password_hash,
+      full_name: input.full_name,
+      full_name_lower: input.full_name.toLowerCase(),
+      role: input.role as any,
+      status: "active",
+      country: input.country,
+      state: input.state,
+      city: input.city
+    }
+  });
+  await audit({ actor, action: "user.created_by_admin", target_type: "user", target_id: user.id, details: { role: input.role } });
+  return omitSensitive(user);
+}
+
+export async function adminCreateOrganization(
+  actor: { id: string; role: Role },
+  input: {
+    org_name: string;
+    org_type: string;
+    owner_user_id?: string;
+    description?: string;
+    country?: string;
+    state?: string;
+    city?: string;
+    contact_name?: string;
+    contact_email?: string;
+    contact_phone?: string;
+    website?: string;
+    sport_categories?: string[];
+    subscription_plan?: string;
+  }
+) {
+  const ownerId = input.owner_user_id ?? actor.id;
+  const ownerExists = await prisma.user.findUnique({ where: { id: ownerId }, select: { id: true } });
+  if (!ownerExists) throw NotFound("Owner user not found");
+  const org = await prisma.organization.create({
+    data: {
+      owner_user_id: ownerId,
+      org_name: input.org_name,
+      org_name_lower: input.org_name.toLowerCase(),
+      org_type: input.org_type,
+      description: input.description,
+      country: input.country,
+      state: input.state,
+      city: input.city,
+      contact_name: input.contact_name,
+      contact_email: input.contact_email,
+      contact_phone: input.contact_phone,
+      website: input.website,
+      sport_categories: input.sport_categories ?? [],
+      subscription_plan: input.subscription_plan ?? "free"
+    }
+  });
+  await audit({ actor, action: "organization.created_by_admin", target_type: "organization", target_id: org.id, details: { org_name: org.org_name } });
+  return org;
+}
+
+export async function adminCreateOpportunity(
+  actor: { id: string; role: Role },
+  input: {
+    org_id: string;
+    title: string;
+    type: string;
+    sport: string;
+    description: string;
+    country: string;
+    state?: string;
+    city: string;
+    start_date: string;
+    end_date: string;
+    application_deadline: string;
+    age_min?: number;
+    age_max?: number;
+    gender_eligibility?: string;
+    experience_level_required?: string;
+    eligibility?: string;
+    entry_fee?: number;
+    vacancies?: number;
+    contact_email?: string;
+    contact_phone?: string;
+  }
+) {
+  const org = await prisma.organization.findUnique({ where: { id: input.org_id }, select: { id: true } });
+  if (!org) throw NotFound("Organization not found");
+  const opp = await prisma.opportunity.create({
+    data: {
+      org_id: input.org_id,
+      posted_by_user_id: actor.id,
+      title: input.title,
+      title_lower: input.title.toLowerCase(),
+      type: input.type as any,
+      sport: input.sport,
+      description: input.description,
+      country: input.country,
+      state: input.state ?? "",
+      city: input.city,
+      start_date: input.start_date,
+      end_date: input.end_date,
+      application_deadline: input.application_deadline,
+      age_min: input.age_min ?? 0,
+      age_max: input.age_max ?? 99,
+      gender_eligibility: input.gender_eligibility ?? "all",
+      experience_level_required: input.experience_level_required ?? "any",
+      eligibility: input.eligibility,
+      entry_fee: input.entry_fee,
+      vacancies: input.vacancies,
+      contact_email: input.contact_email,
+      contact_phone: input.contact_phone,
+      status: "open"
+    }
+  });
+  await audit({ actor, action: "opportunity.created_by_admin", target_type: "opportunity", target_id: opp.id, details: { title: opp.title, type: opp.type } });
+  return opp;
+}
+
 export async function adminTransitionApplication(
   actor: { id: string; role: Role },
   appId: string,
@@ -343,7 +482,7 @@ export async function adminTransitionApplication(
   const app = await prisma.application.findUnique({ where: { id: appId } });
   if (!app) throw NotFound("Application not found");
 
-  const validStatuses = ["applied", "shortlisted", "selected", "rejected", "withdrawn"];
+  const validStatuses = ["pending", "shortlisted", "selected", "rejected", "withdrawn"];
   if (!validStatuses.includes(status)) throw BadRequest("Invalid status");
 
   const newHistory = [

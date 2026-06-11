@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api } from "../../api/client";
-import { humanizeError } from "../../api/client";
+import { useNavigate } from "react-router-dom";
+import { api, humanizeError } from "../../api/client";
 import { PageHeader, Spinner, Badge, Pagination } from "../../components/UI";
-import { Pencil, X, Check } from "lucide-react";
+import { Pencil, X, Check, Plus } from "lucide-react";
 
 const PAGE_SIZE = 15;
 
@@ -54,6 +54,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 export default function AdminOrganizations() {
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [editId, setEditId] = useState<string | null>(null);
@@ -96,13 +97,19 @@ export default function AdminOrganizations() {
     <div className="space-y-4">
       <PageHeader title="Organizations" subtitle="View and edit all organizations" />
 
-      <div className="card card-body flex flex-wrap gap-3">
+      <div className="card card-body flex flex-wrap gap-3 items-center">
         <input
           className="input max-w-xs"
           placeholder="Search by name…"
           value={search}
           onChange={(e) => { setSearch(e.target.value); setPage(1); }}
         />
+        <button
+          className="btn-primary ml-auto flex items-center gap-2"
+          onClick={() => navigate("/admin/organizations/create")}
+        >
+          <Plus className="h-4 w-4" /> Create organization
+        </button>
       </div>
 
       {formSuccess && <div className="rounded bg-green-50 border border-green-200 p-3 text-sm text-green-700">{formSuccess}</div>}
@@ -124,8 +131,8 @@ export default function AdminOrganizations() {
               </thead>
               <tbody>
                 {paged.map((org) => (
-                  <>
-                    <tr key={org.id} className="border-t hover:bg-slate-50">
+                  <Fragment key={org.id}>
+                    <tr className="border-t hover:bg-slate-50">
                       <td className="p-3 font-medium">{org.org_name}</td>
                       <td className="text-slate-500">{org.org_type}</td>
                       <td className="text-slate-500 text-xs">{[org.city, org.country].filter(Boolean).join(", ")}</td>
@@ -139,7 +146,7 @@ export default function AdminOrganizations() {
                       </td>
                     </tr>
                     {editId === org.id && (
-                      <tr key={`edit-${org.id}`} className="bg-slate-50">
+                      <tr className="bg-slate-50">
                         <td colSpan={7} className="p-4">
                           <div className="space-y-4">
                             <h4 className="font-semibold text-slate-700">Edit: {org.org_name}</h4>
@@ -201,7 +208,7 @@ export default function AdminOrganizations() {
                         </td>
                       </tr>
                     )}
-                  </>
+                  </Fragment>
                 ))}
                 {!paged.length && (
                   <tr><td colSpan={7} className="p-6 text-center text-slate-500 text-sm">No organizations found.</td></tr>

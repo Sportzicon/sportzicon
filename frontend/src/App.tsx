@@ -37,7 +37,7 @@ import NewTournament from "./pages/NewTournament";
 import Applicants from "./pages/Applicants";
 import MyApplications from "./pages/MyApplications";
 import Feed from "./pages/Feed";
-// import Reels from "./pages/Reels"; // Disabled
+import Reels from "./pages/Reels";
 import Blogs from "./pages/Blogs";
 import BlogDetail from "./pages/BlogDetail";
 import NewBlog from "./pages/NewBlog";
@@ -57,6 +57,9 @@ import AdminAuditLog from "./pages/admin/AdminAuditLog";
 import AdminOpportunities from "./pages/admin/AdminOpportunities";
 import AdminOrganizations from "./pages/admin/AdminOrganizations";
 import AdminApplications from "./pages/admin/AdminApplications";
+import AdminCreateUser from "./pages/admin/AdminCreateUser";
+import AdminCreateOrganization from "./pages/admin/AdminCreateOrganization";
+import AdminCreateOpportunity from "./pages/admin/AdminCreateOpportunity";
 
 import LiveScores from "./pages/LiveScores";
 import LiveScoreDetail from "./pages/LiveScoreDetail";
@@ -106,7 +109,7 @@ export default function App() {
         <Route path="/tournaments/:id/edit" element={<ProtectedRoute roles={["club", "organizer", "admin"]}><NewTournament /></ProtectedRoute>} />
         <Route path="/applications" element={<ProtectedRoute roles={["athlete"]}><MyApplications /></ProtectedRoute>} />
         <Route path="/feed" element={<ProtectedRoute><Feed /></ProtectedRoute>} />
-        {/* <Route path="/reels" element={<ProtectedRoute><Reels /></ProtectedRoute>} /> */}
+        <Route path="/reels" element={<ProtectedRoute><Reels /></ProtectedRoute>} />
         <Route path="/blogs" element={<ProtectedRoute><Blogs /></ProtectedRoute>} />
         <Route path="/blogs/new" element={<ProtectedRoute><NewBlog /></ProtectedRoute>} />
         <Route path="/blogs/:id/edit" element={<ProtectedRoute><NewBlog /></ProtectedRoute>} />
@@ -123,9 +126,12 @@ export default function App() {
 
         <Route path="/admin" element={<ProtectedRoute roles={["admin"]}><Admin /></ProtectedRoute>} />
         <Route path="/admin/users" element={<ProtectedRoute roles={["admin"]}><AdminUsers /></ProtectedRoute>} />
+        <Route path="/admin/users/create" element={<ProtectedRoute roles={["admin"]}><AdminCreateUser /></ProtectedRoute>} />
         <Route path="/admin/users/:id" element={<ProtectedRoute roles={["admin"]}><AdminUserDetail /></ProtectedRoute>} />
         <Route path="/admin/opportunities" element={<ProtectedRoute roles={["admin"]}><AdminOpportunities /></ProtectedRoute>} />
+        <Route path="/admin/opportunities/create" element={<ProtectedRoute roles={["admin"]}><AdminCreateOpportunity /></ProtectedRoute>} />
         <Route path="/admin/organizations" element={<ProtectedRoute roles={["admin"]}><AdminOrganizations /></ProtectedRoute>} />
+        <Route path="/admin/organizations/create" element={<ProtectedRoute roles={["admin"]}><AdminCreateOrganization /></ProtectedRoute>} />
         <Route path="/admin/applications" element={<ProtectedRoute roles={["admin"]}><AdminApplications /></ProtectedRoute>} />
         <Route path="/admin/reports" element={<ProtectedRoute roles={["admin"]}><AdminReports /></ProtectedRoute>} />
         <Route path="/admin/verifications" element={<ProtectedRoute roles={["admin"]}><AdminVerifications /></ProtectedRoute>} />

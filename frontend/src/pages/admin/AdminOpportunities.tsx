@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api } from "../../api/client";
-import { humanizeError } from "../../api/client";
+import { useNavigate } from "react-router-dom";
+import { api, humanizeError } from "../../api/client";
 import { PageHeader, Spinner, Badge, Pagination } from "../../components/UI";
-import { Pencil, Trash2, X, Check } from "lucide-react";
+import { Pencil, Trash2, X, Check, Plus } from "lucide-react";
 
 const PAGE_SIZE = 15;
 
@@ -87,6 +87,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 export default function AdminOpportunities() {
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const [typeFilter, setTypeFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [page, setPage] = useState(1);
@@ -140,7 +141,7 @@ export default function AdminOpportunities() {
     <div className="space-y-4">
       <PageHeader title="Opportunities" subtitle="Manage all tournaments, trials and recruitments" />
 
-      <div className="card card-body flex flex-wrap gap-3">
+      <div className="card card-body flex flex-wrap gap-3 items-center">
         <select className="input max-w-xs" value={typeFilter} onChange={(e) => { setTypeFilter(e.target.value); setPage(1); }}>
           <option value="">All types</option>
           {OPP_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
@@ -149,6 +150,12 @@ export default function AdminOpportunities() {
           <option value="">All statuses</option>
           {OPP_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
         </select>
+        <button
+          className="btn-primary ml-auto flex items-center gap-2"
+          onClick={() => navigate("/admin/opportunities/create")}
+        >
+          <Plus className="h-4 w-4" /> Create opportunity
+        </button>
       </div>
 
       {q.isLoading ? <Spinner /> : (
@@ -169,8 +176,8 @@ export default function AdminOpportunities() {
               </thead>
               <tbody>
                 {paged.map((opp) => (
-                  <>
-                    <tr key={opp.id} className="border-t hover:bg-slate-50">
+                  <Fragment key={opp.id}>
+                    <tr className="border-t hover:bg-slate-50">
                       <td className="p-3 font-medium max-w-[200px] truncate">{opp.title}</td>
                       <td className="text-slate-500 text-xs max-w-[120px] truncate">{opp.org_name ?? "—"}</td>
                       <td><Badge color="blue">{opp.type}</Badge></td>
@@ -198,7 +205,7 @@ export default function AdminOpportunities() {
                       </td>
                     </tr>
                     {editId === opp.id && (
-                      <tr key={`edit-${opp.id}`} className="bg-slate-50">
+                      <tr className="bg-slate-50">
                         <td colSpan={8} className="p-4">
                           <div className="space-y-4">
                             <h4 className="font-semibold text-slate-700">Edit: {opp.title}</h4>
@@ -284,7 +291,7 @@ export default function AdminOpportunities() {
                         </td>
                       </tr>
                     )}
-                  </>
+                  </Fragment>
                 ))}
                 {!paged.length && (
                   <tr><td colSpan={8} className="p-6 text-center text-slate-500 text-sm">No opportunities found.</td></tr>

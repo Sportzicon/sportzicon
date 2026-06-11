@@ -9,6 +9,26 @@ const router = Router();
 
 router.use(requireAuth, requireRole("admin"));
 
+router.post(
+  "/users",
+  validate(
+    z.object({
+      email: z.string().email(),
+      password: z.string().min(6).max(128),
+      full_name: z.string().min(2).max(120),
+      role: z.enum(["athlete", "club", "scout", "organizer", "admin", "scorer"]),
+      phone: z.string().min(7).max(20).optional(),
+      country: z.string().max(80).optional(),
+      state: z.string().max(80).optional(),
+      city: z.string().max(80).optional()
+    })
+  ),
+  asyncHandler(async (req, res) => {
+    const r = await svc.adminCreateUser({ id: req.user!.sub, role: req.user!.role }, req.body);
+    res.status(201).json(r);
+  })
+);
+
 router.get(
   "/users",
   asyncHandler(async (req, res) => {
@@ -158,6 +178,38 @@ router.patch(
 
 // ─── Opportunity management ──────────────────────────────────────────────────
 
+router.post(
+  "/opportunities",
+  validate(
+    z.object({
+      org_id: z.string().min(8),
+      title: z.string().min(3).max(140),
+      type: z.enum(["trial", "recruitment", "scholarship", "tournament", "coaching_job"]),
+      sport: z.string().min(2).max(60),
+      description: z.string().min(10).max(5000),
+      country: z.string().min(2).max(80),
+      state: z.string().max(80).optional(),
+      city: z.string().min(2).max(80),
+      start_date: z.string().regex(/^\d{4}-\d{2}-\d{2}/),
+      end_date: z.string().regex(/^\d{4}-\d{2}-\d{2}/),
+      application_deadline: z.string().regex(/^\d{4}-\d{2}-\d{2}/),
+      age_min: z.number().int().min(0).max(120).optional(),
+      age_max: z.number().int().min(0).max(120).optional(),
+      gender_eligibility: z.enum(["all", "male", "female", "other"]).optional(),
+      experience_level_required: z.enum(["any", "beginner", "amateur", "semi_pro", "professional"]).optional(),
+      eligibility: z.string().max(2000).optional(),
+      entry_fee: z.number().nonnegative().optional(),
+      vacancies: z.number().int().positive().optional(),
+      contact_email: z.string().email().optional(),
+      contact_phone: z.string().max(20).optional()
+    })
+  ),
+  asyncHandler(async (req, res) => {
+    const r = await svc.adminCreateOpportunity({ id: req.user!.sub, role: req.user!.role }, req.body);
+    res.status(201).json(r);
+  })
+);
+
 router.get(
   "/opportunities",
   asyncHandler(async (req, res) => {
@@ -221,6 +273,31 @@ router.delete(
 );
 
 // ─── Organization management ─────────────────────────────────────────────────
+
+router.post(
+  "/organizations",
+  validate(
+    z.object({
+      org_name: z.string().min(2).max(120),
+      org_type: z.string().min(2).max(80),
+      owner_user_id: z.string().min(8).optional(),
+      description: z.string().max(2000).optional(),
+      country: z.string().max(80).optional(),
+      state: z.string().max(80).optional(),
+      city: z.string().max(80).optional(),
+      contact_name: z.string().max(120).optional(),
+      contact_email: z.string().email().optional(),
+      contact_phone: z.string().max(20).optional(),
+      website: z.string().url().optional(),
+      sport_categories: z.array(z.string()).max(20).optional(),
+      subscription_plan: z.string().max(40).optional()
+    })
+  ),
+  asyncHandler(async (req, res) => {
+    const r = await svc.adminCreateOrganization({ id: req.user!.sub, role: req.user!.role }, req.body);
+    res.status(201).json(r);
+  })
+);
 
 router.get(
   "/organizations",
@@ -288,7 +365,7 @@ router.patch(
   validate(z.object({ id: z.string().min(8) }), "params"),
   validate(
     z.object({
-      status: z.enum(["applied", "shortlisted", "selected", "rejected", "withdrawn"]),
+      status: z.enum(["pending", "shortlisted", "selected", "rejected", "withdrawn"]),
       reason: z.string().max(1000).optional()
     })
   ),

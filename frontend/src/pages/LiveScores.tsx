@@ -109,7 +109,7 @@ export default function LiveScores() {
     : null;
 
   return (
-    <div className="min-h-screen bg-paper py-6 px-3 sm:px-4">
+    <div className="py-6 px-3 sm:px-4">
       <div className="max-w-xl mx-auto space-y-4">
 
         {/* Page header */}

@@ -22,7 +22,7 @@ export default function VerifyEmail() {
   }, [params]);
 
   return (
-    <div className="min-h-screen bg-paper flex items-center justify-center px-4">
+    <div className="min-h-[calc(100vh-10rem)] flex items-center justify-center px-4">
       <div className="w-full max-w-sm text-center">
         {state === "loading" && (
           <div className="panel p-8">

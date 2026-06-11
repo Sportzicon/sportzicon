@@ -991,7 +991,7 @@ export default function LiveScoreDetail() {
   const balls = activeBallsData ?? [];
 
   if (isLoading) return (
-    <div className="min-h-screen bg-paper flex items-center justify-center">
+    <div className="py-24 flex items-center justify-center">
       <div className="animate-pulse space-y-4 w-full max-w-2xl px-4">
         <div className="skel h-20 rounded" />
         <div className="skel h-64 rounded" />
@@ -1000,7 +1000,7 @@ export default function LiveScoreDetail() {
   );
 
   if (!match) return (
-    <div className="min-h-screen bg-paper flex items-center justify-center">
+    <div className="py-24 flex items-center justify-center">
       <div className="text-center">
         <p className="font-disp text-2xl text-ink">Match not found</p>
         <Link to="/live-scores" className="lab text-brand-500 mt-2 block">← Back to Live Scores</Link>
@@ -1009,7 +1009,7 @@ export default function LiveScoreDetail() {
   );
 
   return (
-    <div className="min-h-screen bg-paper">
+    <div>
       <div className="max-w-3xl mx-auto">
 
         {/* Match header */}

@@ -8,11 +8,12 @@ import { Camera } from "lucide-react";
 
 const SPORTS = ["Cricket", "Football", "Athletics", "Basketball", "Hockey", "Tennis", "Badminton", "Kabaddi", "Volleyball", "Rugby", "Swimming", "Multi-sport"];
 
-function Field({ label, req, hint, children }: { label: string; req?: boolean; hint?: string; children: React.ReactNode }) {
+function Field({ label, req, hint, error, children }: { label: string; req?: boolean; hint?: string; error?: string; children: React.ReactNode }) {
   return (
     <label className="block">
       <span className="label">{label}{req && <span className="text-brand-500"> *</span>}</span>
       {children}
+      {error && <span className="text-red-600 text-xs mt-1 block">{error}</span>}
       {hint && <span className="lab mt-1.5 block normal-case tracking-normal text-[10.5px]">{hint}</span>}
     </label>
   );
@@ -67,6 +68,7 @@ export default function NewOrganization() {
   const [uploading, setUploading] = useState<"logo" | "cover" | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (orgQ.data) {
@@ -94,6 +96,7 @@ export default function NewOrganization() {
   async function uploadPhoto(file: File, field: "logo" | "cover") {
     setUploading(field);
     setErr(null);
+    setFieldErrors({});
     try {
       const urlRes = await api.post("/media/upload-url", {
         category: "image",
@@ -120,9 +123,16 @@ export default function NewOrganization() {
       }
     } catch (e) {
       const apiErr = getApiError(e);
-      setErr(apiErr.details?.fieldErrors
-        ? Object.values(apiErr.details.fieldErrors).flat().join(", ")
-        : humanizeError(e));
+      if (apiErr.details?.fieldErrors) {
+        const errors: Record<string, string> = {};
+        for (const [fname, messages] of Object.entries(apiErr.details.fieldErrors)) {
+          errors[fname] = (messages as string[])[0] || "Invalid value";
+        }
+        setFieldErrors(errors);
+        setErr("Please fix the errors below");
+      } else {
+        setErr(humanizeError(e));
+      }
     } finally {
       setUploading(null);
     }
@@ -139,6 +149,7 @@ export default function NewOrganization() {
     if (!form.org_name.trim()) { setErr("Organization name is required."); return; }
     setBusy(true);
     setErr(null);
+    setFieldErrors({});
     try {
       const payload: any = {
         ...form,
@@ -161,7 +172,23 @@ export default function NewOrganization() {
       if (id) await qc.invalidateQueries({ queryKey: ["org", id] });
       navigate("/my-organizations");
     } catch (e) {
-      setErr(humanizeError(e));
+      const apiErr = getApiError(e);
+      if (apiErr.details?.fieldErrors) {
+        const errors: Record<string, string> = {};
+        for (const [field, messages] of Object.entries(apiErr.details.fieldErrors)) {
+          errors[field] = (messages as string[])[0] || "Invalid value";
+        }
+        setFieldErrors(errors);
+        setErr("Please fix the errors below");
+        // Scroll to first error
+        const firstErrorField = Object.keys(errors)[0];
+        setTimeout(() => {
+          const el = document.querySelector(`input[name="${firstErrorField}"], textarea[name="${firstErrorField}"], select[name="${firstErrorField}"]`);
+          el?.scrollIntoView({ behavior: "smooth", block: "center" });
+        }, 0);
+      } else {
+        setErr(humanizeError(e));
+      }
     } finally {
       setBusy(false);
     }
@@ -191,7 +218,15 @@ export default function NewOrganization() {
 
       {/* ── Section 00: Photos ───────────────────────────────────── */}
       <div className="panel overflow-hidden">
-        <div className="px-6 pt-6"><SectionHead n="00" title="Photos" sub="Cover banner and logo" /></div>
+        <div className="px-6 pt-6">
+          <SectionHead n="00" title="Photos" sub="Cover banner and logo" />
+          {(fieldErrors.logo_url || fieldErrors.cover_url) && (
+            <div className="text-red-600 text-xs mt-2">
+              {fieldErrors.logo_url && <div>{fieldErrors.logo_url}</div>}
+              {fieldErrors.cover_url && <div>{fieldErrors.cover_url}</div>}
+            </div>
+          )}
+        </div>
         {/* Cover */}
         <div className="relative h-36 bg-ink mx-6 mt-4 rounded overflow-hidden">
           <div className="absolute inset-0" style={{ backgroundImage: "repeating-linear-gradient(135deg, rgba(255,255,255,0.05) 0 1px, transparent 1px 11px)" }} />
@@ -249,27 +284,27 @@ export default function NewOrganization() {
       {/* ── Section 01: Identity ─────────────────────────────────── */}
       <div className="panel p-6 space-y-5">
         <SectionHead n="01" title="Identity" sub="Name, type and description" />
-        <Field label="Organization name" req>
-          <input className="input" value={form.org_name}
+        <Field label="Organization name" req error={fieldErrors.org_name}>
+          <input className="input" value={form.org_name} name="org_name"
             onChange={(e) => set("org_name", e.target.value)} autoFocus />
         </Field>
         <div className="grid sm:grid-cols-2 gap-4">
-          <Field label="Type" req>
-            <select className="input" value={form.org_type}
+          <Field label="Type" req error={fieldErrors.org_type}>
+            <select className="input" value={form.org_type} name="org_type"
               onChange={(e) => set("org_type", e.target.value)}>
               <option value="club">Club</option>
               <option value="academy">Academy</option>
               <option value="both">Club & Academy</option>
             </select>
           </Field>
-          <Field label="Year established">
+          <Field label="Year established" error={fieldErrors.year_established}>
             <input className="input font-mononum" type="number" min="1800" max={new Date().getFullYear()}
-              placeholder="e.g. 2005" value={form.year_established}
+              placeholder="e.g. 2005" value={form.year_established} name="year_established"
               onChange={(e) => set("year_established", e.target.value)} />
           </Field>
         </div>
-        <Field label="Description" hint="Brief overview of your organization (shown publicly)">
-          <textarea className="input" rows={3} maxLength={2000} value={form.description}
+        <Field label="Description" hint="Brief overview of your organization (shown publicly)" error={fieldErrors.description}>
+          <textarea className="input" rows={3} maxLength={2000} value={form.description} name="description"
             onChange={(e) => set("description", e.target.value)} />
         </Field>
       </div>
@@ -287,41 +322,44 @@ export default function NewOrganization() {
             Selected: {selectedSports.join(", ")}
           </div>
         )}
+        {fieldErrors.sport_categories && (
+          <div className="text-red-600 text-xs">{fieldErrors.sport_categories}</div>
+        )}
       </div>
 
       {/* ── Section 03: Location ─────────────────────────────────── */}
       <div className="panel p-6 space-y-4">
         <SectionHead n="03" title="Location" />
         <div className="grid sm:grid-cols-3 gap-4">
-          <Field label="Country">
-            <select className="input" value={form.country}
+          <Field label="Country" error={fieldErrors.country}>
+            <select className="input" value={form.country} name="country"
               onChange={(e) => { set("country", e.target.value); set("state", ""); }}>
               {COUNTRIES.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
           </Field>
-          <Field label="State / Province">
+          <Field label="State / Province" error={fieldErrors.state}>
             {stateOptions ? (
-              <select className="input" value={form.state}
+              <select className="input" value={form.state} name="state"
                 onChange={(e) => set("state", e.target.value)}>
                 <option value="">Select state…</option>
                 {stateOptions.map((s) => <option key={s} value={s}>{s}</option>)}
               </select>
             ) : (
-              <input className="input" placeholder="e.g. Maharashtra" value={form.state}
+              <input className="input" placeholder="e.g. Maharashtra" value={form.state} name="state"
                 onChange={(e) => set("state", e.target.value)} />
             )}
           </Field>
-          <Field label="City">
-            <input className="input" placeholder="e.g. Pune" value={form.city}
+          <Field label="City" error={fieldErrors.city}>
+            <input className="input" placeholder="e.g. Pune" value={form.city} name="city"
               onChange={(e) => set("city", e.target.value)} />
           </Field>
         </div>
-        <Field label="Street address">
-          <input className="input" placeholder="e.g. 12 Stadium Road" value={form.address}
+        <Field label="Street address" error={fieldErrors.address}>
+          <input className="input" placeholder="e.g. 12 Stadium Road" value={form.address} name="address"
             onChange={(e) => set("address", e.target.value)} />
         </Field>
-        <Field label="Website">
-          <input className="input" type="url" placeholder="https://www.example.com" value={form.website}
+        <Field label="Website" error={fieldErrors.website}>
+          <input className="input" type="url" placeholder="https://www.example.com" value={form.website} name="website"
             onChange={(e) => set("website", e.target.value)} />
         </Field>
       </div>
@@ -329,17 +367,17 @@ export default function NewOrganization() {
       {/* ── Section 04: Contact ──────────────────────────────────── */}
       <div className="panel p-6 space-y-4">
         <SectionHead n="04" title="Contact details" sub="Visible to applicants and scouts" />
-        <Field label="Contact person">
-          <input className="input" placeholder="e.g. Ravi Kumar" value={form.contact_name}
+        <Field label="Contact person" error={fieldErrors.contact_name}>
+          <input className="input" placeholder="e.g. Ravi Kumar" value={form.contact_name} name="contact_name"
             onChange={(e) => set("contact_name", e.target.value)} />
         </Field>
         <div className="grid sm:grid-cols-2 gap-4">
-          <Field label="Email">
-            <input className="input" type="email" value={form.contact_email}
+          <Field label="Email" error={fieldErrors.contact_email}>
+            <input className="input" type="email" value={form.contact_email} name="contact_email"
               onChange={(e) => set("contact_email", e.target.value)} />
           </Field>
-          <Field label="Phone">
-            <input className="input" placeholder="+91 98XXX XXXXX" value={form.contact_phone}
+          <Field label="Phone" error={fieldErrors.contact_phone}>
+            <input className="input" placeholder="+91 98XXX XXXXX" value={form.contact_phone} name="contact_phone"
               onChange={(e) => set("contact_phone", e.target.value)} />
           </Field>
         </div>

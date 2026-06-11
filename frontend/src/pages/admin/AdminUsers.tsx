@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { api } from "../../api/client";
 import { PageHeader, Spinner, StatusPill, Badge, Pagination } from "../../components/UI";
-import { Trash2, Pencil } from "lucide-react";
+import { Trash2, Pencil, Plus } from "lucide-react";
 
 const PAGE_SIZE = 10;
 
@@ -43,7 +43,7 @@ export default function AdminUsers() {
   return (
     <div className="space-y-4">
       <PageHeader title="Users" subtitle="Manage account status and verification" />
-      <div className="card card-body flex flex-wrap gap-3">
+      <div className="card card-body flex flex-wrap gap-3 items-center">
         <select className="input max-w-xs" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
           <option value="">All statuses</option>
           <option>active</option><option>suspended</option><option>pending</option>
@@ -52,6 +52,12 @@ export default function AdminUsers() {
           <option value="">All roles</option>
           <option>athlete</option><option>club</option><option>scout</option><option>organizer</option><option>admin</option>
         </select>
+        <button
+          className="btn-primary ml-auto flex items-center gap-2"
+          onClick={() => navigate("/admin/users/create")}
+        >
+          <Plus className="h-4 w-4" /> Create user
+        </button>
       </div>
       {q.isLoading ? <Spinner /> : (
         <>
