@@ -266,7 +266,7 @@ resource "google_cloud_run_v2_service" "scoring_api" {
         name = "MAIN_JWT_SECRET"
         value_source {
           secret_key_ref {
-            secret  = google_secret_manager_secret.this["MAIN_JWT_SECRET"].secret_id
+            secret  = google_secret_manager_secret.this["JWT_ACCESS_SECRET"].secret_id
             version = "latest"
           }
         }
