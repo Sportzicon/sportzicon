@@ -307,26 +307,6 @@ resource "google_cloud_run_v2_service" "scoring_api" {
   ]
 }
 
-# Cloud Run domain mapping for scoring API custom domain.
-# Creates a Google-managed TLS certificate for the domain.
-# After apply, run: gcloud beta run domain-mappings describe --domain=<domain> --region=<region>
-# to get the DNS records to add in Cloudflare (set SSL mode to Full, not Flexible).
-resource "google_cloud_run_domain_mapping" "scoring_api" {
-  count    = (var.scoring_api_image != "" && var.scoring_api_custom_domain != "") ? 1 : 0
-  provider = google-beta
-  location = var.region
-  name     = var.scoring_api_custom_domain
-
-  metadata {
-    namespace = var.project_id
-  }
-
-  spec {
-    route_name = google_cloud_run_v2_service.scoring_api[0].name
-  }
-
-  depends_on = [google_cloud_run_v2_service.scoring_api]
-}
 
 resource "google_cloud_run_v2_service_iam_member" "api_public" {
   project  = var.project_id
