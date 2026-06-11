@@ -159,6 +159,27 @@ jobs:
           sed -i "s|web_image = .*|web_image = \"${{ env.AR_IMAGE }}/web:main-${{ github.sha }}\"|g" terraform.tfvars.staging
           sed -i "s|scoring_api_image = .*|scoring_api_image = \"${{ env.AR_IMAGE }}/scoring-api:main-${{ github.sha }}\"|g" terraform.tfvars.staging
 
+      - name: Import existing scoring resources into Terraform state
+        working-directory: infra/terraform
+        run: |
+          VARS="-var-file=terraform.tfvars.staging \
+            -var=database_url=${{ secrets.DATABASE_URL }} \
+            -var=direct_url=${{ secrets.DIRECT_URL }} \
+            -var=scoring_database_url=${{ secrets.SCORING_DATABASE_URL }} \
+            -var=scoring_direct_url=${{ secrets.SCORING_DIRECT_URL }}"
+
+          # Import scoring Cloud Run service if it exists in GCP but not in state
+          terraform import $VARS \
+            'google_cloud_run_v2_service.scoring_api[0]' \
+            "projects/${{ secrets.GCP_PROJECT_ID }}/locations/asia-south1/services/sportivox-scoring-api-staging" \
+            2>&1 || true
+
+          # Import scoring domain mapping if it exists in GCP but not in state
+          terraform import $VARS \
+            'google_cloud_run_domain_mapping.scoring_api[0]' \
+            "locations/asia-south1/namespaces/${{ secrets.GCP_PROJECT_ID }}/domainmappings/scoring-api.sportzicon.com" \
+            2>&1 || true
+
       - name: Terraform Plan
         working-directory: infra/terraform
         run: |
