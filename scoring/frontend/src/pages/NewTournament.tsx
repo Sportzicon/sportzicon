@@ -11,6 +11,7 @@ const FORMATS: Record<string, string[]> = {
   basketball: ["5-a-side", "3x3"],
   default: ["League", "Knockout", "Round Robin", "Group + Knockout"]
 };
+const MATCH_TYPES = ["league", "tournament", "friendly", "trial", "academy", "knockout"];
 
 export default function NewTournament() {
   const { id } = useParams<{ id?: string }>();
@@ -20,6 +21,7 @@ export default function NewTournament() {
 
   const [form, setForm] = useState({
     name: "", sport: "cricket", format: "T20",
+    season: "", match_type: "",
     description: "", start_date: "", end_date: "",
     location: "", logo_url: "", is_public: true
   });
@@ -37,6 +39,8 @@ export default function NewTournament() {
         name: existing.name || "",
         sport: existing.sport || "cricket",
         format: existing.format || "",
+        season: existing.season || "",
+        match_type: existing.match_type || "",
         description: existing.description || "",
         start_date: existing.start_date || "",
         end_date: existing.end_date || "",
@@ -91,6 +95,20 @@ export default function NewTournament() {
             <select className="input" value={form.format} onChange={e => update("format", e.target.value)}>
               <option value="">Select format</option>
               {formatOptions.map(f => <option key={f} value={f}>{f}</option>)}
+            </select>
+          </div>
+        </div>
+
+        <div className="grid sm:grid-cols-2 gap-4">
+          <div>
+            <label className="label">Season</label>
+            <input className="input" value={form.season} onChange={e => update("season", e.target.value)} placeholder="e.g. 2026 or 2025-26" />
+          </div>
+          <div>
+            <label className="label">Match Type</label>
+            <select className="input" value={form.match_type} onChange={e => update("match_type", e.target.value)}>
+              <option value="">Select type</option>
+              {MATCH_TYPES.map(t => <option key={t} value={t} className="capitalize">{t.charAt(0).toUpperCase() + t.slice(1)}</option>)}
             </select>
           </div>
         </div>

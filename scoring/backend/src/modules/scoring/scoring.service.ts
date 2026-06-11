@@ -69,21 +69,28 @@ export async function getTournament(id: string) {
   return t;
 }
 
+function nullIfEmpty(v: any): string | null {
+  if (v === undefined || v === null || v === "") return null;
+  return String(v);
+}
+
 export async function createTournament(actorId: string, actorRole: string, input: any) {
   if (!canManage(actorRole)) throw Forbidden("Only organizers can create tournaments");
+  if (!input.name?.trim()) throw BadRequest("Tournament name is required");
+  if (!input.sport) throw BadRequest("Sport is required");
   return prisma.tournament.create({
     data: {
       name: input.name,
       sport: input.sport.toLowerCase(),
-      format: input.format,
-      season: input.season,
-      match_type: input.match_type,
-      description: input.description,
-      start_date: input.start_date,
-      end_date: input.end_date,
-      location: input.location,
-      logo_url: input.logo_url,
-      banner_url: input.banner_url,
+      format: nullIfEmpty(input.format),
+      season: nullIfEmpty(input.season),
+      match_type: nullIfEmpty(input.match_type),
+      description: nullIfEmpty(input.description),
+      start_date: nullIfEmpty(input.start_date),
+      end_date: nullIfEmpty(input.end_date),
+      location: nullIfEmpty(input.location),
+      logo_url: nullIfEmpty(input.logo_url),
+      banner_url: nullIfEmpty(input.banner_url),
       is_public: input.is_public ?? true,
       created_by: actorId
     }
@@ -92,9 +99,13 @@ export async function createTournament(actorId: string, actorRole: string, input
 
 export async function updateTournament(id: string, actorId: string, actorRole: string, patch: any) {
   await assertManager(id, actorId, actorRole);
-  const fields = ["name", "sport", "format", "season", "match_type", "description", "start_date", "end_date", "location", "logo_url", "banner_url", "status", "is_public"];
+  const stringFields = ["format", "season", "match_type", "description", "start_date", "end_date", "location", "logo_url", "banner_url"];
   const data: any = {};
-  for (const k of fields) if (patch[k] !== undefined) data[k] = patch[k];
+  if (patch.name !== undefined) data.name = patch.name;
+  if (patch.sport !== undefined) data.sport = patch.sport.toLowerCase();
+  if (patch.status !== undefined) data.status = patch.status;
+  if (patch.is_public !== undefined) data.is_public = patch.is_public;
+  for (const k of stringFields) if (patch[k] !== undefined) data[k] = nullIfEmpty(patch[k]);
   return prisma.tournament.update({ where: { id }, data });
 }
 
@@ -419,6 +430,9 @@ export async function getPlayerStats(playerId: string) {
 // ── Matches ───────────────────────────────────────────────────────────────────
 
 export async function createMatch(tournamentId: string, actorId: string, actorRole: string, input: any) {
+  if (!input.team1_id) throw BadRequest("team1_id is required");
+  if (!input.team2_id) throw BadRequest("team2_id is required");
+  if (input.team1_id === input.team2_id) throw BadRequest("A match cannot have the same team on both sides");
   const t = await assertManager(tournamentId, actorId, actorRole);
   return prisma.match.create({
     data: {

@@ -110,7 +110,7 @@ CREATE TABLE IF NOT EXISTS "FieldingEntry" (
   "assists"          INTEGER NOT NULL DEFAULT 0,
   "impact_score"     INTEGER NOT NULL DEFAULT 0,
   "created_at"       TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  "updated_at"       TIMESTAMP(3) NOT NULL,
+  "updated_at"       TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT "FieldingEntry_innings_player_uniq" UNIQUE ("innings_id", "player_id")
 );
 CREATE INDEX IF NOT EXISTS "FieldingEntry_innings_id_idx" ON "FieldingEntry" ("innings_id");
@@ -130,7 +130,7 @@ CREATE TABLE IF NOT EXISTS "Partnership" (
   "ended_over"    INTEGER,
   "ended_ball"    INTEGER,
   "created_at"    TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  "updated_at"    TIMESTAMP(3) NOT NULL,
+  "updated_at"    TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT "Partnership_innings_wicket_uniq" UNIQUE ("innings_id", "wicket_number")
 );
 CREATE INDEX IF NOT EXISTS "Partnership_innings_id_idx" ON "Partnership" ("innings_id");
