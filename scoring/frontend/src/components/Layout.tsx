@@ -19,7 +19,7 @@ export default function Layout() {
   const canManage = user && ["organizer", "admin", "scorer"].includes(user.role);
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="flex flex-col min-h-screen">
       {/* Top nav */}
       <header className="bg-white border-b border-gray-200 sticky top-0 z-40">
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center gap-4">
@@ -67,7 +67,7 @@ export default function Layout() {
         )}
       </header>
 
-      <main className="flex-1 max-w-6xl mx-auto w-full px-4 py-6">
+      <main className="flex-1 w-full max-w-6xl mx-auto px-4 py-6 overflow-y-auto">
         <Outlet />
       </main>
 

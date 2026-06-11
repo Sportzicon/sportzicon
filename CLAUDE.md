@@ -196,8 +196,15 @@ User roles in demo seed: `athlete@demo.sportivox`, `club@demo.sportivox`, `scout
 |---|---|---|
 | `ci.yml` | push / PR → main | Type-check backend, build frontend |
 | `daily-e2e.yml` | daily 03:00 UTC, or on e2e/ changes | Playwright tests; commits summary to `reports/e2e/`; updates GitHub issue labeled `e2e` |
-| `deploy-staging.yml` | push → main | Docker build → GCP Cloud Run (staging) |
-| `deploy-production.yml` | git tag `v*` | Docker build → GCP Cloud Run (production) + GitHub Release |
+| `deploy-staging.yml` | push → main | Main + scoring DB migrations → build & push api/web/scoring-api images → Terraform apply → health checks |
+| `deploy-production.yml` | git tag `v*` | Same as staging but against prod tfvars → GitHub Release |
+
+**Required GitHub secrets (both `staging` and `production` environments):**
+- `DATABASE_URL` / `DIRECT_URL` — main app Supabase connection strings
+- `SCORING_DATABASE_URL` / `SCORING_DIRECT_URL` — scoring service PostgreSQL connection strings
+- `GCP_PROJECT_ID`, `GOOGLE_PROVIDER_NAME`, `GOOGLE_SERVICE_ACCOUNT` — GCP auth
+
+**Scoring DB migrations** run from `scoring/backend/` against `SCORING_DIRECT_URL` (not the main DB). The scoring schema lives at `scoring/backend/prisma/migrations/`. Never use `prisma db push` in CI — always `prisma migrate deploy`.
 
 ### Adding a new API endpoint (checklist)
 

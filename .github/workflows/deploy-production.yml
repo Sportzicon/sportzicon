@@ -77,8 +77,8 @@ jobs:
       - name: Run scoring database migrations
         working-directory: scoring/backend
         env:
-          DATABASE_URL: ${{ secrets.DIRECT_URL }}
-          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+          DATABASE_URL: ${{ secrets.SCORING_DIRECT_URL }}
+          DIRECT_URL: ${{ secrets.SCORING_DIRECT_URL }}
         run: |
           npm ci --no-audit --no-fund
           echo "Running migrations on scoring production database..."

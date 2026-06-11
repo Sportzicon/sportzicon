@@ -43,9 +43,10 @@ openai_api_key           = ""
 bootstrap_admin_email    = ""
 bootstrap_admin_password = ""
 
-# Scoring API — not deployed to staging (no image built in staging workflow)
-scoring_api_image          = ""
-scoring_api_custom_domain  = ""
+# Scoring API — built and deployed on every push to main
+scoring_api_image          = "asia-south1-docker.pkg.dev/sportzicon-app/sportivox/scoring-api:latest"
+scoring_api_custom_domain  = "scoring-api.sportzicon.com"
+scoring_cors_origin        = "https://sportzicon.com"
 optional_scoring_secrets   = []
 
 # GCP Terraform state bucket

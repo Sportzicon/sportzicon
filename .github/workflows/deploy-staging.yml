@@ -43,7 +43,7 @@ jobs:
           cache: npm
           cache-dependency-path: database/package-lock.json
 
-      - name: Run database migrations
+      - name: Run main database migrations
         working-directory: database
         env:
           DATABASE_URL: ${{ secrets.DIRECT_URL }}
@@ -71,7 +71,37 @@ jobs:
               exit $EXIT_CODE
             fi
           fi
-          echo "✅ Migrations complete"
+          echo "✅ Main DB migrations complete"
+
+      - name: Run scoring database migrations
+        working-directory: scoring/backend
+        env:
+          DATABASE_URL: ${{ secrets.SCORING_DIRECT_URL }}
+          DIRECT_URL: ${{ secrets.SCORING_DIRECT_URL }}
+        run: |
+          npm ci --no-audit --no-fund
+
+          set +e
+          OUTPUT=$(npx prisma migrate deploy 2>&1)
+          EXIT_CODE=$?
+          set -e
+          echo "$OUTPUT"
+
+          if [ $EXIT_CODE -ne 0 ]; then
+            if echo "$OUTPUT" | grep -q "P1001\|P1002\|P1003"; then
+              echo "⚠️ Scoring database unreachable — skipping migrations. Existing schema assumed current."
+              exit 0
+            elif echo "$OUTPUT" | grep -q "P3005"; then
+              echo "⚠️  P3005: scoring database has no migration history — baselining latest migration..."
+              LATEST=$(ls prisma/migrations | grep -v migration_lock | sort | tail -1)
+              echo "Baselining: $LATEST"
+              npx prisma migrate resolve --applied "$LATEST"
+              npx prisma migrate deploy
+            else
+              exit $EXIT_CODE
+            fi
+          fi
+          echo "✅ Scoring DB migrations complete"
 
       - name: Build and push API image
         uses: docker/build-push-action@v5
@@ -98,6 +128,17 @@ jobs:
             ${{ env.AR_IMAGE }}/web:latest
             ${{ env.AR_IMAGE }}/web:main-${{ github.sha }}
 
+      - name: Build and push Scoring API image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./scoring/backend/Dockerfile
+          target: runtime
+          push: true
+          tags: |
+            ${{ env.AR_IMAGE }}/scoring-api:latest
+            ${{ env.AR_IMAGE }}/scoring-api:main-${{ github.sha }}
+
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v2
         with:
@@ -116,6 +157,7 @@ jobs:
         run: |
           sed -i "s|api_image = .*|api_image = \"${{ env.AR_IMAGE }}/api:main-${{ github.sha }}\"|g" terraform.tfvars.staging
           sed -i "s|web_image = .*|web_image = \"${{ env.AR_IMAGE }}/web:main-${{ github.sha }}\"|g" terraform.tfvars.staging
+          sed -i "s|scoring_api_image = .*|scoring_api_image = \"${{ env.AR_IMAGE }}/scoring-api:main-${{ github.sha }}\"|g" terraform.tfvars.staging
 
       - name: Terraform Plan
         working-directory: infra/terraform
@@ -124,6 +166,8 @@ jobs:
             -var-file=terraform.tfvars.staging \
             -var="database_url=${{ secrets.DATABASE_URL }}" \
             -var="direct_url=${{ secrets.DIRECT_URL }}" \
+            -var="scoring_database_url=${{ secrets.SCORING_DATABASE_URL }}" \
+            -var="scoring_direct_url=${{ secrets.SCORING_DIRECT_URL }}" \
             -out=tfplan
 
       - name: Terraform Apply
@@ -136,6 +180,7 @@ jobs:
         run: |
           echo "api_url=$(terraform output -raw api_url 2>/dev/null || echo 'pending')" >> $GITHUB_OUTPUT
           echo "web_url=$(terraform output -raw web_url 2>/dev/null || echo 'pending')" >> $GITHUB_OUTPUT
+          echo "scoring_api_url=$(terraform output -raw scoring_api_url 2>/dev/null || echo 'pending')" >> $GITHUB_OUTPUT
 
       - name: Health check API
         run: |
@@ -151,4 +196,20 @@ jobs:
             sleep 5
           done
           echo "⚠️ Health check did not confirm healthy within 75s — check Cloud Run logs"
+          exit 0
+
+      - name: Health check Scoring API
+        run: |
+          SCORING_URL="${{ steps.outputs.outputs.scoring_api_url }}"
+          echo "Checking: ${SCORING_URL}/healthz"
+          for i in {1..15}; do
+            RESPONSE=$(curl -sf --max-time 10 "${SCORING_URL}/healthz" 2>/dev/null || echo "")
+            if echo "$RESPONSE" | grep -q "ok"; then
+              echo "✅ Scoring API is healthy: $RESPONSE"
+              exit 0
+            fi
+            echo "⏳ Attempt $i/15 — waiting 5s..."
+            sleep 5
+          done
+          echo "⚠️ Scoring API health check did not confirm healthy — check Cloud Run logs"
           exit 0
