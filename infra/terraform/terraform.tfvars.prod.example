@@ -50,5 +50,7 @@ bootstrap_admin_password = ""
 gcs_bucket_terraform_state = "sportivox-terraform-state-sportzicon-app"
 
 # Scoring API Configuration
-scoring_cors_origin     = "*"
-optional_scoring_secrets = []
+scoring_cors_origin        = "*"
+optional_scoring_secrets   = []
+scoring_api_custom_domain  = "scoring-api.sportzicon.com"
+# scoring_database_url and scoring_direct_url are passed as CI secrets (not committed)

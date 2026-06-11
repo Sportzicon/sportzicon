@@ -214,7 +214,7 @@ variable "environment" {
 
 variable "scoring_api_image" {
   type        = string
-  description = "Full image ref for the scoring API container (e.g. asia-south1-docker.pkg.dev/PROJECT/sportivox/scoring-api:TAG)."
+  description = "Full image ref for the scoring API container (e.g. asia-south1-docker.pkg.dev/PROJECT/sportivox/scoring-api:TAG). Leave empty to skip deploying the scoring service."
   default     = ""
 }
 
@@ -228,4 +228,24 @@ variable "optional_scoring_secrets" {
   type        = set(string)
   default     = []
   description = "Names of optional secrets to create for scoring API: JWT_SECRET, MAIN_JWT_SECRET"
+}
+
+variable "scoring_api_custom_domain" {
+  type        = string
+  default     = ""
+  description = "Custom domain for the scoring API (e.g. scoring-api.sportzicon.com). Leave empty to use the Cloud Run run.app URL. If set, a Cloud Run domain mapping is created and Cloudflare DNS must point to it."
+}
+
+variable "scoring_database_url" {
+  type        = string
+  sensitive   = true
+  default     = ""
+  description = "PostgreSQL connection URL for the scoring database (pooler, port 6543)."
+}
+
+variable "scoring_direct_url" {
+  type        = string
+  sensitive   = true
+  default     = ""
+  description = "PostgreSQL direct connection URL for the scoring database (port 5432). Used by Prisma for migrations."
 }

@@ -168,6 +168,8 @@ jobs:
             -var-file=terraform.tfvars.prod \
             -var="database_url=${{ secrets.DATABASE_URL }}" \
             -var="direct_url=${{ secrets.DIRECT_URL }}" \
+            -var="scoring_database_url=${{ secrets.SCORING_DATABASE_URL }}" \
+            -var="scoring_direct_url=${{ secrets.SCORING_DIRECT_URL }}" \
             -out=tfplan
 
       - name: Terraform Apply

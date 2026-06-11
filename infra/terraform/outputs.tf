@@ -9,8 +9,13 @@ output "web_url" {
 }
 
 output "scoring_api_url" {
-  value       = google_cloud_run_v2_service.scoring_api.uri
-  description = "Public URL of the Cloud Run scoring API service."
+  value       = var.scoring_api_image != "" ? google_cloud_run_v2_service.scoring_api[0].uri : ""
+  description = "Cloud Run run.app URL of the scoring API. Empty when scoring is not deployed."
+}
+
+output "scoring_api_custom_url" {
+  value       = var.scoring_api_custom_domain != "" ? "https://${var.scoring_api_custom_domain}" : ""
+  description = "Custom domain URL for the scoring API. Empty when no custom domain is configured."
 }
 
 output "artifact_registry" {

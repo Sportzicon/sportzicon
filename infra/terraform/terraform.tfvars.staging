@@ -43,5 +43,10 @@ openai_api_key           = ""
 bootstrap_admin_email    = ""
 bootstrap_admin_password = ""
 
+# Scoring API — not deployed to staging (no image built in staging workflow)
+scoring_api_image          = ""
+scoring_api_custom_domain  = ""
+optional_scoring_secrets   = []
+
 # GCP Terraform state bucket
 gcs_bucket_terraform_state = "sportivox-terraform-state-sportzicon-app"

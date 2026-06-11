@@ -194,8 +194,9 @@ resource "google_cloud_run_v2_service" "web" {
   }
 }
 
-# Both services are public — Cloud Run handles HTTPS automatically.
+# Only deployed when scoring_api_image is provided (staging skips this).
 resource "google_cloud_run_v2_service" "scoring_api" {
+  count    = var.scoring_api_image != "" ? 1 : 0
   name     = "sportivox-scoring-api-${var.env}"
   location = var.region
   ingress  = "INGRESS_TRAFFIC_ALL"
@@ -247,11 +248,11 @@ resource "google_cloud_run_v2_service" "scoring_api" {
       }
       env {
         name  = "DATABASE_URL"
-        value = var.database_url
+        value = var.scoring_database_url != "" ? var.scoring_database_url : var.database_url
       }
       env {
         name  = "DIRECT_URL"
-        value = var.direct_url
+        value = var.scoring_direct_url != "" ? var.scoring_direct_url : var.direct_url
       }
       env {
         name  = "JWT_SECRET"
@@ -306,6 +307,27 @@ resource "google_cloud_run_v2_service" "scoring_api" {
   ]
 }
 
+# Cloud Run domain mapping for scoring API custom domain.
+# Creates a Google-managed TLS certificate for the domain.
+# After apply, run: gcloud beta run domain-mappings describe --domain=<domain> --region=<region>
+# to get the DNS records to add in Cloudflare (set SSL mode to Full, not Flexible).
+resource "google_cloud_run_domain_mapping" "scoring_api" {
+  count    = (var.scoring_api_image != "" && var.scoring_api_custom_domain != "") ? 1 : 0
+  provider = google-beta
+  location = var.region
+  name     = var.scoring_api_custom_domain
+
+  metadata {
+    namespace = var.project_id
+  }
+
+  spec {
+    route_name = google_cloud_run_v2_service.scoring_api[0].name
+  }
+
+  depends_on = [google_cloud_run_v2_service.scoring_api]
+}
+
 resource "google_cloud_run_v2_service_iam_member" "api_public" {
   project  = var.project_id
   location = var.region
@@ -315,9 +337,10 @@ resource "google_cloud_run_v2_service_iam_member" "api_public" {
 }
 
 resource "google_cloud_run_v2_service_iam_member" "scoring_api_public" {
+  count    = var.scoring_api_image != "" ? 1 : 0
   project  = var.project_id
   location = var.region
-  name     = google_cloud_run_v2_service.scoring_api.name
+  name     = google_cloud_run_v2_service.scoring_api[0].name
   role     = "roles/run.invoker"
   member   = "allUsers"
 }
