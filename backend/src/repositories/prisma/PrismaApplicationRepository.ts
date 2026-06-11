@@ -16,7 +16,7 @@ export class PrismaApplicationRepository implements IApplicationRepository {
   async findByOpportunityAndApplicant(
     opportunityId: string,
     applicantId: string
-  ): Promise<Pick<ApplicationRecord, "id"> | null> {
+  ): Promise<Pick<ApplicationRecord, "id" | "status"> | null> {
     return this.db.application.findUnique({
       where: {
         opportunity_id_applicant_user_id: {
