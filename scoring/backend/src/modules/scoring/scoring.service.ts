@@ -1111,6 +1111,21 @@ export async function addBall(inningsId: string, actorId: string, actorRole: str
     }
   });
 
+  // Mark non-striker as "not_out" so they appear on public scoreboards immediately.
+  // Without this, a non-striker who hasn't faced a ball stays "yet_to_bat" and is
+  // invisible on the live scores page until they take strike.
+  if (non_striker_id) {
+    await prisma.battingEntry.upsert({
+      where: { innings_id_player_id: { innings_id: inningsId, player_id: non_striker_id } },
+      create: {
+        innings_id: inningsId, player_id: non_striker_id, batting_position: 99,
+        runs: 0, balls_faced: 0, fours: 0, sixes: 0, dot_balls: 0,
+        singles: 0, doubles: 0, threes: 0, status: "not_out"
+      },
+      update: { status: "not_out" }
+    });
+  }
+
   // Dismiss out batsman + capture dismissal context for scorecard view
   if (is_wicket && dismissed_player_id) {
     const bowlerCredit = ["caught", "bowled", "lbw", "stumped", "hit_wicket", "cb"].includes(wicket_type ?? "");

@@ -270,9 +270,23 @@ function LiveTab({ match, balls }: { match: any; balls: any[] }) {
   const battingTeam = activeInn.batting_team_id === match.team1.id ? match.team1 : match.team2;
   const bowlingTeam = activeInn.batting_team_id === match.team1.id ? match.team2 : match.team1;
 
-  const notOutBatsmen   = (activeInn.batting_entries ?? []).filter((e: any) => e.status === "not_out" || e.status === "retired_hurt");
   const lastBall        = balls[balls.length - 1];
   const strikerId       = lastBall?.batsman_id;
+  const nonStrikerId    = lastBall?.non_striker_id;
+  // Include "yet_to_bat" entries for players the last ball identifies as at the crease.
+  // This covers non-strikers who haven't faced a ball yet — the backend now also marks
+  // them "not_out" on each ball, but this fallback handles pre-existing match data.
+  const atCrease = new Set([strikerId, nonStrikerId].filter(Boolean));
+  const notOutBatsmen = (activeInn.batting_entries ?? [])
+    .filter((e: any) =>
+      e.status === "not_out" || e.status === "retired_hurt" ||
+      (e.status === "yet_to_bat" && atCrease.has(e.player_id))
+    )
+    .sort((a: any, b: any) => {
+      if (a.player_id === strikerId) return -1;
+      if (b.player_id === strikerId) return 1;
+      return 0;
+    });
   const currentBowlerId = lastBall?.bowler_id;
   const activeBowlers   = (activeInn.bowling_entries ?? []).filter((e: any) => e.balls > 0).sort((a: any, b: any) => b.balls - a.balls).slice(0, 2);
 
