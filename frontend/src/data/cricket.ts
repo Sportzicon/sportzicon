@@ -183,3 +183,16 @@ export function bowlerVariantFromShort(short: string | undefined): string | unde
     default:         return undefined;
   }
 }
+
+// Reverse mapping: stored bowler_variant → UI bowler_type_short category.
+export function bowlerShortFromVariant(variant: string | undefined): string | undefined {
+  switch (variant) {
+    case "rf": case "rfm": case "rmf": case "rm": return "ra_pace";
+    case "lf": case "lfm": case "lm":             return "la_pace";
+    case "ob": case "doosra": case "carrom": case "teesra": return "off_spin";
+    case "lb": case "googly":                     return "leg_spin";
+    case "sla":                                   return "la_orth";
+    case "slw":                                   return "la_wrist";
+    default:                                      return undefined;
+  }
+}

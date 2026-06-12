@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { scoringApi } from "../../api/scoringClient";
@@ -7,7 +7,7 @@ import { CheckCircle, AlertCircle, Undo2, BarChart3, Radio, ArrowLeftRight, Trop
 import {
   SHOT_TYPES, BALL_LINES, BALL_LENGTHS, BOWLER_TYPE_SHORT,
   FIELDING_POSITIONS, DISMISSAL_ZONES, BALL_TRAJECTORIES, WICKET_TYPES,
-  bowlerVariantFromShort
+  bowlerVariantFromShort, bowlerShortFromVariant
 } from "../../data/cricket";
 
 const ov  = (b: number) => `${Math.floor(b / 6)}.${b % 6}`;
@@ -164,6 +164,7 @@ function ScoringLiveInner() {
 
   const [activeInningsId, setActiveInningsId] = useState<string | null>(null);
   const [ball, setBall] = useState<BallInput>({ ...DEFAULT_BALL });
+  const initializedFromHistory = useRef(false);
   const [feedback, setFeedback] = useState<{ type:"success"|"error"; msg:string } | null>(null);
   const [milestone, setMilestone] = useState<{ playerId:string; runs:number } | null>(null);
   const [showNewInnings, setShowNewInnings] = useState(false);
@@ -196,6 +197,28 @@ function ScoringLiveInner() {
     const inns = match?.innings;
     if (inns?.length) setActiveInningsId(inns[inns.length - 1].id);
   }, [match, activeInningsId]);
+
+  // Pre-populate form from the last recorded ball on page load (so scorers don't
+  // need to re-select striker, non-striker, and bowler after a page refresh).
+  useEffect(() => {
+    if (initializedFromHistory.current) return;
+    if (!allBalls.length) return;
+    initializedFromHistory.current = true;
+    const last = allBalls[allBalls.length - 1];
+    setBall(prev => {
+      if (prev.batsman_id) return prev; // user already made a selection
+      return {
+        ...DEFAULT_BALL,
+        batsman_id:        last.batsman_id     ?? "",
+        non_striker_id:    last.non_striker_id ?? "",
+        bowler_id:         last.bowler_id      ?? "",
+        bowler_type_short: bowlerShortFromVariant(last.bowler_variant) ?? "",
+        ball_length:       last.ball_length    ?? "",
+        ball_line:         last.ball_line      ?? "",
+        shot_type:         last.shot_type      ?? "",
+      };
+    });
+  }, [allBalls]);
 
   const activeInnings  = match?.innings?.find((i: any) => i.id === activeInningsId) ?? match?.innings?.[match.innings.length - 1];
   const battingTeam    = activeInnings ? (activeInnings.batting_team_id === match?.team1?.id ? match.team1 : match.team2) : null;
@@ -306,7 +329,7 @@ function ScoringLiveInner() {
 
   const createInningsMutation = useMutation({
     mutationFn: (input: any) => scoringApi.post(`/matches/${matchId}/innings`, input),
-    onSuccess: (r) => { invalidate(); setActiveInningsId(r.data.innings.id); setBall({ ...DEFAULT_BALL }); setShowNewInnings(false); },
+    onSuccess: (r) => { invalidate(); setActiveInningsId(r.data.innings.id); setBall({ ...DEFAULT_BALL }); initializedFromHistory.current = false; setShowNewInnings(false); },
     onError: (err: any) => fb("error", err.response?.data?.error?.message || "Failed")
   });
 
