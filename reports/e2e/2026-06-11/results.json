@@ -12,24 +12,24 @@
     "maxFailures": 0,
     "metadata": {
       "ci": {
-        "commitHref": "https://github.com/Sportzicon/sportzicon/commit/5d505ea91a890087941185091cfb6c4fe0c79442",
-        "commitHash": "5d505ea91a890087941185091cfb6c4fe0c79442",
-        "buildHref": "https://github.com/Sportzicon/sportzicon/actions/runs/27377288096"
+        "commitHref": "https://github.com/Sportzicon/sportzicon/commit/55eece8747e8d1680191933af7a6415355dad286",
+        "commitHash": "55eece8747e8d1680191933af7a6415355dad286",
+        "buildHref": "https://github.com/Sportzicon/sportzicon/actions/runs/27380917053"
       },
       "gitCommit": {
-        "shortHash": "5d505ea",
-        "hash": "5d505ea91a890087941185091cfb6c4fe0c79442",
-        "subject": "fix: complete scoring CI/CD pipeline and add initial DB migration",
-        "body": "fix: complete scoring CI/CD pipeline and add initial DB migration\n\n- Rewrite deploy-staging.yml to build/deploy scoring API on every push to main,\n  run scoring DB migrations against SCORING_DIRECT_URL, and health-check scoring API\n- Fix deploy-production.yml scoring migration step to use SCORING_DIRECT_URL\n  (was incorrectly using main app DIRECT_URL)\n- Add 20250101_init migration with full base schema so prisma migrate deploy\n  works on a fresh scoring postgres schema (previous db push left no migration history)\n- Add migration_lock.toml for the scoring migrations directory\n- Enable scoring Cloud Run service in terraform.tfvars.staging\n- Fix scrollbar on scoring frontend: overflow-y-auto on main, overflow-y:scroll on html\n- Add season/match_type fields to NewTournament form (already in service/schema)\n- Update CLAUDE.md with scoring CI/CD secrets and migration notes\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>\n",
+        "shortHash": "55eece8",
+        "hash": "55eece8747e8d1680191933af7a6415355dad286",
+        "subject": "fix: scoring layout scrolling when DevTools reduces viewport height",
+        "body": "fix: scoring layout scrolling when DevTools reduces viewport height\n\nSwitch outer container from min-h-screen to h-screen so the layout is\ncapped at viewport height. main gets flex-1 + overflow-y-auto so content\nscrolls within the allocated space. Header and footer get shrink-0 so they\nnever compress. Previously min-h-screen let the container grow freely,\nmeaning main never had a fixed height to overflow against.\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>\n",
         "author": {
           "name": "gitusrmahesh",
           "email": "singarimahesh0@gmail.com",
-          "time": 1781211801000
+          "time": 1781216197000
         },
         "committer": {
           "name": "gitusrmahesh",
           "email": "singarimahesh0@gmail.com",
-          "time": 1781211801000
+          "time": 1781216197000
         },
         "branch": "main"
       },
@@ -43,24 +43,24 @@
         "retries": 2,
         "metadata": {
           "ci": {
-            "commitHref": "https://github.com/Sportzicon/sportzicon/commit/5d505ea91a890087941185091cfb6c4fe0c79442",
-            "commitHash": "5d505ea91a890087941185091cfb6c4fe0c79442",
-            "buildHref": "https://github.com/Sportzicon/sportzicon/actions/runs/27377288096"
+            "commitHref": "https://github.com/Sportzicon/sportzicon/commit/55eece8747e8d1680191933af7a6415355dad286",
+            "commitHash": "55eece8747e8d1680191933af7a6415355dad286",
+            "buildHref": "https://github.com/Sportzicon/sportzicon/actions/runs/27380917053"
           },
           "gitCommit": {
-            "shortHash": "5d505ea",
-            "hash": "5d505ea91a890087941185091cfb6c4fe0c79442",
-            "subject": "fix: complete scoring CI/CD pipeline and add initial DB migration",
-            "body": "fix: complete scoring CI/CD pipeline and add initial DB migration\n\n- Rewrite deploy-staging.yml to build/deploy scoring API on every push to main,\n  run scoring DB migrations against SCORING_DIRECT_URL, and health-check scoring API\n- Fix deploy-production.yml scoring migration step to use SCORING_DIRECT_URL\n  (was incorrectly using main app DIRECT_URL)\n- Add 20250101_init migration with full base schema so prisma migrate deploy\n  works on a fresh scoring postgres schema (previous db push left no migration history)\n- Add migration_lock.toml for the scoring migrations directory\n- Enable scoring Cloud Run service in terraform.tfvars.staging\n- Fix scrollbar on scoring frontend: overflow-y-auto on main, overflow-y:scroll on html\n- Add season/match_type fields to NewTournament form (already in service/schema)\n- Update CLAUDE.md with scoring CI/CD secrets and migration notes\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>\n",
+            "shortHash": "55eece8",
+            "hash": "55eece8747e8d1680191933af7a6415355dad286",
+            "subject": "fix: scoring layout scrolling when DevTools reduces viewport height",
+            "body": "fix: scoring layout scrolling when DevTools reduces viewport height\n\nSwitch outer container from min-h-screen to h-screen so the layout is\ncapped at viewport height. main gets flex-1 + overflow-y-auto so content\nscrolls within the allocated space. Header and footer get shrink-0 so they\nnever compress. Previously min-h-screen let the container grow freely,\nmeaning main never had a fixed height to overflow against.\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>\n",
             "author": {
               "name": "gitusrmahesh",
               "email": "singarimahesh0@gmail.com",
-              "time": 1781211801000
+              "time": 1781216197000
             },
             "committer": {
               "name": "gitusrmahesh",
               "email": "singarimahesh0@gmail.com",
-              "time": 1781211801000
+              "time": 1781216197000
             },
             "branch": "main"
           },
@@ -81,24 +81,24 @@
         "retries": 2,
         "metadata": {
           "ci": {
-            "commitHref": "https://github.com/Sportzicon/sportzicon/commit/5d505ea91a890087941185091cfb6c4fe0c79442",
-            "commitHash": "5d505ea91a890087941185091cfb6c4fe0c79442",
-            "buildHref": "https://github.com/Sportzicon/sportzicon/actions/runs/27377288096"
+            "commitHref": "https://github.com/Sportzicon/sportzicon/commit/55eece8747e8d1680191933af7a6415355dad286",
+            "commitHash": "55eece8747e8d1680191933af7a6415355dad286",
+            "buildHref": "https://github.com/Sportzicon/sportzicon/actions/runs/27380917053"
           },
           "gitCommit": {
-            "shortHash": "5d505ea",
-            "hash": "5d505ea91a890087941185091cfb6c4fe0c79442",
-            "subject": "fix: complete scoring CI/CD pipeline and add initial DB migration",
-            "body": "fix: complete scoring CI/CD pipeline and add initial DB migration\n\n- Rewrite deploy-staging.yml to build/deploy scoring API on every push to main,\n  run scoring DB migrations against SCORING_DIRECT_URL, and health-check scoring API\n- Fix deploy-production.yml scoring migration step to use SCORING_DIRECT_URL\n  (was incorrectly using main app DIRECT_URL)\n- Add 20250101_init migration with full base schema so prisma migrate deploy\n  works on a fresh scoring postgres schema (previous db push left no migration history)\n- Add migration_lock.toml for the scoring migrations directory\n- Enable scoring Cloud Run service in terraform.tfvars.staging\n- Fix scrollbar on scoring frontend: overflow-y-auto on main, overflow-y:scroll on html\n- Add season/match_type fields to NewTournament form (already in service/schema)\n- Update CLAUDE.md with scoring CI/CD secrets and migration notes\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>\n",
+            "shortHash": "55eece8",
+            "hash": "55eece8747e8d1680191933af7a6415355dad286",
+            "subject": "fix: scoring layout scrolling when DevTools reduces viewport height",
+            "body": "fix: scoring layout scrolling when DevTools reduces viewport height\n\nSwitch outer container from min-h-screen to h-screen so the layout is\ncapped at viewport height. main gets flex-1 + overflow-y-auto so content\nscrolls within the allocated space. Header and footer get shrink-0 so they\nnever compress. Previously min-h-screen let the container grow freely,\nmeaning main never had a fixed height to overflow against.\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>\n",
             "author": {
               "name": "gitusrmahesh",
               "email": "singarimahesh0@gmail.com",
-              "time": 1781211801000
+              "time": 1781216197000
             },
             "committer": {
               "name": "gitusrmahesh",
               "email": "singarimahesh0@gmail.com",
-              "time": 1781211801000
+              "time": 1781216197000
             },
             "branch": "main"
           },
@@ -119,24 +119,24 @@
         "retries": 2,
         "metadata": {
           "ci": {
-            "commitHref": "https://github.com/Sportzicon/sportzicon/commit/5d505ea91a890087941185091cfb6c4fe0c79442",
-            "commitHash": "5d505ea91a890087941185091cfb6c4fe0c79442",
-            "buildHref": "https://github.com/Sportzicon/sportzicon/actions/runs/27377288096"
+            "commitHref": "https://github.com/Sportzicon/sportzicon/commit/55eece8747e8d1680191933af7a6415355dad286",
+            "commitHash": "55eece8747e8d1680191933af7a6415355dad286",
+            "buildHref": "https://github.com/Sportzicon/sportzicon/actions/runs/27380917053"
           },
           "gitCommit": {
-            "shortHash": "5d505ea",
-            "hash": "5d505ea91a890087941185091cfb6c4fe0c79442",
-            "subject": "fix: complete scoring CI/CD pipeline and add initial DB migration",
-            "body": "fix: complete scoring CI/CD pipeline and add initial DB migration\n\n- Rewrite deploy-staging.yml to build/deploy scoring API on every push to main,\n  run scoring DB migrations against SCORING_DIRECT_URL, and health-check scoring API\n- Fix deploy-production.yml scoring migration step to use SCORING_DIRECT_URL\n  (was incorrectly using main app DIRECT_URL)\n- Add 20250101_init migration with full base schema so prisma migrate deploy\n  works on a fresh scoring postgres schema (previous db push left no migration history)\n- Add migration_lock.toml for the scoring migrations directory\n- Enable scoring Cloud Run service in terraform.tfvars.staging\n- Fix scrollbar on scoring frontend: overflow-y-auto on main, overflow-y:scroll on html\n- Add season/match_type fields to NewTournament form (already in service/schema)\n- Update CLAUDE.md with scoring CI/CD secrets and migration notes\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>\n",
+            "shortHash": "55eece8",
+            "hash": "55eece8747e8d1680191933af7a6415355dad286",
+            "subject": "fix: scoring layout scrolling when DevTools reduces viewport height",
+            "body": "fix: scoring layout scrolling when DevTools reduces viewport height\n\nSwitch outer container from min-h-screen to h-screen so the layout is\ncapped at viewport height. main gets flex-1 + overflow-y-auto so content\nscrolls within the allocated space. Header and footer get shrink-0 so they\nnever compress. Previously min-h-screen let the container grow freely,\nmeaning main never had a fixed height to overflow against.\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>\n",
             "author": {
               "name": "gitusrmahesh",
               "email": "singarimahesh0@gmail.com",
-              "time": 1781211801000
+              "time": 1781216197000
             },
             "committer": {
               "name": "gitusrmahesh",
               "email": "singarimahesh0@gmail.com",
-              "time": 1781211801000
+              "time": 1781216197000
             },
             "branch": "main"
           },
@@ -237,12 +237,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "skipped",
-                      "duration": 13400,
+                      "duration": 13623,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-11T21:04:31.871Z",
+                      "startTime": "2026-06-11T22:17:38.782Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -294,12 +294,12 @@
                       "workerIndex": 1,
                       "parallelIndex": 1,
                       "status": "skipped",
-                      "duration": 13408,
+                      "duration": 13527,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-11T21:04:31.934Z",
+                      "startTime": "2026-06-11T22:17:38.858Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -351,12 +351,12 @@
                       "workerIndex": 1,
                       "parallelIndex": 1,
                       "status": "skipped",
-                      "duration": 12178,
+                      "duration": 12177,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-11T21:04:45.796Z",
+                      "startTime": "2026-06-11T22:17:52.890Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -408,12 +408,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "skipped",
-                      "duration": 12378,
+                      "duration": 12330,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-11T21:04:45.852Z",
+                      "startTime": "2026-06-11T22:17:53.005Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -454,7 +454,7 @@
                       "workerIndex": 1,
                       "parallelIndex": 1,
                       "status": "failed",
-                      "duration": 2475,
+                      "duration": 2433,
                       "error": {
                         "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoMatch\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected pattern: \u001b[32m/invalid|wrong|incorrect|error|denied|unable|unreach|server/i\u001b[39m\nReceived string:  \u001b[31m\"\u001b[39m\n\u001b[31m    EST. 2026For AthletesFor ClubsHow it worksLive ScoresSign inGet startedThe verified sports recruitment networkPune · Mumbai · London · Melbourne · Cape TownWelcomeback.The verified sports recruitment network. Sign in to your account to access opportunities, messages and your profile.◆Verified profilesEvery badge-holder is identity-checked.◆Structured workflowPending → Shortlisted → Selected.◆Real opportunitiesTrials, scholarships, coaching jobs.Account accessSign inNew here? Create an account →EmailPasswordForgot?Signing in…© 2026 Sportzicon — All rights reservedVerified sports recruitment·········\u001b[39m\n\u001b[31m\"\u001b[39m",
                         "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoMatch\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected pattern: \u001b[32m/invalid|wrong|incorrect|error|denied|unable|unreach|server/i\u001b[39m\nReceived string:  \u001b[31m\"\u001b[39m\n\u001b[31m    EST. 2026For AthletesFor ClubsHow it worksLive ScoresSign inGet startedThe verified sports recruitment networkPune · Mumbai · London · Melbourne · Cape TownWelcomeback.The verified sports recruitment network. Sign in to your account to access opportunities, messages and your profile.◆Verified profilesEvery badge-holder is identity-checked.◆Structured workflowPending → Shortlisted → Selected.◆Real opportunitiesTrials, scholarships, coaching jobs.Account accessSign inNew here? Create an account →EmailPasswordForgot?Signing in…© 2026 Sportzicon — All rights reservedVerified sports recruitment·········\u001b[39m\n\u001b[31m\"\u001b[39m\n    at /home/runner/work/sportzicon/sportzicon/e2e/tests/sportivox/auth.spec.ts:40:23",
@@ -478,7 +478,7 @@
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-11T21:04:57.997Z",
+                      "startTime": "2026-06-11T22:18:05.091Z",
                       "annotations": [],
                       "attachments": [
                         {
@@ -512,7 +512,7 @@
                       "workerIndex": 2,
                       "parallelIndex": 1,
                       "status": "failed",
-                      "duration": 2242,
+                      "duration": 2210,
                       "error": {
                         "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoMatch\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected pattern: \u001b[32m/invalid|wrong|incorrect|error|denied|unable|unreach|server/i\u001b[39m\nReceived string:  \u001b[31m\"\u001b[39m\n\u001b[31m    EST. 2026For AthletesFor ClubsHow it worksLive ScoresSign inGet startedThe verified sports recruitment networkPune · Mumbai · London · Melbourne · Cape TownWelcomeback.The verified sports recruitment network. Sign in to your account to access opportunities, messages and your profile.◆Verified profilesEvery badge-holder is identity-checked.◆Structured workflowPending → Shortlisted → Selected.◆Real opportunitiesTrials, scholarships, coaching jobs.Account accessSign inNew here? Create an account →EmailPasswordForgot?Signing in…© 2026 Sportzicon — All rights reservedVerified sports recruitment·········\u001b[39m\n\u001b[31m\"\u001b[39m",
                         "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoMatch\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected pattern: \u001b[32m/invalid|wrong|incorrect|error|denied|unable|unreach|server/i\u001b[39m\nReceived string:  \u001b[31m\"\u001b[39m\n\u001b[31m    EST. 2026For AthletesFor ClubsHow it worksLive ScoresSign inGet startedThe verified sports recruitment networkPune · Mumbai · London · Melbourne · Cape TownWelcomeback.The verified sports recruitment network. Sign in to your account to access opportunities, messages and your profile.◆Verified profilesEvery badge-holder is identity-checked.◆Structured workflowPending → Shortlisted → Selected.◆Real opportunitiesTrials, scholarships, coaching jobs.Account accessSign inNew here? Create an account →EmailPasswordForgot?Signing in…© 2026 Sportzicon — All rights reservedVerified sports recruitment·········\u001b[39m\n\u001b[31m\"\u001b[39m\n    at /home/runner/work/sportzicon/sportzicon/e2e/tests/sportivox/auth.spec.ts:40:23",
@@ -536,7 +536,7 @@
                       "stdout": [],
                       "stderr": [],
                       "retry": 1,
-                      "startTime": "2026-06-11T21:05:01.222Z",
+                      "startTime": "2026-06-11T22:18:08.220Z",
                       "annotations": [],
                       "attachments": [
                         {
@@ -570,7 +570,7 @@
                       "workerIndex": 3,
                       "parallelIndex": 1,
                       "status": "failed",
-                      "duration": 2256,
+                      "duration": 2186,
                       "error": {
                         "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoMatch\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected pattern: \u001b[32m/invalid|wrong|incorrect|error|denied|unable|unreach|server/i\u001b[39m\nReceived string:  \u001b[31m\"\u001b[39m\n\u001b[31m    EST. 2026For AthletesFor ClubsHow it worksLive ScoresSign inGet startedThe verified sports recruitment networkPune · Mumbai · London · Melbourne · Cape TownWelcomeback.The verified sports recruitment network. Sign in to your account to access opportunities, messages and your profile.◆Verified profilesEvery badge-holder is identity-checked.◆Structured workflowPending → Shortlisted → Selected.◆Real opportunitiesTrials, scholarships, coaching jobs.Account accessSign inNew here? Create an account →EmailPasswordForgot?Signing in…© 2026 Sportzicon — All rights reservedVerified sports recruitment·········\u001b[39m\n\u001b[31m\"\u001b[39m",
                         "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoMatch\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected pattern: \u001b[32m/invalid|wrong|incorrect|error|denied|unable|unreach|server/i\u001b[39m\nReceived string:  \u001b[31m\"\u001b[39m\n\u001b[31m    EST. 2026For AthletesFor ClubsHow it worksLive ScoresSign inGet startedThe verified sports recruitment networkPune · Mumbai · London · Melbourne · Cape TownWelcomeback.The verified sports recruitment network. Sign in to your account to access opportunities, messages and your profile.◆Verified profilesEvery badge-holder is identity-checked.◆Structured workflowPending → Shortlisted → Selected.◆Real opportunitiesTrials, scholarships, coaching jobs.Account accessSign inNew here? Create an account →EmailPasswordForgot?Signing in…© 2026 Sportzicon — All rights reservedVerified sports recruitment·········\u001b[39m\n\u001b[31m\"\u001b[39m\n    at /home/runner/work/sportzicon/sportzicon/e2e/tests/sportivox/auth.spec.ts:40:23",
@@ -594,7 +594,7 @@
                       "stdout": [],
                       "stderr": [],
                       "retry": 2,
-                      "startTime": "2026-06-11T21:05:04.198Z",
+                      "startTime": "2026-06-11T22:18:11.150Z",
                       "annotations": [],
                       "attachments": [
                         {
@@ -661,12 +661,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "skipped",
-                      "duration": 12279,
+                      "duration": 12248,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-11T21:04:58.267Z",
+                      "startTime": "2026-06-11T22:18:05.374Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -725,12 +725,12 @@
                       "workerIndex": 4,
                       "parallelIndex": 1,
                       "status": "passed",
-                      "duration": 1273,
+                      "duration": 1241,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-11T21:05:07.207Z",
+                      "startTime": "2026-06-11T22:18:14.079Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -761,12 +761,12 @@
                       "workerIndex": 4,
                       "parallelIndex": 1,
                       "status": "passed",
-                      "duration": 1207,
+                      "duration": 1145,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-11T21:05:08.586Z",
+                      "startTime": "2026-06-11T22:18:15.427Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -797,12 +797,12 @@
                       "workerIndex": 4,
                       "parallelIndex": 1,
                       "status": "passed",
-                      "duration": 1605,
+                      "duration": 1531,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-11T21:05:09.812Z",
+                      "startTime": "2026-06-11T22:18:16.585Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -833,12 +833,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 1507,
+                      "duration": 1515,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-11T21:05:10.589Z",
+                      "startTime": "2026-06-11T22:18:17.654Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -869,12 +869,12 @@
                       "workerIndex": 4,
                       "parallelIndex": 1,
                       "status": "passed",
-                      "duration": 1978,
+                      "duration": 1533,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-11T21:05:11.449Z",
+                      "startTime": "2026-06-11T22:18:18.132Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -903,12 +903,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 928,
+                      "duration": 1016,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-11T21:05:12.125Z",
+                      "startTime": "2026-06-11T22:18:19.187Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -938,14 +938,14 @@
                   "results": [
                     {
                       "workerIndex": 7,
-                      "parallelIndex": 1,
+                      "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 1311,
+                      "duration": 1318,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-11T21:06:33.796Z",
+                      "startTime": "2026-06-11T22:19:40.216Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -974,14 +974,14 @@
                   "results": [
                     {
                       "workerIndex": 7,
-                      "parallelIndex": 1,
+                      "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 1189,
+                      "duration": 1151,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-11T21:06:35.214Z",
+                      "startTime": "2026-06-11T22:19:41.638Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1010,14 +1010,14 @@
                   "results": [
                     {
                       "workerIndex": 7,
-                      "parallelIndex": 1,
+                      "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 1219,
+                      "duration": 1269,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-11T21:06:36.419Z",
+                      "startTime": "2026-06-11T22:19:42.805Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1046,14 +1046,14 @@
                   "results": [
                     {
                       "workerIndex": 7,
-                      "parallelIndex": 1,
+                      "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 1352,
+                      "duration": 1238,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-11T21:06:37.650Z",
+                      "startTime": "2026-06-11T22:19:44.088Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1082,14 +1082,14 @@
                   "results": [
                     {
                       "workerIndex": 7,
-                      "parallelIndex": 1,
+                      "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 1771,
+                      "duration": 1612,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-11T21:06:39.020Z",
+                      "startTime": "2026-06-11T22:19:45.346Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1116,14 +1116,14 @@
                   "results": [
                     {
                       "workerIndex": 8,
-                      "parallelIndex": 0,
+                      "parallelIndex": 1,
                       "status": "passed",
-                      "duration": 1010,
+                      "duration": 986,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-11T21:06:39.907Z",
+                      "startTime": "2026-06-11T22:19:46.572Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1178,15 +1178,15 @@
                   "projectName": "sportivox-chromium",
                   "results": [
                     {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
+                      "workerIndex": 4,
+                      "parallelIndex": 1,
                       "status": "skipped",
-                      "duration": 12093,
+                      "duration": 12128,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-11T21:05:13.080Z",
+                      "startTime": "2026-06-11T22:18:19.700Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -1234,15 +1234,15 @@
                   "projectName": "sportivox-chromium",
                   "results": [
                     {
-                      "workerIndex": 4,
-                      "parallelIndex": 1,
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
                       "status": "skipped",
-                      "duration": 12197,
+                      "duration": 12200,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-11T21:05:13.478Z",
+                      "startTime": "2026-06-11T22:18:20.227Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -1288,15 +1288,15 @@
                   "projectName": "sportivox-chromium",
                   "results": [
                     {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
+                      "workerIndex": 4,
+                      "parallelIndex": 1,
                       "status": "skipped",
-                      "duration": 12178,
+                      "duration": 12192,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-11T21:05:25.191Z",
+                      "startTime": "2026-06-11T22:18:31.848Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -1342,15 +1342,15 @@
                   "projectName": "sportivox-chromium",
                   "results": [
                     {
-                      "workerIndex": 4,
-                      "parallelIndex": 1,
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
                       "status": "skipped",
-                      "duration": 12144,
+                      "duration": 12198,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-11T21:05:25.698Z",
+                      "startTime": "2026-06-11T22:18:32.442Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -1415,15 +1415,15 @@
                   "projectName": "sportivox-chromium",
                   "results": [
                     {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
+                      "workerIndex": 4,
+                      "parallelIndex": 1,
                       "status": "skipped",
-                      "duration": 12163,
+                      "duration": 12200,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-11T21:05:37.399Z",
+                      "startTime": "2026-06-11T22:18:44.087Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -1471,15 +1471,15 @@
                   "projectName": "sportivox-chromium",
                   "results": [
                     {
-                      "workerIndex": 4,
-                      "parallelIndex": 1,
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
                       "status": "skipped",
-                      "duration": 12281,
+                      "duration": 12263,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-11T21:05:37.883Z",
+                      "startTime": "2026-06-11T22:18:44.673Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -1527,15 +1527,15 @@
                   "projectName": "sportivox-chromium",
                   "results": [
                     {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
+                      "workerIndex": 4,
+                      "parallelIndex": 1,
                       "status": "skipped",
-                      "duration": 12317,
+                      "duration": 12288,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-11T21:05:49.586Z",
+                      "startTime": "2026-06-11T22:18:56.310Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -1583,15 +1583,15 @@
                   "projectName": "sportivox-chromium",
                   "results": [
                     {
-                      "workerIndex": 4,
-                      "parallelIndex": 1,
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
                       "status": "skipped",
-                      "duration": 12294,
+                      "duration": 12202,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-11T21:05:50.197Z",
+                      "startTime": "2026-06-11T22:18:56.957Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -1639,15 +1639,15 @@
                   "projectName": "sportivox-chromium",
                   "results": [
                     {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
+                      "workerIndex": 4,
+                      "parallelIndex": 1,
                       "status": "skipped",
-                      "duration": 12188,
+                      "duration": 12216,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-11T21:06:01.921Z",
+                      "startTime": "2026-06-11T22:19:08.620Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -1693,15 +1693,15 @@
                   "projectName": "sportivox-chromium",
                   "results": [
                     {
-                      "workerIndex": 4,
-                      "parallelIndex": 1,
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
                       "status": "skipped",
-                      "duration": 12230,
+                      "duration": 12098,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-11T21:06:02.519Z",
+                      "startTime": "2026-06-11T22:19:09.179Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -1768,14 +1768,14 @@
                   "results": [
                     {
                       "workerIndex": 5,
-                      "parallelIndex": 0,
+                      "parallelIndex": 1,
                       "status": "skipped",
                       "duration": 0,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-11T21:06:14.882Z",
+                      "startTime": "2026-06-11T22:19:21.528Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -1824,14 +1824,14 @@
                   "results": [
                     {
                       "workerIndex": 5,
-                      "parallelIndex": 0,
+                      "parallelIndex": 1,
                       "status": "skipped",
                       "duration": 0,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-11T21:06:15.570Z",
+                      "startTime": "2026-06-11T22:19:22.226Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -1880,14 +1880,14 @@
                   "results": [
                     {
                       "workerIndex": 6,
-                      "parallelIndex": 1,
+                      "parallelIndex": 0,
                       "status": "skipped",
                       "duration": 0,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-11T21:06:15.369Z",
+                      "startTime": "2026-06-11T22:19:21.891Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -1943,14 +1943,14 @@
                   "results": [
                     {
                       "workerIndex": 5,
-                      "parallelIndex": 0,
+                      "parallelIndex": 1,
                       "status": "passed",
-                      "duration": 677,
+                      "duration": 743,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-11T21:06:15.583Z",
+                      "startTime": "2026-06-11T22:19:22.238Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1979,14 +1979,14 @@
                   "results": [
                     {
                       "workerIndex": 6,
-                      "parallelIndex": 1,
+                      "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 730,
+                      "duration": 727,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-11T21:06:16.098Z",
+                      "startTime": "2026-06-11T22:19:22.608Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -2025,14 +2025,14 @@
                   "results": [
                     {
                       "workerIndex": 5,
-                      "parallelIndex": 0,
+                      "parallelIndex": 1,
                       "status": "skipped",
-                      "duration": 11308,
+                      "duration": 11293,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-11T21:06:16.355Z",
+                      "startTime": "2026-06-11T22:19:23.068Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -2069,14 +2069,14 @@
                   "results": [
                     {
                       "workerIndex": 6,
-                      "parallelIndex": 1,
+                      "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 1436,
+                      "duration": 1457,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-11T21:06:16.925Z",
+                      "startTime": "2026-06-11T22:19:23.441Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -2133,14 +2133,14 @@
                   "results": [
                     {
                       "workerIndex": 6,
-                      "parallelIndex": 1,
+                      "parallelIndex": 0,
                       "status": "skipped",
                       "duration": 0,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-11T21:06:18.400Z",
+                      "startTime": "2026-06-11T22:19:24.934Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -2190,14 +2190,14 @@
                   "results": [
                     {
                       "workerIndex": 6,
-                      "parallelIndex": 1,
+                      "parallelIndex": 0,
                       "status": "skipped",
                       "duration": 0,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-11T21:06:19.034Z",
+                      "startTime": "2026-06-11T22:19:25.568Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -2247,14 +2247,14 @@
                   "results": [
                     {
                       "workerIndex": 6,
-                      "parallelIndex": 1,
+                      "parallelIndex": 0,
                       "status": "skipped",
                       "duration": 0,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-11T21:06:19.034Z",
+                      "startTime": "2026-06-11T22:19:25.568Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -2304,14 +2304,14 @@
                   "results": [
                     {
                       "workerIndex": 6,
-                      "parallelIndex": 1,
+                      "parallelIndex": 0,
                       "status": "skipped",
                       "duration": 0,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-11T21:06:19.040Z",
+                      "startTime": "2026-06-11T22:19:25.574Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -2360,14 +2360,14 @@
                   "results": [
                     {
                       "workerIndex": 6,
-                      "parallelIndex": 1,
+                      "parallelIndex": 0,
                       "status": "skipped",
                       "duration": 0,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-11T21:06:19.672Z",
+                      "startTime": "2026-06-11T22:19:26.206Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -2434,14 +2434,14 @@
                   "results": [
                     {
                       "workerIndex": 6,
-                      "parallelIndex": 1,
+                      "parallelIndex": 0,
                       "status": "skipped",
                       "duration": 0,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-11T21:06:19.683Z",
+                      "startTime": "2026-06-11T22:19:26.217Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -2490,14 +2490,14 @@
                   "results": [
                     {
                       "workerIndex": 6,
-                      "parallelIndex": 1,
+                      "parallelIndex": 0,
                       "status": "skipped",
                       "duration": 0,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-11T21:06:20.323Z",
+                      "startTime": "2026-06-11T22:19:26.854Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -2553,14 +2553,14 @@
                   "results": [
                     {
                       "workerIndex": 6,
-                      "parallelIndex": 1,
+                      "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 554,
+                      "duration": 517,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-11T21:06:20.966Z",
+                      "startTime": "2026-06-11T22:19:27.498Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -2599,14 +2599,14 @@
                   "results": [
                     {
                       "workerIndex": 6,
-                      "parallelIndex": 1,
+                      "parallelIndex": 0,
                       "status": "skipped",
-                      "duration": 11148,
+                      "duration": 11084,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-11T21:06:21.537Z",
+                      "startTime": "2026-06-11T22:19:28.031Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -2655,14 +2655,14 @@
                   "results": [
                     {
                       "workerIndex": 5,
-                      "parallelIndex": 0,
+                      "parallelIndex": 1,
                       "status": "skipped",
-                      "duration": 11343,
+                      "duration": 11471,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-11T21:06:27.707Z",
+                      "startTime": "2026-06-11T22:19:34.394Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -2709,14 +2709,14 @@
                   "results": [
                     {
                       "workerIndex": 6,
-                      "parallelIndex": 1,
+                      "parallelIndex": 0,
                       "status": "skipped",
-                      "duration": 546,
+                      "duration": 519,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-11T21:06:32.702Z",
+                      "startTime": "2026-06-11T22:19:39.134Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -2746,8 +2746,8 @@
   ],
   "errors": [],
   "stats": {
-    "startTime": "2026-06-11T21:04:27.225Z",
-    "duration": 133886.402,
+    "startTime": "2026-06-11T22:17:34.522Z",
+    "duration": 133210.80099999998,
     "expected": 16,
     "skipped": 29,
     "unexpected": 1,
