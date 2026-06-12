@@ -114,8 +114,8 @@ const DEFAULT_BALL: BallInput = {
 };
 
 // ── Batter stat card ──────────────────────────────────────────────────────────
-function BatterStat({ entry, isStriker, milestone }: { entry: any; isStriker: boolean; milestone: number | null }) {
-  const name  = entry?.player?.name ?? (isStriker ? "Select striker" : "Select non-striker");
+function BatterStat({ entry, isStriker, milestone, selectedName }: { entry: any; isStriker: boolean; milestone: number | null; selectedName?: string }) {
+  const name  = entry?.player?.name ?? selectedName ?? (isStriker ? "Select striker" : "Select non-striker");
   const runs  = entry?.runs   ?? 0;
   const balls = entry?.balls_faced ?? 0;
   const fours = entry?.fours ?? 0;
@@ -449,7 +449,23 @@ function ScoringLiveInner() {
             <Undo2 className="w-4 h-4" />
           </button>
           <button onClick={() => {
-            setNiForm(f => ({ ...f, innings_number: String((match.innings?.length ?? 0) + 1), batting_team_id:"", bowling_team_id:"", target:"" }));
+            const prevInnings = match.innings;
+            let defaultBattingId = "";
+            let defaultBowlingId = "";
+            if (prevInnings?.length >= 1) {
+              const prev = prevInnings[prevInnings.length - 1];
+              defaultBattingId = prev.batting_team_id === match.team1?.id ? match.team2?.id : match.team1?.id;
+              defaultBowlingId = prev.batting_team_id === match.team1?.id ? match.team1?.id : match.team2?.id;
+            } else if (match.toss_winner_id && match.toss_decision) {
+              if (match.toss_decision === "bat") {
+                defaultBattingId = match.toss_winner_id;
+                defaultBowlingId = match.toss_winner_id === match.team1?.id ? match.team2?.id : match.team1?.id;
+              } else {
+                defaultBowlingId = match.toss_winner_id;
+                defaultBattingId = match.toss_winner_id === match.team1?.id ? match.team2?.id : match.team1?.id;
+              }
+            }
+            setNiForm(f => ({ ...f, innings_number: String((match.innings?.length ?? 0) + 1), batting_team_id: defaultBattingId, bowling_team_id: defaultBowlingId, target:"" }));
             setShowNewInnings(true);
           }} className="p-2 rounded hover:bg-paper/10 text-paper/50 hover:text-paper transition" title="New innings">
             <Plus className="w-4 h-4" />
@@ -509,7 +525,8 @@ function ScoringLiveInner() {
                   Batting · {battingTeam?.short_name || battingTeam?.name}
                 </p>
                 <div className="space-y-1 relative">
-                  <BatterStat entry={strikerEntry} isStriker={true} milestone={strikerMilestone ?? null} />
+                  <BatterStat entry={strikerEntry} isStriker={true} milestone={strikerMilestone ?? null}
+                    selectedName={battingPlayers.find((p: any) => p.id === ball.batsman_id)?.name} />
                   {/* Swap ends button between the two batter cards */}
                   <div className="flex items-center gap-2 py-0.5">
                     <div className="flex-1 border-t border-dashed border-hairsoft" />
@@ -523,7 +540,8 @@ function ScoringLiveInner() {
                     </button>
                     <div className="flex-1 border-t border-dashed border-hairsoft" />
                   </div>
-                  <BatterStat entry={nonStrikerEntry} isStriker={false} milestone={null} />
+                  <BatterStat entry={nonStrikerEntry} isStriker={false} milestone={null}
+                    selectedName={battingPlayers.find((p: any) => p.id === ball.non_striker_id)?.name} />
                 </div>
               </div>
             )}
@@ -627,7 +645,26 @@ function ScoringLiveInner() {
                   {activeInnings?.total_runs}/{activeInnings?.total_wickets} ({ov(activeInnings?.total_balls ?? 0)})
                 </p>
                 <button
-                  onClick={() => { setNiForm(f => ({ ...f, innings_number: String((match.innings?.length ?? 0) + 1), batting_team_id:"", bowling_team_id:"", target:"" })); setShowNewInnings(true); }}
+                  onClick={() => {
+                    const prevInnings = match.innings;
+                    let defaultBattingId = "";
+                    let defaultBowlingId = "";
+                    if (prevInnings?.length >= 1) {
+                      const prev = prevInnings[prevInnings.length - 1];
+                      defaultBattingId = prev.batting_team_id === match.team1?.id ? match.team2?.id : match.team1?.id;
+                      defaultBowlingId = prev.batting_team_id === match.team1?.id ? match.team1?.id : match.team2?.id;
+                    } else if (match.toss_winner_id && match.toss_decision) {
+                      if (match.toss_decision === "bat") {
+                        defaultBattingId = match.toss_winner_id;
+                        defaultBowlingId = match.toss_winner_id === match.team1?.id ? match.team2?.id : match.team1?.id;
+                      } else {
+                        defaultBowlingId = match.toss_winner_id;
+                        defaultBattingId = match.toss_winner_id === match.team1?.id ? match.team2?.id : match.team1?.id;
+                      }
+                    }
+                    setNiForm(f => ({ ...f, innings_number: String((match.innings?.length ?? 0) + 1), batting_team_id: defaultBattingId, bowling_team_id: defaultBowlingId, target:"" }));
+                    setShowNewInnings(true);
+                  }}
                   className="btn-primary text-xs min-h-0 px-3 py-2 w-full"
                 >
                   Start Next Innings
@@ -868,14 +905,45 @@ function ScoringLiveInner() {
                   <>
                     <p className="font-semibold text-ink mb-1">Innings Complete</p>
                     <p className="lab text-ink-sub mb-4">{activeInnings?.total_runs}/{activeInnings?.total_wickets} ({ov(activeInnings?.total_balls ?? 0)})</p>
-                    <button onClick={() => { setNiForm(f => ({ ...f, innings_number: String((match.innings?.length ?? 0) + 1), batting_team_id:"", bowling_team_id:"", target:"" })); setShowNewInnings(true); }}
-                      className="btn-primary">Start Next Innings</button>
+                    <button onClick={() => {
+                      const prevInnings = match.innings;
+                      let defaultBattingId = "";
+                      let defaultBowlingId = "";
+                      if (prevInnings?.length >= 1) {
+                        const prev = prevInnings[prevInnings.length - 1];
+                        defaultBattingId = prev.batting_team_id === match.team1?.id ? match.team2?.id : match.team1?.id;
+                        defaultBowlingId = prev.batting_team_id === match.team1?.id ? match.team1?.id : match.team2?.id;
+                      } else if (match.toss_winner_id && match.toss_decision) {
+                        if (match.toss_decision === "bat") {
+                          defaultBattingId = match.toss_winner_id;
+                          defaultBowlingId = match.toss_winner_id === match.team1?.id ? match.team2?.id : match.team1?.id;
+                        } else {
+                          defaultBowlingId = match.toss_winner_id;
+                          defaultBattingId = match.toss_winner_id === match.team1?.id ? match.team2?.id : match.team1?.id;
+                        }
+                      }
+                      setNiForm(f => ({ ...f, innings_number: String((match.innings?.length ?? 0) + 1), batting_team_id: defaultBattingId, bowling_team_id: defaultBowlingId, target:"" }));
+                      setShowNewInnings(true);
+                    }} className="btn-primary">Start Next Innings</button>
                   </>
                 ) : (
                   <>
                     <p className="font-semibold text-ink mb-4">No innings started</p>
-                    <button onClick={() => { setNiForm(f => ({ ...f, innings_number:"1", batting_team_id:"", bowling_team_id:"" })); setShowNewInnings(true); }}
-                      className="btn-primary">Start Innings</button>
+                    <button onClick={() => {
+                      let defaultBattingId = "";
+                      let defaultBowlingId = "";
+                      if (match.toss_winner_id && match.toss_decision) {
+                        if (match.toss_decision === "bat") {
+                          defaultBattingId = match.toss_winner_id;
+                          defaultBowlingId = match.toss_winner_id === match.team1?.id ? match.team2?.id : match.team1?.id;
+                        } else {
+                          defaultBowlingId = match.toss_winner_id;
+                          defaultBattingId = match.toss_winner_id === match.team1?.id ? match.team2?.id : match.team1?.id;
+                        }
+                      }
+                      setNiForm(f => ({ ...f, innings_number:"1", batting_team_id: defaultBattingId, bowling_team_id: defaultBowlingId }));
+                      setShowNewInnings(true);
+                    }} className="btn-primary">Start Innings</button>
                   </>
                 )}
               </div>

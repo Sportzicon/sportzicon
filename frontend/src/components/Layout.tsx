@@ -204,7 +204,7 @@ export function Layout() {
         </aside>
 
         {(() => {
-          const isLiveScoring = location.pathname.startsWith("/scoring") || /^\/score(\/|$)/.test(location.pathname);
+          const isLiveScoring = /^\/scoring\/matches\/[^/]+\/score(\/|$)/.test(location.pathname);
           return (
             <main
               ref={mainRef}
