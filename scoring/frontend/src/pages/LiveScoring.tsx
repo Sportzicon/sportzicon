@@ -224,7 +224,23 @@ export default function LiveScoring() {
               </button>
               <button onClick={() => {
                 const nextNum = String((match.innings?.length ?? 0) + 1);
-                setNewInningsForm(f => ({ ...f, innings_number: nextNum, batting_team_id: "", bowling_team_id: "", target: "" }));
+                let defaultBattingId = "";
+                let defaultBowlingId = "";
+                const prevInnings = match.innings;
+                if (prevInnings?.length >= 1) {
+                  const prev = prevInnings[prevInnings.length - 1];
+                  defaultBattingId = prev.batting_team_id === match.team1.id ? match.team2.id : match.team1.id;
+                  defaultBowlingId = prev.batting_team_id === match.team1.id ? match.team1.id : match.team2.id;
+                } else if (match.toss_winner_id && match.toss_decision) {
+                  if (match.toss_decision === "bat") {
+                    defaultBattingId = match.toss_winner_id;
+                    defaultBowlingId = match.toss_winner_id === match.team1.id ? match.team2.id : match.team1.id;
+                  } else {
+                    defaultBowlingId = match.toss_winner_id;
+                    defaultBattingId = match.toss_winner_id === match.team1.id ? match.team2.id : match.team1.id;
+                  }
+                }
+                setNewInningsForm(f => ({ ...f, innings_number: nextNum, batting_team_id: defaultBattingId, bowling_team_id: defaultBowlingId, target: "" }));
                 setShowNewInnings(true);
               }} className="btn-secondary text-sm">
                 + New Innings
@@ -323,6 +339,24 @@ export default function LiveScoring() {
               <p className="text-sm font-bold">{activeInnings.boundary_4s ?? 0}/{activeInnings.boundary_6s ?? 0} · {activeInnings.dot_balls ?? 0}</p>
             </div>
           </div>
+          {/* Current batsmen at crease — updates immediately on dropdown selection */}
+          {(ball.batsman_id || ball.non_striker_id) && (
+            <div className="mt-3 grid grid-cols-2 gap-3 text-sm border-t border-gray-700 pt-3">
+              <div>
+                <p className="text-[10px] uppercase text-gray-400 mb-0.5">On Strike</p>
+                <p className="font-semibold text-white">
+                  {battingPlayers.find((p: any) => p.id === ball.batsman_id)?.name ?? "—"}
+                </p>
+              </div>
+              <div>
+                <p className="text-[10px] uppercase text-gray-400 mb-0.5">Non-Striker</p>
+                <p className="font-semibold text-white">
+                  {battingPlayers.find((p: any) => p.id === ball.non_striker_id)?.name ?? "—"}
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Recent balls */}
           {ballsData && (
             <div className="mt-3 flex gap-1.5 flex-wrap">

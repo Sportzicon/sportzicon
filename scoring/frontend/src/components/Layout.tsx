@@ -67,7 +67,7 @@ export default function Layout() {
         )}
       </header>
 
-      <main className="flex-1 overflow-y-auto w-full">
+      <main className="flex-1 min-h-0 overflow-y-auto w-full">
         <div className="max-w-6xl mx-auto px-4 py-6">
           <Outlet />
         </div>
