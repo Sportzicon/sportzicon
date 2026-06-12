@@ -12,24 +12,24 @@
     "maxFailures": 0,
     "metadata": {
       "ci": {
-        "commitHref": "https://github.com/Sportzicon/sportzicon/commit/bce5593f24a11e6fc8831d70783016c3c8f39f3f",
-        "commitHash": "bce5593f24a11e6fc8831d70783016c3c8f39f3f",
-        "buildHref": "https://github.com/Sportzicon/sportzicon/actions/runs/27407229031"
+        "commitHref": "https://github.com/Sportzicon/sportzicon/commit/727fa288524fba1f89ecca0d2f6c3efaaf1d22b2",
+        "commitHash": "727fa288524fba1f89ecca0d2f6c3efaaf1d22b2",
+        "buildHref": "https://github.com/Sportzicon/sportzicon/actions/runs/27408468350"
       },
       "gitCommit": {
-        "shortHash": "bce5593",
-        "hash": "bce5593f24a11e6fc8831d70783016c3c8f39f3f",
-        "subject": "fix: scoring console UX — scroll on all pages, batsman name on select, toss auto-fill",
-        "body": "fix: scoring console UX — scroll on all pages, batsman name on select, toss auto-fill\n\n- Layout.tsx: narrow isLiveScoring to only /scoring/matches/:id/score so\n  all other /scoring/* pages (match detail, tournaments) get overflow-y-auto\n  instead of overflow-hidden; previously the broad startsWith(\"/scoring\") check\n  was cutting off content on every scoring detail page\n- ScoringLive.tsx: pass selectedName to BatterStat so player name appears\n  immediately on dropdown selection without waiting for a batting entry to exist\n- ScoringLive.tsx: all four \"New Innings\" / \"Start Innings\" buttons now\n  pre-populate batting/bowling team from toss result (1st inn) or flip from\n  previous innings (2nd+ inn)\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>\n",
+        "shortHash": "727fa28",
+        "hash": "727fa288524fba1f89ecca0d2f6c3efaaf1d22b2",
+        "subject": "fix: show non-striker on live scoreboard + prevent index.html caching",
+        "body": "fix: show non-striker on live scoreboard + prevent index.html caching\n\nscoring.service.ts: upsert a not_out batting entry for the non-striker on\nevery ball so they appear on the public live scoreboard immediately. Previously\nthe non-striker kept \"yet_to_bat\" status until they took strike, which made\nthem invisible on the live scores page.\n\nLiveScoreDetail.tsx: also include \"yet_to_bat\" entries whose player_id matches\nthe last ball's batsman_id or non_striker_id as a frontend fallback for\nexisting matches recorded before this backend fix. Striker is sorted first.\n\nnginx.conf: add a no-cache location block for index.html. Without this the\nbrowser serves the old index.html (and therefore the old JS bundle) after a\ndeploy until the user force-refreshes, which is why previous scroll fixes\nappeared to have no effect.\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>\n",
         "author": {
           "name": "gitusrmahesh",
           "email": "singarimahesh0@gmail.com",
-          "time": 1781256581000
+          "time": 1781258064000
         },
         "committer": {
           "name": "gitusrmahesh",
           "email": "singarimahesh0@gmail.com",
-          "time": 1781256581000
+          "time": 1781258084000
         },
         "branch": "main"
       },
@@ -43,24 +43,24 @@
         "retries": 2,
         "metadata": {
           "ci": {
-            "commitHref": "https://github.com/Sportzicon/sportzicon/commit/bce5593f24a11e6fc8831d70783016c3c8f39f3f",
-            "commitHash": "bce5593f24a11e6fc8831d70783016c3c8f39f3f",
-            "buildHref": "https://github.com/Sportzicon/sportzicon/actions/runs/27407229031"
+            "commitHref": "https://github.com/Sportzicon/sportzicon/commit/727fa288524fba1f89ecca0d2f6c3efaaf1d22b2",
+            "commitHash": "727fa288524fba1f89ecca0d2f6c3efaaf1d22b2",
+            "buildHref": "https://github.com/Sportzicon/sportzicon/actions/runs/27408468350"
           },
           "gitCommit": {
-            "shortHash": "bce5593",
-            "hash": "bce5593f24a11e6fc8831d70783016c3c8f39f3f",
-            "subject": "fix: scoring console UX — scroll on all pages, batsman name on select, toss auto-fill",
-            "body": "fix: scoring console UX — scroll on all pages, batsman name on select, toss auto-fill\n\n- Layout.tsx: narrow isLiveScoring to only /scoring/matches/:id/score so\n  all other /scoring/* pages (match detail, tournaments) get overflow-y-auto\n  instead of overflow-hidden; previously the broad startsWith(\"/scoring\") check\n  was cutting off content on every scoring detail page\n- ScoringLive.tsx: pass selectedName to BatterStat so player name appears\n  immediately on dropdown selection without waiting for a batting entry to exist\n- ScoringLive.tsx: all four \"New Innings\" / \"Start Innings\" buttons now\n  pre-populate batting/bowling team from toss result (1st inn) or flip from\n  previous innings (2nd+ inn)\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>\n",
+            "shortHash": "727fa28",
+            "hash": "727fa288524fba1f89ecca0d2f6c3efaaf1d22b2",
+            "subject": "fix: show non-striker on live scoreboard + prevent index.html caching",
+            "body": "fix: show non-striker on live scoreboard + prevent index.html caching\n\nscoring.service.ts: upsert a not_out batting entry for the non-striker on\nevery ball so they appear on the public live scoreboard immediately. Previously\nthe non-striker kept \"yet_to_bat\" status until they took strike, which made\nthem invisible on the live scores page.\n\nLiveScoreDetail.tsx: also include \"yet_to_bat\" entries whose player_id matches\nthe last ball's batsman_id or non_striker_id as a frontend fallback for\nexisting matches recorded before this backend fix. Striker is sorted first.\n\nnginx.conf: add a no-cache location block for index.html. Without this the\nbrowser serves the old index.html (and therefore the old JS bundle) after a\ndeploy until the user force-refreshes, which is why previous scroll fixes\nappeared to have no effect.\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>\n",
             "author": {
               "name": "gitusrmahesh",
               "email": "singarimahesh0@gmail.com",
-              "time": 1781256581000
+              "time": 1781258064000
             },
             "committer": {
               "name": "gitusrmahesh",
               "email": "singarimahesh0@gmail.com",
-              "time": 1781256581000
+              "time": 1781258084000
             },
             "branch": "main"
           },
@@ -81,24 +81,24 @@
         "retries": 2,
         "metadata": {
           "ci": {
-            "commitHref": "https://github.com/Sportzicon/sportzicon/commit/bce5593f24a11e6fc8831d70783016c3c8f39f3f",
-            "commitHash": "bce5593f24a11e6fc8831d70783016c3c8f39f3f",
-            "buildHref": "https://github.com/Sportzicon/sportzicon/actions/runs/27407229031"
+            "commitHref": "https://github.com/Sportzicon/sportzicon/commit/727fa288524fba1f89ecca0d2f6c3efaaf1d22b2",
+            "commitHash": "727fa288524fba1f89ecca0d2f6c3efaaf1d22b2",
+            "buildHref": "https://github.com/Sportzicon/sportzicon/actions/runs/27408468350"
           },
           "gitCommit": {
-            "shortHash": "bce5593",
-            "hash": "bce5593f24a11e6fc8831d70783016c3c8f39f3f",
-            "subject": "fix: scoring console UX — scroll on all pages, batsman name on select, toss auto-fill",
-            "body": "fix: scoring console UX — scroll on all pages, batsman name on select, toss auto-fill\n\n- Layout.tsx: narrow isLiveScoring to only /scoring/matches/:id/score so\n  all other /scoring/* pages (match detail, tournaments) get overflow-y-auto\n  instead of overflow-hidden; previously the broad startsWith(\"/scoring\") check\n  was cutting off content on every scoring detail page\n- ScoringLive.tsx: pass selectedName to BatterStat so player name appears\n  immediately on dropdown selection without waiting for a batting entry to exist\n- ScoringLive.tsx: all four \"New Innings\" / \"Start Innings\" buttons now\n  pre-populate batting/bowling team from toss result (1st inn) or flip from\n  previous innings (2nd+ inn)\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>\n",
+            "shortHash": "727fa28",
+            "hash": "727fa288524fba1f89ecca0d2f6c3efaaf1d22b2",
+            "subject": "fix: show non-striker on live scoreboard + prevent index.html caching",
+            "body": "fix: show non-striker on live scoreboard + prevent index.html caching\n\nscoring.service.ts: upsert a not_out batting entry for the non-striker on\nevery ball so they appear on the public live scoreboard immediately. Previously\nthe non-striker kept \"yet_to_bat\" status until they took strike, which made\nthem invisible on the live scores page.\n\nLiveScoreDetail.tsx: also include \"yet_to_bat\" entries whose player_id matches\nthe last ball's batsman_id or non_striker_id as a frontend fallback for\nexisting matches recorded before this backend fix. Striker is sorted first.\n\nnginx.conf: add a no-cache location block for index.html. Without this the\nbrowser serves the old index.html (and therefore the old JS bundle) after a\ndeploy until the user force-refreshes, which is why previous scroll fixes\nappeared to have no effect.\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>\n",
             "author": {
               "name": "gitusrmahesh",
               "email": "singarimahesh0@gmail.com",
-              "time": 1781256581000
+              "time": 1781258064000
             },
             "committer": {
               "name": "gitusrmahesh",
               "email": "singarimahesh0@gmail.com",
-              "time": 1781256581000
+              "time": 1781258084000
             },
             "branch": "main"
           },
@@ -119,24 +119,24 @@
         "retries": 2,
         "metadata": {
           "ci": {
-            "commitHref": "https://github.com/Sportzicon/sportzicon/commit/bce5593f24a11e6fc8831d70783016c3c8f39f3f",
-            "commitHash": "bce5593f24a11e6fc8831d70783016c3c8f39f3f",
-            "buildHref": "https://github.com/Sportzicon/sportzicon/actions/runs/27407229031"
+            "commitHref": "https://github.com/Sportzicon/sportzicon/commit/727fa288524fba1f89ecca0d2f6c3efaaf1d22b2",
+            "commitHash": "727fa288524fba1f89ecca0d2f6c3efaaf1d22b2",
+            "buildHref": "https://github.com/Sportzicon/sportzicon/actions/runs/27408468350"
           },
           "gitCommit": {
-            "shortHash": "bce5593",
-            "hash": "bce5593f24a11e6fc8831d70783016c3c8f39f3f",
-            "subject": "fix: scoring console UX — scroll on all pages, batsman name on select, toss auto-fill",
-            "body": "fix: scoring console UX — scroll on all pages, batsman name on select, toss auto-fill\n\n- Layout.tsx: narrow isLiveScoring to only /scoring/matches/:id/score so\n  all other /scoring/* pages (match detail, tournaments) get overflow-y-auto\n  instead of overflow-hidden; previously the broad startsWith(\"/scoring\") check\n  was cutting off content on every scoring detail page\n- ScoringLive.tsx: pass selectedName to BatterStat so player name appears\n  immediately on dropdown selection without waiting for a batting entry to exist\n- ScoringLive.tsx: all four \"New Innings\" / \"Start Innings\" buttons now\n  pre-populate batting/bowling team from toss result (1st inn) or flip from\n  previous innings (2nd+ inn)\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>\n",
+            "shortHash": "727fa28",
+            "hash": "727fa288524fba1f89ecca0d2f6c3efaaf1d22b2",
+            "subject": "fix: show non-striker on live scoreboard + prevent index.html caching",
+            "body": "fix: show non-striker on live scoreboard + prevent index.html caching\n\nscoring.service.ts: upsert a not_out batting entry for the non-striker on\nevery ball so they appear on the public live scoreboard immediately. Previously\nthe non-striker kept \"yet_to_bat\" status until they took strike, which made\nthem invisible on the live scores page.\n\nLiveScoreDetail.tsx: also include \"yet_to_bat\" entries whose player_id matches\nthe last ball's batsman_id or non_striker_id as a frontend fallback for\nexisting matches recorded before this backend fix. Striker is sorted first.\n\nnginx.conf: add a no-cache location block for index.html. Without this the\nbrowser serves the old index.html (and therefore the old JS bundle) after a\ndeploy until the user force-refreshes, which is why previous scroll fixes\nappeared to have no effect.\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>\n",
             "author": {
               "name": "gitusrmahesh",
               "email": "singarimahesh0@gmail.com",
-              "time": 1781256581000
+              "time": 1781258064000
             },
             "committer": {
               "name": "gitusrmahesh",
               "email": "singarimahesh0@gmail.com",
-              "time": 1781256581000
+              "time": 1781258084000
             },
             "branch": "main"
           },
@@ -237,12 +237,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "skipped",
-                      "duration": 13547,
+                      "duration": 13514,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-12T09:30:49.568Z",
+                      "startTime": "2026-06-12T09:55:43.403Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -294,12 +294,12 @@
                       "workerIndex": 1,
                       "parallelIndex": 1,
                       "status": "skipped",
-                      "duration": 13531,
+                      "duration": 13675,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-12T09:30:49.529Z",
+                      "startTime": "2026-06-12T09:55:43.279Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -348,15 +348,15 @@
                   "projectName": "sportivox-chromium",
                   "results": [
                     {
-                      "workerIndex": 1,
-                      "parallelIndex": 1,
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
                       "status": "skipped",
-                      "duration": 12219,
+                      "duration": 12217,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-12T09:31:03.555Z",
+                      "startTime": "2026-06-12T09:55:57.353Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -405,15 +405,15 @@
                   "projectName": "sportivox-chromium",
                   "results": [
                     {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
                       "status": "skipped",
-                      "duration": 12352,
+                      "duration": 12400,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-12T09:31:03.575Z",
+                      "startTime": "2026-06-12T09:55:57.560Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -451,10 +451,10 @@
                   "projectName": "sportivox-chromium",
                   "results": [
                     {
-                      "workerIndex": 1,
-                      "parallelIndex": 1,
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
                       "status": "failed",
-                      "duration": 2478,
+                      "duration": 2454,
                       "error": {
                         "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoMatch\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected pattern: \u001b[32m/invalid|wrong|incorrect|error|denied|unable|unreach|server/i\u001b[39m\nReceived string:  \u001b[31m\"\u001b[39m\n\u001b[31m    EST. 2026For AthletesFor ClubsHow it worksLive ScoresSign inGet startedThe verified sports recruitment networkPune · Mumbai · London · Melbourne · Cape TownWelcomeback.The verified sports recruitment network. Sign in to your account to access opportunities, messages and your profile.◆Verified profilesEvery badge-holder is identity-checked.◆Structured workflowPending → Shortlisted → Selected.◆Real opportunitiesTrials, scholarships, coaching jobs.Account accessSign inNew here? Create an account →EmailPasswordForgot?Signing in…© 2026 Sportzicon — All rights reservedVerified sports recruitment·········\u001b[39m\n\u001b[31m\"\u001b[39m",
                         "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoMatch\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected pattern: \u001b[32m/invalid|wrong|incorrect|error|denied|unable|unreach|server/i\u001b[39m\nReceived string:  \u001b[31m\"\u001b[39m\n\u001b[31m    EST. 2026For AthletesFor ClubsHow it worksLive ScoresSign inGet startedThe verified sports recruitment networkPune · Mumbai · London · Melbourne · Cape TownWelcomeback.The verified sports recruitment network. Sign in to your account to access opportunities, messages and your profile.◆Verified profilesEvery badge-holder is identity-checked.◆Structured workflowPending → Shortlisted → Selected.◆Real opportunitiesTrials, scholarships, coaching jobs.Account accessSign inNew here? Create an account →EmailPasswordForgot?Signing in…© 2026 Sportzicon — All rights reservedVerified sports recruitment·········\u001b[39m\n\u001b[31m\"\u001b[39m\n    at /home/runner/work/sportzicon/sportzicon/e2e/tests/sportivox/auth.spec.ts:40:23",
@@ -478,7 +478,7 @@
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-12T09:31:15.805Z",
+                      "startTime": "2026-06-12T09:56:09.596Z",
                       "annotations": [],
                       "attachments": [
                         {
@@ -510,9 +510,9 @@
                     },
                     {
                       "workerIndex": 2,
-                      "parallelIndex": 1,
+                      "parallelIndex": 0,
                       "status": "failed",
-                      "duration": 2180,
+                      "duration": 2214,
                       "error": {
                         "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoMatch\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected pattern: \u001b[32m/invalid|wrong|incorrect|error|denied|unable|unreach|server/i\u001b[39m\nReceived string:  \u001b[31m\"\u001b[39m\n\u001b[31m    EST. 2026For AthletesFor ClubsHow it worksLive ScoresSign inGet startedThe verified sports recruitment networkPune · Mumbai · London · Melbourne · Cape TownWelcomeback.The verified sports recruitment network. Sign in to your account to access opportunities, messages and your profile.◆Verified profilesEvery badge-holder is identity-checked.◆Structured workflowPending → Shortlisted → Selected.◆Real opportunitiesTrials, scholarships, coaching jobs.Account accessSign inNew here? Create an account →EmailPasswordForgot?Signing in…© 2026 Sportzicon — All rights reservedVerified sports recruitment·········\u001b[39m\n\u001b[31m\"\u001b[39m",
                         "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoMatch\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected pattern: \u001b[32m/invalid|wrong|incorrect|error|denied|unable|unreach|server/i\u001b[39m\nReceived string:  \u001b[31m\"\u001b[39m\n\u001b[31m    EST. 2026For AthletesFor ClubsHow it worksLive ScoresSign inGet startedThe verified sports recruitment networkPune · Mumbai · London · Melbourne · Cape TownWelcomeback.The verified sports recruitment network. Sign in to your account to access opportunities, messages and your profile.◆Verified profilesEvery badge-holder is identity-checked.◆Structured workflowPending → Shortlisted → Selected.◆Real opportunitiesTrials, scholarships, coaching jobs.Account accessSign inNew here? Create an account →EmailPasswordForgot?Signing in…© 2026 Sportzicon — All rights reservedVerified sports recruitment·········\u001b[39m\n\u001b[31m\"\u001b[39m\n    at /home/runner/work/sportzicon/sportzicon/e2e/tests/sportivox/auth.spec.ts:40:23",
@@ -536,7 +536,7 @@
                       "stdout": [],
                       "stderr": [],
                       "retry": 1,
-                      "startTime": "2026-06-12T09:31:18.976Z",
+                      "startTime": "2026-06-12T09:56:12.747Z",
                       "annotations": [],
                       "attachments": [
                         {
@@ -568,9 +568,9 @@
                     },
                     {
                       "workerIndex": 3,
-                      "parallelIndex": 1,
+                      "parallelIndex": 0,
                       "status": "failed",
-                      "duration": 2234,
+                      "duration": 2191,
                       "error": {
                         "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoMatch\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected pattern: \u001b[32m/invalid|wrong|incorrect|error|denied|unable|unreach|server/i\u001b[39m\nReceived string:  \u001b[31m\"\u001b[39m\n\u001b[31m    EST. 2026For AthletesFor ClubsHow it worksLive ScoresSign inGet startedThe verified sports recruitment networkPune · Mumbai · London · Melbourne · Cape TownWelcomeback.The verified sports recruitment network. Sign in to your account to access opportunities, messages and your profile.◆Verified profilesEvery badge-holder is identity-checked.◆Structured workflowPending → Shortlisted → Selected.◆Real opportunitiesTrials, scholarships, coaching jobs.Account accessSign inNew here? Create an account →EmailPasswordForgot?Signing in…© 2026 Sportzicon — All rights reservedVerified sports recruitment·········\u001b[39m\n\u001b[31m\"\u001b[39m",
                         "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoMatch\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected pattern: \u001b[32m/invalid|wrong|incorrect|error|denied|unable|unreach|server/i\u001b[39m\nReceived string:  \u001b[31m\"\u001b[39m\n\u001b[31m    EST. 2026For AthletesFor ClubsHow it worksLive ScoresSign inGet startedThe verified sports recruitment networkPune · Mumbai · London · Melbourne · Cape TownWelcomeback.The verified sports recruitment network. Sign in to your account to access opportunities, messages and your profile.◆Verified profilesEvery badge-holder is identity-checked.◆Structured workflowPending → Shortlisted → Selected.◆Real opportunitiesTrials, scholarships, coaching jobs.Account accessSign inNew here? Create an account →EmailPasswordForgot?Signing in…© 2026 Sportzicon — All rights reservedVerified sports recruitment·········\u001b[39m\n\u001b[31m\"\u001b[39m\n    at /home/runner/work/sportzicon/sportzicon/e2e/tests/sportivox/auth.spec.ts:40:23",
@@ -594,7 +594,7 @@
                       "stdout": [],
                       "stderr": [],
                       "retry": 2,
-                      "startTime": "2026-06-12T09:31:21.874Z",
+                      "startTime": "2026-06-12T09:56:15.682Z",
                       "annotations": [],
                       "attachments": [
                         {
@@ -658,15 +658,15 @@
                   "projectName": "sportivox-chromium",
                   "results": [
                     {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
                       "status": "skipped",
-                      "duration": 12360,
+                      "duration": 12168,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-12T09:31:15.965Z",
+                      "startTime": "2026-06-12T09:56:09.988Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -723,14 +723,14 @@
                   "results": [
                     {
                       "workerIndex": 4,
-                      "parallelIndex": 1,
+                      "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 1236,
+                      "duration": 1262,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-12T09:31:24.832Z",
+                      "startTime": "2026-06-12T09:56:18.609Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -759,14 +759,14 @@
                   "results": [
                     {
                       "workerIndex": 4,
-                      "parallelIndex": 1,
+                      "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 1152,
+                      "duration": 1146,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-12T09:31:26.179Z",
+                      "startTime": "2026-06-12T09:56:19.972Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -795,14 +795,14 @@
                   "results": [
                     {
                       "workerIndex": 4,
-                      "parallelIndex": 1,
+                      "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 1608,
+                      "duration": 1556,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-12T09:31:27.345Z",
+                      "startTime": "2026-06-12T09:56:21.133Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -830,15 +830,15 @@
                   "projectName": "sportivox-chromium",
                   "results": [
                     {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
                       "status": "passed",
-                      "duration": 1672,
+                      "duration": 1519,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-12T09:31:28.387Z",
+                      "startTime": "2026-06-12T09:56:22.189Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -867,14 +867,14 @@
                   "results": [
                     {
                       "workerIndex": 4,
-                      "parallelIndex": 1,
+                      "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 1689,
+                      "duration": 1568,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-12T09:31:28.967Z",
+                      "startTime": "2026-06-12T09:56:22.707Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -900,15 +900,15 @@
                   "projectName": "sportivox-chromium",
                   "results": [
                     {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
                       "status": "passed",
-                      "duration": 1213,
+                      "duration": 1062,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-12T09:31:30.080Z",
+                      "startTime": "2026-06-12T09:56:23.723Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -940,12 +940,12 @@
                       "workerIndex": 7,
                       "parallelIndex": 1,
                       "status": "passed",
-                      "duration": 1346,
+                      "duration": 1290,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-12T09:32:52.447Z",
+                      "startTime": "2026-06-12T09:57:45.450Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -976,12 +976,12 @@
                       "workerIndex": 7,
                       "parallelIndex": 1,
                       "status": "passed",
-                      "duration": 1229,
+                      "duration": 1172,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-12T09:32:53.899Z",
+                      "startTime": "2026-06-12T09:57:46.846Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1012,12 +1012,12 @@
                       "workerIndex": 7,
                       "parallelIndex": 1,
                       "status": "passed",
-                      "duration": 1253,
+                      "duration": 1312,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-12T09:32:55.143Z",
+                      "startTime": "2026-06-12T09:57:48.033Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1048,12 +1048,12 @@
                       "workerIndex": 7,
                       "parallelIndex": 1,
                       "status": "passed",
-                      "duration": 1385,
+                      "duration": 1328,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-12T09:32:56.409Z",
+                      "startTime": "2026-06-12T09:57:49.359Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1084,12 +1084,12 @@
                       "workerIndex": 8,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 1795,
+                      "duration": 1490,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-12T09:32:58.547Z",
+                      "startTime": "2026-06-12T09:57:51.435Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1118,12 +1118,12 @@
                       "workerIndex": 7,
                       "parallelIndex": 1,
                       "status": "passed",
-                      "duration": 1022,
+                      "duration": 1024,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-12T09:32:57.810Z",
+                      "startTime": "2026-06-12T09:57:50.706Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1179,14 +1179,14 @@
                   "results": [
                     {
                       "workerIndex": 4,
-                      "parallelIndex": 1,
+                      "parallelIndex": 0,
                       "status": "skipped",
-                      "duration": 13119,
+                      "duration": 12232,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-12T09:31:30.692Z",
+                      "startTime": "2026-06-12T09:56:24.317Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -1234,15 +1234,15 @@
                   "projectName": "sportivox-chromium",
                   "results": [
                     {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
                       "status": "skipped",
-                      "duration": 12311,
+                      "duration": 12233,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-12T09:31:31.325Z",
+                      "startTime": "2026-06-12T09:56:24.807Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -1288,15 +1288,15 @@
                   "projectName": "sportivox-chromium",
                   "results": [
                     {
-                      "workerIndex": 0,
+                      "workerIndex": 4,
                       "parallelIndex": 0,
                       "status": "skipped",
-                      "duration": 12158,
+                      "duration": 12241,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-12T09:31:43.659Z",
+                      "startTime": "2026-06-12T09:56:36.568Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -1342,15 +1342,15 @@
                   "projectName": "sportivox-chromium",
                   "results": [
                     {
-                      "workerIndex": 4,
+                      "workerIndex": 1,
                       "parallelIndex": 1,
                       "status": "skipped",
-                      "duration": 12356,
+                      "duration": 12288,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-12T09:31:43.840Z",
+                      "startTime": "2026-06-12T09:56:37.056Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -1415,15 +1415,15 @@
                   "projectName": "sportivox-chromium",
                   "results": [
                     {
-                      "workerIndex": 0,
+                      "workerIndex": 4,
                       "parallelIndex": 0,
                       "status": "skipped",
-                      "duration": 12199,
+                      "duration": 12231,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-12T09:31:55.844Z",
+                      "startTime": "2026-06-12T09:56:48.855Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -1471,15 +1471,15 @@
                   "projectName": "sportivox-chromium",
                   "results": [
                     {
-                      "workerIndex": 4,
+                      "workerIndex": 1,
                       "parallelIndex": 1,
                       "status": "skipped",
-                      "duration": 12337,
+                      "duration": 12313,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-12T09:31:56.231Z",
+                      "startTime": "2026-06-12T09:56:49.370Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -1527,15 +1527,15 @@
                   "projectName": "sportivox-chromium",
                   "results": [
                     {
-                      "workerIndex": 0,
+                      "workerIndex": 4,
                       "parallelIndex": 0,
                       "status": "skipped",
-                      "duration": 12256,
+                      "duration": 12276,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-12T09:32:08.069Z",
+                      "startTime": "2026-06-12T09:57:01.107Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -1583,15 +1583,15 @@
                   "projectName": "sportivox-chromium",
                   "results": [
                     {
-                      "workerIndex": 4,
+                      "workerIndex": 1,
                       "parallelIndex": 1,
                       "status": "skipped",
-                      "duration": 12391,
+                      "duration": 12295,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-12T09:32:08.584Z",
+                      "startTime": "2026-06-12T09:57:01.699Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -1639,15 +1639,15 @@
                   "projectName": "sportivox-chromium",
                   "results": [
                     {
-                      "workerIndex": 0,
+                      "workerIndex": 4,
                       "parallelIndex": 0,
                       "status": "skipped",
-                      "duration": 12312,
+                      "duration": 12208,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-12T09:32:20.351Z",
+                      "startTime": "2026-06-12T09:57:13.402Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -1693,15 +1693,15 @@
                   "projectName": "sportivox-chromium",
                   "results": [
                     {
-                      "workerIndex": 4,
+                      "workerIndex": 1,
                       "parallelIndex": 1,
                       "status": "skipped",
-                      "duration": 12272,
+                      "duration": 12253,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-12T09:32:20.991Z",
+                      "startTime": "2026-06-12T09:57:14.012Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -1775,7 +1775,7 @@
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-12T09:32:33.424Z",
+                      "startTime": "2026-06-12T09:57:26.363Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -1831,7 +1831,7 @@
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-12T09:32:34.125Z",
+                      "startTime": "2026-06-12T09:57:27.060Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -1887,7 +1887,7 @@
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-12T09:32:33.888Z",
+                      "startTime": "2026-06-12T09:57:26.880Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -1945,12 +1945,12 @@
                       "workerIndex": 5,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 676,
+                      "duration": 670,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-12T09:32:34.137Z",
+                      "startTime": "2026-06-12T09:57:27.072Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1981,12 +1981,12 @@
                       "workerIndex": 6,
                       "parallelIndex": 1,
                       "status": "passed",
-                      "duration": 762,
+                      "duration": 783,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-12T09:32:34.626Z",
+                      "startTime": "2026-06-12T09:57:27.610Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -2027,12 +2027,12 @@
                       "workerIndex": 5,
                       "parallelIndex": 0,
                       "status": "skipped",
-                      "duration": 11266,
+                      "duration": 11315,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-12T09:32:34.897Z",
+                      "startTime": "2026-06-12T09:57:27.829Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -2071,12 +2071,12 @@
                       "workerIndex": 6,
                       "parallelIndex": 1,
                       "status": "passed",
-                      "duration": 1432,
+                      "duration": 1444,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-12T09:32:35.515Z",
+                      "startTime": "2026-06-12T09:57:28.509Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -2140,7 +2140,7 @@
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-12T09:32:36.986Z",
+                      "startTime": "2026-06-12T09:57:29.991Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -2197,7 +2197,7 @@
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-12T09:32:37.623Z",
+                      "startTime": "2026-06-12T09:57:30.627Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -2254,7 +2254,7 @@
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-12T09:32:37.623Z",
+                      "startTime": "2026-06-12T09:57:30.628Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -2311,7 +2311,7 @@
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-12T09:32:37.629Z",
+                      "startTime": "2026-06-12T09:57:30.633Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -2367,7 +2367,7 @@
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-12T09:32:38.263Z",
+                      "startTime": "2026-06-12T09:57:31.266Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -2441,7 +2441,7 @@
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-12T09:32:38.274Z",
+                      "startTime": "2026-06-12T09:57:31.277Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -2497,7 +2497,7 @@
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-12T09:32:38.915Z",
+                      "startTime": "2026-06-12T09:57:31.916Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -2555,12 +2555,12 @@
                       "workerIndex": 6,
                       "parallelIndex": 1,
                       "status": "passed",
-                      "duration": 530,
+                      "duration": 559,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-12T09:32:39.559Z",
+                      "startTime": "2026-06-12T09:57:32.559Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -2601,12 +2601,12 @@
                       "workerIndex": 6,
                       "parallelIndex": 1,
                       "status": "skipped",
-                      "duration": 11190,
+                      "duration": 11179,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-12T09:32:40.109Z",
+                      "startTime": "2026-06-12T09:57:33.135Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -2657,12 +2657,12 @@
                       "workerIndex": 5,
                       "parallelIndex": 0,
                       "status": "skipped",
-                      "duration": 11431,
+                      "duration": 11417,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-12T09:32:46.205Z",
+                      "startTime": "2026-06-12T09:57:39.192Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -2711,12 +2711,12 @@
                       "workerIndex": 6,
                       "parallelIndex": 1,
                       "status": "skipped",
-                      "duration": 547,
+                      "duration": 546,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-06-12T09:32:51.319Z",
+                      "startTime": "2026-06-12T09:57:44.332Z",
                       "annotations": [
                         {
                           "type": "skip",
@@ -2746,8 +2746,8 @@
   ],
   "errors": [],
   "stats": {
-    "startTime": "2026-06-12T09:30:44.948Z",
-    "duration": 135604.511,
+    "startTime": "2026-06-12T09:55:38.805Z",
+    "duration": 134325.669,
     "expected": 16,
     "skipped": 29,
     "unexpected": 1,
