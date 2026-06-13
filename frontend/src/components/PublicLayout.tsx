@@ -24,54 +24,41 @@ export default function PublicLayout() {
   return (
     <div className="min-h-screen bg-paper text-ink">
       {/* ── Masthead ──────────────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-50 flex items-center justify-between border-b-[1.5px] border-ink bg-paper px-4 sm:px-8 lg:px-11 py-4">
-        <Link to="/" aria-label="Sportzicon" className="flex flex-col items-start">
-          <div style={{ width: 155, height: 48, backgroundImage: 'url(/logo.png)', backgroundSize: 'auto 450%', backgroundRepeat: 'no-repeat', backgroundPosition: 'center', flexShrink: 0 }} />
-          <span className="lab hidden sm:inline" style={{ fontSize: 9, marginTop: -4, marginLeft: 86, letterSpacing: '0.12em' }}>EST. 2026</span>
-        </Link>
-        <nav className="flex items-center gap-3 sm:gap-5 lg:gap-7">
-          <button
-            onClick={() => handleScrollNav("for-athletes")}
-            className={`font-mononum text-[11px] transition bg-transparent border-none p-0 hidden md:inline cursor-pointer ${pathname === "/" ? "text-ink-70 hover:text-ink" : "text-ink-70 hover:text-ink"}`}
-          >
-            For Athletes
-          </button>
-          <button
-            onClick={() => handleScrollNav("for-clubs")}
-            className="font-mononum text-[11px] text-ink-70 hover:text-ink transition bg-transparent border-none p-0 hidden md:inline cursor-pointer"
-          >
-            For Clubs
-          </button>
-          <Link
-            to="/how-it-works"
-            className={`font-mononum text-[11px] transition hidden md:inline ${
-              pathname === "/how-it-works"
-                ? "text-ink border-b border-brand-500 pb-px"
-                : "text-ink-70 hover:text-ink"
-            }`}
-          >
-            How it works
-          </Link>
-          <Link
-            to="/live-scores"
-            className={`font-mononum text-[11px] transition hidden md:inline-flex items-center gap-1 ${
-              pathname === "/live-scores"
-                ? "text-ink border-b border-brand-500 pb-px"
-                : "text-ink-70 hover:text-ink"
-            }`}
-          >
-            <Activity className="w-3 h-3 text-red-500" />
-            Live Scores
-          </Link>
-          <Link to="/login" className="font-mononum text-[11px] text-ink-sub">Sign in</Link>
-          <Link to="/signup" className="btn-primary">Get started</Link>
-        </nav>
-      </header>
+      <header className="fixed top-0 left-0 right-0 z-50 border-b-[1.5px] border-ink bg-paper">
+  {/* Main nav row */}
+  <div className="flex items-center justify-between px-4 sm:px-8 lg:px-11 py-4">
+    <Link to="/" aria-label="Sportzicon" className="flex flex-col items-start">
+      <div style={{ width: 155, height: 48, backgroundImage: 'url(/logo.png)', backgroundSize: 'auto 450%', backgroundRepeat: 'no-repeat', backgroundPosition: 'center', flexShrink: 0 }} />
+      <span className="lab hidden sm:inline" style={{ fontSize: 9, marginTop: -4, marginLeft: 86, letterSpacing: '0.12em' }}>EST. 2026</span>
+    </Link>
+    <nav className="flex items-center gap-3 sm:gap-5 lg:gap-7">
+      <button onClick={() => handleScrollNav("for-athletes")} className="font-mononum text-[11px] transition bg-transparent border-none p-0 hidden md:inline cursor-pointer text-ink-70 hover:text-ink">
+        For Athletes
+      </button>
+      <button onClick={() => handleScrollNav("for-clubs")} className="font-mononum text-[11px] text-ink-70 hover:text-ink transition bg-transparent border-none p-0 hidden md:inline cursor-pointer">
+        For Clubs
+      </button>
+      <Link to="/how-it-works" className={`font-mononum text-[11px] transition hidden md:inline ${pathname === "/how-it-works" ? "text-ink border-b border-brand-500 pb-px" : "text-ink-70 hover:text-ink"}`}>
+        How it works
+      </Link>
+      <Link to="/live-scores" className={`font-mononum text-[11px] transition hidden md:inline-flex items-center gap-1 ${pathname === "/live-scores" ? "text-ink border-b border-brand-500 pb-px" : "text-ink-70 hover:text-ink"}`}>
+        <Activity className="w-3 h-3 text-red-500" />
+        Live Scores
+      </Link>
+      <Link to="/login" className="font-mononum text-[11px] text-ink-sub">Sign in</Link>
+      <Link to="/signup" className="btn-primary">Get started</Link>
+    </nav>
+  </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-1 border-b border-hair px-4 sm:px-8 lg:px-11 py-2.5">
-        <span className="lab">The verified sports recruitment network</span>
-        <span className="lab hidden sm:inline">Pune · Mumbai · London · Melbourne · Cape Town</span>
-      </div>
+  {/* Ticker bar — fixed with the header */}
+  <div className="flex flex-wrap items-center justify-between gap-1 border-t border-hair px-4 sm:px-8 lg:px-11 py-2.5">
+    <span className="lab">The verified sports recruitment network</span>
+    <span className="lab hidden sm:inline">Pune · Mumbai · London · Melbourne · Cape Town</span>
+  </div>
+</header>
+
+{/* Spacer = nav height (80px) + ticker height (~36px) = 116px */}
+<div className="h-[116px]" />
 
       {/* ── Page content ──────────────────────────────────────────────────── */}
       <Outlet />
