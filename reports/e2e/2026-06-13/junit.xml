@@ -1,5 +1,5 @@
-<testsuites id="" name="" tests="46" failures="1" skipped="29" errors="0" time="134.728941">
-<testsuite name="sportivox/auth.spec.ts" timestamp="2026-06-13T22:36:15.013Z" hostname="sportivox-chromium" tests="6" failures="1" skipped="5" time="69.681" errors="0">
+<testsuites id="" name="" tests="46" failures="1" skipped="29" errors="0" time="134.655658">
+<testsuite name="sportivox/auth.spec.ts" timestamp="2026-06-13T22:44:56.539Z" hostname="sportivox-chromium" tests="6" failures="1" skipped="5" time="71.084" errors="0">
 <testcase name="@auth Sportivox authentication › @critical admin can sign in" classname="sportivox/auth.spec.ts">
 <properties>
 <property name="skip" value="Seed missing for admin@sportivox.local — load demo data with `make seed`">
@@ -32,7 +32,7 @@
 <skipped>
 </skipped>
 </testcase>
-<testcase name="@auth Sportivox authentication › invalid credentials show an inline error" classname="sportivox/auth.spec.ts" time="6.999">
+<testcase name="@auth Sportivox authentication › invalid credentials show an inline error" classname="sportivox/auth.spec.ts" time="7.01">
 <system-out>
 <![CDATA[
 [[ATTACHMENT|../test-results/auth--auth-Sportivox-authe-9e4a7-ntials-show-an-inline-error-sportivox-chromium/test-failed-1.png]]
@@ -180,21 +180,21 @@
 </skipped>
 </testcase>
 </testsuite>
-<testsuite name="sportivox/landing.spec.ts" timestamp="2026-06-13T22:36:15.013Z" hostname="sportivox-chromium" tests="6" failures="0" skipped="0" time="8.175" errors="0">
-<testcase name="Sportivox landing &amp; public surfaces › @smoke @critical landing page renders headline and CTA" classname="sportivox/landing.spec.ts" time="1.258">
+<testsuite name="sportivox/landing.spec.ts" timestamp="2026-06-13T22:44:56.539Z" hostname="sportivox-chromium" tests="6" failures="0" skipped="0" time="9.112" errors="0">
+<testcase name="Sportivox landing &amp; public surfaces › @smoke @critical landing page renders headline and CTA" classname="sportivox/landing.spec.ts" time="1.365">
 </testcase>
-<testcase name="Sportivox landing &amp; public surfaces › @smoke login page accepts inputs" classname="sportivox/landing.spec.ts" time="1.189">
+<testcase name="Sportivox landing &amp; public surfaces › @smoke login page accepts inputs" classname="sportivox/landing.spec.ts" time="1.345">
 </testcase>
-<testcase name="Sportivox landing &amp; public surfaces › @smoke signup page loads (multi-step)" classname="sportivox/landing.spec.ts" time="1.616">
+<testcase name="Sportivox landing &amp; public surfaces › @smoke signup page loads (multi-step)" classname="sportivox/landing.spec.ts" time="1.937">
 </testcase>
-<testcase name="Sportivox landing &amp; public surfaces › @smoke forgot password page exists" classname="sportivox/landing.spec.ts" time="1.517">
+<testcase name="Sportivox landing &amp; public surfaces › @smoke forgot password page exists" classname="sportivox/landing.spec.ts" time="1.789">
 </testcase>
-<testcase name="Sportivox landing &amp; public surfaces › @critical browse opportunities works unauthenticated" classname="sportivox/landing.spec.ts" time="1.603">
+<testcase name="Sportivox landing &amp; public surfaces › @critical browse opportunities works unauthenticated" classname="sportivox/landing.spec.ts" time="1.689">
 </testcase>
-<testcase name="Sportivox landing &amp; public surfaces › 404 handler returns a friendly page" classname="sportivox/landing.spec.ts" time="0.992">
+<testcase name="Sportivox landing &amp; public surfaces › 404 handler returns a friendly page" classname="sportivox/landing.spec.ts" time="0.987">
 </testcase>
 </testsuite>
-<testsuite name="sportivox/opportunities.spec.ts" timestamp="2026-06-13T22:36:15.013Z" hostname="sportivox-chromium" tests="4" failures="0" skipped="4" time="49.025" errors="0">
+<testsuite name="sportivox/opportunities.spec.ts" timestamp="2026-06-13T22:44:56.539Z" hostname="sportivox-chromium" tests="4" failures="0" skipped="4" time="49.09" errors="0">
 <testcase name="Opportunities flow › @critical athlete can browse and open an opportunity" classname="sportivox/opportunities.spec.ts">
 <properties>
 <property name="skip" value="Seed missing">
@@ -228,7 +228,7 @@
 </skipped>
 </testcase>
 </testsuite>
-<testsuite name="sportivox/social.spec.ts" timestamp="2026-06-13T22:36:15.013Z" hostname="sportivox-chromium" tests="6" failures="0" skipped="6" time="73.237" errors="0">
+<testsuite name="sportivox/social.spec.ts" timestamp="2026-06-13T22:44:56.539Z" hostname="sportivox-chromium" tests="6" failures="0" skipped="6" time="73.493" errors="0">
 <testcase name="Social surfaces › @smoke feed renders" classname="sportivox/social.spec.ts">
 <properties>
 <property name="skip" value="Seed missing">
@@ -278,7 +278,7 @@
 </skipped>
 </testcase>
 </testsuite>
-<testsuite name="scoring/analytics.spec.ts" timestamp="2026-06-13T22:36:15.013Z" hostname="scoring-chromium" tests="3" failures="0" skipped="3" time="0" errors="0">
+<testsuite name="scoring/analytics.spec.ts" timestamp="2026-06-13T22:44:56.539Z" hostname="scoring-chromium" tests="3" failures="0" skipped="3" time="0" errors="0">
 <testcase name="@scoring Analytics dashboard › @critical analytics page renders all sections" classname="scoring/analytics.spec.ts">
 <properties>
 <property name="skip" value="Scoring API unreachable">
@@ -304,10 +304,10 @@
 </skipped>
 </testcase>
 </testsuite>
-<testsuite name="scoring/auth.spec.ts" timestamp="2026-06-13T22:36:15.013Z" hostname="scoring-chromium" tests="4" failures="0" skipped="1" time="14.113" errors="0">
-<testcase name="Scoring console — auth › @smoke login page renders" classname="scoring/auth.spec.ts" time="0.68">
+<testsuite name="scoring/auth.spec.ts" timestamp="2026-06-13T22:44:56.539Z" hostname="scoring-chromium" tests="4" failures="0" skipped="1" time="14.199" errors="0">
+<testcase name="Scoring console — auth › @smoke login page renders" classname="scoring/auth.spec.ts" time="0.73">
 </testcase>
-<testcase name="Scoring console — auth › @smoke signup page renders" classname="scoring/auth.spec.ts" time="0.754">
+<testcase name="Scoring console — auth › @smoke signup page renders" classname="scoring/auth.spec.ts" time="0.826">
 </testcase>
 <testcase name="Scoring console — auth › @critical admin/organizer can sign in" classname="scoring/auth.spec.ts">
 <properties>
@@ -317,10 +317,10 @@
 <skipped>
 </skipped>
 </testcase>
-<testcase name="Scoring console — auth › rejected credentials stay on login" classname="scoring/auth.spec.ts" time="1.421">
+<testcase name="Scoring console — auth › rejected credentials stay on login" classname="scoring/auth.spec.ts" time="1.434">
 </testcase>
 </testsuite>
-<testsuite name="scoring/live-scoring.spec.ts" timestamp="2026-06-13T22:36:15.013Z" hostname="scoring-chromium" tests="5" failures="0" skipped="5" time="0" errors="0">
+<testsuite name="scoring/live-scoring.spec.ts" timestamp="2026-06-13T22:44:56.539Z" hostname="scoring-chromium" tests="5" failures="0" skipped="5" time="0" errors="0">
 <testcase name="@scoring Live scoring — PPTX Level 1 + Level 2 › @critical scorer can record a Level 1 ball" classname="scoring/live-scoring.spec.ts">
 <properties>
 <property name="skip" value="Scoring API/seed not reachable">
@@ -362,7 +362,7 @@
 </skipped>
 </testcase>
 </testsuite>
-<testsuite name="scoring/match-config.spec.ts" timestamp="2026-06-13T22:36:15.013Z" hostname="scoring-chromium" tests="2" failures="0" skipped="2" time="0" errors="0">
+<testsuite name="scoring/match-config.spec.ts" timestamp="2026-06-13T22:44:56.539Z" hostname="scoring-chromium" tests="2" failures="0" skipped="2" time="0" errors="0">
 <testcase name="@scoring Match configuration › @critical config screen renders all PPTX sections" classname="scoring/match-config.spec.ts">
 <properties>
 <property name="skip" value="Scoring API unreachable">
@@ -380,8 +380,8 @@
 </skipped>
 </testcase>
 </testsuite>
-<testsuite name="scoring/tournaments.spec.ts" timestamp="2026-06-13T22:36:15.013Z" hostname="scoring-chromium" tests="4" failures="0" skipped="3" time="23.774" errors="0">
-<testcase name="Scoring console — tournaments › @smoke unauthenticated tournament list loads" classname="scoring/tournaments.spec.ts" time="0.512">
+<testsuite name="scoring/tournaments.spec.ts" timestamp="2026-06-13T22:44:56.539Z" hostname="scoring-chromium" tests="4" failures="0" skipped="3" time="23.811" errors="0">
+<testcase name="Scoring console — tournaments › @smoke unauthenticated tournament list loads" classname="scoring/tournaments.spec.ts" time="0.547">
 </testcase>
 <testcase name="Scoring console — tournaments › @critical organizer can open the new tournament form" classname="scoring/tournaments.spec.ts">
 <properties>
@@ -408,18 +408,18 @@
 </skipped>
 </testcase>
 </testsuite>
-<testsuite name="sportivox/landing.spec.ts" timestamp="2026-06-13T22:36:15.013Z" hostname="mobile-chrome" tests="6" failures="0" skipped="0" time="7.55" errors="0">
-<testcase name="Sportivox landing &amp; public surfaces › @smoke @critical landing page renders headline and CTA" classname="sportivox/landing.spec.ts" time="1.294">
+<testsuite name="sportivox/landing.spec.ts" timestamp="2026-06-13T22:44:56.539Z" hostname="mobile-chrome" tests="6" failures="0" skipped="0" time="7.715" errors="0">
+<testcase name="Sportivox landing &amp; public surfaces › @smoke @critical landing page renders headline and CTA" classname="sportivox/landing.spec.ts" time="1.34">
 </testcase>
-<testcase name="Sportivox landing &amp; public surfaces › @smoke login page accepts inputs" classname="sportivox/landing.spec.ts" time="1.182">
+<testcase name="Sportivox landing &amp; public surfaces › @smoke login page accepts inputs" classname="sportivox/landing.spec.ts" time="1.235">
 </testcase>
-<testcase name="Sportivox landing &amp; public surfaces › @smoke signup page loads (multi-step)" classname="sportivox/landing.spec.ts" time="1.237">
+<testcase name="Sportivox landing &amp; public surfaces › @smoke signup page loads (multi-step)" classname="sportivox/landing.spec.ts" time="1.242">
 </testcase>
-<testcase name="Sportivox landing &amp; public surfaces › @smoke forgot password page exists" classname="sportivox/landing.spec.ts" time="1.352">
+<testcase name="Sportivox landing &amp; public surfaces › @smoke forgot password page exists" classname="sportivox/landing.spec.ts" time="1.372">
 </testcase>
-<testcase name="Sportivox landing &amp; public surfaces › @critical browse opportunities works unauthenticated" classname="sportivox/landing.spec.ts" time="1.601">
+<testcase name="Sportivox landing &amp; public surfaces › @critical browse opportunities works unauthenticated" classname="sportivox/landing.spec.ts" time="1.534">
 </testcase>
-<testcase name="Sportivox landing &amp; public surfaces › 404 handler returns a friendly page" classname="sportivox/landing.spec.ts" time="0.884">
+<testcase name="Sportivox landing &amp; public surfaces › 404 handler returns a friendly page" classname="sportivox/landing.spec.ts" time="0.992">
 </testcase>
 </testsuite>
 </testsuites>
