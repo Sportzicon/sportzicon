@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { api, humanizeError } from "../api/client";
 import { COUNTRIES, COUNTRY_PHONE, statesForCountry } from "../data/geo";
+import { SPORTS, rolesForSport, sportRequiresPosition } from "../data/sportProfile";
 import { Eye, EyeOff } from "lucide-react";
 
 const ROLES = [
@@ -11,7 +12,6 @@ const ROLES = [
   { value: "organizer", label: "Organizer", hint: "Create events, accept registrations, manage participants." }
 ];
 
-const SPORTS = ["Cricket", "Football", "Athletics", "Basketball", "Hockey", "Tennis", "Badminton", "Kabaddi"];
 const LEVELS = ["Beginner", "Amateur", "Academy", "Semi-professional", "State", "National", "Professional"];
 const ORG_TYPES = ["Club", "Academy", "Both"];
 const STORE_KEY = "sx_signup_draft";
@@ -139,9 +139,6 @@ function PhoneInput({ country, value, onChange }: {
   );
 }
 
-// Sports where a playing position is not meaningful
-const SPORTS_WITHOUT_POSITION = ["swimming", "gymnastics", "crossfit", "cycling", "rowing", "skiing"];
-
 export default function Signup() {
   const navigate = useNavigate();
   const [d, setDraft] = useState<Draft>(DEFAULT);
@@ -235,7 +232,7 @@ export default function Signup() {
       setDraft((p) => ({ ...p, step: 1 }));
       return;
     }
-    const requiresPosition = !SPORTS_WITHOUT_POSITION.includes(d.primary_sport?.toLowerCase() ?? "");
+    const requiresPosition = sportRequiresPosition(d.primary_sport);
     if (isAthlete && (requiresPosition && !d.play_role || !d.level)) {
       setErr("Please select your playing role and experience level."); return;
     }
@@ -460,32 +457,20 @@ export default function Signup() {
                 <Field label="Primary sport" req>
                   <div className="flex flex-wrap gap-2 mt-1.5">
                     {SPORTS.map((s) => (
-                      <Chip key={s} label={s} active={d.primary_sport === s} onClick={() => patch({ primary_sport: s })} />
+                      <Chip key={s} label={s} active={d.primary_sport === s}
+                        onClick={() => patch({ primary_sport: s, play_role: "" })} />
                     ))}
                   </div>
                 </Field>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {sportRequiresPosition(d.primary_sport) && (
                   <Field label="Playing role" req>
                     <select className="input" value={d.play_role} onChange={(e) => patch({ play_role: e.target.value })}>
                       <option value="">Select playing role</option>
-                      {(d.primary_sport === "Cricket"
-                        ? ["Batter", "Bowler", "All-rounder", "Wicket-keeper"]
-                        : d.primary_sport === "Football"
-                        ? ["Goalkeeper", "Defender", "Midfielder", "Winger", "Striker"]
-                        : d.primary_sport === "Basketball"
-                        ? ["Point Guard", "Shooting Guard", "Small Forward", "Power Forward", "Centre"]
-                        : d.primary_sport === "Hockey"
-                        ? ["Goalkeeper", "Defender", "Midfielder", "Forward"]
-                        : d.primary_sport === "Kabaddi"
-                        ? ["Raider", "Defender", "All-rounder"]
-                        : d.primary_sport === "Tennis" || d.primary_sport === "Badminton"
-                        ? ["Singles specialist", "Doubles specialist", "All-court"]
-                        : d.primary_sport === "Athletics"
-                        ? ["Sprinter", "Middle distance", "Long distance", "Jumper", "Thrower", "Multi-event"]
-                        : ["Attacker", "Defender", "All-rounder", "Other"]
-                      ).map((o) => <option key={o}>{o}</option>)}
+                      {rolesForSport(d.primary_sport).map((o) => <option key={o}>{o}</option>)}
                     </select>
                   </Field>
+                  )}
                   <Field label="Experience level" req>
                     <select className="input" value={d.level} onChange={(e) => patch({ level: e.target.value })}>
                       <option value="">Select experience level</option>

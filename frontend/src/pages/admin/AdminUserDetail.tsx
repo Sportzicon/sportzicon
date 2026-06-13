@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import { humanizeError } from "../../api/client";
 import { PageHeader, Spinner } from "../../components/UI";
+import { clearSportSpecific, validateAthleteSportProfile } from "../../data/sportProfile";
 import { ArrowLeft, Save } from "lucide-react";
 
 const ROLES = ["athlete", "club", "scout", "organizer", "admin", "scorer"] as const;
@@ -62,6 +63,10 @@ export default function AdminUserDetail() {
 
   const saveProfile = useMutation({
     mutationFn: async () => {
+      if (user?.role === "athlete") {
+        const sportErrors = validateAthleteSportProfile(athleteData);
+        if (sportErrors.length) throw new Error(sportErrors[0]);
+      }
       const body: Record<string, any> = {};
       for (const [k, v] of Object.entries(profile)) {
         if (v !== "" && v !== null) body[k] = v;
@@ -182,7 +187,8 @@ export default function AdminUserDetail() {
           <h3 className="font-semibold text-slate-800">Athlete Profile</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field label="Primary sport">
-              <input className="input" value={ad("primary_sport")} onChange={(e) => setAd("primary_sport", e.target.value)} />
+              <input className="input" value={ad("primary_sport")}
+                onChange={(e) => setAthleteData((prev) => clearSportSpecific({ ...prev, primary_sport: e.target.value }) as Record<string, any>)} />
             </Field>
             <Field label="Playing role / position">
               <input className="input" value={ad("playing_role")} onChange={(e) => setAd("playing_role", e.target.value)} />

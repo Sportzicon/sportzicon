@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { api, humanizeError } from "../../api/client";
 import { PageHeader, Spinner, Badge, Pagination } from "../../components/UI";
-import { Pencil, X, Check, Plus } from "lucide-react";
+import { Pencil, Plus } from "lucide-react";
 
 const PAGE_SIZE = 15;
 

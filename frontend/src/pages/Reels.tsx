@@ -6,7 +6,7 @@ import { CommentSection } from "../components/CommentSection";
 import { ReelViewer } from "../components/ReelViewer";
 import { useAuthStore } from "../store/auth";
 import { useFavoritesStore } from "../store/favorites";
-import { Heart, Trash2, Pencil, MoreVertical, MessageCircle, Eye, Bookmark, Award, Upload, X } from "lucide-react";
+import { Heart, Trash2, Pencil, MoreVertical, MessageCircle, Eye, Bookmark, Award, Upload } from "lucide-react";
 import type { Reel } from "../types";
 
 export default function Reels() {

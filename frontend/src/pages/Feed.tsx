@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { useQueryClient } from "@tanstack/react-query";
 import { useFeed } from "../hooks";
 import { useAuthStore } from "../store/auth";
 import { PageHeader, Spinner, EmptyState, Avatar, Tabs } from "../components/UI";

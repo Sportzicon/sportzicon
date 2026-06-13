@@ -48,7 +48,6 @@ const parsed = schema.safeParse(process.env);
 
 if (!parsed.success) {
   // Fail fast on misconfiguration — never run with partial config.
-  // eslint-disable-next-line no-console
   console.error("Invalid environment configuration:", parsed.error.flatten().fieldErrors);
   process.exit(1);
 }

@@ -72,7 +72,7 @@ export default function AdminCreateOrganization() {
   // Per-step touched sets — errors only show after the user has interacted with a field
   const [touched1, setTouched1] = useState<Set<string>>(new Set());
   const [touched2, setTouched2] = useState<Set<string>>(new Set());
-  const [touched3, setTouched3] = useState<Set<string>>(new Set());
+  const [, setTouched3] = useState<Set<string>>(new Set());
 
   const setDraft = useCallback((updater: (prev: Draft) => Draft) => {
     setDraftRaw((prev) => {

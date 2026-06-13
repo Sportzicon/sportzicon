@@ -12,15 +12,6 @@ import {
 const ov = (b: number) => `${Math.floor(b / 6)}.${b % 6}`;
 
 const MATCH_TYPES = ["league", "tournament", "friendly", "trial", "academy", "knockout"];
-const ROLES = ["batsman", "bowler", "all-rounder", "wicket-keeper"];
-const BAT_STYLES = ["right-hand bat", "left-hand bat"];
-const BOWL_STYLES = [
-  "right-arm fast", "right-arm fast-medium", "right-arm medium-fast", "right-arm medium",
-  "right-arm off-spin", "right-arm leg-spin",
-  "left-arm fast", "left-arm fast-medium", "left-arm medium",
-  "left-arm orthodox", "left-arm wrist-spin",
-  "slow left-arm orthodox", "other"
-];
 
 // ── Status pill ───────────────────────────────────────────────────────────────
 function StatusPill({ status }: { status: string }) {

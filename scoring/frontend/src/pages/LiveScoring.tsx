@@ -8,6 +8,10 @@ import {
   SHOT_TYPES, BALL_LINES, BALL_LENGTHS, BOWLER_TYPE_SHORT, bowlerVariantFromShort,
   WICKET_TYPES, FIELDING_POSITIONS, DISMISSAL_ZONES, BALL_TRAJECTORIES
 } from "../data/cricket";
+import {
+  allowedWicketTypes, runsLockedToZero, deriveFreeHit, validateBall as validateBallRules,
+  NO_RUNS_DISMISSALS
+} from "../data/ballRules";
 
 function oversFromBalls(balls: number) {
   return `${Math.floor(balls / 6)}.${balls % 6}`;
@@ -49,6 +53,33 @@ const DEFAULT_BALL: BallInput = {
   wicket_type: "", dismissed_player_id: "", fielder_id: "", fielder_name: "",
   fielding_position: "", dismissal_zone: "", ball_trajectory: ""
 };
+
+// Reconcile a ball into a cricket-legal shape after any field change:
+// derive boundary flags from runs, lock runs/boundaries for ball-is-dead
+// dismissals, and clear a dismissal type that the delivery no longer allows.
+function normalizeBall(b: BallInput, freeHitActive: boolean): BallInput {
+  const n = { ...b };
+
+  if (n.is_wicket) {
+    const allowed = allowedWicketTypes(n as any, freeHitActive);
+    if (n.wicket_type && !allowed.has(n.wicket_type)) n.wicket_type = "";
+  } else {
+    n.wicket_type = ""; n.dismissed_player_id = ""; n.fielder_id = "";
+    n.fielder_name = ""; n.fielding_position = ""; n.dismissal_zone = ""; n.ball_trajectory = "";
+  }
+
+  // Ball-is-dead dismissal → no runs off the bat.
+  const noRunsWk = n.is_wicket && NO_RUNS_DISMISSALS.has(n.wicket_type);
+  if (noRunsWk) n.runs = 0;
+
+  // Boundary flags are fully derived — never a wide/bye/leg-bye, never a dead-ball wicket.
+  const cleanBat = !n.is_wide && !n.is_bye && !n.is_leg_bye;
+  const deadForBoundary = n.is_wicket && (NO_RUNS_DISMISSALS.has(n.wicket_type) || n.wicket_type === "run_out" || n.wicket_type === "obstruction");
+  n.is_four = cleanBat && !deadForBoundary && Number(n.runs) === 4;
+  n.is_six = cleanBat && !deadForBoundary && Number(n.runs) === 6;
+
+  return n;
+}
 
 export default function LiveScoring() {
   const { matchId } = useParams<{ matchId: string }>();
@@ -149,11 +180,30 @@ export default function LiveScoring() {
   const currentOver = activeInnings ? Math.floor(activeInnings.total_balls / 6) : 0;
   const currentBallNum = activeInnings ? (activeInnings.total_balls % 6) + 1 : 1;
 
+  // ── Live cricket-law state (mirrors backend `ballValidation.ts`) ────────────
+  const freeHitEnabled = match?.format !== "Test";
+  const recentDesc = ballsData
+    ? [...(ballsData as any[])].sort((a, b) =>
+        b.over_number - a.over_number || b.ball_number - a.ball_number)
+    : [];
+  const freeHitActive = deriveFreeHit(recentDesc, freeHitEnabled);
+  const allowedWk = allowedWicketTypes(ball as any, freeHitActive);
+  const runsLocked = runsLockedToZero(ball as any);
+  const clientErrors = validateBallRules(ball as any, freeHitActive);
+  // Wides/no-balls have a mandatory penalty run, so they're never a true dot.
+  const extraDisabled = {
+    is_wide: ball.is_no_ball,
+    is_no_ball: ball.is_wide,
+    is_bye: ball.is_leg_bye || ball.is_wide,
+    is_leg_bye: ball.is_bye || ball.is_wide,
+  } as Record<string, boolean>;
+
   function handleBallSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!activeInningsId) return;
-    if (!ball.batsman_id || !ball.bowler_id) {
-      setFeedback({ type: "error", msg: "Select batsman and bowler" });
+    const errs = validateBallRules(ball as any, freeHitActive);
+    if (errs.length) {
+      setFeedback({ type: "error", msg: errs[0] });
       return;
     }
     addBallMutation.mutate({
@@ -170,7 +220,7 @@ export default function LiveScoring() {
       is_wicket: ball.is_wicket,
       is_four: ball.is_four,
       is_six: ball.is_six,
-      is_free_hit: ball.is_free_hit,
+      is_free_hit: freeHitActive,
       // PPTX § Level 1 dropdowns
       shot_type: ball.shot_type || undefined,
       ball_line: ball.ball_line || undefined,
@@ -189,13 +239,15 @@ export default function LiveScoring() {
 
   function update(k: keyof BallInput, v: any) {
     setBall(prev => {
-      const next = { ...prev, [k]: v };
-      // Auto-set is_four / is_six
-      if (k === "runs") {
-        if (Number(v) === 4) next.is_four = true; else if (Number(v) !== 4) next.is_four = false;
-        if (Number(v) === 6) next.is_six = true; else if (Number(v) !== 6) next.is_six = false;
-      }
-      return next;
+      const next: BallInput = { ...prev, [k]: v };
+
+      // Pairwise mutual exclusivity — the just-toggled extra wins.
+      if (k === "is_wide" && v) { next.is_no_ball = false; next.is_bye = false; next.is_leg_bye = false; }
+      if (k === "is_no_ball" && v) { next.is_wide = false; }
+      if (k === "is_bye" && v) { next.is_leg_bye = false; }
+      if (k === "is_leg_bye" && v) { next.is_bye = false; }
+
+      return normalizeBall(next, freeHitActive);
     });
   }
 
@@ -364,8 +416,8 @@ export default function LiveScoring() {
               {(ballsData as any[])
                 .filter((b: any) => b.over_number === Math.max(0, currentOver - (currentBallNum === 1 ? 1 : 0)))
                 .map((b: any, i: number) => (
-                  <span key={i} className={`w-6 h-6 rounded-full text-xs font-bold flex items-center justify-center ${b.is_wicket ? "bg-red-500" : b.is_six ? "bg-purple-500" : b.is_four ? "bg-blue-500" : b.is_wide || b.is_no_ball ? "bg-yellow-500" : "bg-gray-600"}`}>
-                    {b.is_wide ? "Wd" : b.is_no_ball ? "NB" : b.is_wicket ? "W" : b.runs}
+                  <span key={i} className={`min-w-6 h-6 px-1 rounded-full text-xs font-bold flex items-center justify-center ${b.is_wicket ? "bg-red-500" : b.is_six ? "bg-purple-500" : b.is_four ? "bg-blue-500" : b.is_wide || b.is_no_ball ? "bg-yellow-500" : "bg-gray-600"}`}>
+                    {b.is_wide ? `${1 + b.runs}wd` : b.is_no_ball ? (b.runs ? `${b.runs}nb` : "nb") : b.is_wicket ? "W" : b.runs}
                   </span>
                 ))}
             </div>
@@ -384,7 +436,14 @@ export default function LiveScoring() {
       {/* Ball entry form — admin/scorer only */}
       {activeInnings && !activeInnings.is_completed && canScore && (
         <form onSubmit={handleBallSubmit} className="card p-4 space-y-4">
-          <h2 className="font-semibold">Over {currentOver + 1} · Ball {currentBallNum}</h2>
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <h2 className="font-semibold">Over {currentOver + 1} · Ball {currentBallNum}</h2>
+            {freeHitActive && (
+              <span className="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 text-xs font-bold uppercase tracking-wide">
+                Free Hit
+              </span>
+            )}
+          </div>
 
           <div className="grid sm:grid-cols-3 gap-4">
             <div>
@@ -446,18 +505,37 @@ export default function LiveScoring() {
 
           {/* Runs */}
           <div>
-            <label className="label">Runs</label>
+            <label className="label">
+              {ball.is_wide || ball.is_no_ball || ball.is_bye || ball.is_leg_bye ? "Runs (off the extra)" : "Runs (off the bat)"}
+            </label>
             <div className="flex gap-2 flex-wrap">
-              {[0, 1, 2, 3, 4, 5, 6].map(r => (
-                <button
-                  key={r} type="button"
-                  onClick={() => update("runs", r)}
-                  className={`w-10 h-10 rounded-full font-bold text-sm transition ${ball.runs === r && !ball.is_wide && !ball.is_no_ball ? "bg-emerald-600 text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}
-                >
-                  {r}
-                </button>
-              ))}
+              {[0, 1, 2, 3, 4, 5, 6].map(r => {
+                const disabled = runsLocked && r !== 0;
+                return (
+                  <button
+                    key={r} type="button"
+                    disabled={disabled}
+                    onClick={() => update("runs", r)}
+                    className={`w-10 h-10 rounded-full font-bold text-sm transition ${disabled ? "bg-gray-50 text-gray-300 cursor-not-allowed" : ball.runs === r ? "bg-emerald-600 text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}
+                  >
+                    {r}
+                  </button>
+                );
+              })}
             </div>
+            {runsLocked && (
+              <p className="text-[11px] text-gray-400 mt-1">Runs locked to 0 — none can be scored when out this way.</p>
+            )}
+            {!runsLocked && ball.is_wide && (
+              <p className="text-[11px] text-gray-400 mt-1">
+                Keeper missed and it ran to the fence? Tap <b>4</b> — recorded as <b>{1 + Number(ball.runs)} wides</b>.
+              </p>
+            )}
+            {!runsLocked && ball.is_no_ball && Number(ball.runs) > 0 && (
+              <p className="text-[11px] text-gray-400 mt-1">
+                No-ball plus runs — bowler is charged <b>{1 + Number(ball.runs)}</b> ({Number(ball.runs)} off the bat + 1).
+              </p>
+            )}
           </div>
 
           {/* Extras row */}
@@ -469,20 +547,20 @@ export default function LiveScoring() {
                 { key: "is_no_ball", label: "No Ball", color: "orange" },
                 { key: "is_bye", label: "Bye", color: "blue" },
                 { key: "is_leg_bye", label: "Leg Bye", color: "blue" },
-                { key: "is_free_hit", label: "Free Hit", color: "green" },
                 { key: "is_wicket", label: "Wicket!", color: "red" },
               ].map(({ key, label, color }) => {
                 const active = ball[key as keyof BallInput] as boolean;
+                const disabled = !active && !!extraDisabled[key];
                 const colorMap: Record<string, string> = {
                   yellow: "bg-yellow-500 text-white",
                   orange: "bg-orange-500 text-white",
                   blue: "bg-blue-500 text-white",
-                  green: "bg-emerald-600 text-white",
                   red: "bg-red-600 text-white"
                 };
                 return (
-                  <button key={key} type="button" onClick={() => update(key as keyof BallInput, !active)}
-                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${active ? colorMap[color] : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}>
+                  <button key={key} type="button" disabled={disabled}
+                    onClick={() => update(key as keyof BallInput, !active)}
+                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${disabled ? "bg-gray-50 text-gray-300 cursor-not-allowed" : active ? colorMap[color] : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}>
                     {label}
                   </button>
                 );
@@ -499,8 +577,15 @@ export default function LiveScoring() {
                   <label className="label">Dismissal Type *</label>
                   <select className="input" value={ball.wicket_type} onChange={e => update("wicket_type", e.target.value)} required>
                     <option value="">Select</option>
-                    {WICKET_TYPES.map(w => <option key={w.value} value={w.value}>{w.label}</option>)}
+                    {WICKET_TYPES.filter(w => allowedWk.has(w.value)).map(w => <option key={w.value} value={w.value}>{w.label}</option>)}
                   </select>
+                  {(ball.is_wide || ball.is_no_ball || freeHitActive) && (
+                    <p className="text-[11px] text-red-600/80 mt-1">
+                      {freeHitActive ? "Free hit: only run-out / obstruction." :
+                       ball.is_no_ball ? "No-ball: only run-out / obstruction." :
+                       "Wide: only stumped / run-out / hit-wicket / obstruction."}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="label">Batsman Out</label>
@@ -554,8 +639,14 @@ export default function LiveScoring() {
             </div>
           )}
 
-          <button type="submit" disabled={addBallMutation.isPending} className="btn-primary w-full justify-center">
-            {addBallMutation.isPending ? "Recording…" : "Record Ball"}
+          {ball.batsman_id && ball.bowler_id && clientErrors.length > 0 && (
+            <ul className="bg-red-50 border border-red-200 rounded-lg px-4 py-2.5 text-xs text-red-700 space-y-0.5 list-disc list-inside">
+              {clientErrors.map((msg, i) => <li key={i}>{msg}</li>)}
+            </ul>
+          )}
+
+          <button type="submit" disabled={addBallMutation.isPending || clientErrors.length > 0} className="btn-primary w-full justify-center disabled:opacity-50 disabled:cursor-not-allowed">
+            {addBallMutation.isPending ? "Recording…" : clientErrors.length > 0 ? "Resolve issues to record" : "Record Ball"}
           </button>
         </form>
       )}

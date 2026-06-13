@@ -9,7 +9,6 @@ import { Trash2, Pencil, MoreVertical, Heart } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "../hooks";
-import type { Blog } from "../models";
 
 export default function BlogDetail() {
   const navigate = useNavigate();

@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { opportunityService } from "../services";
 import { useAuthStore } from "../store/auth";
-import { PageHeader, Spinner, EmptyState, StatusPill, Kicker, SectionHead, Pagination } from "../components/UI";
+import { PageHeader, Spinner, EmptyState, StatusPill, SectionHead, Pagination } from "../components/UI";
 
 const PAGE_SIZE = 10;
 import { Trash2, Pencil, MoreVertical, Bookmark } from "lucide-react";
@@ -107,8 +107,6 @@ export default function Opportunities() {
       if (sort === "newest") return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       return (b.application_count ?? 0) - (a.application_count ?? 0);
     });
-
-  const isFiltered = type || sport !== "All sports" || verifiedOnly || q;
 
   function resetFilters() {
     setType(""); setSport("All sports"); setVerifiedOnly(false); setQ(""); setPage(1);

@@ -2,6 +2,7 @@ import { prisma } from "../../config/prisma";
 import { BadRequest, Conflict, NotFound } from "../../utils/errors";
 import { omitSensitive } from "../../utils/user";
 import { hashPassword } from "../auth/tokens";
+import { validateAthleteSportProfile } from "../users/sportProfile";
 import type { AccountStatus, Role, ReportStatus } from "../../types/domain";
 
 export async function audit(input: {
@@ -162,7 +163,10 @@ export async function updateUserProfile(
 
   if (patch.athlete_data !== undefined) {
     const existing = (user.athlete_data as Record<string, unknown>) ?? {};
-    data.athlete_data = { ...existing, ...(patch.athlete_data as Record<string, unknown>) };
+    const merged = { ...existing, ...(patch.athlete_data as Record<string, unknown>) };
+    const violations = validateAthleteSportProfile(merged);
+    if (violations.length) throw BadRequest(violations.join(" "));
+    data.athlete_data = merged;
   }
   if (patch.coach_data !== undefined) {
     const existing = (user.coach_data as Record<string, unknown>) ?? {};

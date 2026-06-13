@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { scoringApi } from "../../api/scoringClient";
@@ -190,7 +190,7 @@ function ScoringLiveInner() {
     enabled: !!activeInningsId,
     refetchInterval: 5_000
   });
-  const allBalls = ballsData ?? [];
+  const allBalls = useMemo(() => ballsData ?? [], [ballsData]);
 
   useEffect(() => {
     if (activeInningsId) return;

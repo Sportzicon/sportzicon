@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { userService } from "../services";
 import { useFeed, useOpportunities, useMyApplications } from "../hooks";
 import { useAuthStore } from "../store/auth";
-import { PageHeader, StatusPill, Spinner, EmptyState, Kicker, SectionHead, Avatar } from "../components/UI";
+import { StatusPill, Spinner, EmptyState, Kicker, SectionHead, Avatar } from "../components/UI";
 import type { Application, Opportunity, Post } from "../models";
 
 function Metric({ k, v, accent = false }: { k: string; v: React.ReactNode; accent?: boolean }) {

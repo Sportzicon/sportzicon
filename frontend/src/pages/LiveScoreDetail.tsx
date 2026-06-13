@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { scoringApi } from "../api/scoringClient";
-import { Activity, MapPin, RefreshCw, ChevronRight, TrendingUp, Zap, Radio } from "lucide-react";
+import { MapPin, RefreshCw, ChevronRight, TrendingUp, Zap, Radio } from "lucide-react";
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 const ov  = (b: number) => `${Math.floor(b / 6)}.${b % 6}`;
@@ -13,8 +13,6 @@ const rrr = (tgt: number, r: number, b: number, maxB: number) => {
   const left = maxB - b; const need = tgt - r;
   return left > 0 && need > 0 ? ((need / left) * 6).toFixed(2) : left <= 0 ? "–" : "0.00";
 };
-const proj = (r: number, b: number, maxB: number) =>
-  b > 0 ? Math.round((r / b) * maxB) : 0;
 
 function ballLabel(b: any) {
   if (b.is_wicket)  return "W";
@@ -192,8 +190,8 @@ function generateCommentary(
     };
   }
 
-  // 1-3 runs
-  if (true) {
+  // 1-3 runs (default case — always returns)
+  {
     const runDesc = runs === 1 ? "1 run" : runs === 2 ? "2 runs" : runs === 3 ? "3 runs" : `${runs} runs`;
     return {
       headline: `${bowler} to ${batsman}, ${runDesc}${shotPhrase ? `. ${batsman} ${shotPhrase}s it.` : "."}`,

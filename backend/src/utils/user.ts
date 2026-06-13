@@ -7,7 +7,7 @@ import type { User } from "@prisma/client";
 //   - converts Date objects to epoch ms numbers
 export function omitSensitive(user: User) {
   const {
-    password_hash, email_lower, full_name_lower,
+    password_hash: _password_hash, email_lower: _email_lower, full_name_lower: _full_name_lower,
     athlete_data, coach_data,
     verification_status, verification_badges,
     created_at, updated_at, last_active_at,

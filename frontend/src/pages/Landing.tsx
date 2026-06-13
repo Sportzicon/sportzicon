@@ -22,6 +22,8 @@ export default function Landing({ initialView = "home" }: { initialView?: View }
       window.history.replaceState({}, "", location.pathname);
     }
     setView(initialView);
+  // location.pathname is only read for history.replaceState; re-running on it would loop.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialView, location.state]);
 
   // After view settles, either execute pending scroll or go to top
@@ -36,21 +38,6 @@ export default function Landing({ initialView = "home" }: { initialView?: View }
       window.scrollTo(0, 0);
     }
   }, [view]);
-
-  function showHowItWorks() {
-    setView("how-it-works");
-  }
-
-  function scrollToSection(id: string) {
-    if (view !== "home") {
-      setView("home");
-      setTimeout(() => {
-        document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
-      }, 50);
-    } else {
-      document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
-    }
-  }
 
   const stats: [string, string][] = [
     ["48,200", "Athletes"],

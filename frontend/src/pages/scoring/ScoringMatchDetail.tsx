@@ -123,11 +123,6 @@ function PlayingXIPanel({ matchId, canManage }: { matchId: string; canManage: bo
     setSel(next);
   }
 
-  const roleColor: Record<string, string> = {
-    "batsman": "text-blue-600", "bowler": "text-purple-600",
-    "all-rounder": "text-brand-500", "wicket-keeper": "text-amber-600"
-  };
-
   if (isLoading) return <div className="skel h-24 rounded" />;
 
   const xiLocked = xi?.xi_locked;

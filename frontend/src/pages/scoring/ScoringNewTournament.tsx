@@ -3,7 +3,6 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { scoringApi } from "../../api/scoringClient";
 import { PageHeader } from "../../components/UI";
-import { Trophy } from "lucide-react";
 
 const SPORTS = ["cricket", "football", "basketball", "volleyball", "hockey", "kabaddi"];
 const FORMATS: Record<string, string[]> = {

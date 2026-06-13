@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
-import { opportunityService, applicationService } from "../services";
+import { opportunityService } from "../services";
 import { humanizeError } from "../api/client";
 import { useAuthStore } from "../store/auth";
 import { Spinner, StatusPill, SectionHead, Kicker } from "../components/UI";
@@ -262,7 +262,6 @@ export default function OpportunityDetail() {
   const navigate = useNavigate();
   const { id = "" } = useParams();
   const user = useAuthStore((s) => s.user);
-  const qc = useQueryClient();
   const [applyOpen, setApplyOpen] = useState(false);
   const [applied, setApplied] = useState(false);
   const [saved, setSaved] = useState(false);

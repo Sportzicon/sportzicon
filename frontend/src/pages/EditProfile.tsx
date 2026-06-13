@@ -5,6 +5,7 @@ import { useAuthStore } from "../store/auth";
 import { PageHeader, SectionHead } from "../components/UI";
 import { Camera } from "lucide-react";
 import { COUNTRIES, statesForCountry } from "../data/geo";
+import { clearSportSpecific, validateAthleteSportProfile } from "../data/sportProfile";
 
 // ============================================================================
 // Edit profile — "Editorial Workstation" skin. Photo-upload flow, both form
@@ -95,6 +96,10 @@ export default function EditProfile() {
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    if (user!.role === "athlete") {
+      const sportErrors = validateAthleteSportProfile(athlete);
+      if (sportErrors.length) { setErr(sportErrors[0]); window.scrollTo(0, 0); return; }
+    }
     setBusy(true);
     setErr(null);
     setFieldErrors({});
@@ -237,7 +242,7 @@ export default function EditProfile() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Field label="Primary sport">
                 <input className="input" list="sport-list" value={athlete.primary_sport}
-                  onChange={(e) => setAthlete({ ...athlete, primary_sport: e.target.value })} />
+                  onChange={(e) => setAthlete(clearSportSpecific({ ...athlete, primary_sport: e.target.value }))} />
                 <datalist id="sport-list">
                   {["Cricket","Football","Basketball","Hockey","Athletics","Tennis","Badminton","Kabaddi","Volleyball","Boxing","Wrestling","Swimming"].map((s) => <option key={s} value={s} />)}
                 </datalist>

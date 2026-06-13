@@ -16,11 +16,11 @@ export default function ScoringGate({ children }: { children: React.ReactNode })
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Already authenticated — render immediately
-  if (scoringUser) return <>{children}</>;
-
-  // Auto-SSO: runs once when the gate mounts and a main token is available
+  // Auto-SSO: runs once when the gate mounts and a main token is available.
+  // NOTE: this hook must run unconditionally on every render — the
+  // "already authenticated" guard below sits AFTER all hooks (Rules of Hooks).
   useEffect(() => {
+    if (scoringUser) return;        // already authenticated — nothing to exchange
     if (!mainToken) {
       setSsoState("failed");
       return;
@@ -39,6 +39,9 @@ export default function ScoringGate({ children }: { children: React.ReactNode })
       });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Already authenticated — render immediately (guard runs after all hooks)
+  if (scoringUser) return <>{children}</>;
 
   // SSO in progress — show a spinner instead of a login form
   if (ssoState === "pending") {

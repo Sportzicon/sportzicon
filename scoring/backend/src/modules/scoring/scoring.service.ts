@@ -1,5 +1,6 @@
 import { prisma } from "../../config/prisma";
 import { BadRequest, Forbidden, NotFound } from "../../utils/errors";
+import { validateBall, deriveFreeHit } from "./ballValidation";
 
 // ── Guards ───────────────────────────────────────────────────────────────────
 
@@ -1031,6 +1032,32 @@ export async function addBall(inningsId: string, actorId: string, actorRole: str
     fielding_position, dismissal_zone, ball_trajectory, commentary
   } = input;
 
+  // ── Cricket-law validation (authoritative — runs before any write) ─────────
+  // Free hit follows a no-ball and persists through wides until the next legal ball.
+  const freeHitEnabled = tournament?.free_hit_enabled ?? (match.format !== "Test");
+  const recentForFreeHit = await prisma.ballEvent.findMany({
+    where: { innings_id: inningsId },
+    orderBy: { created_at: "desc" }, take: 6,
+    select: { is_no_ball: true, is_wide: true }
+  });
+  const freeHitActive = deriveFreeHit(recentForFreeHit, freeHitEnabled);
+
+  // Max wickets = batting squad size − 1, capped at 10 (standard all-out).
+  const battingSquad = await prisma.matchPlayer.count({
+    where: { match_id: innings.match_id, team_id: innings.batting_team_id }
+  });
+  const squadFallback = battingSquad > 0
+    ? battingSquad
+    : await prisma.player.count({ where: { team_id: innings.batting_team_id } });
+  const maxWickets = Math.min(Math.max((squadFallback || 11) - 1, 1), 10);
+
+  const violations = validateBall(input, {
+    freeHitActive,
+    wicketsSoFar: innings.total_wickets,
+    maxWickets
+  });
+  if (violations.length) throw BadRequest(violations.join(" "));
+
   const isLegal = !is_wide && !is_no_ball;
   // On a wide ALL runs go to extras — batsman scores nothing. On a bye/lb off a legal ball, same.
   const batsmanRuns = (is_wide || is_bye || is_leg_bye) ? 0 : runs;
@@ -1039,6 +1066,8 @@ export async function addBall(inningsId: string, actorId: string, actorRole: str
   const totalRuns = batsmanRuns + extraRuns + byeRuns + (is_penalty ? 5 : 0);
   const isDot = isLegal && totalRuns === 0 && !is_wicket;
   const phase = computePhase(over_number, match.format, (tournament?.powerplay_overs as any) ?? null);
+  // The server decides free-hit status from the previous delivery — not the client.
+  const effectiveFreeHit = freeHitActive;
 
   // Ball event row with full PPTX fields
   const ball = await prisma.ballEvent.create({
@@ -1048,7 +1077,7 @@ export async function addBall(inningsId: string, actorId: string, actorRole: str
       batsman_id, bowler_id, non_striker_id,
       runs,
       is_wide, is_no_ball, is_bye, is_leg_bye, is_penalty,
-      is_wicket, is_four, is_six, is_free_hit, is_dot: isDot,
+      is_wicket, is_four, is_six, is_free_hit: effectiveFreeHit, is_dot: isDot,
       shot_type, ball_line, ball_length, bowler_variant, delivery_outcome,
       phase,
       wicket_type, dismissed_player_id, fielder_id, fielder_name,

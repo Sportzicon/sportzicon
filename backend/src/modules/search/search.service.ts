@@ -1,5 +1,5 @@
 import { prisma } from "../../config/prisma";
-import type { User, Organization, Opportunity } from "@prisma/client";
+import type { User, Organization } from "@prisma/client";
 
 // Phase 1: indexed SQL filters server-side + case-insensitive substring in-memory.
 // Phase 2 upgrade path: replace in-memory text filter with pg full-text search (tsvector).

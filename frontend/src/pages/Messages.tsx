@@ -83,6 +83,8 @@ export default function Messages() {
       setMobileView("thread");
       setParams({}, { replace: true });
     }
+  // Reacts to URL ?to= changes only; recipient/setParams are stable enough here.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params]);
   const qc = useQueryClient();
   const endRef = useRef<HTMLDivElement>(null);
@@ -99,6 +101,8 @@ export default function Messages() {
     if (!convs.data || !recipient) return;
     const existing = convs.data.find((c: Conversation) => c.participant_ids.includes(recipient));
     if (existing && activeId !== existing.id) setActiveId(existing.id);
+  // activeId is intentionally read but not a trigger — including it would loop on setActiveId.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [convs.data, recipient]);
 
   const recipientProfile = useQuery({
@@ -124,6 +128,8 @@ export default function Messages() {
         .then(() => qc.invalidateQueries({ queryKey: ["conversations"] }))
         .catch(() => undefined);
     }
+  // qc is a stable QueryClient ref; not a meaningful dependency here.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeId, messages.data?.length]);
 
   async function send(e?: React.FormEvent) {

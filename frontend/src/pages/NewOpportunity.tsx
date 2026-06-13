@@ -55,6 +55,8 @@ export default function NewOpportunity() {
 
   useEffect(() => {
     if (!form.org_id && orgsQ.data?.length) setForm((f) => ({ ...f, org_id: orgsQ.data![0].id }));
+  // Defaults org_id once when orgs load; form.org_id is read as a guard, not a trigger.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orgsQ.data]);
 
   useEffect(() => {

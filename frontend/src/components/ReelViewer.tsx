@@ -48,6 +48,8 @@ export function ReelViewer({
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
+  // Bind keyboard handlers once on mount; handlers read latest state via setState callbacks.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {

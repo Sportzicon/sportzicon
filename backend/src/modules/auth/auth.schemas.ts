@@ -16,7 +16,7 @@ export const signupSchema = z.object({
   email: z.string().email().max(254),
   password: passwordSchema,
   full_name: z.string().min(2).max(120),
-  phone: z.string().min(7).max(20).regex(/^\+?[\d\s\-() ]+$/, "Phone number must contain digits only"),
+  phone: z.string().min(7).max(20).regex(/^\+?[\d\s\-()]+$/, "Phone number must contain digits only"),
   role: z.enum(publicRoles),
   // optional fields from onboarding step 2 (account details)
   country: z.string().max(80).optional(),
@@ -76,7 +76,7 @@ export const registerBasicSchema = z.object({
   email: z.string().email().max(254),
   password: passwordSchema,
   full_name: z.string().min(2).max(120),
-  phone: z.string().min(7).max(20).regex(/^\+?[\d\s\-() ]+$/, "Phone number must contain digits only"),
+  phone: z.string().min(7).max(20).regex(/^\+?[\d\s\-()]+$/, "Phone number must contain digits only"),
   role: z.enum(["athlete", "club", "scout", "organizer"] as const),
   country: z.string().max(80).optional(),
   state: z.string().max(80).optional(),

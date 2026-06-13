@@ -1,6 +1,7 @@
 import { prisma } from "../../config/prisma";
-import { Conflict, Forbidden, NotFound } from "../../utils/errors";
+import { BadRequest, Conflict, Forbidden, NotFound } from "../../utils/errors";
 import { omitSensitive } from "../../utils/user";
+import { validateAthleteSportProfile } from "./sportProfile";
 
 export async function getUserById(id: string) {
   const user = await prisma.user.findUnique({
@@ -54,9 +55,12 @@ export async function updateAthleteFields(userId: string, fields: Record<string,
   if (user.role !== "athlete") throw Forbidden("Only athletes can update athlete fields");
 
   const existing = (user.athlete_data as Record<string, unknown>) ?? {};
+  const merged = { ...existing, ...fields };
+  const violations = validateAthleteSportProfile(merged);
+  if (violations.length) throw BadRequest(violations.join(" "));
   const updated = await prisma.user.update({
     where: { id: userId },
-    data: { athlete_data: { ...existing, ...fields } as object }
+    data: { athlete_data: merged as object }
   });
   return omitSensitive(updated);
 }

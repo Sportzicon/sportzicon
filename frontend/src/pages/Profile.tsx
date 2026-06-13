@@ -1,10 +1,10 @@
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { useState, useRef } from "react";
-import { api, getApiError, humanizeError } from "../api/client";
+import { api, humanizeError } from "../api/client";
 import { scoringApi } from "../api/scoringClient";
 import { useAuthStore } from "../store/auth";
-import { Spinner, VerifiedBadge, Avatar, SectionHead, Kicker, StatCard, Placeholder, Tabs, Badge, StatusPill } from "../components/UI";
+import { Spinner, VerifiedBadge, Avatar, SectionHead, Kicker, StatCard, Placeholder, Badge, StatusPill } from "../components/UI";
 import type { Post, User } from "../types";
 import { useSavedOpportunities } from "../store/savedOpportunities";
 import { Bookmark, Camera, FileText, Trash2, Upload, X } from "lucide-react";
@@ -190,7 +190,7 @@ export default function Profile() {
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [uploadingName, setUploadingName] = useState<string>("");
   const docFileRef = useRef<HTMLInputElement>(null);
-  const { saved: savedOpps, toggle: toggleSaved, isSaved } = useSavedOpportunities();
+  const { saved: savedOpps, toggle: toggleSaved } = useSavedOpportunities();
 
   // Photo management state (only relevant when isMe)
   const [photoUploading, setPhotoUploading] = useState<"profile" | "cover" | null>(null);

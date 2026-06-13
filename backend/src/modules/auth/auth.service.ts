@@ -4,6 +4,7 @@ import { sendMail } from "../../config/mailer";
 import { logger } from "../../config/logger";
 import { BadRequest, Conflict, NotFound, Unauthorized } from "../../utils/errors";
 import { omitSensitive } from "../../utils/user";
+import { validateAthleteSportProfile } from "../users/sportProfile";
 import {
   comparePassword,
   generateToken,
@@ -341,6 +342,11 @@ export async function registerProfile(input: {
           stats: {}
         }
       : undefined;
+
+  if (athleteData) {
+    const violations = validateAthleteSportProfile(athleteData);
+    if (violations.length) throw BadRequest(violations.join(" "));
+  }
 
   await prisma.user.update({
     where: { id: input.user_id },
