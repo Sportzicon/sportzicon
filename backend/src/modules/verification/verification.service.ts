@@ -18,6 +18,7 @@ const BADGE_MAP: Record<string, string> = {
 
 export async function submit(input: {
   actorId: string;
+  actorRole: string;
   entity_type: EntityType;
   entity_id: string;
   verification_type: string;
@@ -28,7 +29,7 @@ export async function submit(input: {
     throw BadRequest(`Invalid verification_type for ${input.entity_type}`);
   if (input.documents.length === 0) throw BadRequest("At least one document is required");
 
-  if (input.entity_type === "user" && input.entity_id !== input.actorId)
+  if (input.entity_type === "user" && input.entity_id !== input.actorId && input.actorRole !== "admin")
     throw Forbidden("Cannot submit verification for another user");
 
   if (input.entity_type === "organization") {
@@ -37,7 +38,7 @@ export async function submit(input: {
       select: { owner_user_id: true }
     });
     if (!org) throw NotFound("Organization not found");
-    if (org.owner_user_id !== input.actorId)
+    if (org.owner_user_id !== input.actorId && input.actorRole !== "admin")
       throw Forbidden("Cannot submit verification for an organization you do not own");
   }
 

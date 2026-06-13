@@ -4,6 +4,7 @@ import { useState, useRef } from "react";
 import { api, humanizeError } from "../api/client";
 import { scoringApi } from "../api/scoringClient";
 import { useAuthStore } from "../store/auth";
+import { isAdmin } from "../utils/roles";
 import { Spinner, VerifiedBadge, Avatar, SectionHead, Kicker, StatCard, Placeholder, Badge, StatusPill } from "../components/UI";
 import type { Post, User } from "../types";
 import { useSavedOpportunities } from "../store/savedOpportunities";
@@ -275,7 +276,7 @@ export default function Profile() {
     queryKey: ["email-logs", id],
     queryFn: async () =>
       (await api.get<{ items: any[]; total: number; stats: any }>(`/users/${id}/email-logs`)).data,
-    enabled: tab === "emails" && (isMe || me?.role === "admin")
+    enabled: tab === "emails" && (isMe || isAdmin(me?.role ?? ""))
   });
 
   const uploadDoc = useMutation({
@@ -337,7 +338,7 @@ export default function Profile() {
     { id: "followers", label: `Followers (${u.follower_count})` },
     { id: "following", label: `Following (${u.following_count})` },
     ...(isMe ? [{ id: "saved" as Tab, label: `Saved (${savedOpps.length})` }] : []),
-    ...(isMe || me?.role === "admin" ? [{ id: "emails" as Tab, label: "Email History" }] : [])
+    ...(isMe || isAdmin(me?.role ?? "") ? [{ id: "emails" as Tab, label: "Email History" }] : [])
   ];
 
   return (
@@ -809,7 +810,7 @@ export default function Profile() {
             </div>
           ))}
 
-        {tab === "emails" && (isMe || me?.role === "admin") && (
+        {tab === "emails" && (isMe || isAdmin(me?.role ?? "")) && (
           <div className="space-y-4">
             {emailLogsQ.isLoading ? (
               <div className="flex justify-center p-8"><Spinner className="text-brand-500" /></div>

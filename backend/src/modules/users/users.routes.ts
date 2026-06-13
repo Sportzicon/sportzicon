@@ -88,7 +88,7 @@ router.delete(
   "/:id/documents/:docId",
   requireAuth,
   asyncHandler(async (req, res) => {
-    await docSvc.deleteDocument(req.user!.sub, req.params.docId);
+    await docSvc.deleteDocument(req.user!.sub, req.params.docId, req.user!.role);
     res.json({ ok: true });
   })
 );

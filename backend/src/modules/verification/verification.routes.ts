@@ -25,7 +25,7 @@ router.post(
   requireAuth,
   validate(submitSchema),
   asyncHandler(async (req, res) => {
-    const r = await svc.submit({ ...req.body, actorId: req.user!.sub });
+    const r = await svc.submit({ ...req.body, actorId: req.user!.sub, actorRole: req.user!.role });
     res.status(201).json({ verification: r });
   })
 );

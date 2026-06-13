@@ -3,6 +3,7 @@ import { z } from "zod";
 import { asyncHandler } from "../../utils/async";
 import { requireAuth, requireRole } from "../../middleware/auth";
 import { validate } from "../../middleware/validate";
+import { ROLES } from "../../utils/roles";
 import * as svc from "./applications.service";
 
 const router = Router();
@@ -20,7 +21,7 @@ const transitionSchema = z.object({
 router.post(
   "/opportunities/:opportunityId/apply",
   requireAuth,
-  requireRole("athlete"),
+  requireRole(...ROLES.ATHLETES_AND_ADMIN),
   validate(z.object({ opportunityId: z.string().min(8) }), "params"),
   validate(applySchema),
   asyncHandler(async (req, res) => {

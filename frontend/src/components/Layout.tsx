@@ -3,13 +3,14 @@ import { useAuthStore } from "../store/auth";
 import { useQueryClient } from "@tanstack/react-query";
 import { authService } from "../services";
 import { useNotificationCount } from "../hooks";
+import { hasRole, isAdmin } from "../utils/roles";
 import { Bell, Home, Search, Briefcase, FileText, MessageCircle, ShieldCheck, LogOut, User as UserIcon, Menu, X, Trophy, ChevronDown, Building2, Target, Activity, Video } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 
 function GlobalSearch({ user, inputRef }: { user: any; inputRef: React.RefObject<HTMLInputElement> }) {
   const navigate = useNavigate();
   const [q, setQ] = useState("");
-  const isRecruiter = user.role === "club" || user.role === "scout" || user.role === "organizer" || user.role === "admin";
+  const isRecruiter = hasRole(user.role, "club", "scout", "organizer");
 
   function handleKey(e: React.KeyboardEvent) {
     if (e.key === "Enter" && q.trim()) {
@@ -107,13 +108,13 @@ export function Layout() {
     { to: "/opportunities",icon: <Briefcase className="h-4 w-4" />,     label: "Opportunities" },
     { to: "/tournaments",  icon: <Trophy className="h-4 w-4" />,        label: "Tournaments" },
     { to: "/messages",     icon: <MessageCircle className="h-4 w-4" />, label: "Messages" },
-    ...(user.role === "athlete" ? [{ to: "/applications", icon: <Briefcase className="h-4 w-4" />, label: "My Applications" }] : []),
-    ...(user.role === "club" || user.role === "organizer" || user.role === "admin"
+    ...(hasRole(user.role, "athlete") ? [{ to: "/applications", icon: <Briefcase className="h-4 w-4" />, label: "My Applications" }] : []),
+    ...(hasRole(user.role, "club", "organizer")
       ? [{ to: "/my-organizations", icon: <Building2 className="h-4 w-4" />, label: "Organizations" }]
       : [{ to: "/organizations", icon: <Building2 className="h-4 w-4" />, label: "Organizations" }]),
-    ...(["organizer", "admin", "scorer"].includes(user.role)
+    ...(hasRole(user.role, "organizer", "scorer")
       ? [{ to: "/scoring", icon: <Target className="h-4 w-4" />, label: "Scoring" }] : []),
-    ...(user.role === "admin" ? [{ to: "/admin", icon: <ShieldCheck className="h-4 w-4" />, label: "Admin" }] : [])
+    ...(isAdmin(user.role) ? [{ to: "/admin", icon: <ShieldCheck className="h-4 w-4" />, label: "Admin" }] : [])
   ];
 
   return (
@@ -186,11 +187,11 @@ export function Layout() {
               ))}
             </div>
             <div className={`p-3 border-t border-hairsoft transition-all ${isDesktop && !sidebarHovered ? "opacity-0 invisible" : "opacity-100 visible"}`}>
-              {user.role === "athlete" ? (
+              {hasRole(user.role, "athlete") ? (
                 <Link to="/opportunities" className="btn-primary w-full text-center text-[11px] mb-3" onClick={() => setSidebarOpen(false)}>
                   Find a trial →
                 </Link>
-              ) : user.role === "club" || user.role === "organizer" ? (
+              ) : hasRole(user.role, "club", "organizer") ? (
                 <Link to="/opportunities/new" className="btn-primary w-full text-center text-[11px] mb-3" onClick={() => setSidebarOpen(false)}>
                   + Post opportunity
                 </Link>

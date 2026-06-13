@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useInfiniteOpportunities } from "../hooks";
+import { hasRole } from "../utils/roles";
 import { useAuthStore } from "../store/auth";
 import { PageHeader, Spinner, EmptyState, StatusPill, SectionHead } from "../components/UI";
 
@@ -84,7 +85,7 @@ export default function Opportunities() {
   const { list: oppsQuery, remove: deleteOpp } = useInfiniteOpportunities(filters);
 
   const { toggle: toggleSave, isSaved } = useSavedOpportunities();
-  const canPost = user?.role === "club" || user?.role === "organizer" || user?.role === "admin";
+  const canPost = hasRole(user?.role ?? "", "club", "organizer");
 
   // Sport, type and sort are applied server-side; the free-text search box still
   // filters within the pages already loaded on the client.

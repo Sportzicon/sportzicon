@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, humanizeError } from "../api/client";
+import { hasRole } from "../utils/roles";
 import { PageHeader, Spinner, EmptyState } from "../components/UI";
 import { CommentSection } from "../components/CommentSection";
 import { ReelViewer } from "../components/ReelViewer";
@@ -33,7 +34,7 @@ export default function Reels() {
   const thumbInputRef = useRef<HTMLInputElement>(null);
 
   const isAdmin = user?.role === "admin";
-  const canUpload = user?.role === "athlete" || user?.role === "admin";
+  const canUpload = hasRole(user?.role ?? "", "athlete");
 
   useEffect(() => {
     function onClickOutside(e: MouseEvent) {

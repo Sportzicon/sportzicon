@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { scoringApi } from "../../api/scoringClient";
 import { useAuthStore } from "../../store/auth";
+import { hasRole } from "../../utils/roles";
 import { Trophy, Plus, Filter } from "lucide-react";
 import { PageHeader, EmptyState } from "../../components/UI";
 
@@ -24,7 +25,7 @@ function StatusBadge({ status }: { status: string }) {
 
 function ScoringTournamentsInner() {
   const user = useAuthStore(s => s.user);
-  const canManage = user?.role === "organizer" || user?.role === "admin" || user?.role === "scorer";
+  const canManage = hasRole(user?.role ?? "", "organizer", "scorer");
   const [sport, setSport] = useState("");
   const [status, setStatus] = useState("");
 

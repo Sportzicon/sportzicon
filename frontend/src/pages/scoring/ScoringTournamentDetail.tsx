@@ -4,6 +4,7 @@ import { Link, useParams } from "react-router-dom";
 import { scoringApi } from "../../api/scoringClient";
 import { api } from "../../api/client";
 import { useAuthStore } from "../../store/auth";
+import { hasRole } from "../../utils/roles";
 import {
   Trophy, Users, Calendar, MapPin, Radio, Edit2, ChevronRight,
   Plus, ChevronDown, ChevronUp, Trash2, User, Search, X
@@ -757,7 +758,7 @@ function StandingsTable({ tournamentId }: { tournamentId: string }) {
 function ScoringTournamentDetailInner() {
   const { id } = useParams<{ id: string }>();
   const user = useAuthStore(s => s.user);
-  const canManage = user?.role === "organizer" || user?.role === "admin" || user?.role === "scorer";
+  const canManage = hasRole(user?.role ?? "", "organizer", "scorer");
 
   const [addingTeam, setAddingTeam]   = useState(false);
   const [scheduling, setScheduling]   = useState(false);

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { asyncHandler } from "../../utils/async";
 import { requireAuth, requireRole } from "../../middleware/auth";
 import { validate } from "../../middleware/validate";
+import { ROLES } from "../../utils/roles";
 import * as svc from "./organizations.service";
 import { createOrgSchema, updateOrgSchema } from "./organizations.schemas";
 
@@ -11,7 +12,7 @@ const router = Router();
 router.post(
   "/",
   requireAuth,
-  requireRole("club", "organizer", "admin"),
+  requireRole(...ROLES.CLUB_MANAGERS),
   validate(createOrgSchema),
   asyncHandler(async (req, res) => {
     const r = await svc.createOrganization(req.user!.sub, req.user!.role, req.body);

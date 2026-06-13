@@ -3,6 +3,7 @@ import { z } from "zod";
 import { asyncHandler } from "../../utils/async";
 import { requireAuth, requireRole, optionalAuth } from "../../middleware/auth";
 import { validate } from "../../middleware/validate";
+import { ROLES } from "../../utils/roles";
 import * as svc from "./opportunities.service";
 import {
   createOpportunitySchema,
@@ -16,7 +17,7 @@ const idParam = z.object({ id: z.string().min(8) });
 router.post(
   "/",
   requireAuth,
-  requireRole("club", "organizer", "admin"),
+  requireRole(...ROLES.CLUB_MANAGERS),
   validate(createOpportunitySchema),
   asyncHandler(async (req, res) => {
     const r = await svc.createOpportunity(req.user!.sub, req.user!.role, req.body);

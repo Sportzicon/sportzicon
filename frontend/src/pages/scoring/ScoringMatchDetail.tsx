@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useParams } from "react-router-dom";
 import { scoringApi } from "../../api/scoringClient";
 import { useAuthStore } from "../../store/auth";
+import { hasRole } from "../../utils/roles";
 import { Radio, Trophy, TrendingUp, Activity, MapPin, Zap, Users, CheckCircle2, User } from "lucide-react";
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -436,7 +437,7 @@ function InningsPanel({ inn, match }: { inn: any; match: any }) {
 function ScoringMatchDetailInner() {
   const { matchId } = useParams<{ matchId: string }>();
   const user = useAuthStore(s => s.user);
-  const canManage = user?.role === "organizer" || user?.role === "admin" || user?.role === "scorer";
+  const canManage = hasRole(user?.role ?? "", "organizer", "scorer");
 
   const { data, isLoading } = useQuery({
     queryKey: ["scoring-match", matchId],

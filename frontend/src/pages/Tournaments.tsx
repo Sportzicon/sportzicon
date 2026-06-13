@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { hasRole } from "../utils/roles";
 import { api } from "../api/client";
 import { useAuthStore } from "../store/auth";
 import { PageHeader, Spinner, EmptyState, StatusPill, Kicker, Pagination } from "../components/UI";
@@ -42,8 +43,8 @@ export default function Tournaments() {
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["tournaments"] }); setPendingDeleteId(null); }
   });
 
-  const canPost = user?.role === "club" || user?.role === "organizer" || user?.role === "admin";
-  const isOrganizer = user?.role === "organizer" || user?.role === "admin";
+  const canPost = hasRole(user?.role ?? "", "club", "organizer");
+  const isOrganizer = hasRole(user?.role ?? "", "organizer");
 
   return (
     <div className="space-y-5">

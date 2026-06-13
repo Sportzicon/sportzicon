@@ -4,6 +4,7 @@ import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { opportunityService } from "../services";
 import { humanizeError } from "../api/client";
 import { useAuthStore } from "../store/auth";
+import { hasRole } from "../utils/roles";
 import { Spinner, StatusPill, SectionHead, Kicker } from "../components/UI";
 import { Trash2, Pencil, MoreVertical } from "lucide-react";
 import type { Opportunity, ApplyRequest } from "../models";
@@ -292,7 +293,7 @@ export default function OpportunityDetail() {
   if (!o) return <div className="panel p-8 text-center font-disp text-xl text-ink-70">Opportunity not found.</div>;
 
   const isPoster = user?.id === o.posted_by_user_id;
-  const canApply = (user?.role === "athlete" || user?.role === "scout") && o.status === "open" && !applied;
+  const canApply = hasRole(user?.role ?? "", "athlete", "scout") && o.status === "open" && !applied;
   const deadline = deadlineInfo(o.application_deadline);
 
   return (

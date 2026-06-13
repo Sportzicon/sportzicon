@@ -74,10 +74,10 @@ export async function uploadDocument(input: {
   };
 }
 
-export async function deleteDocument(userId: string, docId: string) {
+export async function deleteDocument(userId: string, docId: string, actorRole: string) {
   const doc = await prisma.userDocument.findUnique({ where: { id: docId } });
   if (!doc) throw NotFound("Document not found");
-  if (doc.user_id !== userId) throw Forbidden("Not your document");
+  if (doc.user_id !== userId && actorRole !== "admin") throw Forbidden("Not your document");
 
   await docsBucket.file(doc.url).delete({ ignoreNotFound: true });
   await prisma.userDocument.delete({ where: { id: docId } });
