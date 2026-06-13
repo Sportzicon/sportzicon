@@ -32,7 +32,14 @@ export interface OpportunityFilters {
   sport?: string;
   verified_org?: boolean;
   q?: string;
+  sort?: "newest" | "deadline";
   limit?: number;
+  cursor?: string;
+}
+
+export interface OpportunityPage {
+  data: Opportunity[];
+  nextCursor: string | null;
 }
 
 export interface CreateOpportunityRequest {

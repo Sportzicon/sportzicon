@@ -96,6 +96,7 @@ export async function listOpportunities(q: {
   city?: string;
   status?: string;
   org_id?: string;
+  sort?: "newest" | "deadline";
   limit: number;
   cursor?: string;
 }) {
@@ -107,9 +108,16 @@ export async function listOpportunities(q: {
   if (q.city) where.city = { contains: q.city, mode: "insensitive" };
   if (q.org_id) where.org_id = q.org_id;
 
+  // `id` is the stable tiebreaker so cursor pagination stays deterministic
+  // even when the primary sort key has duplicate values.
+  const orderBy =
+    q.sort === "deadline"
+      ? [{ application_deadline: "asc" as const }, { id: "asc" as const }]
+      : [{ created_at: "desc" as const }, { id: "desc" as const }];
+
   const rows = await prisma.opportunity.findMany({
     where,
-    orderBy: { created_at: "desc" },
+    orderBy,
     take: q.limit + 1,
     ...(q.cursor ? { cursor: { id: q.cursor }, skip: 1 } : {}),
     include: { _count: { select: { applications: true } } }
@@ -117,11 +125,11 @@ export async function listOpportunities(q: {
 
   const hasMore = rows.length > q.limit;
   const page = hasMore ? rows.slice(0, q.limit) : rows;
-  const items = page.map(({ _count, ...opp }) => ({
+  const data = page.map(({ _count, ...opp }) => ({
     ...opp,
     application_count: _count.applications
   }));
-  return { items, next_cursor: hasMore ? items[items.length - 1].id : null };
+  return { data, nextCursor: hasMore ? data[data.length - 1].id : null };
 }
 
 export async function bumpApplicationCount(id: string, delta: number) {

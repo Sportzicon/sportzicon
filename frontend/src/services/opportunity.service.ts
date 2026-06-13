@@ -2,6 +2,7 @@ import type { AxiosInstance } from "axios";
 import type {
   Opportunity,
   OpportunityFilters,
+  OpportunityPage,
   CreateOpportunityRequest,
   UpdateOpportunityRequest,
   ApplyRequest,
@@ -10,9 +11,9 @@ import type {
 export class OpportunityService {
   constructor(private readonly client: AxiosInstance) {}
 
-  async list(filters: OpportunityFilters = {}): Promise<Opportunity[]> {
-    const res = await this.client.get<{ items: Opportunity[] }>("/opportunities", { params: filters });
-    return res.data.items;
+  async list(filters: OpportunityFilters = {}): Promise<OpportunityPage> {
+    const res = await this.client.get<OpportunityPage>("/opportunities", { params: filters });
+    return res.data;
   }
 
   async get(id: string): Promise<Opportunity> {

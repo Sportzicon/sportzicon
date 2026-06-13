@@ -34,7 +34,7 @@ export default function Tournaments() {
 
   const q = useQuery({
     queryKey: ["tournaments", params],
-    queryFn: async () => (await api.get<{ items: Opportunity[] }>("/opportunities", { params })).data.items
+    queryFn: async () => (await api.get<{ data: Opportunity[] }>("/opportunities", { params })).data.data
   });
 
   const deleteOpp = useMutation({

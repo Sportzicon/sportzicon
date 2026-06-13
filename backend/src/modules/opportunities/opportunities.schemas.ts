@@ -63,6 +63,7 @@ export const listOpportunitiesQuery = z.object({
   city: z.string().optional(),
   status: z.enum(["open", "closed", "filled"]).optional(),
   org_id: z.string().optional(),
+  sort: z.enum(["newest", "deadline"]).default("newest"),
   limit: z.coerce.number().int().min(1).max(100).default(20),
   cursor: z.string().optional()
 });

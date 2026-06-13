@@ -1,11 +1,9 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { opportunityService } from "../services";
+import { useInfiniteOpportunities } from "../hooks";
 import { useAuthStore } from "../store/auth";
-import { PageHeader, Spinner, EmptyState, StatusPill, SectionHead, Pagination } from "../components/UI";
+import { PageHeader, Spinner, EmptyState, StatusPill, SectionHead } from "../components/UI";
 
-const PAGE_SIZE = 10;
 import { Trash2, Pencil, MoreVertical, Bookmark } from "lucide-react";
 import type { Opportunity, OpportunityFilters } from "../models";
 import { useSavedOpportunities } from "../store/savedOpportunities";
@@ -61,17 +59,13 @@ function deadlineDays(deadline: string) {
 
 export default function Opportunities() {
   const user = useAuthStore((s) => s.user);
-  const qc = useQueryClient();
   const [type, setType] = useState("");
   const [sport, setSport] = useState("All sports");
   const [verifiedOnly, setVerifiedOnly] = useState(false);
   const [q, setQ] = useState("");
-  const [sort, setSort] = useState("deadline");
+  const [sort, setSort] = useState<"deadline" | "newest">("deadline");
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
-  const [page, setPage] = useState(1);
-
-  useEffect(() => { setPage(1); }, [type, sport, verifiedOnly, q, sort]);
 
   useEffect(() => {
     function onClickOutside(e: MouseEvent) {
@@ -82,34 +76,23 @@ export default function Opportunities() {
     return () => document.removeEventListener("mousedown", onClickOutside);
   }, []);
 
-  const filters: OpportunityFilters = { status: "open" };
+  const filters: OpportunityFilters = { status: "open", sort };
   if (type) filters.type = type;
   if (sport !== "All sports") filters.sport = sport;
   if (verifiedOnly) filters.verified_org = true;
 
-  const oppsQuery = useQuery({
-    queryKey: ["opportunities", filters],
-    queryFn: () => opportunityService.list(filters)
-  });
-
-  const deleteOpp = useMutation({
-    mutationFn: (id: string) => opportunityService.delete(id),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["opportunities"] }); setPendingDeleteId(null); }
-  });
+  const { list: oppsQuery, remove: deleteOpp } = useInfiniteOpportunities(filters);
 
   const { toggle: toggleSave, isSaved } = useSavedOpportunities();
   const canPost = user?.role === "club" || user?.role === "organizer" || user?.role === "admin";
 
-  const results = (oppsQuery.data ?? [])
-    .filter((o) => !q || o.title.toLowerCase().includes(q.toLowerCase()) || (o.org_name ?? "").toLowerCase().includes(q.toLowerCase()))
-    .sort((a, b) => {
-      if (sort === "deadline") return new Date(a.application_deadline).getTime() - new Date(b.application_deadline).getTime();
-      if (sort === "newest") return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-      return (b.application_count ?? 0) - (a.application_count ?? 0);
-    });
+  // Sport, type and sort are applied server-side; the free-text search box still
+  // filters within the pages already loaded on the client.
+  const results = (oppsQuery.data?.pages.flatMap((p) => p.data) ?? [])
+    .filter((o) => !q || o.title.toLowerCase().includes(q.toLowerCase()) || (o.org_name ?? "").toLowerCase().includes(q.toLowerCase()));
 
   function resetFilters() {
-    setType(""); setSport("All sports"); setVerifiedOnly(false); setQ(""); setPage(1);
+    setType(""); setSport("All sports"); setVerifiedOnly(false); setQ("");
   }
 
   return (
@@ -149,10 +132,9 @@ export default function Opportunities() {
           />
           <div className="flex justify-end mb-4">
             <select className="input font-mononum" style={{ width: "auto", fontSize: 11, height: 32, padding: "0 28px 0 10px" }}
-              value={sort} onChange={(e) => setSort(e.target.value)}>
+              value={sort} onChange={(e) => setSort(e.target.value as "deadline" | "newest")}>
               <option value="deadline">Sort: Deadline soonest</option>
               <option value="newest">Sort: Newest</option>
-              <option value="popular">Sort: Most applicants</option>
             </select>
           </div>
 
@@ -167,7 +149,7 @@ export default function Opportunities() {
           ) : (
             <>
             <div className="flex flex-col gap-3">
-              {results.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE).map((o: Opportunity) => {
+              {results.map((o: Opportunity) => {
                 const isPoster = user?.id === o.posted_by_user_id;
                 const deadline = deadlineDays(o.application_deadline);
 
@@ -231,7 +213,7 @@ export default function Opportunities() {
                           {pendingDeleteId === o.id && (
                             <div className="absolute right-4 bottom-12 panel shadow-pop z-10 p-3 flex items-center gap-2 min-w-52">
                               <span className="text-[12.5px] text-ink flex-1">Delete this opportunity?</span>
-                              <button onClick={() => deleteOpp.mutate(o.id)} disabled={deleteOpp.isPending} className="btn-danger">Confirm</button>
+                              <button onClick={() => deleteOpp.mutate(o.id, { onSuccess: () => setPendingDeleteId(null) })} disabled={deleteOpp.isPending} className="btn-danger">Confirm</button>
                               <button onClick={() => setPendingDeleteId(null)} className="btn-secondary">Cancel</button>
                             </div>
                           )}
@@ -242,7 +224,17 @@ export default function Opportunities() {
                 );
               })}
             </div>
-            <Pagination page={page} total={results.length} pageSize={PAGE_SIZE} onChange={setPage} />
+            {oppsQuery.hasNextPage && (
+              <div className="flex justify-center mt-4">
+                <button
+                  onClick={() => oppsQuery.fetchNextPage()}
+                  disabled={oppsQuery.isFetchingNextPage}
+                  className="btn-secondary"
+                >
+                  {oppsQuery.isFetchingNextPage ? "Loading…" : "Load more"}
+                </button>
+              </div>
+            )}
             </>
           )}
         </div>

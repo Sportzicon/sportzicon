@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { opportunityService, organizationService } from "../services";
 import { queryKeys } from "./queryKeys";
 import type { OpportunityFilters, CreateOpportunityRequest, UpdateOpportunityRequest } from "../models";
@@ -8,12 +8,30 @@ export function useOpportunities(filters: OpportunityFilters = {}) {
 
   const list = useQuery({
     queryKey: queryKeys.opportunities(filters),
-    queryFn: () => opportunityService.list(filters),
+    queryFn: async () => (await opportunityService.list(filters)).data,
   });
 
   const remove = useMutation({
     mutationFn: (id: string) => opportunityService.delete(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.opportunities() }),
+  });
+
+  return { list, remove };
+}
+
+export function useInfiniteOpportunities(filters: OpportunityFilters = {}) {
+  const qc = useQueryClient();
+
+  const list = useInfiniteQuery({
+    queryKey: queryKeys.opportunitiesInfinite(filters),
+    queryFn: ({ pageParam }) => opportunityService.list({ ...filters, cursor: pageParam }),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+  });
+
+  const remove = useMutation({
+    mutationFn: (id: string) => opportunityService.delete(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.opportunitiesInfinite(filters) }),
   });
 
   return { list, remove };
