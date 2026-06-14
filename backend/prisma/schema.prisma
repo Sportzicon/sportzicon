@@ -497,3 +497,11 @@ model EmailLog {
   @@index([email_type])
   @@index([status])
 }
+
+model LoginAttempt {
+  id           String   @id @default(uuid()) @db.Uuid
+  email        String
+  attempted_at DateTime @default(now())
+
+  @@index([email, attempted_at])
+}

@@ -30,6 +30,8 @@ export default function Login() {
       const apiErr = getApiError(e);
       if (apiErr.code === "NETWORK") {
         setErr("Unable to reach the server. Check your internet connection or try again in a moment.");
+      } else if (apiErr.code === "RATE_LIMITED") {
+        setErr("Too many attempts. Please try again in a few minutes.");
       } else {
         if (apiErr.message.toLowerCase().includes("not verified")) setEmailUnverified(true);
         setErr(apiErr.message);
@@ -82,10 +84,10 @@ export default function Login() {
             <Link to="/signup" className="text-brand-500 normal-case tracking-normal text-[11px]">Create an account →</Link>
           </p>
 
-          <form onSubmit={submit} className="mt-8 space-y-4">
+          <form onSubmit={submit} className="mt-8 space-y-4" noValidate>
             <label className="block">
               <span className="label">Email</span>
-              <input className="input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoFocus />
+              <input className="input min-h-[44px]" type="email" inputMode="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoFocus />
             </label>
             <label className="block">
               <div className="flex items-center justify-between mb-1.5">
@@ -93,7 +95,7 @@ export default function Login() {
                 <Link to="/forgot-password" className="font-mononum text-[10px] text-brand-500 uppercase tracking-[0.1em]">Forgot?</Link>
               </div>
               <div className="relative">
-                <input className="input pr-9" type={showPwd ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} required />
+                <input className="input pr-9 min-h-[44px]" type={showPwd ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} required />
                 <button type="button" onClick={() => setShowPwd((v) => !v)}
                   className="absolute right-2.5 top-1/2 -translate-y-1/2 text-ink-faint hover:text-ink transition" tabIndex={-1}>
                   {showPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -117,7 +119,7 @@ export default function Login() {
               </div>
             )}
 
-            <button className="btn-primary w-full mt-2" disabled={submitting}>
+            <button className="btn-primary w-full mt-2 min-h-[44px]" disabled={submitting}>
               {submitting ? "Signing in…" : "Sign in →"}
             </button>
           </form>

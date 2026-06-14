@@ -7,7 +7,8 @@ const passwordSchema = z
   .max(128)
   .refine((v) => /[A-Z]/.test(v), "Must contain an uppercase letter")
   .refine((v) => /[a-z]/.test(v), "Must contain a lowercase letter")
-  .refine((v) => /[0-9]/.test(v), "Must contain a digit");
+  .refine((v) => /[0-9]/.test(v), "Must contain a digit")
+  .refine((v) => /[!@#$%^&*]/.test(v), "Must contain a special character (!@#$%^&*)");
 
 // Public registration cannot create admin users.
 const publicRoles = ROLES.filter((r) => r !== "admin") as ["athlete", "club", "scout", "organizer"];
@@ -37,7 +38,7 @@ export const signupSchema = z.object({
 });
 
 export const loginSchema = z.object({
-  email: z.string().email(),
+  email: z.string().email().trim().toLowerCase(),
   password: z.string().min(1)
 });
 

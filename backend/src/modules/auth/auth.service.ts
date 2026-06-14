@@ -2,7 +2,7 @@ import { prisma } from "../../config/prisma";
 import { env } from "../../config/env";
 import { sendMail } from "../../config/mailer";
 import { logger } from "../../config/logger";
-import { BadRequest, Conflict, NotFound, Unauthorized } from "../../utils/errors";
+import { BadRequest, Conflict, NotFound, Unauthorized, TooManyRequests } from "../../utils/errors";
 import { omitSensitive } from "../../utils/user";
 import { validateAthleteSportProfile } from "../users/sportProfile";
 import {
@@ -136,19 +136,45 @@ export async function resendVerification(email: string) {
     select: { id: true, email: true, full_name: true, email_verified: true }
   });
   if (!user || user.email_verified) return { ok: true };
+
+  // Rate limit: max 3 verification emails per email per hour
+  const hourStart = new Date(Date.now() - 60 * 60 * 1000);
+  const recentVerifications = await prisma.emailVerification.count({
+    where: { user_id: user.id, created_at: { gte: hourStart } }
+  });
+  if (recentVerifications >= 3) return { ok: true };
+
   await issueAndSendVerificationEmail(user.id, user.email, user.full_name);
   return { ok: true };
 }
 
 export async function login(email: string, password: string) {
-  const user = await prisma.user.findUnique({
-    where: { email_lower: email.trim().toLowerCase() }
+  const emailLower = email.trim().toLowerCase();
+
+  // Brute-force protection: max 5 failed attempts per email in 15 minutes
+  const windowStart = new Date(Date.now() - 15 * 60 * 1000);
+  const recentAttempts = await prisma.loginAttempt.count({
+    where: { email: emailLower, attempted_at: { gte: windowStart } }
   });
-  if (!user) throw Unauthorized("Invalid credentials");
+  if (recentAttempts >= 5) {
+    throw TooManyRequests("Too many login attempts. Please try again in a few minutes.");
+  }
+
+  const user = await prisma.user.findUnique({ where: { email_lower: emailLower } });
+  if (!user) {
+    await prisma.loginAttempt.create({ data: { email: emailLower } });
+    throw Unauthorized("Invalid credentials");
+  }
   const ok = await comparePassword(password, user.password_hash);
-  if (!ok) throw Unauthorized("Invalid credentials");
+  if (!ok) {
+    await prisma.loginAttempt.create({ data: { email: emailLower } });
+    throw Unauthorized("Invalid credentials");
+  }
   if (user.status === "suspended") throw Unauthorized("Account is suspended");
   if (!user.email_verified) throw Unauthorized("Email not verified — please check your inbox");
+
+  // Clear failed attempts on successful login
+  await prisma.loginAttempt.deleteMany({ where: { email: emailLower } });
 
   await prisma.user.update({
     where: { id: user.id },
@@ -188,7 +214,14 @@ export async function forgotPassword(email: string) {
     where: { email_lower: email.trim().toLowerCase() },
     select: { id: true, email: true, full_name: true }
   });
-  if (!user) return { ok: true, found: false };
+  if (!user) return { ok: true };
+
+  // Rate limit: max 3 reset emails per email per hour
+  const hourStart = new Date(Date.now() - 60 * 60 * 1000);
+  const recentResets = await prisma.passwordReset.count({
+    where: { user_id: user.id, created_at: { gte: hourStart } }
+  });
+  if (recentResets >= 3) return { ok: true };
 
   const token = generateToken();
   await prisma.passwordReset.create({
@@ -213,9 +246,8 @@ export async function forgotPassword(email: string) {
     });
   } catch (err) {
     logger.error({ err, userId: user.id }, "Failed to send password reset email");
-    throw BadRequest("We couldn't send the reset email. Please try again in a moment.");
   }
-  return { ok: true, found: true };
+  return { ok: true };
 }
 
 export async function resetPassword(token: string, password: string) {

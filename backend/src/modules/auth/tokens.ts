@@ -43,16 +43,34 @@ export async function issueRefreshToken(userId: string): Promise<string> {
 }
 
 export async function rotateRefreshToken(token: string): Promise<{ userId: string; newToken: string }> {
-  const claims = jwt.verify(token, env.JWT_REFRESH_SECRET) as RefreshTokenPayload;
-  if (claims.type !== "refresh") throw new Error("Invalid refresh token type");
+  let claims: RefreshTokenPayload;
+  try {
+    claims = jwt.verify(token, env.JWT_REFRESH_SECRET) as RefreshTokenPayload;
+  } catch {
+    throw new Error("Session expired, please log in again");
+  }
+  if (claims.type !== "refresh") throw new Error("Session expired, please log in again");
 
   const record = await prisma.refreshToken.findUnique({ where: { token } });
-  if (!record) throw new Error("Refresh token not recognised");
-  if (record.revoked) throw new Error("Refresh token revoked");
+  if (!record || record.revoked) throw new Error("Session expired, please log in again");
 
-  await prisma.refreshToken.update({ where: { token }, data: { revoked: true } });
-  const newToken = await issueRefreshToken(claims.sub);
-  return { userId: claims.sub, newToken };
+  // Generate new token synchronously before the transaction
+  const jti = crypto.randomUUID();
+  const newJwt = jwt.sign(
+    { sub: claims.sub, jti, type: "refresh" } as RefreshTokenPayload,
+    env.JWT_REFRESH_SECRET,
+    { expiresIn: env.JWT_REFRESH_TTL as SignOptions["expiresIn"] }
+  );
+  const expiresAt = new Date(Date.now() + parseTtlMs(env.JWT_REFRESH_TTL));
+
+  await prisma.$transaction([
+    prisma.refreshToken.delete({ where: { token } }),
+    prisma.refreshToken.create({
+      data: { token: newJwt, user_id: claims.sub, expires_at: expiresAt }
+    })
+  ]);
+
+  return { userId: claims.sub, newToken: newJwt };
 }
 
 export async function revokeRefreshToken(token: string): Promise<void> {

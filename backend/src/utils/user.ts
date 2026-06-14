@@ -1,5 +1,32 @@
 import type { User } from "@prisma/client";
 
+export const safeUserSelect = {
+  id: true,
+  email: true,
+  email_verified: true,
+  phone: true,
+  full_name: true,
+  role: true,
+  status: true,
+  bio: true,
+  profile_photo_url: true,
+  cover_photo_url: true,
+  country: true,
+  state: true,
+  city: true,
+  dob: true,
+  gender: true,
+  verification_status: true,
+  verification_badges: true,
+  athlete_data: true,
+  coach_data: true,
+  follower_count: true,
+  following_count: true,
+  created_at: true,
+  updated_at: true,
+  last_active_at: true,
+} as const;
+
 // Transforms a Prisma User row into the public API shape the frontend expects:
 //   - strips internal DB fields
 //   - renames athlete_data → athlete, coach_data → coach

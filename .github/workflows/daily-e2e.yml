@@ -19,14 +19,6 @@ on:
         description: "Scoring base URL (leave blank to use staging secret or localhost)"
         required: false
         default: ""
-  push:
-    branches: [main]
-    paths:
-      - "e2e/**"
-      - "frontend/src/**"
-      - "scoring/frontend/src/**"
-      - ".github/workflows/daily-e2e.yml"
-
 permissions:
   contents: write
   issues: write
