@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "Reel" ADD COLUMN IF NOT EXISTS "title" TEXT;
+ALTER TABLE "Reel" ADD COLUMN IF NOT EXISTS "description" TEXT;

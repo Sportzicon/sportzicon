@@ -1,532 +1,693 @@
-import { useState, useEffect, useRef } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState, useRef, useCallback } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, humanizeError } from "../api/client";
-import { hasRole } from "../utils/roles";
-import { PageHeader, Spinner, EmptyState } from "../components/UI";
+import { hasRole, isAdmin as checkAdmin } from "../utils/roles";
+import { Spinner, EmptyState } from "../components/UI";
+import { MobileDrawer } from "../components/MobileDrawer";
 import { CommentSection } from "../components/CommentSection";
 import { ReelViewer } from "../components/ReelViewer";
 import { useAuthStore } from "../store/auth";
 import { useFavoritesStore } from "../store/favorites";
-import { Heart, Trash2, Pencil, MoreVertical, MessageCircle, Eye, Bookmark, Award, Upload } from "lucide-react";
-import type { Reel } from "../types";
+import { useReels } from "../hooks/useReels";
+import { queryKeys } from "../hooks/queryKeys";
+import { Heart, Trash2, Pencil, MessageCircle, Eye, Bookmark, Plus, Upload, X } from "lucide-react";
+import type { Reel } from "../models";
+import type { CreateReelRequest } from "../services/reel.service";
+
+interface UploadState {
+  progress: number;
+  fileSize: number;
+  phase: "video" | "thumbnail" | null;
+}
 
 export default function Reels() {
   const user = useAuthStore((s) => s.user);
   const { favoriteReels, toggleFavoriteReel } = useFavoritesStore();
   const qc = useQueryClient();
 
-  const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ video_url: "", thumbnail_url: "", caption: "", sport: "" });
-  const [err, setErr] = useState<string | null>(null);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
-  const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
-  const [openCommentId, setOpenCommentId] = useState<string | null>(null);
+  const { list, allReels, toggleLike, likedReels, remove, update } = useReels();
+
+  const [uploadOpen, setUploadOpen] = useState(false);
+  const [form, setForm] = useState<CreateReelRequest>({ title: "", video_url: "" });
+  const [formErr, setFormErr] = useState<string | null>(null);
+  const [upload, setUpload] = useState<UploadState>({ progress: 0, fileSize: 0, phase: null });
+
   const [viewerOpen, setViewerOpen] = useState(false);
   const [viewerIndex, setViewerIndex] = useState(0);
-  const [likedReels, setLikedReels] = useState<Set<string>>(new Set());
-  const [flaggedReelId, setFlaggedReelId] = useState<string | null>(null);
-  const [uploading, setUploading] = useState<"video" | "thumbnail" | null>(null);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [uploadFileSize, setUploadFileSize] = useState(0);
+
+  const [editingReel, setEditingReel] = useState<Reel | null>(null);
+  const [editForm, setEditForm] = useState({ title: "", description: "", sport: "" });
+  const [commentReelId, setCommentReelId] = useState<string | null>(null);
 
   const videoInputRef = useRef<HTMLInputElement>(null);
   const thumbInputRef = useRef<HTMLInputElement>(null);
 
-  const isAdmin = user?.role === "admin";
   const canUpload = hasRole(user?.role ?? "", "athlete");
-
-  useEffect(() => {
-    function onClickOutside(e: MouseEvent) {
-      const t = e.target as HTMLElement;
-      if (!t.closest("[data-menu-button]") && !t.closest("[data-menu-content]")) setMenuOpenId(null);
-    }
-    document.addEventListener("mousedown", onClickOutside);
-    return () => document.removeEventListener("mousedown", onClickOutside);
-  }, []);
-
-  const q = useQuery({
-    queryKey: ["reels"],
-    queryFn: async () => (await api.get<{ items: Reel[] }>("/reels", { params: { limit: 50 } })).data.items
-  });
+  const isAdmin = checkAdmin(user?.role ?? "");
 
   const create = useMutation({
-    mutationFn: async () => {
-      const payload: any = { ...form };
-      Object.keys(payload).forEach((k) => payload[k] === "" && delete payload[k]);
-      return api.post("/reels", payload);
-    },
+    mutationFn: () => api.post("/reels", form),
     onSuccess: () => {
-      setOpen(false);
-      setForm({ video_url: "", thumbnail_url: "", caption: "", sport: "" });
-      qc.invalidateQueries({ queryKey: ["reels"] });
+      setUploadOpen(false);
+      setForm({ title: "", video_url: "" });
+      setFormErr(null);
+      qc.invalidateQueries({ queryKey: queryKeys.reels() });
     },
-    onError: (e) => setErr(humanizeError(e))
+    onError: (e) => setFormErr(humanizeError(e))
   });
 
-  const update = useMutation({
-    mutationFn: async ({ id, caption }: { id: string; caption: string }) => api.put(`/reels/${id}`, { caption }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["reels"] }); setEditingId(null); }
-  });
-
-  const deleteReel = useMutation({
-    mutationFn: async (id: string) => api.delete(`/reels/${id}`),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["reels"] }); setPendingDeleteId(null); }
-  });
-
-  const like = useMutation({
-    mutationFn: async (id: string) => {
-      if (likedReels.has(id)) return api.delete(`/reels/${id}/like`);
-      return api.post(`/reels/${id}/like`);
-    },
-    onMutate: (id: string) => {
-      setLikedReels((prev) => {
-        const next = new Set(prev);
-        next.has(id) ? next.delete(id) : next.add(id);
-        return next;
-      });
-    },
-    onError: (_err, id) => {
-      setLikedReels((prev) => {
-        const next = new Set(prev);
-        next.has(id) ? next.delete(id) : next.add(id);
-        return next;
-      });
-    },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["reels"] })
-  });
-
-  const flagReel = useMutation({
-    mutationFn: async (id: string) => api.post(`/reels/${id}/report`, { reason: "inappropriate" }),
-    onSuccess: () => { setFlaggedReelId(null); qc.invalidateQueries({ queryKey: ["reels"] }); }
-  });
-
-  async function uploadVideo(file: File) {
-    setUploading("video");
-    setUploadProgress(0);
-    setUploadFileSize(file.size);
-    setErr(null);
-    try {
-      // Upload directly to backend as binary
-      const buffer = await file.arrayBuffer();
-      await new Promise<void>((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-        xhr.upload.addEventListener("progress", (e) => {
-          if (e.lengthComputable) {
-            setUploadProgress(Math.round((e.loaded / e.total) * 100));
-          }
-        });
-        xhr.addEventListener("load", () => {
-          if (xhr.status >= 200 && xhr.status < 300) {
-            const res = JSON.parse(xhr.responseText);
-            setForm((f) => ({ ...f, video_url: res.public_url }));
-            resolve();
-          } else {
-            reject(new Error(`Upload failed: ${xhr.status}`));
-          }
-        });
-        xhr.addEventListener("error", () => reject(new Error("Upload failed")));
-        const token = useAuthStore.getState().accessToken;
-        xhr.open("POST", `${api.defaults.baseURL}/media/upload?category=video&filename=${encodeURIComponent(file.name)}&content_type=${encodeURIComponent(file.type)}`);
-        if (token) xhr.setRequestHeader("Authorization", `Bearer ${token}`);
-        xhr.setRequestHeader("Content-Type", file.type || "application/octet-stream");
-        xhr.send(buffer);
-      });
-    } catch (e) {
-      setErr(humanizeError(e));
-    } finally {
-      setUploading(null);
-      setUploadProgress(0);
-      setUploadFileSize(0);
-    }
-  }
-
-  async function uploadThumbnail(file: File) {
-    setUploading("thumbnail");
-    setUploadProgress(0);
-    setUploadFileSize(file.size);
-    setErr(null);
-    try {
-      // Upload directly to backend as binary
-      const buffer = await file.arrayBuffer();
-      await new Promise<void>((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-        xhr.upload.addEventListener("progress", (e) => {
-          if (e.lengthComputable) {
-            setUploadProgress(Math.round((e.loaded / e.total) * 100));
-          }
-        });
-        xhr.addEventListener("load", () => {
-          if (xhr.status >= 200 && xhr.status < 300) {
-            const res = JSON.parse(xhr.responseText);
-            setForm((f) => ({ ...f, thumbnail_url: res.public_url }));
-            resolve();
-          } else {
-            reject(new Error(`Upload failed: ${xhr.status}`));
-          }
-        });
-        xhr.addEventListener("error", () => reject(new Error("Upload failed")));
-        const token = useAuthStore.getState().accessToken;
-        xhr.open("POST", `${api.defaults.baseURL}/media/upload?category=image&filename=${encodeURIComponent(file.name)}&content_type=${encodeURIComponent(file.type)}`);
-        if (token) xhr.setRequestHeader("Authorization", `Bearer ${token}`);
-        xhr.setRequestHeader("Content-Type", file.type || "application/octet-stream");
-        xhr.send(buffer);
-      });
-    } catch (e) {
-      setErr(humanizeError(e));
-    } finally {
-      setUploading(null);
-      setUploadProgress(0);
-      setUploadFileSize(0);
-    }
-  }
-
-  const openViewer = (index: number) => {
-    setViewerIndex(index);
+  const openViewer = useCallback((idx: number) => {
+    setViewerIndex(idx);
     setViewerOpen(true);
-  };
+  }, []);
 
-  const canEditOrDelete = (authorId: string) => user?.id === authorId || isAdmin;
+  async function uploadMedia(file: File, category: "video" | "image"): Promise<string | null> {
+    setUpload({ progress: 0, fileSize: file.size, phase: category === "video" ? "video" : "thumbnail" });
+    setFormErr(null);
 
-  if (!q.data) return null;
+    try {
+      const { data: urlData } = await api.post("/media/upload-url", {
+        category,
+        filename: file.name,
+        content_type: file.type,
+        content_length: file.size
+      });
 
-  const ReelCard = ({ r, idx }: { r: Reel; idx: number }) => {
-    const isLiked = likedReels.has(r.id);
-    const isFavorite = favoriteReels.has(r.id);
-    const canManage = canEditOrDelete(r.author_id);
-    const isOfficialReel = r.author_id === "admin";
+      const publicUrl: string = urlData.public_url;
+      const uploadUrl: string = urlData.upload_url;
+      const headers: Record<string, string> = urlData.headers ?? {};
 
-    return (
-      <div key={r.id} className="group">
-        <div
-          onClick={() => openViewer(idx)}
-          className={`relative aspect-[9/16] rounded-lg overflow-hidden cursor-pointer ${
-            isOfficialReel ? "ring-2 ring-brand-500" : ""
-          }`}
-        >
-          <video
-            src={r.video_url}
-            poster={r.thumbnail_url || undefined}
-            className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300 bg-ink"
-          />
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.upload.addEventListener("progress", (e) => {
+          if (e.lengthComputable) setUpload((u) => ({ ...u, progress: Math.round((e.loaded / e.total) * 100) }));
+        });
+        xhr.addEventListener("load", () => {
+          if (xhr.status >= 200 && xhr.status < 300) resolve();
+          else reject(new Error(`Upload failed: ${xhr.status}`));
+        });
+        xhr.addEventListener("error", () => reject(new Error("Upload failed")));
+        xhr.open("PUT", uploadUrl);
+        Object.entries(headers).forEach(([k, v]) => xhr.setRequestHeader(k, v));
+        xhr.send(file);
+      });
 
-          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
-            <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-              <div className="bg-white/90 rounded-full p-3">
-                <svg className="h-6 w-6 text-black" fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" />
-                </svg>
-              </div>
-            </div>
-          </div>
+      return publicUrl;
+    } catch (e) {
+      setFormErr(humanizeError(e));
+      return null;
+    } finally {
+      setUpload({ progress: 0, fileSize: 0, phase: null });
+    }
+  }
 
-          {isOfficialReel && (
-            <div className="absolute top-2 left-2 flex items-center gap-1 badge bg-brand-500 text-white border-transparent text-xs">
-              <Award className="h-3 w-3" />
-              Official
-            </div>
-          )}
+  async function handleVideoFile(file: File) {
+    if (file.size > 200 * 1024 * 1024) {
+      setFormErr(`Video must be under 200MB. Your file is ${(file.size / 1024 / 1024).toFixed(1)}MB.`);
+      return;
+    }
+    const url = await uploadMedia(file, "video");
+    if (url) setForm((f) => ({ ...f, video_url: url }));
+  }
 
-          {r.sport && !isOfficialReel && (
-            <span className="absolute top-2 left-2 badge bg-ink/70 text-paper border-transparent text-xs">{r.sport}</span>
-          )}
+  async function handleThumbFile(file: File) {
+    if (file.size > 10 * 1024 * 1024) {
+      setFormErr(`Thumbnail must be under 10MB.`);
+      return;
+    }
+    const url = await uploadMedia(file, "image");
+    if (url) setForm((f) => ({ ...f, thumbnail_url: url }));
+  }
 
-          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-2 opacity-0 group-hover:opacity-100 transition-opacity">
-            <div className="flex items-center gap-3 text-white text-xs">
-              <span className="flex items-center gap-1"><Heart className="h-3 w-3" /> {r.like_count}</span>
-              <span className="flex items-center gap-1"><MessageCircle className="h-3 w-3" /> {r.comment_count}</span>
-              <span className="flex items-center gap-1 ml-auto"><Eye className="h-3 w-3" /> {r.view_count}</span>
-            </div>
-          </div>
-        </div>
+  function openEditDrawer(r: Reel) {
+    setEditingReel(r);
+    setEditForm({
+      title: r.title ?? r.caption ?? "",
+      description: r.description ?? "",
+      sport: r.sport ?? ""
+    });
+  }
 
-        <div className="mt-2 space-y-1.5 text-sm">
-          <div className="font-semibold text-[13px] text-ink truncate">
-            {r.author_name}
-            {isOfficialReel && <span className="ml-1 text-brand-500">✓</span>}
-          </div>
-          {r.caption && <p className="text-ink-70 text-[12px] line-clamp-2">{r.caption}</p>}
-
-          <div className="flex items-center gap-2 pt-1.5 border-t border-hairsoft">
-            <button
-              onClick={() => like.mutate(r.id)}
-              className={`flex items-center gap-1 text-[11px] font-mononum transition ${
-                isLiked ? "text-brand-500" : "text-ink-sub hover:text-brand-500"
-              }`}
-            >
-              <Heart className="h-3.5 w-3.5" fill={isLiked ? "currentColor" : "none"} />
-              {r.like_count}
-            </button>
-            <span className="flex items-center gap-1 text-[11px] font-mononum text-ink-sub">
-              <MessageCircle className="h-3.5 w-3.5" />
-              {r.comment_count}
-            </span>
-            <button
-              onClick={() => toggleFavoriteReel(r.id)}
-              className={`flex items-center gap-1 text-[11px] font-mononum transition ml-auto ${
-                isFavorite ? "text-yellow-500" : "text-ink-sub hover:text-yellow-500"
-              }`}
-            >
-              <Bookmark className="h-3.5 w-3.5" fill={isFavorite ? "currentColor" : "none"} />
-            </button>
-
-            {canManage && (
-              <div className="relative">
-                <button
-                  data-menu-button
-                  onClick={() => setMenuOpenId(menuOpenId === r.id ? null : r.id)}
-                  className="p-1 hover:bg-fill rounded transition"
-                >
-                  <MoreVertical className="h-3.5 w-3.5 text-ink-sub" />
-                </button>
-                {menuOpenId === r.id && (
-                  <div data-menu-content className="absolute right-0 mt-1 panel shadow-pop z-10 min-w-36">
-                    <button
-                      onClick={() => { setEditingId(r.id); setMenuOpenId(null); }}
-                      className="w-full flex items-center gap-2 px-3 py-2 text-[12px] text-ink hover:bg-fill border-b border-hairsoft"
-                    >
-                      <Pencil className="h-3.5 w-3.5" /> Edit caption
-                    </button>
-                    <button
-                      onClick={() => { setPendingDeleteId(r.id); setMenuOpenId(null); }}
-                      className="w-full flex items-center gap-2 px-3 py-2 text-[12px] text-red-600 hover:bg-red-50"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" /> {isAdmin && user?.id !== r.author_id ? "Remove" : "Delete"}
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
-          {editingId === r.id && (
-            <div className="flex gap-2 pt-2">
-              <input id={`edit-${r.id}`} defaultValue={r.caption || ""} className="input flex-1 text-xs" />
-              <button
-                onClick={() => {
-                  const el = document.getElementById(`edit-${r.id}`) as HTMLInputElement;
-                  update.mutate({ id: r.id, caption: el.value });
-                }}
-                disabled={update.isPending}
-                className="btn-primary text-xs px-2 py-1"
-              >
-                Save
-              </button>
-              <button onClick={() => setEditingId(null)} className="btn-secondary text-xs px-2 py-1">✕</button>
-            </div>
-          )}
-
-          {pendingDeleteId === r.id && (
-            <div className="flex items-center gap-2 rounded bg-red-50 border border-red-200 p-2 mt-2">
-              <span className="text-[11px] text-red-900 flex-1">Delete?</span>
-              <button onClick={() => deleteReel.mutate(r.id)} disabled={deleteReel.isPending} className="btn-danger text-xs px-2 py-1">Yes</button>
-              <button onClick={() => setPendingDeleteId(null)} className="btn-secondary text-xs px-2 py-1">No</button>
-            </div>
-          )}
-
-          {flaggedReelId === r.id && (
-            <div className="flex items-center gap-2 rounded bg-yellow-50 border border-yellow-200 p-2 mt-2">
-              <span className="text-[11px] text-yellow-900 flex-1">Report?</span>
-              <button onClick={() => flagReel.mutate(r.id)} disabled={flagReel.isPending} className="btn-secondary text-xs px-2 py-1">Yes</button>
-              <button onClick={() => setFlaggedReelId(null)} className="btn-secondary text-xs px-2 py-1">No</button>
-            </div>
-          )}
-
-          <div className="pt-2 mt-2 border-t border-hairsoft">
-            <CommentSection parentType="reel" parentId={r.id} commentCount={r.comment_count} />
-          </div>
-        </div>
-      </div>
+  function handleEditSave() {
+    if (!editingReel) return;
+    update.mutate(
+      { id: editingReel.id, title: editForm.title, description: editForm.description, sport: editForm.sport },
+      { onSuccess: () => setEditingReel(null) }
     );
-  };
+  }
 
-  const officialReels = q.data.filter(r => r.author_id === "admin");
-  const userReels = q.data.filter(r => r.author_id !== "admin");
+  const commentReel = allReels.find((r) => r.id === commentReelId);
 
   return (
-    <div className="space-y-8 pb-12">
-      <PageHeader
-        title="Reels"
-        subtitle="Highlights · drills · technique"
-        action={canUpload && (
-          <button className="btn-accent" onClick={() => setOpen(true)}>
-            + {isAdmin ? "Post Official Reel" : "Post a reel"}
-          </button>
-        )}
-      />
-
-      {open && (
-        <div className="panel p-5 space-y-4 animate-fadein max-w-2xl">
-          <div className="kicker">{isAdmin ? "New Official Reel" : "New reel"}</div>
-          {isAdmin && (
-            <div className="p-3 rounded bg-brand-50 border border-brand-200">
-              <p className="text-xs text-brand-900">
-                This reel will be marked as <strong>Official</strong> and appear in the Featured section.
-              </p>
-            </div>
-          )}
-          {/* Video Upload Zone */}
-          <div className="space-y-2">
-            <span className="label">Video *</span>
-            {form.video_url ? (
-              <div className="border border-green-300 rounded bg-green-50 p-4 space-y-2">
-                <video src={form.video_url} poster={form.thumbnail_url} className="h-32 w-full object-cover rounded bg-ink" muted />
-                <div className="flex items-center justify-between">
-                  <div className="text-sm text-green-900">✓ Video uploaded</div>
-                  <button
-                    type="button"
-                    onClick={() => setForm((f) => ({ ...f, video_url: "" }))}
-                    className="text-xs px-2 py-1 rounded bg-red-100 text-red-700 hover:bg-red-200 transition"
-                  >
-                    Remove
-                  </button>
-                </div>
-              </div>
-            ) : uploading === "video" ? (
-              <div className="border-2 border-dashed border-brand-300 rounded p-6 bg-brand-50 space-y-3">
-                <Upload className="h-8 w-8 text-brand-500 mx-auto" />
-                <div className="text-center space-y-2">
-                  <p className="text-sm font-medium text-brand-900">Uploading…</p>
-                  <div className="w-full bg-brand-200 rounded h-2 overflow-hidden">
-                    <div className="bg-brand-500 h-full transition-all" style={{ width: `${uploadProgress}%` }} />
-                  </div>
-                  <p className="text-xs text-brand-700">{uploadProgress}% · {(uploadFileSize / 1024 / 1024).toFixed(1)} MB</p>
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                <div className="border-2 border-dashed border-brand-300 rounded p-6 text-center bg-brand-50 space-y-3">
-                  <Upload className="h-8 w-8 text-brand-500 mx-auto" />
-                  <button
-                    type="button"
-                    onClick={() => videoInputRef.current?.click()}
-                    className="btn-primary"
-                  >
-                    Pick a video file
-                  </button>
-                  <p className="text-xs text-brand-700">MP4, WebM, MOV · max 10 MB</p>
-                </div>
-                <div className="relative">
-                  <input type="text" placeholder="Or paste a video URL" className="input" value={form.video_url} onChange={(e) => setForm({ ...form, video_url: e.target.value })} />
-                </div>
-              </div>
-            )}
-            <input
-              ref={videoInputRef}
-              type="file"
-              accept="video/mp4,video/webm,video/quicktime"
-              className="sr-only"
-              onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadVideo(f); }}
-            />
+    <div className="pb-4">
+      {/* ── Mobile: full-screen snap-scroll feed ── */}
+      <div className="lg:hidden">
+        {list.isLoading ? (
+          <div className="flex justify-center items-center h-[80vh]">
+            <Spinner className="text-brand-500" />
           </div>
-
-          {/* Thumbnail Upload Zone */}
-          <div className="space-y-2">
-            <span className="label">Thumbnail (optional)</span>
-            {form.thumbnail_url ? (
-              <div className="border border-green-300 rounded bg-green-50 p-3 flex items-center justify-between">
-                <img src={form.thumbnail_url} alt="Thumbnail" className="h-16 w-16 object-cover rounded" />
+        ) : allReels.length === 0 ? (
+          <div className="p-6">
+            <EmptyState title="No reels yet" hint="Post match highlights, training clips or technique breakdowns." />
+          </div>
+        ) : (
+          <div
+            className="h-[calc(100svh-56px)] overflow-y-scroll snap-y snap-mandatory"
+            style={{ scrollbarWidth: "none" }}
+          >
+            {allReels.map((r, idx) => (
+              <MobileReelSlide
+                key={r.id}
+                reel={r}
+                idx={idx}
+                isLiked={likedReels.has(r.id)}
+                isFavorite={favoriteReels.has(r.id)}
+                currentUserId={user?.id}
+                isAdmin={isAdmin}
+                onLike={() => toggleLike.mutate(r.id)}
+                onFavorite={() => toggleFavoriteReel(r.id)}
+                onComment={() => setCommentReelId(r.id)}
+                onEdit={() => openEditDrawer(r)}
+                onDelete={() => remove.mutate(r.id)}
+              />
+            ))}
+            {list.hasNextPage && (
+              <div className="h-screen snap-start flex items-center justify-center bg-black">
                 <button
-                  type="button"
-                  onClick={() => setForm((f) => ({ ...f, thumbnail_url: "" }))}
-                  className="text-xs px-2 py-1 rounded bg-red-100 text-red-700 hover:bg-red-200 transition"
+                  onClick={() => list.fetchNextPage()}
+                  disabled={list.isFetchingNextPage}
+                  className="btn-primary min-h-[44px] px-6"
                 >
-                  Remove
+                  {list.isFetchingNextPage ? "Loading…" : "Load more reels"}
                 </button>
               </div>
-            ) : uploading === "thumbnail" ? (
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-ink">Uploading…</p>
-                <div className="w-full bg-fill rounded h-2 overflow-hidden">
-                  <div className="bg-brand-500 h-full transition-all" style={{ width: `${uploadProgress}%` }} />
-                </div>
-                <p className="text-xs text-ink-faint">{uploadProgress}% · {(uploadFileSize / 1024 / 1024).toFixed(1)} MB</p>
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => thumbInputRef.current?.click()}
-                className="btn-secondary w-full"
-              >
-                Upload thumbnail
-              </button>
             )}
-            <input
-              ref={thumbInputRef}
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              className="sr-only"
-              onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadThumbnail(f); }}
-            />
           </div>
+        )}
 
-          {/* Other Fields */}
-          <div className="grid sm:grid-cols-2 gap-3">
-            <label className="block">
-              <span className="label">Sport</span>
-              <input className="input" placeholder="e.g. Cricket" value={form.sport} onChange={(e) => setForm({ ...form, sport: e.target.value })} />
-            </label>
-            <label className="block">
-              <span className="label">Caption</span>
-              <input className="input" placeholder="Describe the clip" value={form.caption} onChange={(e) => setForm({ ...form, caption: e.target.value })} />
-            </label>
+        {/* FAB upload button */}
+        {canUpload && (
+          <button
+            onClick={() => setUploadOpen(true)}
+            className="fixed bottom-[calc(56px+env(safe-area-inset-bottom)+16px)] right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-brand-500 text-white shadow-lg min-h-[56px]"
+            aria-label="Upload reel"
+          >
+            <Plus className="h-6 w-6" />
+          </button>
+        )}
+      </div>
+
+      {/* ── Desktop: 3-column grid ── */}
+      <div className="hidden lg:block space-y-8 p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="font-disp text-2xl text-ink">Reels</h1>
+            <p className="text-sm text-ink-sub mt-1">Highlights · drills · technique</p>
           </div>
-          {err && <div className="text-sm text-red-700 rounded bg-red-50 p-3">{err}</div>}
-          <div className="flex gap-2 justify-end pt-1">
-            <button className="btn-secondary" onClick={() => setOpen(false)} disabled={uploading !== null}>Cancel</button>
-            <button className="btn-primary" disabled={create.isPending || !form.video_url || uploading !== null} onClick={() => create.mutate()}>
-              {create.isPending ? "Posting…" : uploading ? "Uploading…" : "Post reel →"}
+          {canUpload && (
+            <button className="btn-accent min-h-[44px]" onClick={() => setUploadOpen(true)}>
+              <Plus className="h-4 w-4 mr-1" /> Post a reel
             </button>
+          )}
+        </div>
+
+        {list.isLoading ? (
+          <div className="panel p-8 flex justify-center"><Spinner className="text-brand-500" /></div>
+        ) : allReels.length === 0 ? (
+          <EmptyState title="No reels yet" hint="Post match highlights, training clips or technique breakdowns." />
+        ) : (
+          <>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {allReels.map((r, idx) => (
+                <DesktopReelCard
+                  key={r.id}
+                  reel={r}
+                  idx={idx}
+                  isLiked={likedReels.has(r.id)}
+                  isFavorite={favoriteReels.has(r.id)}
+                  currentUserId={user?.id}
+                  isAdmin={isAdmin}
+                  onOpen={() => openViewer(idx)}
+                  onLike={() => toggleLike.mutate(r.id)}
+                  onFavorite={() => toggleFavoriteReel(r.id)}
+                  onEdit={() => openEditDrawer(r)}
+                  onDelete={() => remove.mutate(r.id)}
+                />
+              ))}
+            </div>
+            {list.hasNextPage && (
+              <div className="flex justify-center pt-4">
+                <button
+                  onClick={() => list.fetchNextPage()}
+                  disabled={list.isFetchingNextPage}
+                  className="btn-secondary min-h-[44px] px-8"
+                >
+                  {list.isFetchingNextPage ? "Loading…" : "Load more"}
+                </button>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      {/* ── Upload drawer / modal ── */}
+      <MobileDrawer
+        isOpen={uploadOpen}
+        onClose={() => { if (upload.phase === null) setUploadOpen(false); }}
+        title="Post a Reel"
+      >
+        <UploadForm
+          form={form}
+          setForm={setForm}
+          upload={upload}
+          formErr={formErr}
+          setFormErr={setFormErr}
+          videoInputRef={videoInputRef}
+          thumbInputRef={thumbInputRef}
+          onVideoFile={handleVideoFile}
+          onThumbFile={handleThumbFile}
+          onSubmit={() => create.mutate()}
+          onCancel={() => setUploadOpen(false)}
+          isPending={create.isPending}
+        />
+      </MobileDrawer>
+
+      {/* ── Desktop upload modal ── */}
+      {uploadOpen && (
+        <div className="hidden lg:flex fixed inset-0 z-50 items-center justify-center bg-black/60" onClick={() => { if (upload.phase === null) setUploadOpen(false); }}>
+          <div className="bg-panel rounded-2xl shadow-card w-full max-w-lg p-6 space-y-4" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <h2 className="font-disp text-xl text-ink">Post a Reel</h2>
+              <button onClick={() => { if (upload.phase === null) setUploadOpen(false); }} className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center text-ink-sub hover:text-ink">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <UploadForm
+              form={form}
+              setForm={setForm}
+              upload={upload}
+              formErr={formErr}
+              setFormErr={setFormErr}
+              videoInputRef={videoInputRef}
+              thumbInputRef={thumbInputRef}
+              onVideoFile={handleVideoFile}
+              onThumbFile={handleThumbFile}
+              onSubmit={() => create.mutate()}
+              onCancel={() => setUploadOpen(false)}
+              isPending={create.isPending}
+            />
           </div>
         </div>
       )}
 
-      {q.isLoading ? (
-        <div className="panel p-8 flex justify-center"><Spinner className="text-brand-500" /></div>
-      ) : !q.data?.length ? (
-        <EmptyState title="No reels yet" hint="Post match highlights, training clips or technique breakdowns." />
-      ) : (
-        <>
-          {officialReels.length > 0 && (
-            <section className="space-y-4">
-              <div className="flex items-center gap-2">
-                <Award className="h-5 w-5 text-brand-500" />
-                <h2 className="font-disp text-lg text-ink">Featured</h2>
-              </div>
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 auto-rows-max">
-                {officialReels.map((r, idx) => (
-                  <ReelCard key={r.id} r={r} idx={idx} />
-                ))}
-              </div>
-            </section>
-          )}
-
-          {userReels.length > 0 && (
-            <section className="space-y-4">
-              <h2 className="font-disp text-lg text-ink">User Reels</h2>
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 auto-rows-max">
-                {userReels.map((r, idx) => (
-                  <ReelCard key={r.id} r={r} idx={idx + officialReels.length} />
-                ))}
-              </div>
-            </section>
-          )}
-        </>
-      )}
-
-      {viewerOpen && q.data && (
+      {/* ── Full-screen viewer (desktop) ── */}
+      {viewerOpen && allReels.length > 0 && (
         <ReelViewer
-          reels={q.data}
+          reels={allReels}
           initialIndex={viewerIndex}
           onClose={() => setViewerOpen(false)}
-          onLike={(id) => like.mutate(id)}
+          onLike={(id) => toggleLike.mutate(id)}
           onAddToFavorites={(id) => toggleFavoriteReel(id)}
-          onFlag={(id) => setFlaggedReelId(id)}
-          onCommentClick={(id) => setOpenCommentId(openCommentId === id ? null : id)}
+          onCommentClick={(id) => setCommentReelId(id)}
           likedReels={likedReels}
           favoriteReels={favoriteReels}
         />
       )}
+
+      {/* ── Edit drawer ── */}
+      <MobileDrawer
+        isOpen={!!editingReel}
+        onClose={() => setEditingReel(null)}
+        title="Edit Reel"
+        footer={
+          <div className="flex gap-2 p-3">
+            <button onClick={() => setEditingReel(null)} className="btn-secondary flex-1 min-h-[44px]">Cancel</button>
+            <button onClick={handleEditSave} disabled={update.isPending || !editForm.title.trim()} className="btn-primary flex-1 min-h-[44px]">
+              {update.isPending ? "Saving…" : "Save"}
+            </button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          <label className="block">
+            <span className="label">Title *</span>
+            <input className="input min-h-[44px]" maxLength={100} value={editForm.title} onChange={(e) => setEditForm((f) => ({ ...f, title: e.target.value }))} />
+          </label>
+          <label className="block">
+            <span className="label">Description</span>
+            <textarea className="input min-h-[80px] resize-none" maxLength={500} value={editForm.description} onChange={(e) => setEditForm((f) => ({ ...f, description: e.target.value }))} />
+          </label>
+          <label className="block">
+            <span className="label">Sport</span>
+            <input className="input min-h-[44px]" value={editForm.sport} onChange={(e) => setEditForm((f) => ({ ...f, sport: e.target.value }))} />
+          </label>
+        </div>
+      </MobileDrawer>
+
+      {/* ── Comments drawer ── */}
+      <MobileDrawer
+        isOpen={!!commentReelId}
+        onClose={() => setCommentReelId(null)}
+        title={commentReel ? `Comments on "${commentReel.title ?? commentReel.caption ?? "Reel"}"` : "Comments"}
+      >
+        {commentReelId && (
+          <CommentSection
+            parentType="reel"
+            parentId={commentReelId}
+            commentCount={commentReel?.comment_count ?? 0}
+          />
+        )}
+      </MobileDrawer>
+    </div>
+  );
+}
+
+/* ─────────────────────────── sub-components ─────────────────────────── */
+
+function MobileReelSlide({
+  reel, idx, isLiked, isFavorite, currentUserId, isAdmin,
+  onLike, onFavorite, onComment, onEdit, onDelete
+}: {
+  reel: Reel; idx: number; isLiked: boolean; isFavorite: boolean;
+  currentUserId?: string; isAdmin: boolean;
+  onLike(): void; onFavorite(): void; onComment(): void; onEdit(): void; onDelete(): void;
+}) {
+  const canManage = reel.author_id === currentUserId || isAdmin;
+  const displayTitle = reel.title ?? reel.caption;
+
+  return (
+    <div className="relative h-screen snap-start overflow-hidden bg-black flex items-center justify-center">
+      <video
+        src={reel.video_url}
+        poster={reel.thumbnail_url ?? undefined}
+        className="h-full w-full object-cover"
+        muted
+        playsInline
+        loop
+      />
+
+      {/* Gradient overlays */}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/20 pointer-events-none" />
+
+      {/* Right action bar */}
+      <div className="absolute right-3 bottom-32 flex flex-col gap-4 items-center">
+        <button
+          onClick={onLike}
+          className="flex flex-col items-center gap-1 min-h-[56px] min-w-[56px] justify-center"
+        >
+          <Heart className="h-7 w-7 text-white drop-shadow" fill={isLiked ? "#ef4444" : "none"} stroke={isLiked ? "#ef4444" : "white"} />
+          <span className="text-white text-xs font-medium drop-shadow">{reel.like_count}</span>
+        </button>
+        <button
+          onClick={onComment}
+          className="flex flex-col items-center gap-1 min-h-[56px] min-w-[56px] justify-center"
+        >
+          <MessageCircle className="h-7 w-7 text-white drop-shadow" />
+          <span className="text-white text-xs font-medium drop-shadow">{reel.comment_count}</span>
+        </button>
+        <button
+          onClick={onFavorite}
+          className="flex flex-col items-center gap-1 min-h-[56px] min-w-[56px] justify-center"
+        >
+          <Bookmark className="h-7 w-7 text-white drop-shadow" fill={isFavorite ? "#eab308" : "none"} stroke={isFavorite ? "#eab308" : "white"} />
+        </button>
+        <div className="flex flex-col items-center gap-1 min-h-[44px] min-w-[44px] justify-center">
+          <Eye className="h-6 w-6 text-white/70 drop-shadow" />
+          <span className="text-white/70 text-xs font-medium drop-shadow">{reel.view_count}</span>
+        </div>
+        {canManage && (
+          <>
+            <button onClick={onEdit} className="min-h-[44px] min-w-[44px] flex items-center justify-center">
+              <Pencil className="h-5 w-5 text-white/70 drop-shadow" />
+            </button>
+            <button onClick={onDelete} className="min-h-[44px] min-w-[44px] flex items-center justify-center">
+              <Trash2 className="h-5 w-5 text-red-400 drop-shadow" />
+            </button>
+          </>
+        )}
+      </div>
+
+      {/* Bottom author + info */}
+      <div className="absolute bottom-0 left-0 right-16 p-4 pb-[calc(env(safe-area-inset-bottom)+16px)]">
+        <p className="text-white font-semibold text-sm drop-shadow">
+          {reel.author?.full_name ?? reel.author_name ?? "Unknown"}
+        </p>
+        {displayTitle && (
+          <p className="text-white/90 text-sm mt-1 line-clamp-2 drop-shadow">{displayTitle}</p>
+        )}
+        {reel.sport && (
+          <span className="inline-block mt-1.5 text-xs bg-white/20 text-white px-2 py-0.5 rounded-full">
+            {reel.sport}
+          </span>
+        )}
+      </div>
+
+      <span className="absolute top-3 right-3 text-white/50 text-xs">#{idx + 1}</span>
+    </div>
+  );
+}
+
+function DesktopReelCard({
+  reel, isLiked, isFavorite, currentUserId, isAdmin,
+  onOpen, onLike, onFavorite, onEdit, onDelete
+}: {
+  reel: Reel; idx: number; isLiked: boolean; isFavorite: boolean;
+  currentUserId?: string; isAdmin: boolean;
+  onOpen(): void; onLike(): void; onFavorite(): void; onEdit(): void; onDelete(): void;
+}) {
+  const canManage = reel.author_id === currentUserId || isAdmin;
+  const displayTitle = reel.title ?? reel.caption;
+
+  return (
+    <div className="group panel overflow-hidden">
+      <div
+        onClick={onOpen}
+        className="relative aspect-[9/16] cursor-pointer overflow-hidden bg-ink"
+      >
+        <video
+          src={reel.video_url}
+          poster={reel.thumbnail_url ?? undefined}
+          className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
+          muted
+        />
+        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+          <div className="opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 rounded-full p-3">
+            <svg className="h-6 w-6 text-black" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" />
+            </svg>
+          </div>
+        </div>
+        {reel.sport && (
+          <span className="absolute top-2 left-2 badge bg-ink/70 text-paper border-transparent text-xs">{reel.sport}</span>
+        )}
+        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-2 opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="flex items-center gap-3 text-white text-xs">
+            <span className="flex items-center gap-1"><Heart className="h-3 w-3" /> {reel.like_count}</span>
+            <span className="flex items-center gap-1"><MessageCircle className="h-3 w-3" /> {reel.comment_count}</span>
+            <span className="flex items-center gap-1 ml-auto"><Eye className="h-3 w-3" /> {reel.view_count}</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="p-3 space-y-2">
+        <div className="font-semibold text-sm text-ink truncate">
+          {reel.author?.full_name ?? reel.author_name ?? "Unknown"}
+        </div>
+        {displayTitle && <p className="text-ink-70 text-xs line-clamp-2">{displayTitle}</p>}
+        <div className="flex items-center gap-2 pt-1 border-t border-hairsoft">
+          <button
+            onClick={onLike}
+            className={`flex items-center gap-1 text-xs min-h-[44px] transition ${isLiked ? "text-red-500" : "text-ink-sub hover:text-red-500"}`}
+          >
+            <Heart className="h-4 w-4" fill={isLiked ? "currentColor" : "none"} /> {reel.like_count}
+          </button>
+          <button
+            onClick={onFavorite}
+            className={`flex items-center gap-1 text-xs min-h-[44px] ml-auto transition ${isFavorite ? "text-yellow-500" : "text-ink-sub hover:text-yellow-500"}`}
+          >
+            <Bookmark className="h-4 w-4" fill={isFavorite ? "currentColor" : "none"} />
+          </button>
+          {canManage && (
+            <>
+              <button onClick={onEdit} className="p-1 min-h-[44px] min-w-[44px] flex items-center justify-center text-ink-sub hover:text-ink transition">
+                <Pencil className="h-4 w-4" />
+              </button>
+              <button onClick={onDelete} className="p-1 min-h-[44px] min-w-[44px] flex items-center justify-center text-ink-sub hover:text-red-600 transition">
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function UploadForm({
+  form, setForm, upload, formErr, setFormErr,
+  videoInputRef, thumbInputRef,
+  onVideoFile, onThumbFile,
+  onSubmit, onCancel, isPending
+}: {
+  form: CreateReelRequest;
+  setForm: React.Dispatch<React.SetStateAction<CreateReelRequest>>;
+  upload: UploadState;
+  formErr: string | null;
+  setFormErr: (e: string | null) => void;
+  videoInputRef: React.RefObject<HTMLInputElement>;
+  thumbInputRef: React.RefObject<HTMLInputElement>;
+  onVideoFile(f: File): void;
+  onThumbFile(f: File): void;
+  onSubmit(): void;
+  onCancel(): void;
+  isPending: boolean;
+}) {
+  const isUploading = upload.phase !== null;
+
+  return (
+    <div className="space-y-4">
+      {/* Video upload */}
+      <div className="space-y-2">
+        <span className="label">Video *</span>
+        {form.video_url ? (
+          <div className="border border-green-300 rounded-lg bg-green-50 p-3 flex items-center justify-between">
+            <span className="text-sm text-green-900 font-medium">✓ Video uploaded</span>
+            <button
+              type="button"
+              onClick={() => setForm((f) => ({ ...f, video_url: "" }))}
+              className="text-xs px-2 py-1 rounded bg-red-100 text-red-700 min-h-[44px] hover:bg-red-200 transition"
+            >
+              Remove
+            </button>
+          </div>
+        ) : upload.phase === "video" ? (
+          <div className="border-2 border-dashed border-brand-300 rounded-lg p-6 bg-brand-50 space-y-3 text-center">
+            <Upload className="h-8 w-8 text-brand-500 mx-auto" />
+            <p className="text-sm font-medium text-brand-900">Uploading…</p>
+            <div className="w-full bg-brand-200 rounded h-2 overflow-hidden">
+              <div className="bg-brand-500 h-full transition-all" style={{ width: `${upload.progress}%` }} />
+            </div>
+            <p className="text-xs text-brand-700">{upload.progress}% · {(upload.fileSize / 1024 / 1024).toFixed(1)} MB</p>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => videoInputRef.current?.click()}
+            disabled={isUploading}
+            className="w-full border-2 border-dashed border-hair rounded-lg p-6 text-center text-ink-sub hover:border-brand-400 hover:text-brand-500 transition min-h-[80px] flex flex-col items-center justify-center gap-2"
+          >
+            <Upload className="h-6 w-6" />
+            <span className="text-sm font-medium">Tap to select video</span>
+            <span className="text-xs">MP4, WebM, MOV · max 200MB</span>
+          </button>
+        )}
+        <input
+          ref={videoInputRef}
+          type="file"
+          accept="video/mp4,video/webm,video/quicktime"
+          className="sr-only"
+          onChange={(e) => { const f = e.target.files?.[0]; if (f) onVideoFile(f); e.target.value = ""; }}
+        />
+      </div>
+
+      {/* Title */}
+      <label className="block">
+        <span className="label">Title *</span>
+        <input
+          className="input min-h-[44px]"
+          placeholder="e.g. Match-winning six at Eden Gardens"
+          maxLength={100}
+          value={form.title}
+          onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+        />
+        <span className="text-xs text-ink-faint">{form.title.length}/100</span>
+      </label>
+
+      {/* Description */}
+      <label className="block">
+        <span className="label">Description</span>
+        <textarea
+          className="input min-h-[80px] resize-none"
+          placeholder="Describe this clip…"
+          maxLength={500}
+          value={form.description ?? ""}
+          onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+        />
+        <span className="text-xs text-ink-faint">{(form.description ?? "").length}/500</span>
+      </label>
+
+      {/* Sport */}
+      <label className="block">
+        <span className="label">Sport</span>
+        <input
+          className="input min-h-[44px]"
+          placeholder="e.g. Cricket"
+          value={form.sport ?? ""}
+          onChange={(e) => setForm((f) => ({ ...f, sport: e.target.value }))}
+        />
+      </label>
+
+      {/* Thumbnail */}
+      <div className="space-y-2">
+        <span className="label">Thumbnail (optional)</span>
+        {form.thumbnail_url ? (
+          <div className="border border-green-300 rounded-lg bg-green-50 p-3 flex items-center gap-3">
+            <img src={form.thumbnail_url} alt="Thumbnail" className="h-14 w-14 object-cover rounded" />
+            <button
+              type="button"
+              onClick={() => setForm((f) => ({ ...f, thumbnail_url: undefined }))}
+              className="text-xs px-2 py-1 rounded bg-red-100 text-red-700 min-h-[44px] hover:bg-red-200 transition ml-auto"
+            >
+              Remove
+            </button>
+          </div>
+        ) : upload.phase === "thumbnail" ? (
+          <div className="space-y-2 p-3 border rounded-lg">
+            <div className="w-full bg-fill rounded h-2 overflow-hidden">
+              <div className="bg-brand-500 h-full transition-all" style={{ width: `${upload.progress}%` }} />
+            </div>
+            <p className="text-xs text-ink-faint">{upload.progress}%</p>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => thumbInputRef.current?.click()}
+            disabled={isUploading}
+            className="btn-secondary w-full min-h-[44px]"
+          >
+            Upload thumbnail
+          </button>
+        )}
+        <input
+          ref={thumbInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          capture="environment"
+          className="sr-only"
+          onChange={(e) => { const f = e.target.files?.[0]; if (f) onThumbFile(f); e.target.value = ""; }}
+        />
+      </div>
+
+      {formErr && <div className="text-sm text-red-700 rounded-lg bg-red-50 p-3">{formErr}</div>}
+
+      <div className="flex gap-2 pt-1">
+        <button
+          type="button"
+          className="btn-secondary flex-1 min-h-[44px]"
+          onClick={onCancel}
+          disabled={isUploading}
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          className="btn-primary flex-1 min-h-[44px]"
+          disabled={isPending || !form.video_url || !form.title.trim() || isUploading}
+          onClick={onSubmit}
+        >
+          {isPending ? "Posting…" : isUploading ? "Uploading…" : "Post reel →"}
+        </button>
+      </div>
     </div>
   );
 }

@@ -1,5 +1,7 @@
-import { useState, useRef, useEffect } from "react";
-import { Heart, MessageCircle, Flag, Eye, ChevronUp, ChevronDown, Volume2, VolumeX, Play, Pause, Bookmark } from "lucide-react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { Heart, MessageCircle, Bookmark, Eye, ChevronUp, ChevronDown, Volume2, VolumeX, Play, Pause, X } from "lucide-react";
+import { MobileDrawer } from "./MobileDrawer";
+import { CommentSection } from "./CommentSection";
 import type { Reel } from "../types";
 
 interface ReelViewerProps {
@@ -8,7 +10,6 @@ interface ReelViewerProps {
   onClose: () => void;
   onLike: (id: string) => void;
   onAddToFavorites: (id: string) => void;
-  onFlag: (id: string) => void;
   onCommentClick: (id: string) => void;
   likedReels: Set<string>;
   favoriteReels: Set<string>;
@@ -20,19 +21,17 @@ export function ReelViewer({
   onClose,
   onLike,
   onAddToFavorites,
-  onFlag,
   onCommentClick,
   likedReels,
   favoriteReels
 }: ReelViewerProps) {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [isPlaying, setIsPlaying] = useState(true);
-  const [isMuted, setIsMuted] = useState(false);
+  const [isMuted, setIsMuted] = useState(true);
   const [progress, setProgress] = useState(0);
-  const [isHoveringControls, setIsHoveringControls] = useState(false);
+  const [commentOpen, setCommentOpen] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const lastTapRef = useRef(0);
 
   const currentReel = reels[currentIndex];
 
@@ -41,226 +40,206 @@ export function ReelViewer({
       if (e.key === "Escape") onClose();
       if (e.key === "ArrowUp") goToPrevious();
       if (e.key === "ArrowDown") goToNext();
-      if (e.key === " ") {
-        e.preventDefault();
-        setIsPlaying((p) => !p);
-      }
+      if (e.key === " ") { e.preventDefault(); togglePlay(); }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  // Bind keyboard handlers once on mount; handlers read latest state via setState callbacks.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
-    isPlaying ? video.play() : video.pause();
+    setProgress(0);
+    video.currentTime = 0;
+    if (isPlaying) video.play().catch(() => setIsPlaying(false));
+  }, [currentIndex]);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    if (isPlaying) video.play().catch(() => setIsPlaying(false));
+    else video.pause();
   }, [isPlaying]);
 
-  const goToNext = () => {
+  const goToNext = useCallback(() => {
     setCurrentIndex((i) => (i + 1 < reels.length ? i + 1 : i));
-    setProgress(0);
-  };
+    setIsPlaying(true);
+  }, [reels.length]);
 
-  const goToPrevious = () => {
+  const goToPrevious = useCallback(() => {
     setCurrentIndex((i) => (i - 1 >= 0 ? i - 1 : i));
-    setProgress(0);
-  };
+    setIsPlaying(true);
+  }, []);
 
-  const handleDoubleClick = () => {
-    const now = Date.now();
-    if (now - lastTapRef.current < 300) {
-      onLike(currentReel.id);
-    }
-    lastTapRef.current = now;
-  };
+  const togglePlay = useCallback(() => setIsPlaying((p) => !p), []);
 
-  const handleVideoTimeUpdate = () => {
-    if (videoRef.current) {
-      setProgress((videoRef.current.currentTime / videoRef.current.duration) * 100);
-    }
-  };
-
-  const handleVideoEnded = () => {
-    goToNext();
-  };
+  const handleCommentClick = useCallback(() => {
+    setCommentOpen(true);
+    onCommentClick(currentReel.id);
+  }, [currentReel.id, onCommentClick]);
 
   return (
     <div
       ref={containerRef}
-      className="fixed inset-0 bg-black/95 z-50 flex items-center justify-center"
-      onClick={(e) => {
-        if (e.target === containerRef.current) onClose();
-      }}
+      className="fixed inset-0 bg-black z-50 flex items-center justify-center"
     >
-      {/* Main Video Container */}
-      <div className="relative h-full w-full max-h-screen max-w-lg">
-        {/* Video Player */}
-        <div
-          className="relative h-full bg-black overflow-hidden"
-          onMouseEnter={() => setIsHoveringControls(true)}
-          onMouseLeave={() => setIsHoveringControls(false)}
-        >
-          <video
-            ref={videoRef}
-            src={currentReel.video_url}
-            poster={currentReel.thumbnail_url}
-            className="h-full w-full object-cover cursor-pointer"
-            onClick={() => setIsPlaying(!isPlaying)}
-            onDoubleClick={handleDoubleClick}
-            onTimeUpdate={handleVideoTimeUpdate}
-            onEnded={handleVideoEnded}
-            muted={isMuted}
-          />
+      <div className="relative h-full w-full max-w-lg mx-auto">
+        {/* Video */}
+        <video
+          ref={videoRef}
+          src={currentReel.video_url}
+          poster={currentReel.thumbnail_url ?? undefined}
+          className="h-full w-full object-cover cursor-pointer"
+          muted={isMuted}
+          loop
+          playsInline
+          onClick={togglePlay}
+          onTimeUpdate={() => {
+            if (videoRef.current && videoRef.current.duration) {
+              setProgress((videoRef.current.currentTime / videoRef.current.duration) * 100);
+            }
+          }}
+          onEnded={goToNext}
+        />
 
-          {/* Progress Bar */}
-          <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/20">
-            <div className="h-full bg-brand-500" style={{ width: `${progress}%` }} />
+        {/* Progress bar */}
+        <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/20">
+          <div className="h-full bg-brand-500 transition-none" style={{ width: `${progress}%` }} />
+        </div>
+
+        {/* Gradient overlay */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/30 pointer-events-none" />
+
+        {/* Paused indicator */}
+        {!isPlaying && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <Play className="h-20 w-20 text-white/60" fill="white" />
           </div>
+        )}
 
-          {/* Top Controls */}
-          <div className="absolute top-0 left-0 right-0 p-4 flex items-center justify-between bg-gradient-to-b from-black/40 to-transparent">
-            <div className="text-white text-xs font-medium">
-              {currentIndex + 1} / {reels.length}
-            </div>
+        {/* Top bar */}
+        <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-4 pt-safe-area-inset-top p-4 bg-gradient-to-b from-black/40 to-transparent">
+          <span className="text-white/60 text-sm font-medium">{currentIndex + 1} / {reels.length}</span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setIsMuted((m) => !m)}
+              className="text-white p-2 min-h-[44px] min-w-[44px] flex items-center justify-center"
+            >
+              {isMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
+            </button>
+            <button
+              onClick={() => setIsPlaying((p) => !p)}
+              className="text-white p-2 min-h-[44px] min-w-[44px] flex items-center justify-center"
+            >
+              {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" fill="white" />}
+            </button>
             <button
               onClick={onClose}
-              className="text-white hover:bg-white/10 p-2 rounded transition"
+              className="text-white p-2 min-h-[44px] min-w-[44px] flex items-center justify-center"
             >
-              ✕
+              <X className="h-5 w-5" />
             </button>
-          </div>
-
-          {/* Center Play/Pause Icon */}
-          {!isPlaying && (
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <Play className="h-16 w-16 text-white/60" fill="white" />
-            </div>
-          )}
-
-          {/* Bottom Controls */}
-          <div
-            className={`absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/60 to-transparent transition-opacity ${
-              isHoveringControls ? "opacity-100" : "opacity-0 hover:opacity-100"
-            }`}
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setIsPlaying(!isPlaying)}
-                  className="text-white hover:bg-white/10 p-2 rounded transition"
-                >
-                  {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" fill="white" />}
-                </button>
-                <button
-                  onClick={() => setIsMuted(!isMuted)}
-                  className="text-white hover:bg-white/10 p-2 rounded transition"
-                >
-                  {isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
-                </button>
-              </div>
-              <span className="text-white text-xs font-medium">
-                {Math.floor((videoRef.current?.currentTime || 0) / 60)}:
-                {String(Math.floor((videoRef.current?.currentTime || 0) % 60)).padStart(2, "0")}
-              </span>
-            </div>
           </div>
         </div>
 
-        {/* Right Sidebar - Actions */}
-        <div className="absolute right-0 top-1/2 -translate-y-1/2 flex flex-col gap-4 pr-4">
-          {/* Like */}
+        {/* Right action bar */}
+        <div className="absolute right-3 bottom-28 flex flex-col gap-5 items-center">
+          {/* Like — 56px */}
           <button
             onClick={() => onLike(currentReel.id)}
-            className={`flex flex-col items-center gap-1 p-3 rounded-full transition ${
-              likedReels.has(currentReel.id) ? "bg-brand-500/20 text-brand-500" : "text-white/70 hover:text-white"
-            }`}
+            className="flex flex-col items-center gap-1 h-14 w-14 justify-center min-h-[56px]"
           >
             <Heart
-              className="h-5 w-5"
-              fill={likedReels.has(currentReel.id) ? "currentColor" : "none"}
+              className="h-7 w-7 drop-shadow"
+              fill={likedReels.has(currentReel.id) ? "#ef4444" : "none"}
+              stroke={likedReels.has(currentReel.id) ? "#ef4444" : "white"}
             />
-            <span className="text-xs font-medium">{currentReel.like_count}</span>
+            <span className="text-white text-xs font-medium drop-shadow">{currentReel.like_count}</span>
           </button>
 
           {/* Comment */}
           <button
-            onClick={() => onCommentClick(currentReel.id)}
-            className="flex flex-col items-center gap-1 p-3 rounded-full text-white/70 hover:text-white transition"
+            onClick={handleCommentClick}
+            className="flex flex-col items-center gap-1 h-14 w-14 justify-center min-h-[56px]"
           >
-            <MessageCircle className="h-5 w-5" />
-            <span className="text-xs font-medium">{currentReel.comment_count}</span>
+            <MessageCircle className="h-7 w-7 text-white drop-shadow" />
+            <span className="text-white text-xs font-medium drop-shadow">{currentReel.comment_count}</span>
           </button>
 
           {/* Favorites */}
           <button
             onClick={() => onAddToFavorites(currentReel.id)}
-            className={`flex flex-col items-center gap-1 p-3 rounded-full transition ${
-              favoriteReels.has(currentReel.id) ? "bg-yellow-500/20 text-yellow-500" : "text-white/70 hover:text-white"
-            }`}
+            className="flex flex-col items-center gap-1 h-14 w-14 justify-center min-h-[56px]"
           >
             <Bookmark
-              className="h-5 w-5"
-              fill={favoriteReels.has(currentReel.id) ? "currentColor" : "none"}
+              className="h-7 w-7 drop-shadow"
+              fill={favoriteReels.has(currentReel.id) ? "#eab308" : "none"}
+              stroke={favoriteReels.has(currentReel.id) ? "#eab308" : "white"}
             />
-            <span className="text-xs">Save</span>
+            <span className="text-white text-xs drop-shadow">Save</span>
           </button>
 
-          {/* Flag */}
-          <button
-            onClick={() => onFlag(currentReel.id)}
-            className="flex flex-col items-center gap-1 p-3 rounded-full text-white/70 hover:text-white transition"
-          >
-            <Flag className="h-5 w-5" />
-            <span className="text-xs">Report</span>
-          </button>
-
-          {/* View Count */}
-          <div className="flex flex-col items-center gap-1 p-3 rounded-full text-white/70">
-            <Eye className="h-5 w-5" />
-            <span className="text-xs font-medium">{currentReel.view_count}</span>
+          {/* Views */}
+          <div className="flex flex-col items-center gap-1 h-14 w-14 justify-center">
+            <Eye className="h-6 w-6 text-white/70 drop-shadow" />
+            <span className="text-white/70 text-xs font-medium drop-shadow">{currentReel.view_count}</span>
           </div>
         </div>
 
-        {/* Navigation Arrows */}
+        {/* Navigation arrows */}
         {currentIndex > 0 && (
           <button
             onClick={goToPrevious}
-            className="absolute top-4 left-4 text-white/70 hover:text-white p-2 transition"
+            className="absolute top-1/2 -translate-y-1/2 left-3 text-white/70 hover:text-white p-2 min-h-[44px] min-w-[44px] flex items-center justify-center transition"
           >
-            <ChevronUp className="h-6 w-6" />
+            <ChevronUp className="h-7 w-7" />
           </button>
         )}
         {currentIndex < reels.length - 1 && (
           <button
             onClick={goToNext}
-            className="absolute bottom-20 left-4 text-white/70 hover:text-white p-2 transition"
+            className="absolute top-2/3 left-3 text-white/70 hover:text-white p-2 min-h-[44px] min-w-[44px] flex items-center justify-center transition"
           >
-            <ChevronDown className="h-6 w-6" />
+            <ChevronDown className="h-7 w-7" />
           </button>
         )}
 
-        {/* Bottom Info */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 via-black/40 to-transparent">
-          <div className="text-white space-y-2 max-w-xs">
-            <div className="font-semibold text-sm">{currentReel.author_name}</div>
-            {currentReel.caption && (
-              <p className="text-sm text-white/90 line-clamp-2">{currentReel.caption}</p>
-            )}
-            {currentReel.sport && (
-              <span className="inline-block text-xs bg-white/20 px-2 py-1 rounded">
-                {currentReel.sport}
-              </span>
-            )}
-          </div>
+        {/* Bottom info */}
+        <div className="absolute bottom-6 left-4 right-20">
+          <p className="text-white font-semibold text-sm drop-shadow">
+            {currentReel.author?.full_name ?? (currentReel as any).author_name ?? "Unknown"}
+          </p>
+          {(currentReel.title ?? currentReel.caption) && (
+            <p className="text-white/90 text-sm mt-1 line-clamp-2 drop-shadow">
+              {currentReel.title ?? currentReel.caption}
+            </p>
+          )}
+          {currentReel.sport && (
+            <span className="inline-block mt-1.5 text-xs bg-white/20 text-white px-2 py-0.5 rounded-full">
+              {currentReel.sport}
+            </span>
+          )}
+        </div>
+
+        {/* Keyboard hint — desktop only */}
+        <div className="hidden lg:block absolute bottom-4 left-1/2 -translate-x-1/2 text-white/40 text-xs text-center whitespace-nowrap">
+          Space play/pause · ↑↓ navigate · ESC close
         </div>
       </div>
 
-      {/* Keyboard Hint */}
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white/50 text-xs text-center">
-        <div>Space to play/pause · ↑↓ to navigate · ESC to exit</div>
-      </div>
+      {/* Comments MobileDrawer */}
+      <MobileDrawer
+        isOpen={commentOpen}
+        onClose={() => setCommentOpen(false)}
+        title={`Comments on "${currentReel.title ?? currentReel.caption ?? "Reel"}"`}
+      >
+        <CommentSection
+          parentType="reel"
+          parentId={currentReel.id}
+          commentCount={currentReel.comment_count}
+        />
+      </MobileDrawer>
     </div>
   );
 }

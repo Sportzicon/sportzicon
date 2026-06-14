@@ -9,6 +9,8 @@ export interface Reel {
   author_id: string;
   author?: ReelAuthor;
   author_name?: string;
+  title?: string;
+  description?: string;
   caption?: string;
   video_url: string;
   thumbnail_url?: string;
