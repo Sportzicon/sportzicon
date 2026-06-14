@@ -4,35 +4,15 @@ import { asyncHandler } from "../../utils/async";
 import { requireAuth, optionalAuth } from "../../middleware/auth";
 import { validate } from "../../middleware/validate";
 import * as svc from "./blogs.service";
+import { createBlogSchema, updateBlogSchema, listBlogsSchema } from "./blogs.schemas";
 import { addComment, listComments } from "../posts/comments.service";
 
 const router = Router();
 
-const createSchema = z.object({
-  title: z.string().min(3).max(180),
-  body_markdown: z.string().min(20).max(50000),
-  excerpt: z.string().max(280).optional(),
-  cover_image_url: z.string().url().optional(),
-  tags: z.array(z.string().max(40)).max(20).optional(),
-  sport: z.string().max(60).optional(),
-  status: z.enum(["draft", "published"]).default("draft")
-});
-
-const updateSchema = createSchema.partial();
-
-const listQuery = z.object({
-  author_id: z.string().optional(),
-  tag: z.string().optional(),
-  sport: z.string().optional(),
-  status: z.enum(["draft", "published"]).optional(),
-  limit: z.coerce.number().int().min(1).max(50).default(20),
-  cursor: z.string().optional()
-});
-
 router.post(
   "/",
   requireAuth,
-  validate(createSchema),
+  validate(createBlogSchema),
   asyncHandler(async (req, res) => {
     const r = await svc.createBlog(req.user!.sub, req.body);
     res.status(201).json({ blog: r });
@@ -43,7 +23,7 @@ router.put(
   "/:id",
   requireAuth,
   validate(z.object({ id: z.string().min(8) }), "params"),
-  validate(updateSchema),
+  validate(updateBlogSchema),
   asyncHandler(async (req, res) => {
     const r = await svc.updateBlog(req.params.id, req.user!.sub, req.user!.role === "admin", req.body);
     res.json({ blog: r });
@@ -63,9 +43,10 @@ router.delete(
 router.get(
   "/",
   optionalAuth,
-  validate(listQuery, "query"),
+  validate(listBlogsSchema, "query"),
   asyncHandler(async (req, res) => {
-    const r = await svc.listBlogs(req.query as any);
+    const actor = req.user ? { id: req.user.sub, role: req.user.role } : undefined;
+    const r = await svc.listBlogs(req.query as any, actor);
     res.json(r);
   })
 );
@@ -76,7 +57,12 @@ router.get(
   validate(z.object({ idOrSlug: z.string().min(1) }), "params"),
   asyncHandler(async (req, res) => {
     const r = await svc.getBlog(req.params.idOrSlug);
-    res.json({ blog: r });
+    // If logged in, check liked status
+    let liked = false;
+    if (req.user) {
+      liked = await svc.checkLiked(r.id, req.user.sub);
+    }
+    res.json({ blog: { ...r, liked } });
   })
 );
 
@@ -102,7 +88,7 @@ router.delete(
 
 router.get(
   "/:id/comments",
-  requireAuth,
+  optionalAuth,
   validate(z.object({ id: z.string().min(8) }), "params"),
   asyncHandler(async (req, res) => {
     const limit = Math.min(Number(req.query.limit) || 20, 50);

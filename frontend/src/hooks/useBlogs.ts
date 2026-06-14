@@ -1,15 +1,20 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { blogService } from "../services";
 import { queryKeys } from "./queryKeys";
 import type { Blog, BlogFilters } from "../models";
 
 export function useBlogs(filters: BlogFilters = {}) {
-  const list = useQuery({
+  const infinite = useInfiniteQuery({
     queryKey: queryKeys.blogs(filters),
-    queryFn: () => blogService.list(filters),
+    queryFn: ({ pageParam }) =>
+      blogService.list({ ...filters, cursor: pageParam as string | undefined, limit: 20 }),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (lastPage) => lastPage.next_cursor ?? undefined,
   });
 
-  return { list };
+  const allItems = infinite.data?.pages.flatMap((p) => p.items) ?? [];
+
+  return { infinite, allItems };
 }
 
 export function useBlog(id: string, options?: { onDeleteSuccess?: () => void }) {
@@ -39,5 +44,49 @@ export function useBlog(id: string, options?: { onDeleteSuccess?: () => void }) 
     },
   });
 
-  return { detail, remove, save };
+  const like = useMutation({
+    mutationFn: () => blogService.like(id),
+    onMutate: async () => {
+      await qc.cancelQueries({ queryKey: queryKeys.blog(id) });
+      const prev = qc.getQueryData<Blog>(queryKeys.blog(id));
+      if (prev) {
+        qc.setQueryData(queryKeys.blog(id), {
+          ...prev,
+          liked: true,
+          like_count: prev.like_count + 1,
+        });
+      }
+      return { prev };
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prev) qc.setQueryData(queryKeys.blog(id), ctx.prev);
+    },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.blog(id) });
+    },
+  });
+
+  const unlike = useMutation({
+    mutationFn: () => blogService.unlike(id),
+    onMutate: async () => {
+      await qc.cancelQueries({ queryKey: queryKeys.blog(id) });
+      const prev = qc.getQueryData<Blog>(queryKeys.blog(id));
+      if (prev) {
+        qc.setQueryData(queryKeys.blog(id), {
+          ...prev,
+          liked: false,
+          like_count: Math.max(0, prev.like_count - 1),
+        });
+      }
+      return { prev };
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prev) qc.setQueryData(queryKeys.blog(id), ctx.prev);
+    },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.blog(id) });
+    },
+  });
+
+  return { detail, remove, save, like, unlike };
 }
