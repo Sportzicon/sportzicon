@@ -5,6 +5,7 @@ import { opportunityService } from "../services";
 import { humanizeError } from "../api/client";
 import { useAuthStore } from "../store/auth";
 import { hasRole } from "../utils/roles";
+import { useOpportunityApplication } from "../hooks/useApplications";
 import { Spinner, StatusPill, SectionHead, Kicker } from "../components/UI";
 import { MobileDrawer } from "../components/MobileDrawer";
 import { Trash2, Pencil, MoreVertical, ChevronDown } from "lucide-react";
@@ -286,13 +287,15 @@ export default function OpportunityDetail() {
   const { id = "" } = useParams();
   const user = useAuthStore((s) => s.user);
   const [applyOpen, setApplyOpen] = useState(false);
-  const [applied, setApplied] = useState(false);
+  const [justApplied, setJustApplied] = useState(false);
   const [saved, setSaved] = useState(false);
   const [pendingDelete, setPendingDelete] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [commentsOpen, setCommentsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const qc = useQueryClient();
+
+  const { application: existingApp } = useOpportunityApplication(id);
 
   useEffect(() => {
     function onClickOutside(e: MouseEvent) {
@@ -320,10 +323,13 @@ export default function OpportunityDetail() {
   if (!o) return <div className="panel p-8 text-center font-disp text-xl text-ink-70">Opportunity not found.</div>;
 
   const isPoster = hasRole(user?.role ?? "", "club", "organizer") && user?.id === o.posted_by_user_id;
-  const canApply = hasRole(user?.role ?? "", "athlete") && o.status === "open" && !applied;
   const deadline = deadlineInfo(o.application_deadline);
   const spotsLeft = o.vacancies != null ? o.vacancies - (o.vacancies_filled ?? 0) : null;
   const isFull = spotsLeft !== null && spotsLeft <= 0;
+
+  const alreadyApplied = justApplied || (existingApp != null && existingApp.status !== "withdrawn");
+  const currentAppStatus = existingApp?.status;
+  const canApply = hasRole(user?.role ?? "", "athlete") && o.status === "open" && !alreadyApplied;
 
   function ApplyButton({ className = "" }: { className?: string }) {
     if (isPoster) return (
@@ -331,20 +337,33 @@ export default function OpportunityDetail() {
         Review {o!.application_count} applicants →
       </Link>
     );
-    if (applied) return (
-      <Link to="/applications" className={`btn-secondary text-center flex items-center justify-center min-h-[44px] ${className}`}>View in tracker →</Link>
-    );
-    if (canApply && !isFull && !deadline.closed) return (
-      <button className={`btn-accent flex items-center justify-center min-h-[44px] ${className}`} onClick={() => setApplyOpen(true)}>Apply now →</button>
+    if (alreadyApplied) return (
+      <Link
+        to="/applications"
+        className={`btn-secondary text-center flex items-center justify-center min-h-[44px] ${className}`}
+      >
+        Applied ✓{currentAppStatus ? ` — ${currentAppStatus}` : ""} · View tracker
+      </Link>
     );
     if (deadline.closed) return (
-      <button className={`btn-secondary flex items-center justify-center min-h-[44px] ${className}`} disabled>Applications closed</button>
+      <button className={`btn-secondary flex items-center justify-center min-h-[44px] ${className}`} disabled>
+        Applications closed
+      </button>
     );
     if (isFull) return (
-      <button className={`btn-secondary flex items-center justify-center min-h-[44px] ${className}`} disabled>No vacancies</button>
+      <button className={`btn-secondary flex items-center justify-center min-h-[44px] ${className}`} disabled>
+        No vacancies
+      </button>
+    );
+    if (canApply) return (
+      <button className={`btn-accent flex items-center justify-center min-h-[44px] ${className}`} onClick={() => setApplyOpen(true)}>
+        Apply now →
+      </button>
     );
     if (!user) return (
-      <Link to="/login" className={`btn-primary text-center flex items-center justify-center min-h-[44px] ${className}`}>Sign in to apply</Link>
+      <Link to="/login" className={`btn-primary text-center flex items-center justify-center min-h-[44px] ${className}`}>
+        Sign in to apply
+      </Link>
     );
     return null;
   }
@@ -464,7 +483,7 @@ export default function OpportunityDetail() {
             </div>
           </CollapsibleSection>
 
-          {applied && (
+          {justApplied && (
             <div className="panel p-6 text-center animate-fadein">
               <div className="w-14 h-14 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center text-2xl mx-auto">✓</div>
               <h3 className="font-disp text-2xl mt-4">Application submitted!</h3>
@@ -538,7 +557,7 @@ export default function OpportunityDetail() {
         <ApplyModal
           opp={o}
           onClose={() => setApplyOpen(false)}
-          onSuccess={() => { setApplyOpen(false); setApplied(true); }}
+          onSuccess={() => { setApplyOpen(false); setJustApplied(true); }}
         />
       )}
 

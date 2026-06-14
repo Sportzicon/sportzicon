@@ -35,7 +35,10 @@ export class PrismaApplicationRepository implements IApplicationRepository {
       take: limit,
       include: {
         opportunity: {
-          select: { title: true, org_id: true, type: true, sport: true, status: true, posted_by_user_id: true },
+          select: {
+            title: true, org_id: true, type: true, sport: true, status: true, posted_by_user_id: true,
+            organization: { select: { org_name: true } },
+          },
         },
       },
     });
@@ -43,7 +46,10 @@ export class PrismaApplicationRepository implements IApplicationRepository {
     return rows.map(({ opportunity, ...r }) => ({
       ...r,
       opportunity_title: opportunity.title,
+      opportunity_sport: opportunity.sport,
+      opportunity_type: opportunity.type,
       org_id: opportunity.org_id,
+      org_name: opportunity.organization.org_name,
       poster_user_id: opportunity.posted_by_user_id,
     })) as unknown as ApplicationRecord[];
   }

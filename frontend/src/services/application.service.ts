@@ -14,11 +14,13 @@ export class ApplicationService {
     return res.data.items;
   }
 
-  async updateStatus(id: string, status: string, reason?: string): Promise<void> {
-    await this.client.put(`/applications/${id}/status`, { status, reason });
+  async updateStatus(id: string, status: string, reason?: string): Promise<Application> {
+    const res = await this.client.patch<{ application: Application }>(`/applications/${id}/status`, { status, reason });
+    return res.data.application;
   }
 
-  async withdraw(id: string): Promise<void> {
-    await this.client.put(`/applications/${id}/status`, { status: "withdrawn" });
+  async withdraw(id: string): Promise<Application> {
+    const res = await this.client.patch<{ application: Application }>(`/applications/${id}/status`, { status: "withdrawn" });
+    return res.data.application;
   }
 }

@@ -19,8 +19,8 @@ export const APPLICATION_TRANSITIONS: Transition<ApplicationStatus>[] = [
   { from: "shortlisted", to: "selected"    },
   { from: "shortlisted", to: "rejected"    },
 
-  // Applicant can withdraw at any non-terminal point
-  { from: ["pending", "shortlisted", "selected"], to: "withdrawn" },
+  // Applicant can withdraw at non-terminal points (selected is terminal)
+  { from: ["pending", "shortlisted"], to: "withdrawn" },
 ];
 
 /** States from which no further transitions are allowed. */

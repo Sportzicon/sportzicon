@@ -1,199 +1,320 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useMyApplications } from "../hooks";
-import { PageHeader, Spinner, EmptyState, StatusPill, Avatar, Tabs } from "../components/UI";
-import type { Application } from "../models";
+import { MobileDrawer } from "../components/MobileDrawer";
+import { PageHeader, Spinner, EmptyState, StatusPill } from "../components/UI";
+import { humanizeError } from "../api/client";
+import type { Application, ApplicationStatus } from "../models";
 
-function StageTrack({ status }: { status: string }) {
-  const order = ["pending", "shortlisted", "selected"];
-  const terminalBad = status === "rejected" || status === "withdrawn";
-  const idx = order.indexOf(status);
-  const steps = [
-    { k: "pending",     l: "Applied" },
-    { k: "shortlisted", l: "Shortlisted" },
-    { k: "selected",    l: terminalBad ? (status === "rejected" ? "Not selected" : "Withdrawn") : "Selected" }
-  ];
+const STATUS_TABS: { id: string; label: string }[] = [
+  { id: "all",         label: "All" },
+  { id: "pending",     label: "Pending" },
+  { id: "shortlisted", label: "Shortlisted" },
+  { id: "selected",    label: "Selected" },
+  { id: "rejected",    label: "Rejected" },
+  { id: "withdrawn",   label: "Withdrawn" },
+];
+
+const STATUS_EMPTY: Record<string, { title: string; hint: string }> = {
+  all:         { title: "No applications yet",     hint: "Find an opportunity and apply to start tracking your progress." },
+  pending:     { title: "No pending applications", hint: "Applications awaiting club review will appear here." },
+  shortlisted: { title: "No shortlisted applications", hint: "Clubs will shortlist you when you advance past the first stage." },
+  selected:    { title: "No selections yet",       hint: "Congratulations — selected applications will appear here." },
+  rejected:    { title: "No rejections",           hint: "Rejected applications will appear here." },
+  withdrawn:   { title: "No withdrawn applications", hint: "Applications you withdraw will appear here." },
+};
+
+const STATUS_BADGE_COLOR: Record<ApplicationStatus, string> = {
+  pending:     "bg-amber-100 text-amber-800",
+  shortlisted: "bg-blue-100 text-blue-800",
+  selected:    "bg-emerald-100 text-emerald-800",
+  rejected:    "bg-red-100 text-red-800",
+  withdrawn:   "bg-gray-100 text-gray-600",
+};
+
+function StatusBadge({ status }: { status: ApplicationStatus }) {
   return (
-    <div className="flex items-center gap-0">
-      {steps.map((s, i) => {
-        const reached  = !terminalBad && idx >= i;
-        const isBadEnd = terminalBad && i === 2;
-        const color    = isBadEnd
-          ? status === "rejected" ? "#C0392B" : "#9A9286"
-          : reached ? "#FA4D14" : "rgba(20,17,13,0.15)";
-        return (
-          <div key={s.k} className="flex items-center">
-            <div className="flex items-center gap-1.5">
-              <span className="w-[11px] h-[11px] rounded-full flex-shrink-0 border-[1.5px]"
-                style={{ background: (reached || isBadEnd) ? color : "transparent", borderColor: (reached || isBadEnd) ? color : "rgba(20,17,13,0.2)" }} />
-              <span className="font-mononum text-[10.5px] uppercase tracking-[0.04em]"
-                style={{ color: (reached || isBadEnd) ? "#14110D" : "#9A9286" }}>{s.l}</span>
-            </div>
-            {i < 2 && <span className="h-[1.5px] min-w-[22px] mx-2.5 flex-shrink-0"
-              style={{ background: (!terminalBad && idx > i) ? "#FA4D14" : "rgba(20,17,13,0.15)" }} />}
-          </div>
-        );
-      })}
+    <span className={`font-mononum text-[10px] uppercase tracking-widest px-2 py-0.5 rounded ${STATUS_BADGE_COLOR[status]}`}>
+      {status}
+    </span>
+  );
+}
+
+function WithdrawConfirm({
+  app,
+  onConfirm,
+  onCancel,
+  isPending,
+  error,
+}: {
+  app: Application;
+  onConfirm: () => void;
+  onCancel: () => void;
+  isPending: boolean;
+  error: string | null;
+}) {
+  return (
+    <div className="space-y-4">
+      <p className="text-[14px] text-ink-70 leading-relaxed">
+        Are you sure you want to withdraw your application for{" "}
+        <span className="font-semibold text-ink">{app.opportunity_title}</span>?
+        This action cannot be undone.
+      </p>
+      {error && (
+        <div className="rounded bg-red-50 border border-red-200 p-3 text-sm text-red-800">{error}</div>
+      )}
+      <div className="flex gap-3">
+        <button
+          className="btn-danger flex-1 min-h-[44px]"
+          onClick={onConfirm}
+          disabled={isPending}
+        >
+          {isPending ? "Withdrawing…" : "Confirm withdrawal"}
+        </button>
+        <button className="btn-secondary min-h-[44px]" onClick={onCancel}>
+          Cancel
+        </button>
+      </div>
     </div>
   );
 }
 
-function Metric({ label, value, accent = false }: { label: string; value: number; accent?: boolean }) {
-  return (
-    <div className="panel px-4 py-4">
-      <div className="lab">{label}</div>
-      <div className={`font-disp mt-2 text-4xl ${accent ? "text-brand-500" : "text-ink"}`}>{value}</div>
-    </div>
-  );
-}
+function ApplicationCard({
+  app,
+  onWithdraw,
+}: {
+  app: Application;
+  onWithdraw: (app: Application) => void;
+}) {
+  const canWithdraw = app.status === "pending" || app.status === "shortlisted";
+  const rejectionReason = app.rejection_reason ?? (app.history as any[])?.find((h) => h.status === "rejected")?.reason;
 
-function HistoryTimeline({ history }: { history: any[] }) {
   return (
-    <div className="mt-4 pt-4 border-t border-hairsoft animate-fadein">
-      {history.map((h: any, i: number) => (
-        <div key={i} className="flex gap-3 pb-3">
-          <div className="flex flex-col items-center">
-            <span className="w-2 h-2 rounded-full bg-brand-500 flex-shrink-0 mt-1.5" />
-            {i < history.length - 1 && <span className="w-px flex-1 bg-hair mt-1" style={{ minHeight: 18 }} />}
+    <div className="panel p-4 lg:p-5 space-y-3">
+      {/* Header row */}
+      <div className="flex items-start gap-3">
+        <div className="flex-1 min-w-0">
+          <div className="flex flex-wrap items-center gap-1.5 mb-1">
+            {app.opportunity_sport && (
+              <span className="badge capitalize">{app.opportunity_sport}</span>
+            )}
+            {app.opportunity_type && (
+              <span className="badge capitalize">{app.opportunity_type}</span>
+            )}
+            <StatusBadge status={app.status} />
           </div>
-          <div>
-            <div className="text-[13px]">
-              <span className="capitalize font-semibold text-ink">{h.status}</span>
-              <span className="lab ml-2">{new Date(h.at).toLocaleDateString()} · by {h.by === "system" ? "System" : "Club"}</span>
-            </div>
-            {h.note && <div className="text-[12.5px] text-ink-sub mt-0.5 leading-snug">{h.note}</div>}
-          </div>
+          <Link
+            to={`/opportunities/${app.opportunity_id}`}
+            className="font-disp text-lg leading-tight hover:text-brand-500 transition block"
+          >
+            {app.opportunity_title ?? "Opportunity"}
+          </Link>
+          {app.org_name && (
+            <div className="lab mt-0.5">{app.org_name}</div>
+          )}
         </div>
-      ))}
+      </div>
+
+      {/* Applied date */}
+      <div className="text-[12px] text-ink-sub">
+        Applied {new Date(app.applied_at).toLocaleDateString()}
+        {app.updated_at !== app.applied_at && (
+          <> · Updated {new Date(app.updated_at).toLocaleDateString()}</>
+        )}
+      </div>
+
+      {/* Contextual messages */}
+      {app.status === "shortlisted" && (
+        <div className="rounded px-3 py-2.5 text-[13px] text-blue-900 leading-snug" style={{ background: "#E2EAF8" }}>
+          <span className="font-mononum text-[10px] uppercase tracking-[0.08em] mr-1.5">Shortlisted ·</span>
+          Awaiting the club's next decision — you may be invited to a trial or interview.
+        </div>
+      )}
+      {app.status === "selected" && (
+        <div className="rounded px-3 py-2.5 text-[13px] text-emerald-900 leading-snug" style={{ background: "#E2F0E8" }}>
+          <span className="font-mononum text-[10px] uppercase tracking-[0.08em] mr-1.5">Selected ·</span>
+          Congratulations! Contact the club via Messages to discuss next steps.
+        </div>
+      )}
+      {app.status === "rejected" && rejectionReason && (
+        <div className="rounded px-3 py-2.5 text-[13px] text-red-900 leading-snug" style={{ background: "#F8E3E0" }}>
+          <span className="font-mononum text-[10px] uppercase tracking-[0.08em] mr-1.5">Reason ·</span>
+          {rejectionReason}
+        </div>
+      )}
+
+      {/* Actions */}
+      {canWithdraw && (
+        <div className="flex justify-end pt-1">
+          <button
+            className="btn-ghost text-[12.5px] min-h-[44px]"
+            onClick={() => onWithdraw(app)}
+          >
+            Withdraw
+          </button>
+        </div>
+      )}
     </div>
   );
 }
 
 export default function MyApplications() {
-  const navigate = useNavigate();
   const { list, withdraw } = useMyApplications();
-  const [activeTab, setActiveTab] = useState("active");
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState("all");
+  const [withdrawTarget, setWithdrawTarget] = useState<Application | null>(null);
+  const [withdrawError, setWithdrawError] = useState<string | null>(null);
 
-  if (list.isLoading) return <div className="flex justify-center p-12"><Spinner className="text-brand-500" /></div>;
+  function handleWithdrawClick(app: Application) {
+    setWithdrawTarget(app);
+    setWithdrawError(null);
+  }
+
+  function handleWithdrawConfirm() {
+    if (!withdrawTarget) return;
+    withdraw.mutate(withdrawTarget.id, {
+      onSuccess: () => setWithdrawTarget(null),
+      onError: (err) => setWithdrawError(humanizeError(err)),
+    });
+  }
+
+  if (list.isLoading) {
+    return <div className="flex justify-center p-12"><Spinner className="text-brand-500" /></div>;
+  }
 
   const apps: Application[] = list.data ?? [];
-  const counts = {
-    pending:     apps.filter((a) => a.status === "pending").length,
-    shortlisted: apps.filter((a) => a.status === "shortlisted").length,
-    selected:    apps.filter((a) => a.status === "selected").length,
-    rejected:    apps.filter((a) => a.status === "rejected").length,
-    withdrawn:   apps.filter((a) => a.status === "withdrawn").length,
-  };
 
-  const tabs = [
-    { id: "active",      label: "Active" },
-    { id: "all",         label: "All" },
-    { id: "shortlisted", label: `Shortlisted${counts.shortlisted ? ` (${counts.shortlisted})` : ""}` },
-    { id: "selected",    label: `Selected${counts.selected ? ` (${counts.selected})` : ""}` },
-    { id: "closed",      label: "Closed" },
-  ];
+  const tabCounts = STATUS_TABS.reduce<Record<string, number>>((acc, tab) => {
+    if (tab.id === "all") acc[tab.id] = apps.length;
+    else acc[tab.id] = apps.filter((a) => a.status === tab.id).length;
+    return acc;
+  }, {});
 
-  const filtered = apps.filter((a) => {
-    if (activeTab === "active")      return ["pending", "shortlisted"].includes(a.status);
-    if (activeTab === "shortlisted") return a.status === "shortlisted";
-    if (activeTab === "selected")    return a.status === "selected";
-    if (activeTab === "closed")      return ["rejected", "withdrawn"].includes(a.status);
-    return true;
-  });
+  const filtered = activeTab === "all"
+    ? apps
+    : apps.filter((a) => a.status === activeTab);
+
+  const emptyState = STATUS_EMPTY[activeTab] ?? STATUS_EMPTY.all;
 
   return (
-    <div className="max-w-3xl space-y-5">
-      <PageHeader title="My applications" subtitle="Application tracker"
-        action={<Link to="/opportunities" className="btn-secondary">Browse opportunities →</Link>} />
+    <div className="max-w-4xl space-y-5">
+      <PageHeader
+        title="My applications"
+        subtitle="Track every application from submission to selection"
+        action={
+          <Link to="/opportunities" className="btn-secondary min-h-[44px] flex items-center">
+            Browse opportunities →
+          </Link>
+        }
+      />
 
       {!apps.length ? (
-        <EmptyState title="No applications yet"
-          hint="Find an opportunity and apply to start tracking your progress here."
-          action={<Link to="/opportunities" className="btn-accent">Browse opportunities</Link>} />
+        <EmptyState
+          title={emptyState.title}
+          hint={emptyState.hint}
+          action={<Link to="/opportunities" className="btn-accent min-h-[44px] inline-flex items-center">Browse opportunities</Link>}
+        />
       ) : (
         <>
-          <div className="grid grid-cols-3 gap-3.5">
-            <Metric label="Pending"     value={counts.pending} />
-            <Metric label="Shortlisted" value={counts.shortlisted} accent />
-            <Metric label="Selected"    value={counts.selected} />
+          {/* Summary stats */}
+          <div className="grid grid-cols-3 sm:grid-cols-5 gap-2.5">
+            {[
+              { label: "Pending",     count: tabCounts.pending,     color: "#B6791E" },
+              { label: "Shortlisted", count: tabCounts.shortlisted, color: "#2B66C9" },
+              { label: "Selected",    count: tabCounts.selected,    color: "#2E7D52" },
+              { label: "Rejected",    count: tabCounts.rejected,    color: "#C0392B" },
+              { label: "Withdrawn",   count: tabCounts.withdrawn,   color: "#9A9286" },
+            ].map(({ label, count, color }) => (
+              <div key={label} className="panel px-3 py-3" style={{ borderTop: `2px solid ${color}` }}>
+                <div className="font-disp text-2xl" style={{ color }}>{count}</div>
+                <div className="lab mt-1 text-[10px]">{label}</div>
+              </div>
+            ))}
           </div>
 
-          <Tabs tabs={tabs} active={activeTab} onChange={setActiveTab} />
-
-          {!filtered.length ? (
-            <EmptyState title="Nothing in this stage"
-              hint="Applications you submit will appear here, tracked through every stage."
-              action={<Link to="/opportunities" className="btn-secondary">Browse opportunities</Link>} />
-          ) : (
-            <div className="space-y-4">
-              {filtered.map((a: Application) => {
-                const isExpanded  = expandedId === a.id;
-                const canWithdraw = a.status === "pending" || a.status === "shortlisted";
-                const lastHistory = a.history?.[a.history.length - 1];
+          {/* Status filter tabs — horizontally scrollable */}
+          <div className="overflow-x-auto -mx-4 px-4 lg:mx-0 lg:px-0">
+            <div className="flex gap-0 border-b border-hair min-w-max lg:min-w-0">
+              {STATUS_TABS.map((tab) => {
+                const count = tabCounts[tab.id] ?? 0;
+                const isActive = activeTab === tab.id;
                 return (
-                  <div key={a.id} className="panel p-[18px]">
-                    <div className="flex gap-4 items-start">
-                      <Avatar name={a.opportunity_title} size={44} />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex flex-wrap items-center gap-2 mb-1.5">
-                          <span className="badge">Opportunity</span>
-                          <span className="lab">Applied {new Date(a.applied_at).toLocaleDateString()} · Updated {new Date(a.updated_at).toLocaleDateString()}</span>
-                        </div>
-                        <Link to={`/opportunities/${a.opportunity_id}`}
-                          className="font-disp text-xl leading-tight hover:text-brand-500 transition">
-                          {a.opportunity_title}
-                        </Link>
-                      </div>
-                      <StatusPill status={a.status} />
-                    </div>
-
-                    <div className="mt-4 py-3.5 border-y border-hairsoft"><StageTrack status={a.status} /></div>
-
-                    {a.status === "shortlisted" && (
-                      <div className="mt-3 px-3 py-3 rounded text-[13px] text-blue-900 leading-snug" style={{ background: "#E2EAF8" }}>
-                        <span className="font-mononum text-[10px] uppercase tracking-[0.08em] mr-2">Next ·</span>
-                        {(lastHistory as any)?.note ?? "Awaiting the club's next decision — you may be invited to a conditioning camp or interview."}
-                      </div>
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`font-mononum text-[11.5px] tracking-[0.05em] px-4 py-2.5 border-b-2 -mb-px transition whitespace-nowrap min-h-[44px] ${
+                      isActive
+                        ? "border-brand-500 text-ink font-semibold"
+                        : "border-transparent text-ink-sub hover:text-ink"
+                    }`}
+                  >
+                    {tab.label}
+                    {count > 0 && (
+                      <span className={`ml-1.5 text-[10px] ${isActive ? "text-brand-500" : "text-ink-faint"}`}>
+                        {count}
+                      </span>
                     )}
-                    {a.status === "selected" && (
-                      <div className="mt-3 px-3 py-3 rounded text-[13px] text-emerald-900 leading-snug" style={{ background: "#E2F0E8" }}>
-                        <span className="font-mononum text-[10px] uppercase tracking-[0.08em] mr-2">Selected ·</span>
-                        Congratulations! Contact the club via Messages to discuss next steps.
-                      </div>
-                    )}
-                    {a.status === "rejected" && (lastHistory as any)?.note && (
-                      <div className="mt-3 px-3 py-3 rounded text-[13px] text-red-900 leading-snug" style={{ background: "#F8E3E0" }}>
-                        <span className="font-mononum text-[10px] uppercase tracking-[0.08em] mr-2">Reason ·</span>
-                        {(lastHistory as any).note}
-                      </div>
-                    )}
-
-                    <div className="flex items-center justify-between mt-4">
-                      <button onClick={() => setExpandedId(isExpanded ? null : a.id)} className="btn-ghost text-[12px]">
-                        {isExpanded ? "Hide history ▴" : "View history ▾"}
-                      </button>
-                      <div className="flex gap-2">
-                        {(a.status === "shortlisted" || a.status === "selected") && a.poster_user_id && (
-                          <button className="btn-secondary text-[12.5px]" onClick={() => navigate(`/messages?to=${a.poster_user_id}`)}>
-                            Message club
-                          </button>
-                        )}
-                        {canWithdraw && (
-                          <button className="btn-ghost text-[12.5px]" disabled={withdraw.isPending}
-                            onClick={() => withdraw.mutate(a.id)}>
-                            Withdraw
-                          </button>
-                        )}
-                      </div>
-                    </div>
-
-                    {isExpanded && a.history?.length > 0 && <HistoryTimeline history={a.history} />}
-                  </div>
+                  </button>
                 );
               })}
             </div>
+          </div>
+
+          {/* Applications grid */}
+          {!filtered.length ? (
+            <EmptyState
+              title={emptyState.title}
+              hint={emptyState.hint}
+              action={
+                <Link to="/opportunities" className="btn-secondary min-h-[44px] inline-flex items-center">
+                  Browse opportunities
+                </Link>
+              }
+            />
+          ) : (
+            <div className="grid gap-4 lg:grid-cols-2">
+              {filtered.map((app) => (
+                <ApplicationCard key={app.id} app={app} onWithdraw={handleWithdrawClick} />
+              ))}
+            </div>
           )}
+        </>
+      )}
+
+      {/* Withdraw confirmation — MobileDrawer on mobile, inline modal on desktop */}
+      {withdrawTarget && (
+        <>
+          {/* Mobile: MobileDrawer */}
+          <MobileDrawer
+            isOpen={!!withdrawTarget}
+            onClose={() => setWithdrawTarget(null)}
+            title="Withdraw application"
+          >
+            <WithdrawConfirm
+              app={withdrawTarget}
+              onConfirm={handleWithdrawConfirm}
+              onCancel={() => setWithdrawTarget(null)}
+              isPending={withdraw.isPending}
+              error={withdrawError}
+            />
+          </MobileDrawer>
+
+          {/* Desktop: overlay modal */}
+          <div
+            className="hidden lg:flex fixed inset-0 z-50 items-center justify-center p-4"
+            style={{ background: "rgba(20,17,13,0.55)" }}
+            onClick={(e) => e.target === e.currentTarget && setWithdrawTarget(null)}
+          >
+            <div className="panel w-full max-w-md p-6 animate-popin">
+              <h3 className="font-disp text-xl mb-4">Withdraw application</h3>
+              <WithdrawConfirm
+                app={withdrawTarget}
+                onConfirm={handleWithdrawConfirm}
+                onCancel={() => setWithdrawTarget(null)}
+                isPending={withdraw.isPending}
+                error={withdrawError}
+              />
+            </div>
+          </div>
         </>
       )}
     </div>
