@@ -3,6 +3,7 @@ import { env } from "./config/env";
 import { logger } from "./config/logger";
 import { ensureBuckets } from "./config/storage";
 import { bootstrapAdminIfNeeded } from "./modules/auth/auth.service";
+import { checkAndCloseExpiredOpportunities } from "./modules/opportunities/opportunities.service";
 import { prisma } from "./config/prisma";
 
 async function main() {
@@ -22,6 +23,11 @@ async function main() {
   const server = app.listen(env.PORT, () => {
     logger.info({ port: env.PORT, env: env.NODE_ENV }, "Sportzicon API listening");
   });
+
+  // Auto-close opportunities whose deadline has passed — runs every 5 minutes.
+  void checkAndCloseExpiredOpportunities();
+  const autoCloseTimer = setInterval(() => void checkAndCloseExpiredOpportunities(), 5 * 60 * 1000);
+  autoCloseTimer.unref();
 
   // Graceful shutdown — Cloud Run sends SIGTERM at the end of a revision's lifecycle.
   const shutdown = (signal: string) => {

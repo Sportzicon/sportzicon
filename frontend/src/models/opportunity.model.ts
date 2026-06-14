@@ -40,6 +40,7 @@ export interface OpportunityFilters {
 export interface OpportunityPage {
   data: Opportunity[];
   nextCursor: string | null;
+  total: number;
 }
 
 export interface CreateOpportunityRequest {

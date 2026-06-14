@@ -1,15 +1,20 @@
 import { z } from "zod";
+import { VALID_SPORTS } from "../../utils/sportValidation";
 
 const dateIso = z.string().regex(/^\d{4}-\d{2}-\d{2}/, "Use ISO date YYYY-MM-DD");
-const today = () => new Date().toISOString().split("T")[0];
+
+const futureDateIso = dateIso.refine(
+  (d) => new Date(d) > new Date(),
+  "Deadline must be in the future"
+);
 
 export const createOpportunitySchema = z
   .object({
     org_id: z.string().min(8),
-    title: z.string().min(3).max(140),
+    title: z.string().trim().min(5, "Title must be at least 5 characters").max(200),
     type: z.enum(["trial", "recruitment", "scholarship", "tournament", "coaching_job"]),
-    sport: z.string().min(2).max(60),
-    description: z.string().min(10).max(5000),
+    sport: z.string().refine((s) => VALID_SPORTS.includes(s), { message: "Invalid sport — must be one of the supported sports" }),
+    description: z.string().trim().min(20, "Description must be at least 20 characters").max(5000),
     eligibility: z.string().max(2000).optional(),
     age_min: z.number().int().min(0).max(120),
     age_max: z.number().int().min(0).max(120),
@@ -17,15 +22,15 @@ export const createOpportunitySchema = z
     experience_level_required: z
       .enum(["any", "beginner", "amateur", "semi_pro", "professional"])
       .default("any"),
-    country: z.string().min(2).max(80),
-    state: z.string().min(1).max(80),
-    city: z.string().min(1).max(80),
+    country: z.string().min(2).max(200),
+    state: z.string().min(1).max(200),
+    city: z.string().min(1).max(200),
     start_date: dateIso.optional(),
     end_date: dateIso.optional(),
-    application_deadline: dateIso,
+    application_deadline: futureDateIso,
     entry_fee: z.number().nonnegative().optional(),
     documents_required: z.array(z.string().max(120)).max(20).optional(),
-    vacancies: z.number().int().positive().optional(),
+    vacancies: z.number().int().min(1, "Vacancies must be at least 1").max(1000, "Vacancies cannot exceed 1000").optional(),
     contact_email: z.string().email().optional(),
     contact_phone: z.string().max(20).optional()
   })
@@ -37,19 +42,15 @@ export const createOpportunitySchema = z
   .refine((v) => !v.start_date || v.application_deadline <= v.start_date, {
     message: "application_deadline must be on or before start_date",
     path: ["application_deadline"]
-  })
-  .refine((v) => v.application_deadline >= today(), {
-    message: "application_deadline cannot be in the past",
-    path: ["application_deadline"]
   });
 
 export const updateOpportunitySchema = z
   .object({
-    title: z.string().min(3).max(140).optional(),
-    description: z.string().min(10).max(5000).optional(),
+    title: z.string().trim().min(5).max(200).optional(),
+    description: z.string().trim().min(20).max(5000).optional(),
     eligibility: z.string().max(2000).optional(),
-    application_deadline: dateIso.optional(),
-    vacancies: z.number().int().positive().optional(),
+    application_deadline: futureDateIso.optional(),
+    vacancies: z.number().int().min(1).max(1000).optional(),
     status: z.enum(["open", "closed", "filled"]).optional(),
     contact_email: z.string().email().optional(),
     contact_phone: z.string().max(20).optional()
@@ -58,12 +59,16 @@ export const updateOpportunitySchema = z
 
 export const listOpportunitiesQuery = z.object({
   sport: z.string().optional(),
-  type: z.string().optional(),
-  country: z.string().optional(),
-  city: z.string().optional(),
+  type: z.enum(["trial", "recruitment", "scholarship", "tournament", "coaching_job"]).optional(),
+  sort: z.enum(["newest", "deadline"]).default("newest"),
+  cursor: z.string().optional(),
+  limit: z.coerce.number().int().min(1).max(50).default(20),
+  // text search
+  q: z.string().max(200).optional(),
+  // legacy / extended filters kept for backwards compat
   status: z.enum(["open", "closed", "filled"]).optional(),
   org_id: z.string().optional(),
-  sort: z.enum(["newest", "deadline"]).default("newest"),
-  limit: z.coerce.number().int().min(1).max(100).default(20),
-  cursor: z.string().optional()
+  country: z.string().optional(),
+  city: z.string().optional(),
+  verified_org: z.coerce.boolean().optional(),
 });

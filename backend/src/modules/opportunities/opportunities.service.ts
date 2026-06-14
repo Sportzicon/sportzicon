@@ -1,5 +1,7 @@
 import { prisma } from "../../config/prisma";
-import { Forbidden, NotFound } from "../../utils/errors";
+import { eventBus } from "../../lib/EventBus";
+import { Forbidden, NotFound, UnprocessableEntity } from "../../utils/errors";
+import { logger } from "../../config/logger";
 import type { Role } from "../../types/domain";
 
 export async function createOpportunity(actorId: string, actorRole: Role, input: Record<string, unknown>) {
@@ -38,10 +40,19 @@ export async function createOpportunity(actorId: string, actorRole: Role, input:
 }
 
 export async function updateOpportunity(id: string, actorId: string, actorRole: Role, patch: Record<string, unknown>) {
-  const opp = await prisma.opportunity.findUnique({ where: { id } });
+  const opp = await prisma.opportunity.findUnique({
+    where: { id },
+    include: { organization: { select: { owner_user_id: true } } }
+  });
   if (!opp) throw NotFound("Opportunity not found");
-  if (opp.posted_by_user_id !== actorId && actorRole !== "admin")
-    throw Forbidden("Only the poster or an admin can update this opportunity");
+
+  // Only org owner or admin may update
+  if (opp.organization.owner_user_id !== actorId && actorRole !== "admin")
+    throw Forbidden("Only the organization owner or an admin can update this opportunity");
+
+  // Cannot update a closed or filled opportunity
+  if (opp.status === "closed" || opp.status === "filled")
+    throw UnprocessableEntity(`Cannot update a ${opp.status} opportunity`);
 
   const allowed = [
     "title", "type", "sport", "description", "eligibility", "age_min", "age_max",
@@ -61,17 +72,25 @@ export async function updateOpportunity(id: string, actorId: string, actorRole: 
 export async function getOpportunity(id: string) {
   const opp = await prisma.opportunity.findUnique({
     where: { id },
-    include: { _count: { select: { applications: true } } }
+    include: {
+      _count: { select: { applications: true } },
+      organization: { select: { org_name: true } }
+    }
   });
   if (!opp) throw NotFound("Opportunity not found");
 
-  const { _count, ...rest } = opp;
+  const { _count, organization, ...rest } = opp;
   const realAppCount = _count.applications;
   const realFilled = await prisma.application.count({
     where: { opportunity_id: id, status: "selected" }
   });
 
-  const base = { ...rest, application_count: realAppCount, vacancies_filled: realFilled };
+  const base = {
+    ...rest,
+    org_name: organization?.org_name,
+    application_count: realAppCount,
+    vacancies_filled: realFilled
+  };
 
   if (base.status === "open" && new Date(base.application_deadline) < new Date()) {
     await prisma.opportunity.update({ where: { id }, data: { status: "closed" } });
@@ -81,55 +100,100 @@ export async function getOpportunity(id: string) {
 }
 
 export async function deleteOpportunity(id: string, actorId: string, actorRole: Role) {
-  const opp = await prisma.opportunity.findUnique({ where: { id }, select: { posted_by_user_id: true } });
+  const opp = await prisma.opportunity.findUnique({
+    where: { id },
+    include: { organization: { select: { owner_user_id: true } } }
+  });
   if (!opp) throw NotFound("Opportunity not found");
-  if (opp.posted_by_user_id !== actorId && actorRole !== "admin")
-    throw Forbidden("Only the poster or an admin can delete this opportunity");
-  await prisma.opportunity.delete({ where: { id } });
+
+  // Only org owner or admin may delete
+  if (opp.organization.owner_user_id !== actorId && actorRole !== "admin")
+    throw Forbidden("Only the organization owner or an admin can delete this opportunity");
+
+  // Collect pending/shortlisted apps for notification before deleting
+  const appsToWithdraw = await prisma.application.findMany({
+    where: { opportunity_id: id, status: { in: ["pending", "shortlisted"] } },
+    select: { id: true, applicant_user_id: true }
+  });
+
+  // Transition pending/shortlisted to withdrawn, then delete all apps, then delete opp
+  await prisma.$transaction([
+    prisma.application.updateMany({
+      where: { opportunity_id: id, status: { in: ["pending", "shortlisted"] } },
+      data: { status: "withdrawn" }
+    }),
+    prisma.application.deleteMany({ where: { opportunity_id: id } }),
+    prisma.opportunity.delete({ where: { id } })
+  ]);
+
+  // Emit notification events for each withdrawn application
+  for (const app of appsToWithdraw) {
+    eventBus.emit("application.status_changed", {
+      applicationId: app.id,
+      opportunityTitle: opp.title,
+      athleteId: app.applicant_user_id,
+      clubId: opp.org_id,
+      fromStatus: "pending",
+      toStatus: "withdrawn",
+      actorId
+    });
+  }
+
   return { ok: true };
 }
 
 export async function listOpportunities(q: {
   sport?: string;
   type?: string;
-  country?: string;
-  city?: string;
-  status?: string;
-  org_id?: string;
   sort?: "newest" | "deadline";
   limit: number;
   cursor?: string;
+  // extended filters
+  status?: string;
+  org_id?: string;
+  country?: string;
+  city?: string;
+  q?: string;
+  verified_org?: boolean;
 }) {
-  const where: Record<string, unknown> = {};
-  if (q.status) where.status = q.status;
-  if (q.sport) where.sport = { contains: q.sport, mode: "insensitive" };
+  const where: Record<string, unknown> = {
+    status: q.status ?? "open"
+  };
+  if (q.sport) where.sport = q.sport;
   if (q.type) where.type = q.type;
   if (q.country) where.country = { contains: q.country, mode: "insensitive" };
   if (q.city) where.city = { contains: q.city, mode: "insensitive" };
   if (q.org_id) where.org_id = q.org_id;
+  if (q.q) where.title_lower = { contains: q.q.toLowerCase() };
+  if (q.verified_org) where.organization = { is_verified: true };
 
-  // `id` is the stable tiebreaker so cursor pagination stays deterministic
-  // even when the primary sort key has duplicate values.
   const orderBy =
     q.sort === "deadline"
       ? [{ application_deadline: "asc" as const }, { id: "asc" as const }]
       : [{ created_at: "desc" as const }, { id: "desc" as const }];
 
-  const rows = await prisma.opportunity.findMany({
-    where,
-    orderBy,
-    take: q.limit + 1,
-    ...(q.cursor ? { cursor: { id: q.cursor }, skip: 1 } : {}),
-    include: { _count: { select: { applications: true } } }
-  });
+  const [rows, total] = await Promise.all([
+    prisma.opportunity.findMany({
+      where,
+      orderBy,
+      take: q.limit + 1,
+      ...(q.cursor ? { cursor: { id: q.cursor }, skip: 1 } : {}),
+      include: {
+        _count: { select: { applications: true } },
+        organization: { select: { org_name: true } }
+      }
+    }),
+    prisma.opportunity.count({ where })
+  ]);
 
   const hasMore = rows.length > q.limit;
   const page = hasMore ? rows.slice(0, q.limit) : rows;
-  const data = page.map(({ _count, ...opp }) => ({
+  const data = page.map(({ _count, organization, ...opp }) => ({
     ...opp,
+    org_name: organization?.org_name,
     application_count: _count.applications
   }));
-  return { data, nextCursor: hasMore ? data[data.length - 1].id : null };
+  return { data, nextCursor: hasMore ? data[data.length - 1].id : null, total };
 }
 
 export async function bumpApplicationCount(id: string, delta: number) {
@@ -144,4 +208,20 @@ export async function markFilled(id: string) {
     where: { id },
     data: { vacancies_filled: { increment: 1 } }
   });
+}
+
+export async function checkAndCloseExpiredOpportunities(): Promise<void> {
+  try {
+    const result = await prisma.$executeRaw`
+      UPDATE "Opportunity"
+      SET status = 'closed', updated_at = NOW()
+      WHERE status = 'open'
+        AND application_deadline < NOW()::date
+    `;
+    if (result > 0) {
+      logger.info({ count: result }, "auto-closed expired opportunities");
+    }
+  } catch (err) {
+    logger.error({ err }, "failed to auto-close expired opportunities");
+  }
 }
