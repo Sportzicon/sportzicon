@@ -10,6 +10,7 @@ export function useComments(parentType: CommentParentType, parentId: string) {
   const list = useQuery({
     queryKey: key,
     queryFn: () => commentService.list(parentType, parentId),
+    select: (page) => page.data,
   });
 
   const add = useMutation({

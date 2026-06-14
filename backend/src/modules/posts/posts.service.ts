@@ -12,7 +12,7 @@ export async function createPost(authorId: string, input: Record<string, unknown
     data: {
       author_id: authorId,
       type: (input.type as string) ?? "post",
-      text: input.text as string,
+      text: (input.text as string).trim(),
       media_urls: (input.media_urls as string[]) ?? [],
       sport: input.sport as string | undefined,
       tags: (input.tags as string[]) ?? []
@@ -75,7 +75,7 @@ export async function listPosts(q: {
   return { items, next_cursor: hasMore ? items[items.length - 1].id : null };
 }
 
-export async function feedForUser(userId: string, limit = 20) {
+export async function feedForUser(userId: string, limit = 20, cursor?: string) {
   const followeeIds = await prisma.follow
     .findMany({ where: { follower_id: userId }, select: { followee_id: true } })
     .then((rows) => rows.map((r) => r.followee_id));
@@ -83,45 +83,44 @@ export async function feedForUser(userId: string, limit = 20) {
   const rows = await prisma.post.findMany({
     where: { author_id: { in: [userId, ...followeeIds] } },
     orderBy: { created_at: "desc" },
-    take: limit,
+    take: limit + 1,
+    ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
     include: {
       author: { select: { id: true, full_name: true, role: true, profile_photo_url: true } },
       _count: { select: { likes: true, comments: true } }
     }
   });
 
-  return { items: rows.map(flattenPost) };
+  const hasMore = rows.length > limit;
+  const page = hasMore ? rows.slice(0, limit) : rows;
+  const data = page.map(flattenPost);
+  return { data, nextCursor: hasMore ? data[data.length - 1].id : null };
 }
 
 export async function likePost(postId: string, userId: string) {
   const exists = await prisma.post.findUnique({ where: { id: postId }, select: { id: true } });
   if (!exists) throw NotFound("Post not found");
 
-  const already = await prisma.postLike.findUnique({
-    where: { post_id_user_id: { post_id: postId, user_id: userId } },
-    select: { post_id: true }
-  });
-  if (already) return { ok: true };
-
   await prisma.$transaction([
-    prisma.postLike.create({ data: { post_id: postId, user_id: userId } }),
-    prisma.post.update({ where: { id: postId }, data: { like_count: { increment: 1 } } })
+    prisma.$executeRaw`INSERT INTO "PostLike" (post_id, user_id) VALUES (${postId}, ${userId}) ON CONFLICT DO NOTHING`,
+    prisma.$executeRaw`UPDATE "Post" SET like_count = (SELECT COUNT(*) FROM "PostLike" WHERE post_id = ${postId}) WHERE id = ${postId}`
   ]);
-  return { ok: true };
+
+  const updated = await prisma.post.findUnique({ where: { id: postId }, select: { like_count: true } });
+  return { like_count: updated?.like_count ?? 0, liked: true };
 }
 
 export async function unlikePost(postId: string, userId: string) {
-  const already = await prisma.postLike.findUnique({
-    where: { post_id_user_id: { post_id: postId, user_id: userId } },
-    select: { post_id: true }
-  });
-  if (!already) return { ok: true };
+  const exists = await prisma.post.findUnique({ where: { id: postId }, select: { id: true } });
+  if (!exists) throw NotFound("Post not found");
 
   await prisma.$transaction([
-    prisma.postLike.delete({ where: { post_id_user_id: { post_id: postId, user_id: userId } } }),
-    prisma.post.update({ where: { id: postId }, data: { like_count: { decrement: 1 } } })
+    prisma.$executeRaw`DELETE FROM "PostLike" WHERE post_id = ${postId} AND user_id = ${userId}`,
+    prisma.$executeRaw`UPDATE "Post" SET like_count = (SELECT COUNT(*) FROM "PostLike" WHERE post_id = ${postId}) WHERE id = ${postId}`
   ]);
-  return { ok: true };
+
+  const updated = await prisma.post.findUnique({ where: { id: postId }, select: { like_count: true } });
+  return { like_count: updated?.like_count ?? 0, liked: false };
 }
 
 // ── Internal helper ───────────────────────────────────────────────────────────

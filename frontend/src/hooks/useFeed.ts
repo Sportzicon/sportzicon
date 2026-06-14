@@ -1,63 +1,79 @@
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQueryClient, type InfiniteData } from "@tanstack/react-query";
 import { postService } from "../services";
 import { queryKeys } from "./queryKeys";
-import type { CreatePostRequest } from "../models";
+import type { CreatePostRequest, Post } from "../models";
+import type { FeedPage } from "../services/post.service";
 
-export function useFeed(limit = 30) {
+export function useFeed() {
   const qc = useQueryClient();
   const [likedPosts, setLikedPosts] = useState<Set<string>>(new Set());
 
-  const feed = useQuery({
-    queryKey: queryKeys.feed(limit),
-    queryFn: () => postService.getFeed(limit),
+  const feedQuery = useInfiniteQuery({
+    queryKey: queryKeys.feedInfinite(),
+    queryFn: ({ pageParam }) => postService.getFeedPage(pageParam as string | undefined),
+    getNextPageParam: (lastPage: FeedPage) => lastPage.nextCursor ?? undefined,
+    initialPageParam: undefined as string | undefined,
   });
+
+  const posts: Post[] = feedQuery.data?.pages.flatMap((p) => p.data) ?? [];
 
   const create = useMutation({
     mutationFn: (data: CreatePostRequest) => postService.create(data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.feed() }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.feedInfinite() }),
   });
 
   const update = useMutation({
     mutationFn: ({ id, text }: { id: string; text: string }) => postService.update(id, { text }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.feed() }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.feedInfinite() }),
   });
 
   const remove = useMutation({
     mutationFn: (id: string) => postService.delete(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.feed() }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.feedInfinite() }),
   });
 
   const toggleLike = useMutation({
     mutationFn: (id: string) =>
       likedPosts.has(id) ? postService.unlike(id) : postService.like(id),
     onMutate: async (id: string) => {
-      await qc.cancelQueries({ queryKey: queryKeys.feed(limit) });
-      const prevFeed = qc.getQueryData(queryKeys.feed(limit));
+      await qc.cancelQueries({ queryKey: queryKeys.feedInfinite() });
+      const prevData = qc.getQueryData<InfiniteData<FeedPage>>(queryKeys.feedInfinite());
       const isLiked = likedPosts.has(id);
-      qc.setQueryData(queryKeys.feed(limit), (old: any[]) =>
-        old?.map((p: any) => p.id === id
-          ? { ...p, like_count: Math.max(0, p.like_count + (isLiked ? -1 : 1)) }
-          : p
-        )
-      );
+
+      qc.setQueryData<InfiniteData<FeedPage>>(queryKeys.feedInfinite(), (old) => {
+        if (!old) return old;
+        return {
+          ...old,
+          pages: old.pages.map((page) => ({
+            ...page,
+            data: page.data.map((p) =>
+              p.id === id
+                ? { ...p, like_count: Math.max(0, p.like_count + (isLiked ? -1 : 1)) }
+                : p
+            ),
+          })),
+        };
+      });
+
       setLikedPosts((prev) => {
         const next = new Set(prev);
         next.has(id) ? next.delete(id) : next.add(id);
         return next;
       });
-      return { prevFeed, wasLiked: isLiked };
+
+      return { prevData, wasLiked: isLiked };
     },
-    onError: (_err: unknown, id: string, ctx: any) => {
-      if (ctx?.prevFeed) qc.setQueryData(queryKeys.feed(limit), ctx.prevFeed);
+    onError: (_err, id, ctx) => {
+      if (ctx?.prevData) qc.setQueryData(queryKeys.feedInfinite(), ctx.prevData);
       setLikedPosts((prev) => {
         const next = new Set(prev);
-        next.has(id) ? next.delete(id) : next.add(id);
+        ctx?.wasLiked ? next.add(id) : next.delete(id);
         return next;
       });
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.feed() }),
+    onSettled: () => qc.invalidateQueries({ queryKey: queryKeys.feedInfinite() }),
   });
 
-  return { feed, create, update, remove, toggleLike, likedPosts };
+  return { feedQuery, posts, create, update, remove, toggleLike, likedPosts };
 }

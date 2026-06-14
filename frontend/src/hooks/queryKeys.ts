@@ -7,6 +7,7 @@ import type { OpportunityFilters, BlogFilters } from "../models";
 export const queryKeys = {
   // Feed / Posts
   feed:           (limit?: number) => limit ? ["feed", limit] : ["feed"] as const,
+  feedInfinite:   () => ["feed", "infinite"] as const,
 
   // Opportunities
   opportunities:  (filters?: OpportunityFilters) => ["opportunities", filters ?? {}] as const,

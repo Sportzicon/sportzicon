@@ -104,8 +104,10 @@ router.get(
   requireAuth,
   validate(z.object({ id: z.string().min(8) }), "params"),
   asyncHandler(async (req, res) => {
-    const items = await listComments("reel", req.params.id);
-    res.json({ items });
+    const limit = Math.min(Number(req.query.limit) || 20, 50);
+    const cursor = req.query.cursor as string | undefined;
+    const r = await listComments("reel", req.params.id, { cursor, limit });
+    res.json(r);
   })
 );
 

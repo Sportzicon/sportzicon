@@ -1,12 +1,24 @@
 import type { AxiosInstance } from "axios";
 import type { Post, CreatePostRequest, UpdatePostRequest } from "../models";
 
+export interface FeedPage {
+  data: Post[];
+  nextCursor: string | null;
+}
+
+export interface LikeResult {
+  like_count: number;
+  liked: boolean;
+}
+
 export class PostService {
   constructor(private readonly client: AxiosInstance) {}
 
-  async getFeed(limit = 30): Promise<Post[]> {
-    const res = await this.client.get<{ items: Post[] }>("/posts/feed", { params: { limit } });
-    return res.data.items;
+  async getFeedPage(cursor?: string, limit = 20): Promise<FeedPage> {
+    const res = await this.client.get<FeedPage>("/posts/feed", {
+      params: { limit, ...(cursor ? { cursor } : {}) }
+    });
+    return res.data;
   }
 
   async create(data: CreatePostRequest): Promise<void> {
@@ -21,11 +33,13 @@ export class PostService {
     await this.client.delete(`/posts/${id}`);
   }
 
-  async like(id: string): Promise<void> {
-    await this.client.post(`/posts/${id}/like`);
+  async like(id: string): Promise<LikeResult> {
+    const res = await this.client.post<LikeResult>(`/posts/${id}/like`);
+    return res.data;
   }
 
-  async unlike(id: string): Promise<void> {
-    await this.client.delete(`/posts/${id}/like`);
+  async unlike(id: string): Promise<LikeResult> {
+    const res = await this.client.delete<LikeResult>(`/posts/${id}/like`);
+    return res.data;
   }
 }

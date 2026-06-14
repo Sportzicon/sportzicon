@@ -61,7 +61,12 @@ export async function addComment(
   };
 }
 
-export async function listComments(parentType: ParentType, parentId: string, limit = 50) {
+export async function listComments(
+  parentType: ParentType,
+  parentId: string,
+  opts: { cursor?: string; limit?: number } = {}
+) {
+  const { cursor, limit = 20 } = opts;
   const where: Record<string, unknown> = {
     parent_type: parentType,
     ...parentIdField(parentType, parentId)
@@ -70,16 +75,20 @@ export async function listComments(parentType: ParentType, parentId: string, lim
   const rows = await prisma.comment.findMany({
     where,
     orderBy: { created_at: "asc" },
-    take: limit,
+    take: limit + 1,
+    ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
     include: { author: { select: { id: true, full_name: true, profile_photo_url: true } } }
   });
 
-  return rows.map(({ author, ...c }) => ({
+  const hasMore = rows.length > limit;
+  const page = hasMore ? rows.slice(0, limit) : rows;
+  const data = page.map(({ author, ...c }) => ({
     ...c,
     author,
     author_name: author?.full_name ?? "Unknown",
     created_at: c.created_at.getTime()
   }));
+  return { data, nextCursor: hasMore ? data[data.length - 1].id : null };
 }
 
 export async function updateComment(commentId: string, actorId: string, isAdmin: boolean, text: string) {

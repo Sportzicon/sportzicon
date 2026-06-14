@@ -20,7 +20,7 @@ export default function Dashboard() {
   const role = user?.role;
 
   const sport = user?.athlete?.primary_sport;
-  const { feed } = useFeed(10);
+  const { feedQuery, posts: feedPosts } = useFeed();
   const { list: myApps } = useMyApplications();
   const { list: matchedOpps } = useOpportunities(role === "athlete" ? { limit: 4, status: "open", sport: sport || undefined } : {});
   const { list: opportunities } = useOpportunities({ limit: 5, status: "open" });
@@ -69,12 +69,12 @@ export default function Dashboard() {
         {role === "athlete" ? (
           <>
             <Metric k="Active applications" v={activeApps.length} accent />
-            <Metric k="Feed updates" v={feed.data?.length ?? "—"} />
+            <Metric k="Feed updates" v={feedPosts.length > 0 ? feedPosts.length : "—"} />
             <Metric k="Profile strength" v="86%" />
           </>
         ) : (
           <>
-            <Metric k="Feed updates" v={feed.data?.length ?? "—"} accent />
+            <Metric k="Feed updates" v={feedPosts.length > 0 ? feedPosts.length : "—"} accent />
             <Metric k="Your role" v={<span className="text-2xl capitalize">{role}</span>} />
             <Metric k="Network" v="Live" />
           </>
@@ -87,11 +87,11 @@ export default function Dashboard() {
           <div>
             <SectionHead n="01" title="Your feed" sub="Recent posts from people you follow"
               right={<Link to="/feed" className="btn-secondary">Open feed →</Link>} />
-            {feed.isLoading ? (
+            {feedQuery.isLoading ? (
               <div className="panel p-6"><Spinner className="text-brand-500" /></div>
-            ) : feed.data && feed.data.length > 0 ? (
+            ) : feedPosts.length > 0 ? (
               <ul className="panel divide-y divide-hairsoft">
-                {feed.data.map((p: Post) => (
+                {feedPosts.slice(0, 10).map((p: Post) => (
                   <li key={p.id} className="p-4">
                     <div className="flex items-center gap-3">
                       <Avatar name={p.author_name} src={p.author?.profile_photo_url} size={36} />

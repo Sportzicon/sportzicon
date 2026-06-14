@@ -10,7 +10,7 @@ const router = Router();
 
 const createSchema = z.object({
   type: z.enum(["log", "post"]).default("post"),
-  text: z.string().min(1).max(4000),
+  text: z.string().min(1).max(2000).trim(),
   media_urls: z.array(z.string().url()).max(10).optional(),
   sport: z.string().max(60).optional(),
   tags: z.array(z.string().max(40)).max(20).optional()
@@ -54,7 +54,8 @@ router.get(
   requireAuth,
   asyncHandler(async (req, res) => {
     const limit = Math.min(Number(req.query.limit) || 20, 50);
-    const r = await svc.feedForUser(req.user!.sub, limit);
+    const cursor = req.query.cursor as string | undefined;
+    const r = await svc.feedForUser(req.user!.sub, limit, cursor);
     res.json(r);
   })
 );
@@ -105,8 +106,10 @@ router.get(
   requireAuth,
   validate(z.object({ id: z.string().min(8) }), "params"),
   asyncHandler(async (req, res) => {
-    const items = await commentSvc.listComments("post", req.params.id);
-    res.json({ items });
+    const limit = Math.min(Number(req.query.limit) || 20, 50);
+    const cursor = req.query.cursor as string | undefined;
+    const r = await commentSvc.listComments("post", req.params.id, { cursor, limit });
+    res.json(r);
   })
 );
 
@@ -114,7 +117,7 @@ router.post(
   "/:id/comments",
   requireAuth,
   validate(z.object({ id: z.string().min(8) }), "params"),
-  validate(z.object({ text: z.string().min(1).max(2000) })),
+  validate(z.object({ text: z.string().min(1).max(1000).trim() })),
   asyncHandler(async (req, res) => {
     const r = await commentSvc.addComment({ type: "post", id: req.params.id }, req.user!.sub, req.body.text);
     res.status(201).json({ comment: r });

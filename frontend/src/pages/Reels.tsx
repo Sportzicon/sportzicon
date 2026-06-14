@@ -333,7 +333,7 @@ export default function Reels() {
           )}
 
           <div className="pt-2 mt-2 border-t border-hairsoft">
-            <CommentSection parentType="reel" parentId={r.id} commentCount={r.comment_count} showForm />
+            <CommentSection parentType="reel" parentId={r.id} commentCount={r.comment_count} />
           </div>
         </div>
       </div>

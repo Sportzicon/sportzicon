@@ -10,9 +10,10 @@ interface MobileDrawerProps {
   onClose: () => void;
   title: string;
   children: ReactNode;
+  footer?: ReactNode;
 }
 
-export function MobileDrawer({ isOpen, onClose, title, children }: MobileDrawerProps) {
+export function MobileDrawer({ isOpen, onClose, title, children, footer }: MobileDrawerProps) {
   // Lock background scroll while the sheet is open on mobile.
   useEffect(() => {
     if (!isOpen) return;
@@ -61,7 +62,12 @@ export function MobileDrawer({ isOpen, onClose, title, children }: MobileDrawerP
               ✕
             </button>
           </div>
-          <div className="overflow-y-auto p-4">{children}</div>
+          <div className="overflow-y-auto p-4 flex-1">{children}</div>
+          {footer && (
+            <div className="shrink-0 border-t border-hair bg-panel pb-[env(safe-area-inset-bottom)]">
+              {footer}
+            </div>
+          )}
         </div>
       </div>
 
