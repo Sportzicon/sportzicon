@@ -2,6 +2,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { useState, useRef } from "react";
 import { api, humanizeError } from "../api/client";
+import { queryKeys } from "../hooks/queryKeys";
 import { scoringApi } from "../api/scoringClient";
 import { useAuthStore } from "../store/auth";
 import { isAdmin } from "../utils/roles";
@@ -313,7 +314,9 @@ export default function Profile() {
     if (followStatus.data) await api.delete(`/follow/${id}`);
     else await api.post(`/follow/${id}`);
     qc.invalidateQueries({ queryKey: ["follow-status", id] });
-    qc.invalidateQueries({ queryKey: ["user", id] });
+    // Invalidate both profiles so follower_count / following_count refresh
+    qc.invalidateQueries({ queryKey: queryKeys.user(id) });
+    if (me?.id) qc.invalidateQueries({ queryKey: queryKeys.user(me.id) });
   }
 
   if (userQ.isLoading) return <div className="flex justify-center p-12"><Spinner className="text-brand-500" /></div>;
@@ -371,7 +374,7 @@ export default function Profile() {
                   <X className="h-3 w-3" /> Remove
                 </button>
               )}
-              <input ref={coverPhotoRef} type="file" accept="image/jpeg,image/png,image/webp" className="sr-only"
+              <input ref={coverPhotoRef} type="file" accept="image/*" className="sr-only"
                 onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadPhoto(f, "cover"); e.currentTarget.value = ""; }} />
             </div>
           )}
@@ -380,10 +383,13 @@ export default function Profile() {
           {photoError && (
             <div className="mb-3 rounded border border-red-200 bg-red-50 px-3 py-2 text-[12px] text-red-700">{photoError}</div>
           )}
-          <div className="flex flex-wrap items-end justify-between gap-4">
-            <div className="flex items-end gap-4">
-              <div className="relative h-24 w-24 group/avatar">
-                <div className="h-24 w-24 overflow-hidden rounded border-4 border-panel bg-fill">
+
+          {/* Mobile: centered stack. Desktop: left-aligned row */}
+          <div className="flex flex-col items-center text-center lg:flex-row lg:items-end lg:text-left lg:justify-between gap-4">
+            <div className="flex flex-col items-center lg:flex-row lg:items-end gap-4">
+              {/* Avatar — 96px mobile, 128px desktop */}
+              <div className="relative group/avatar flex-shrink-0">
+                <div className="h-24 w-24 lg:h-32 lg:w-32 overflow-hidden rounded border-4 border-panel bg-fill">
                   {u.profile_photo_url ? (
                     <img src={u.profile_photo_url} alt={u.full_name} className="h-full w-full object-cover" />
                   ) : (
@@ -413,39 +419,55 @@ export default function Profile() {
                         <X className="h-2.5 w-2.5" /> Remove
                       </button>
                     )}
-                    <input ref={profilePhotoRef} type="file" accept="image/jpeg,image/png,image/webp" className="sr-only"
+                    <input ref={profilePhotoRef} type="file" accept="image/*" className="sr-only"
                       onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadPhoto(f, "profile"); e.currentTarget.value = ""; }} />
                   </div>
                 )}
               </div>
+
+              {/* Name / role / location — centered on mobile */}
               <div className="pb-1">
-                <div className="flex items-center gap-2.5">
+                <div className="flex items-center justify-center lg:justify-start gap-2.5">
                   <Kicker>{u.role}{sport ? ` · ${sport}` : ""}</Kicker>
                   <VerifiedBadge verification={u.verification} label="Verified" />
                 </div>
-                <h1 className="font-disp mt-1.5 text-4xl">{u.full_name}</h1>
-                <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-ink-sub">
-                  {u.city && <span className="lab">{u.city}{u.country ? `, ${u.country}` : ""}</span>}
-                  <span className="lab"><strong className="font-mononum text-ink">{u.follower_count}</strong> followers</span>
-                  <span className="lab"><strong className="font-mononum text-ink">{u.following_count}</strong> following</span>
+                <h1 className="font-disp mt-1.5 text-3xl lg:text-4xl">{u.full_name}</h1>
+                {/* Stats row — horizontal scroll on mobile so it never wraps */}
+                <div className="mt-2 flex items-center gap-3 overflow-x-auto justify-center lg:justify-start">
+                  {u.city && <span className="lab whitespace-nowrap">{u.city}{u.country ? `, ${u.country}` : ""}</span>}
+                  <span className="lab whitespace-nowrap"><strong className="font-mononum text-ink">{u.follower_count}</strong> followers</span>
+                  <span className="lab whitespace-nowrap"><strong className="font-mononum text-ink">{u.following_count}</strong> following</span>
+                  {sport && <span className="lab whitespace-nowrap">{sport}</span>}
                 </div>
               </div>
             </div>
-            <div className="flex flex-wrap gap-2">
-              {isMe && <button className="btn-primary" onClick={() => navigate("/profile/edit")}>✎ Edit profile</button>}
+
+            {/* Action buttons — full width on mobile */}
+            <div className="w-full lg:w-auto flex flex-col sm:flex-row lg:flex-row gap-2">
+              {isMe && (
+                <button className="btn-primary w-full sm:w-auto min-h-[44px]" onClick={() => navigate("/profile/edit")}>
+                  ✎ Edit profile
+                </button>
+              )}
               {!isMe && (
                 <>
-                  <button className="btn-primary" onClick={toggleFollow}>{followStatus.data ? "Following ✓" : "Follow"}</button>
-                  <button className="btn-secondary" onClick={() => navigate(`/messages?to=${u.id}`)}>Message</button>
+                  <button className="btn-primary w-full sm:w-auto min-h-[44px]" onClick={toggleFollow}>
+                    {followStatus.data ? "Following ✓" : "Follow"}
+                  </button>
+                  <button className="btn-secondary w-full sm:w-auto min-h-[44px]" onClick={() => navigate(`/messages?to=${u.id}`)}>
+                    Message
+                  </button>
                 </>
               )}
             </div>
           </div>
 
-          {u.bio && <p className="mt-5 max-w-2xl text-[15px] leading-relaxed text-ink-70">{u.bio}</p>}
+          {/* Bio — full width, wraps correctly */}
+          {u.bio && <p className="mt-5 text-[15px] leading-relaxed text-ink-70">{u.bio}</p>}
 
+          {/* Athlete stats — two columns on desktop, scrollable on mobile */}
           {isAthlete && ath && (
-            <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div className="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
               <Stat label="Sport" value={ath.primary_sport} />
               <Stat label="Position" value={ath.position ?? ath.playing_role} />
               <Stat label="Experience" value={ath.experience_level?.replace(/_/g, " ")} />

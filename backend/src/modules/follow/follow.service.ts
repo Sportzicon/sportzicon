@@ -21,8 +21,8 @@ export async function follow(followerId: string, followeeId: string) {
 
   await prisma.$transaction([
     prisma.follow.create({ data: { follower_id: followerId, followee_id: followeeId } }),
-    prisma.user.update({ where: { id: followeeId }, data: { follower_count: { increment: 1 } } }),
-    prisma.user.update({ where: { id: followerId }, data: { following_count: { increment: 1 } } })
+    prisma.$executeRaw`UPDATE "User" SET follower_count = follower_count + 1 WHERE id = ${followeeId}`,
+    prisma.$executeRaw`UPDATE "User" SET following_count = following_count + 1 WHERE id = ${followerId}`,
   ]);
 
   eventBus.emit<UserFollowedEvent>(USER_FOLLOWED, {
@@ -45,8 +45,8 @@ export async function unfollow(followerId: string, followeeId: string) {
 
   await prisma.$transaction([
     prisma.follow.delete({ where: { follower_id_followee_id: { follower_id: followerId, followee_id: followeeId } } }),
-    prisma.user.update({ where: { id: followeeId }, data: { follower_count: { decrement: 1 } } }),
-    prisma.user.update({ where: { id: followerId }, data: { following_count: { decrement: 1 } } })
+    prisma.$executeRaw`UPDATE "User" SET follower_count = GREATEST(0, follower_count - 1) WHERE id = ${followeeId}`,
+    prisma.$executeRaw`UPDATE "User" SET following_count = GREATEST(0, following_count - 1) WHERE id = ${followerId}`,
   ]);
 
   return { ok: true };
