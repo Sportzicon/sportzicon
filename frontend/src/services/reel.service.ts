@@ -60,10 +60,9 @@ export class ReelService {
   }
 
   async getUploadUrl(params: {
-    category: "video" | "image";
-    filename: string;
-    content_type: string;
-    content_length: number;
+    context: "reel" | "post" | "avatar" | "org-logo" | "blog-cover" | "org-doc";
+    fileName: string;
+    contentType: string;
   }): Promise<{ upload_url: string; headers: Record<string, string>; public_url?: string; object_name: string }> {
     const res = await this.client.post("/media/upload-url", params);
     return res.data;

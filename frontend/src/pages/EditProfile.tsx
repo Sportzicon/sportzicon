@@ -77,10 +77,9 @@ export default function EditProfile() {
     setErr(null);
     try {
       const urlRes = await api.post("/media/upload-url", {
-        category: "image",
-        filename: file.name,
-        content_type: file.type,
-        content_length: file.size,
+        context: "avatar",
+        fileName: file.name,
+        contentType: file.type,
       });
       const { upload_url, headers, public_url } = urlRes.data;
       await fetch(upload_url, { method: "PUT", headers, body: file });

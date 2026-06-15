@@ -66,11 +66,11 @@ export default function Reels() {
     setFormErr(null);
 
     try {
+      const context = category === "video" ? "reel" : "post";
       const { data: urlData } = await api.post("/media/upload-url", {
-        category,
-        filename: file.name,
-        content_type: file.type,
-        content_length: file.size
+        context,
+        fileName: file.name,
+        contentType: file.type,
       });
 
       const publicUrl: string = urlData.public_url;

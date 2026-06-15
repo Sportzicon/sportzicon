@@ -4,49 +4,53 @@ import { asyncHandler } from "../../utils/async";
 import { requireAuth } from "../../middleware/auth";
 import { validate } from "../../middleware/validate";
 import * as svc from "./media.service";
-import { env } from "../../config/env";
+import { uploadUrlSchema, confirmUploadSchema } from "./media.schemas";
 
 const router = Router();
 
-const uploadSchema = z.object({
-  category: z.enum(["image", "video", "document"]),
-  filename: z.string().min(1).max(200),
-  content_type: z.string().min(3).max(120),
-  content_length: z.coerce.number().int().positive().max(env.MAX_UPLOAD_MB * 1024 * 1024)
-});
-
+// POST /media/upload-url — returns a GCS signed PUT URL for the client to upload directly
 router.post(
   "/upload-url",
   requireAuth,
-  validate(uploadSchema),
+  validate(uploadUrlSchema),
   asyncHandler(async (req, res) => {
     const r = await svc.getUploadUrl({
       userId: req.user!.sub,
-      category: req.body.category,
-      filename: req.body.filename,
-      contentType: req.body.content_type,
-      contentLength: req.body.content_length
+      context: req.body.context,
+      fileName: req.body.fileName,
+      contentType: req.body.contentType,
     });
     res.json(r);
-  })
+  }),
 );
 
-router.get(
-  "/read-url",
+// POST /media/confirm — verify file landed in GCS, return public URL
+router.post(
+  "/confirm",
   requireAuth,
-  validate(
-    z.object({
-      category: z.enum(["image", "video", "document"]),
-      object_name: z.string().min(1).max(500)
-    }),
-    "query"
-  ),
+  validate(confirmUploadSchema),
   asyncHandler(async (req, res) => {
-    const url = await svc.getReadUrl(req.query.category as any, req.query.object_name as string);
-    res.json({ url });
-  })
+    const r = await svc.confirmUpload(req.body.key, req.body.context);
+    res.json(r);
+  }),
 );
 
+// GET /media/download-url/:key — generate a short-lived signed URL for a private org document
+router.get(
+  "/download-url/:key",
+  requireAuth,
+  validate(z.object({ key: z.string().min(1) }), "params"),
+  asyncHandler(async (req, res) => {
+    const url = await svc.getPrivateDownloadUrl(
+      req.params.key,
+      req.user!.sub,
+      req.user!.role,
+    );
+    res.json({ url });
+  }),
+);
+
+// POST /media/upload — legacy direct-buffer upload (used by server-side test helpers only)
 router.post(
   "/upload",
   requireAuth,
@@ -62,13 +66,16 @@ router.post(
 
     const public_url = await svc.uploadFile({
       userId: req.user!.sub,
-      category: (req.query.category as any) || "image",
+      category: (req.query.category as "image" | "video" | "document") || "image",
       filename: (req.query.filename as string) || "upload",
-      contentType: (req.query.content_type as string) || req.headers["content-type"] || "application/octet-stream",
-      buffer
+      contentType:
+        (req.query.content_type as string) ||
+        req.headers["content-type"] ||
+        "application/octet-stream",
+      buffer,
     });
     res.json({ public_url });
-  })
+  }),
 );
 
 export default router;
