@@ -52,4 +52,27 @@ router.post(
   })
 );
 
+router.patch(
+  "/:orgId/approve",
+  requireAuth,
+  requireRole("admin"),
+  validate(z.object({ orgId: z.string().min(8) }), "params"),
+  asyncHandler(async (req, res) => {
+    const r = await svc.approveOrg(req.params.orgId, req.user!.sub);
+    res.json(r);
+  })
+);
+
+router.patch(
+  "/:orgId/reject",
+  requireAuth,
+  requireRole("admin"),
+  validate(z.object({ orgId: z.string().min(8) }), "params"),
+  validate(z.object({ reason: z.string().min(10).max(1000) })),
+  asyncHandler(async (req, res) => {
+    const r = await svc.rejectOrg(req.params.orgId, req.user!.sub, req.body.reason);
+    res.json(r);
+  })
+);
+
 export default router;

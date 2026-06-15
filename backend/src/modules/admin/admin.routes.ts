@@ -35,6 +35,7 @@ router.get(
     const r = await svc.listUsers({
       status: req.query.status as any,
       role: req.query.role as any,
+      q: req.query.q as string | undefined,
       limit: Math.min(Number(req.query.limit) || 50, 200),
       cursor: req.query.cursor as string | undefined
     });
@@ -60,6 +61,29 @@ router.patch(
 );
 
 router.patch(
+  "/users/:id/ban",
+  validate(z.object({ id: z.string().min(8) }), "params"),
+  validate(z.object({ reason: z.string().min(1).max(500) })),
+  asyncHandler(async (req, res) => {
+    const r = await svc.banUser(
+      { id: req.user!.sub, role: req.user!.role },
+      req.params.id,
+      req.body.reason
+    );
+    res.json(r);
+  })
+);
+
+router.patch(
+  "/users/:id/unban",
+  validate(z.object({ id: z.string().min(8) }), "params"),
+  asyncHandler(async (req, res) => {
+    const r = await svc.unbanUser({ id: req.user!.sub, role: req.user!.role }, req.params.id);
+    res.json(r);
+  })
+);
+
+router.patch(
   "/users/:id/badges",
   validate(z.object({ id: z.string().min(8) }), "params"),
   validate(z.object({ badges: z.array(z.string()).max(20) })),
@@ -78,37 +102,102 @@ router.delete(
   })
 );
 
+// ─── Content moderation ──────────────────────────────────────────────────────
+
+router.delete(
+  "/posts/:id",
+  validate(z.object({ id: z.string().min(8) }), "params"),
+  asyncHandler(async (req, res) => {
+    const r = await svc.adminDeletePost({ id: req.user!.sub, role: req.user!.role }, req.params.id);
+    res.json(r);
+  })
+);
+
+router.delete(
+  "/reels/:id",
+  validate(z.object({ id: z.string().min(8) }), "params"),
+  asyncHandler(async (req, res) => {
+    const r = await svc.adminDeleteReel({ id: req.user!.sub, role: req.user!.role }, req.params.id);
+    res.json(r);
+  })
+);
+
+// ─── Reports ─────────────────────────────────────────────────────────────────
+
 router.get(
   "/reports",
   asyncHandler(async (req, res) => {
-    const status = (req.query.status as any) ?? "open";
-    const items = await svc.listReports(status, Math.min(Number(req.query.limit) || 100, 200));
-    res.json({ items });
+    const r = await svc.listReports({
+      status: (req.query.status as string) ?? "open",
+      type: req.query.type as string | undefined,
+      limit: Math.min(Number(req.query.limit) || 50, 200),
+      cursor: req.query.cursor as string | undefined
+    });
+    res.json(r);
   })
 );
 
 router.patch(
-  "/reports/:id",
+  "/reports/:id/resolve",
   validate(z.object({ id: z.string().min(8) }), "params"),
-  validate(z.object({ status: z.enum(["actioned", "dismissed"]), notes: z.string().max(2000).optional() })),
+  validate(z.object({ action: z.enum(["warned", "banned", "dismissed"]), notes: z.string().max(2000).optional() })),
   asyncHandler(async (req, res) => {
     const r = await svc.resolveReport(
       { id: req.user!.sub, role: req.user!.role },
       req.params.id,
-      req.body.status,
+      req.body.action,
       req.body.notes
     );
     res.json(r);
   })
 );
 
+// Keep old resolve endpoint for backwards compatibility
+router.patch(
+  "/reports/:id",
+  validate(z.object({ id: z.string().min(8) }), "params"),
+  validate(z.object({ status: z.enum(["actioned", "dismissed"]), notes: z.string().max(2000).optional() })),
+  asyncHandler(async (req, res) => {
+    const action = req.body.status === "dismissed" ? "dismissed" : "warned";
+    const r = await svc.resolveReport(
+      { id: req.user!.sub, role: req.user!.role },
+      req.params.id,
+      action as any,
+      req.body.notes
+    );
+    res.json(r);
+  })
+);
+
+// ─── Audit log ───────────────────────────────────────────────────────────────
+
+router.get(
+  "/audit-log",
+  asyncHandler(async (req, res) => {
+    const r = await svc.listAuditLogs({
+      limit: Math.min(Number(req.query.limit) || 100, 500),
+      cursor: req.query.cursor as string | undefined,
+      actor_id: req.query.actor_id as string | undefined,
+      action: req.query.action as string | undefined,
+      date_from: req.query.date_from as string | undefined,
+      date_to: req.query.date_to as string | undefined
+    });
+    res.json(r);
+  })
+);
+
+// Keep old endpoint for backwards compatibility
 router.get(
   "/audit-logs",
   asyncHandler(async (req, res) => {
-    const r = await svc.listAuditLogs(
-      Math.min(Number(req.query.limit) || 100, 500),
-      req.query.cursor as string | undefined
-    );
+    const r = await svc.listAuditLogs({
+      limit: Math.min(Number(req.query.limit) || 100, 500),
+      cursor: req.query.cursor as string | undefined,
+      actor_id: req.query.actor_id as string | undefined,
+      action: req.query.action as string | undefined,
+      date_from: req.query.date_from as string | undefined,
+      date_to: req.query.date_to as string | undefined
+    });
     res.json(r);
   })
 );

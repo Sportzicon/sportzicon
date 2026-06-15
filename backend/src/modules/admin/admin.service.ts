@@ -26,10 +26,23 @@ export async function audit(input: {
   });
 }
 
-export async function listUsers(filter: { status?: AccountStatus; role?: Role; limit: number; cursor?: string }) {
+export async function listUsers(filter: {
+  status?: AccountStatus;
+  role?: Role;
+  q?: string;
+  limit: number;
+  cursor?: string;
+}) {
   const where: Record<string, unknown> = {};
   if (filter.status) where.status = filter.status;
   if (filter.role) where.role = filter.role;
+  if (filter.q) {
+    const q = filter.q.toLowerCase();
+    where.OR = [
+      { full_name_lower: { contains: q } },
+      { email_lower: { contains: q } }
+    ];
+  }
 
   const items = await prisma.user.findMany({
     where,
@@ -54,6 +67,53 @@ export async function setUserStatus(actor: { id: string; role: Role }, userId: s
   return { ok: true };
 }
 
+export async function banUser(actor: { id: string; role: Role }, userId: string, reason: string) {
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { id: true, role: true } });
+  if (!user) throw NotFound("User not found");
+  if (userId === actor.id) throw BadRequest("Cannot ban yourself");
+  if (user.role === "admin") throw BadRequest("Cannot ban another admin");
+
+  await prisma.$transaction([
+    prisma.user.update({
+      where: { id: userId },
+      data: {
+        status: "suspended" as any,
+        is_banned: true,
+        banned_reason: reason,
+        banned_at: new Date()
+      }
+    }),
+    prisma.refreshToken.deleteMany({ where: { user_id: userId } })
+  ]);
+
+  await audit({
+    actor,
+    action: "user.banned",
+    target_type: "user",
+    target_id: userId,
+    details: { reason }
+  });
+  return { ok: true };
+}
+
+export async function unbanUser(actor: { id: string; role: Role }, userId: string) {
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { id: true, is_banned: true } });
+  if (!user) throw NotFound("User not found");
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: {
+      status: "active" as any,
+      is_banned: false,
+      banned_reason: null,
+      banned_at: null
+    }
+  });
+
+  await audit({ actor, action: "user.unbanned", target_type: "user", target_id: userId });
+  return { ok: true };
+}
+
 export async function setUserBadges(actor: { id: string; role: Role }, userId: string, badges: string[]) {
   const exists = await prisma.user.findUnique({ where: { id: userId }, select: { id: true } });
   if (!exists) throw NotFound("User not found");
@@ -68,41 +128,76 @@ export async function setUserBadges(actor: { id: string; role: Role }, userId: s
   return { ok: true };
 }
 
-export async function listReports(status: ReportStatus | "all", limit: number) {
+export async function listReports(filter: {
+  status?: string;
+  type?: string;
+  limit: number;
+  cursor?: string;
+}) {
   const where: Record<string, unknown> = {};
-  if (status !== "all") where.status = status;
-  return prisma.report.findMany({
+  if (filter.status && filter.status !== "all") where.status = filter.status;
+  if (filter.type) where.target_type = filter.type;
+
+  const items = await prisma.report.findMany({
     where,
     orderBy: { created_at: "desc" },
-    take: limit
+    take: filter.limit + 1,
+    ...(filter.cursor ? { cursor: { id: filter.cursor }, skip: 1 } : {}),
+    include: { reporter: { select: { full_name: true, email: true } } }
   });
+
+  const hasMore = items.length > filter.limit;
+  const page = hasMore ? items.slice(0, filter.limit) : items;
+  return {
+    items: page,
+    next_cursor: hasMore ? page[page.length - 1].id : null
+  };
 }
 
 export async function resolveReport(
   actor: { id: string; role: Role },
   reportId: string,
-  status: "actioned" | "dismissed",
+  action: "warned" | "banned" | "dismissed",
   notes?: string
 ) {
   const exists = await prisma.report.findUnique({ where: { id: reportId }, select: { id: true } });
   if (!exists) throw NotFound("Report not found");
   await prisma.report.update({
     where: { id: reportId },
-    data: { status, resolved_by: actor.id, resolved_at: new Date(), notes }
+    data: { status: action === "dismissed" ? "dismissed" : "actioned", resolved_by: actor.id, resolved_at: new Date(), notes }
   });
-  await audit({ actor, action: `report.${status}`, target_type: "report", target_id: reportId, details: { notes } });
+  await audit({ actor, action: `report.${action}`, target_type: "report", target_id: reportId, details: { notes } });
   return { ok: true };
 }
 
-export async function listAuditLogs(limit: number, cursor?: string) {
+export async function listAuditLogs(filter: {
+  limit: number;
+  cursor?: string;
+  actor_id?: string;
+  action?: string;
+  date_from?: string;
+  date_to?: string;
+}) {
+  const where: Record<string, unknown> = {};
+  if (filter.actor_id) where.actor_id = filter.actor_id;
+  if (filter.action) where.action = { contains: filter.action };
+  if (filter.date_from || filter.date_to) {
+    where.created_at = {
+      ...(filter.date_from ? { gte: new Date(filter.date_from) } : {}),
+      ...(filter.date_to ? { lte: new Date(filter.date_to + "T23:59:59Z") } : {})
+    };
+  }
+
   const items = await prisma.auditLog.findMany({
+    where,
     orderBy: { created_at: "desc" },
-    take: limit + 1,
-    ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {})
+    take: filter.limit + 1,
+    ...(filter.cursor ? { cursor: { id: filter.cursor }, skip: 1 } : {}),
+    include: { actor: { select: { full_name: true, email: true } } }
   });
 
-  const hasMore = items.length > limit;
-  const page = hasMore ? items.slice(0, limit) : items;
+  const hasMore = items.length > filter.limit;
+  const page = hasMore ? items.slice(0, filter.limit) : items;
   return {
     items: page,
     next_cursor: hasMore ? page[page.length - 1].id : null
@@ -110,14 +205,15 @@ export async function listAuditLogs(limit: number, cursor?: string) {
 }
 
 export async function analytics() {
-  const [users, orgs, opps, applications, open_reports] = await Promise.all([
+  const [users, orgs, opps, applications, open_reports, pending_verifs] = await Promise.all([
     prisma.user.count(),
     prisma.organization.count(),
     prisma.opportunity.count(),
     prisma.application.count(),
-    prisma.report.count({ where: { status: "open" } })
+    prisma.report.count({ where: { status: "open" } }),
+    prisma.verification.count({ where: { status: "pending" } })
   ]);
-  return { users, organizations: orgs, opportunities: opps, applications, open_reports };
+  return { users, organizations: orgs, opportunities: opps, applications, open_reports, pending_verifications: pending_verifs };
 }
 
 export async function createReport(reporterId: string, input: Record<string, unknown>) {
@@ -189,6 +285,22 @@ export async function updateUserRole(
   const updated = await prisma.user.update({ where: { id: userId }, data: { role: newRole as any } });
   await audit({ actor, action: "user.role_changed", target_type: "user", target_id: userId, details: { from: user.role, to: newRole } });
   return omitSensitive(updated);
+}
+
+export async function adminDeletePost(actor: { id: string; role: Role }, postId: string) {
+  const post = await prisma.post.findUnique({ where: { id: postId }, select: { id: true } });
+  if (!post) throw NotFound("Post not found");
+  await prisma.post.delete({ where: { id: postId } });
+  await audit({ actor, action: "post.deleted_by_admin", target_type: "post", target_id: postId });
+  return { ok: true };
+}
+
+export async function adminDeleteReel(actor: { id: string; role: Role }, reelId: string) {
+  const reel = await prisma.reel.findUnique({ where: { id: reelId }, select: { id: true, video_url: true } });
+  if (!reel) throw NotFound("Reel not found");
+  await prisma.reel.delete({ where: { id: reelId } });
+  await audit({ actor, action: "reel.deleted_by_admin", target_type: "reel", target_id: reelId, details: { video_url: reel.video_url } });
+  return { ok: true };
 }
 
 export async function listAdminOpportunities(filter: {

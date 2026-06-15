@@ -34,6 +34,13 @@ export const queryKeys = {
   notifCount:     () => ["notifications", "count"] as const,
   notifications:  () => ["notifications", "list"] as const,
 
+  // Organizations
+  organizations:  (filters?: Record<string, unknown>) => ["organizations", filters ?? {}] as const,
+  organization:   (id: string) => ["organization", id] as const,
+  orgDocuments:   (id: string) => ["organization", id, "documents"] as const,
+  myOrganizations: () => ["my-orgs"] as const,
+  adminVerifications: () => ["admin-verifs"] as const,
+
   // Users
   user:           (id: string) => ["user", id] as const,
 
@@ -42,4 +49,13 @@ export const queryKeys = {
 
   // Search
   search:         (mode: string, params: Record<string, unknown>) => ["search", mode, params] as const,
+
+  // Admin
+  adminUsers:     (filters?: Record<string, unknown>) => ["admin", "users", filters ?? {}] as const,
+  adminReports:   (filters?: Record<string, unknown>) => ["admin", "reports", filters ?? {}] as const,
+  adminAuditLog:  (filters?: Record<string, unknown>) => ["admin", "audit-log", filters ?? {}] as const,
+  adminAnalytics: () => ["admin", "analytics"] as const,
+  adminOpportunities: (filters?: Record<string, unknown>) => ["admin", "opportunities", filters ?? {}] as const,
+  adminOrganizations: (filters?: Record<string, unknown>) => ["admin", "organizations", filters ?? {}] as const,
+  adminApplications:  (filters?: Record<string, unknown>) => ["admin", "applications", filters ?? {}] as const,
 } as const;

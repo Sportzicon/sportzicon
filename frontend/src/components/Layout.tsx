@@ -1,7 +1,9 @@
 import { Link, NavLink, Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useAuthStore } from "../store/auth";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { authService } from "../services";
+import { api } from "../api/client";
+import { queryKeys } from "../hooks/queryKeys";
 import { useNotificationCount, useNotifications } from "../hooks";
 import { useNotificationStore } from "../store/notifications";
 import { hasRole, isAdmin } from "../utils/roles";
@@ -62,7 +64,7 @@ function GlobalSearch({ user, inputRef, mobileOpen, onMobileClose }: {
   );
 }
 
-function NavItem({ to, icon, label, onClick, isCollapsed }: { to: string; icon: React.ReactNode; label: string; onClick?: () => void; isCollapsed?: boolean }) {
+function NavItem({ to, icon, label, onClick, isCollapsed, badge }: { to: string; icon: React.ReactNode; label: string; onClick?: () => void; isCollapsed?: boolean; badge?: number }) {
   return (
     <NavLink to={to} onClick={onClick} title={isCollapsed ? label : undefined}
       className={({ isActive }) =>
@@ -70,8 +72,24 @@ function NavItem({ to, icon, label, onClick, isCollapsed }: { to: string; icon: 
           isActive ? "bg-ink text-paper" : "text-ink-70 hover:bg-fill"}`}>
       {({ isActive }: { isActive: boolean }) => (
         <>
-          <span className={`w-4 flex-shrink-0 text-center ${isActive ? "text-brand-500" : "text-ink-faint"}`}>{icon}</span>
-          {!isCollapsed && <span className="truncate">{label}</span>}
+          <span className={`relative w-4 flex-shrink-0 text-center ${isActive ? "text-brand-500" : "text-ink-faint"}`}>
+            {icon}
+            {badge != null && badge > 0 && isCollapsed && (
+              <span className="absolute -top-1.5 -right-1.5 h-3.5 min-w-3.5 rounded-full bg-red-500 text-[8px] font-bold text-white flex items-center justify-center px-0.5">
+                {badge > 99 ? "99+" : badge}
+              </span>
+            )}
+          </span>
+          {!isCollapsed && (
+            <span className="flex-1 flex items-center gap-2 truncate">
+              <span className="truncate">{label}</span>
+              {badge != null && badge > 0 && (
+                <span className="ml-auto inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white">
+                  {badge > 99 ? "99+" : badge}
+                </span>
+              )}
+            </span>
+          )}
         </>
       )}
     </NavLink>
@@ -185,6 +203,17 @@ export function Layout() {
   useNotificationCount(!!user);
   const unreadCount = useNotificationStore((s) => s.unreadCount);
 
+  const pendingVerifCount = useQuery({
+    queryKey: queryKeys.adminVerifications(),
+    queryFn: async () => {
+      const r = await api.get("/admin/analytics");
+      return (r.data.pending_verifications as number) ?? 0;
+    },
+    enabled: isAdmin(user?.role ?? ""),
+    staleTime: 60_000,
+    refetchInterval: 120_000
+  });
+
   useEffect(() => {
     const onResize = () => {
       const desktop = window.innerWidth >= 1024;
@@ -239,7 +268,7 @@ export function Layout() {
       : [{ to: "/organizations", icon: <Building2 className="h-4 w-4" />, label: "Organizations" }]),
     ...(hasRole(user.role, "organizer", "scorer")
       ? [{ to: "/scoring", icon: <Target className="h-4 w-4" />, label: "Scoring" }] : []),
-    ...(isAdmin(user.role) ? [{ to: "/admin", icon: <ShieldCheck className="h-4 w-4" />, label: "Admin" }] : [])
+    ...(isAdmin(user.role) ? [{ to: "/admin", icon: <ShieldCheck className="h-4 w-4" />, label: "Admin", badge: pendingVerifCount.data ?? 0 }] : [])
   ];
 
   return (
@@ -341,6 +370,7 @@ export function Layout() {
               {navItems.map((item) => (
                 <NavItem key={item.to} to={item.to} icon={item.icon} label={item.label}
                   isCollapsed={isDesktop ? !sidebarHovered : !sidebarOpen}
+                  badge={"badge" in item ? (item as any).badge : undefined}
                   onClick={() => { if (!isDesktop) setSidebarOpen(false); }} />
               ))}
             </div>

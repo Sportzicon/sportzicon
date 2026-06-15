@@ -1,6 +1,7 @@
 import { prisma } from "../../config/prisma";
 import { BadRequest, Forbidden, NotFound } from "../../utils/errors";
 import { createNotification } from "../notifications/notifications.service";
+import { eventBus } from "../../lib/EventBus";
 import type { EntityType } from "../../types/domain";
 
 const VALID_TYPES: Record<EntityType, string[]> = {
@@ -146,4 +147,82 @@ export async function review(id: string, reviewerId: string, decision: "approve"
   });
 
   return { ...v, status: newStatus };
+}
+
+export async function approveOrg(orgId: string, adminId: string) {
+  const org = await prisma.organization.findUnique({
+    where: { id: orgId },
+    select: { owner_user_id: true, verification_status: true, org_name: true, verification_badges: true }
+  });
+  if (!org) throw NotFound("Organization not found");
+
+  const existing = org.verification_badges ?? [];
+  const badges = existing.includes("verified_org") ? existing : [...existing, "verified_org"];
+
+  await prisma.$transaction([
+    prisma.organization.update({
+      where: { id: orgId },
+      data: { verification_status: "approved", verification_badges: badges }
+    }),
+    prisma.auditLog.create({
+      data: {
+        actor_id: adminId,
+        actor_role: "admin",
+        action: "org_verified",
+        target_type: "organization",
+        target_id: orgId
+      }
+    })
+  ]);
+
+  eventBus.emit("org.verified", { orgId, adminId });
+
+  await createNotification({
+    user_id: org.owner_user_id,
+    type: "org.verified",
+    title: "Organization verified ✓",
+    body: `${org.org_name} has been verified and now displays the verified badge.`,
+    link: `/organizations/${orgId}`,
+    email: true
+  });
+
+  return { ok: true };
+}
+
+export async function rejectOrg(orgId: string, adminId: string, reason: string) {
+  const org = await prisma.organization.findUnique({
+    where: { id: orgId },
+    select: { owner_user_id: true, org_name: true }
+  });
+  if (!org) throw NotFound("Organization not found");
+
+  await prisma.$transaction([
+    prisma.organization.update({
+      where: { id: orgId },
+      data: { verification_status: "rejected" }
+    }),
+    prisma.auditLog.create({
+      data: {
+        actor_id: adminId,
+        actor_role: "admin",
+        action: "org_verification_rejected",
+        target_type: "organization",
+        target_id: orgId,
+        details: { reason }
+      }
+    })
+  ]);
+
+  eventBus.emit("org.verification_rejected", { orgId, adminId, reason });
+
+  await createNotification({
+    user_id: org.owner_user_id,
+    type: "org.verification_rejected",
+    title: "Verification update",
+    body: `Verification for ${org.org_name} was not approved. Reason: ${reason}`,
+    link: `/organizations/${orgId}`,
+    email: true
+  });
+
+  return { ok: true };
 }

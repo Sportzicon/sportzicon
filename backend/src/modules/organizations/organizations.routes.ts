@@ -5,7 +5,7 @@ import { requireAuth, requireRole } from "../../middleware/auth";
 import { validate } from "../../middleware/validate";
 import { ROLES } from "../../utils/roles";
 import * as svc from "./organizations.service";
-import { createOrgSchema, updateOrgSchema } from "./organizations.schemas";
+import { createOrgSchema, updateOrgSchema, addDocumentSchema } from "./organizations.schemas";
 
 const router = Router();
 
@@ -68,6 +68,27 @@ router.delete(
   asyncHandler(async (req, res) => {
     const r = await svc.deleteOrganization(req.params.id, req.user!.sub, req.user!.role === "admin");
     res.json(r);
+  })
+);
+
+router.post(
+  "/:id/documents",
+  requireAuth,
+  validate(z.object({ id: z.string().min(8) }), "params"),
+  validate(addDocumentSchema),
+  asyncHandler(async (req, res) => {
+    const doc = await svc.addOrgDocument(req.params.id, req.user!.sub, req.user!.role, req.body.key, req.body.name);
+    res.status(201).json({ document: doc });
+  })
+);
+
+router.get(
+  "/:id/documents",
+  requireAuth,
+  validate(z.object({ id: z.string().min(8) }), "params"),
+  asyncHandler(async (req, res) => {
+    const docs = await svc.listOrgDocuments(req.params.id, req.user!.sub, req.user!.role);
+    res.json({ items: docs });
   })
 );
 

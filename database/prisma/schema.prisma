@@ -80,6 +80,10 @@ model User {
   athlete_data Json?
   coach_data   Json?
 
+  is_banned      Boolean  @default(false)
+  banned_reason  String?
+  banned_at      DateTime?
+
   follower_count  Int @default(0)
   following_count Int @default(0)
 
@@ -153,6 +157,19 @@ model Organization {
 
   owner         User          @relation(fields: [owner_user_id], references: [id])
   opportunities Opportunity[]
+  documents     OrgDocument[]
+}
+
+model OrgDocument {
+  id          String   @id @default(uuid()) @db.Uuid
+  org_id      String   @db.Uuid
+  key         String
+  name        String
+  uploaded_at DateTime @default(now())
+
+  organization Organization @relation(fields: [org_id], references: [id], onDelete: Cascade)
+
+  @@index([org_id])
 }
 
 model Opportunity {

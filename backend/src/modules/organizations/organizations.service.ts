@@ -80,6 +80,24 @@ export async function listOrganizationsForOwner(ownerId: string) {
   return orgs.map(formatOrg);
 }
 
+export async function addOrgDocument(orgId: string, actorId: string, actorRole: string, key: string, name: string) {
+  const org = await prisma.organization.findUnique({ where: { id: orgId }, select: { owner_user_id: true } });
+  if (!org) throw NotFound("Organization not found");
+  if (org.owner_user_id !== actorId && actorRole !== "admin")
+    throw Forbidden("Only the org owner or an admin can upload documents");
+
+  return prisma.orgDocument.create({ data: { org_id: orgId, key, name } });
+}
+
+export async function listOrgDocuments(orgId: string, actorId: string, actorRole: string) {
+  const org = await prisma.organization.findUnique({ where: { id: orgId }, select: { owner_user_id: true } });
+  if (!org) throw NotFound("Organization not found");
+  if (org.owner_user_id !== actorId && actorRole !== "admin")
+    throw Forbidden("Only the org owner or an admin can view documents");
+
+  return prisma.orgDocument.findMany({ where: { org_id: orgId }, orderBy: { uploaded_at: "desc" } });
+}
+
 export async function deleteOrganization(orgId: string, actorId: string, isAdmin: boolean) {
   const org = await prisma.organization.findUnique({ where: { id: orgId }, select: { owner_user_id: true } });
   if (!org) throw NotFound("Organization not found");
