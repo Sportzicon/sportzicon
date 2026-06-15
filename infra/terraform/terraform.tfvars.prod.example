@@ -22,7 +22,7 @@ max_instances_web = 3
 api_port       = 8080
 api_public_url = "https://api.sportzicon.com"
 web_app_url    = "https://sportzicon.com"
-cors_origins   = "https://sportzicon.com"
+cors_origins   = "https://sportzicon.com,https://www.sportzicon.com"
 
 # Rate limiting (production — strict)
 rate_limit_window_ms = 900000

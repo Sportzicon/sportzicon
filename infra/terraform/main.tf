@@ -21,6 +21,11 @@ resource "google_project_service" "apis" {
   disable_on_destroy = false
 }
 
+# Resolve project number — needed to construct the Cloud Build SA email.
+data "google_project" "project" {
+  project_id = var.project_id
+}
+
 # Reference existing runtime service account (created outside Terraform or in previous run)
 data "google_service_account" "runtime" {
   account_id = "sportivox-run-${var.env}"
@@ -38,6 +43,13 @@ resource "google_project_iam_member" "runtime_secret_accessor" {
   project = var.project_id
   role    = "roles/secretmanager.secretAccessor"
   member  = "serviceAccount:${data.google_service_account.runtime.email}"
+}
+
+# Allow Cloud Build to read the DIRECT_URL secret for the migrate step.
+resource "google_secret_manager_secret_iam_member" "cloudbuild_direct_url" {
+  secret_id = google_secret_manager_secret.direct_url.secret_id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${data.google_project.project.number}@cloudbuild.gserviceaccount.com"
 }
 
 # Logs / monitoring

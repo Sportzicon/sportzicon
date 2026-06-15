@@ -7,3 +7,4 @@ export { useConversations, useMessages, useUserProfile } from "./useMessages";
 export { useNotificationCount, useNotifications } from "./useNotifications";
 export { useComments } from "./useComments";
 export { useReels } from "./useReels";
+export { useSearchPlayers, useSearchClubs, useSearchOpportunities } from "./useSearch";

@@ -1,16 +1,32 @@
 # Cloud Build pipeline for Sportivox.
 # Trigger off pushes to `main` from the GitHub repo. Builds both images
-# in parallel, pushes them to Artifact Registry, then rolls Cloud Run.
+# in parallel, pushes them to Artifact Registry, runs DB migrations, then
+# rolls Cloud Run.
 #
 # Substitutions you must set on the trigger:
-#   _REGION       e.g. asia-south1
-#   _AR_REPO      e.g. sportivox
-#   _API_SERVICE  e.g. sportivox-api-prod
-#   _WEB_SERVICE  e.g. sportivox-web-prod
-#   _WEB_APP_URL  e.g. https://app.sportivox.com (passed into the web build as VITE_API_BASE_URL via env)
+#   _REGION         e.g. asia-south1
+#   _AR_REPO        e.g. sportivox
+#   _API_SERVICE    e.g. sportivox-api-prod
+#   _WEB_SERVICE    e.g. sportivox-web-prod
+#   _WEB_APP_URL    e.g. https://app.sportivox.com
 #   _API_PUBLIC_URL the api base URL the web app should call
+#   _ENV            e.g. prod  (must match the suffix used in Secret Manager names)
+#
+# Secret Manager prerequisite (one-time setup per environment):
+#   The migration step reads DIRECT_URL from Secret Manager.
+#   Run `terraform apply` once after adding the direct_url variable — Terraform
+#   creates the secret and populates it. Then ensure the Cloud Build service
+#   account has roles/secretmanager.secretAccessor on the project (Terraform
+#   handles this too via the cloudbuild_secret_accessor resource in main.tf).
+
+availableSecrets:
+  secretManager:
+    - versionName: projects/$PROJECT_ID/secrets/sportivox-direct-url-${_ENV}/versions/latest
+      env: DIRECT_URL
 
 steps:
+  # ── Build images in parallel ────────────────────────────────────────────────
+
   # API image
   - id: build-api
     name: gcr.io/cloud-builders/docker
@@ -41,7 +57,8 @@ steps:
       - "VITE_API_BASE_URL=${_API_PUBLIC_URL}"
       - ./frontend
 
-  # Push
+  # ── Push images ─────────────────────────────────────────────────────────────
+
   - id: push-api
     name: gcr.io/cloud-builders/docker
     waitFor: ["build-api"]
@@ -52,10 +69,28 @@ steps:
     waitFor: ["build-web"]
     args: ["push", "--all-tags", "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO}/web"]
 
-  # Deploy
+  # ── Run database migrations ─────────────────────────────────────────────────
+  # Runs inside the freshly-built API image so the migration files are in sync
+  # with the code being deployed. Blocks deploy-api; if it fails the current
+  # revision keeps serving traffic.
+
+  - id: migrate
+    name: "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO}/api:$SHORT_SHA"
+    waitFor: ["push-api"]
+    entrypoint: sh
+    secretEnv: ["DIRECT_URL"]
+    args:
+      - -c
+      - |
+        echo "Running Prisma migrations..."
+        DATABASE_URL="$$DIRECT_URL" ./node_modules/.bin/prisma migrate deploy
+        echo "Migrations complete."
+
+  # ── Deploy ──────────────────────────────────────────────────────────────────
+
   - id: deploy-api
     name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
-    waitFor: ["push-api"]
+    waitFor: ["migrate"]
     entrypoint: gcloud
     args:
       - run

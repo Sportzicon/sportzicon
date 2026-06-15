@@ -10,6 +10,9 @@ const router = Router();
 const playerSearchQ = z.object({
   q: z.string().max(120).optional(),
   sport: z.string().optional(),
+  sort: z.enum(["newest", "verified"]).optional(),
+  cursor: z.string().optional(),
+  limit: z.coerce.number().int().min(1).max(50).default(20),
   country: z.string().optional(),
   state: z.string().optional(),
   city: z.string().optional(),
@@ -20,28 +23,31 @@ const playerSearchQ = z.object({
   position: z.string().optional(),
   available: z.coerce.boolean().optional(),
   verified: z.coerce.boolean().optional(),
-  limit: z.coerce.number().int().min(1).max(500).default(20)
 });
 
 const clubSearchQ = z.object({
   q: z.string().max(120).optional(),
   sport: z.string().optional(),
+  sort: z.enum(["newest", "verified"]).optional(),
+  cursor: z.string().optional(),
+  limit: z.coerce.number().int().min(1).max(50).default(20),
   country: z.string().optional(),
   state: z.string().optional(),
   city: z.string().optional(),
   org_type: z.enum(["club", "academy", "both"]).optional(),
   verified: z.coerce.boolean().optional(),
-  limit: z.coerce.number().int().min(1).max(100).default(20)
 });
 
 const oppSearchQ = z.object({
   q: z.string().max(120).optional(),
   sport: z.string().optional(),
-  type: z.enum(["trial", "recruitment", "scholarship", "tournament", "coaching_job"]).optional(),
+  sort: z.enum(["newest", "deadline"]).optional(),
+  cursor: z.string().optional(),
+  limit: z.coerce.number().int().min(1).max(50).default(20),
   country: z.string().optional(),
   city: z.string().optional(),
+  type: z.enum(["trial", "recruitment", "scholarship", "tournament", "coaching_job"]).optional(),
   status: z.enum(["open", "closed", "filled"]).optional(),
-  limit: z.coerce.number().int().min(1).max(100).default(20)
 });
 
 router.get(
@@ -49,8 +55,8 @@ router.get(
   requireAuth,
   validate(playerSearchQ, "query"),
   asyncHandler(async (req, res) => {
-    const items = await svc.searchPlayers(req.query as any);
-    res.json({ items });
+    const result = await svc.searchPlayers(req.query as unknown as z.infer<typeof playerSearchQ>);
+    res.json(result);
   })
 );
 
@@ -59,8 +65,8 @@ router.get(
   requireAuth,
   validate(clubSearchQ, "query"),
   asyncHandler(async (req, res) => {
-    const items = await svc.searchClubs(req.query as any);
-    res.json({ items });
+    const result = await svc.searchClubs(req.query as unknown as z.infer<typeof clubSearchQ>);
+    res.json(result);
   })
 );
 
@@ -69,8 +75,8 @@ router.get(
   requireAuth,
   validate(oppSearchQ, "query"),
   asyncHandler(async (req, res) => {
-    const items = await svc.searchOpportunities(req.query as any);
-    res.json({ items });
+    const result = await svc.searchOpportunities(req.query as unknown as z.infer<typeof oppSearchQ>);
+    res.json(result);
   })
 );
 

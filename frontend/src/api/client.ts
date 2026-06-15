@@ -17,9 +17,10 @@ let refreshing: Promise<string | null> | null = null;
 
 async function doRefresh(): Promise<string | null> {
   const s = useAuthStore.getState();
-  if (!s.refreshToken) return null;
+  const tokenAtStart = s.refreshToken;
+  if (!tokenAtStart) return null;
   try {
-    const r = await axios.post(`${baseURL}/auth/refresh`, { refresh_token: s.refreshToken });
+    const r = await axios.post(`${baseURL}/auth/refresh`, { refresh_token: tokenAtStart });
     useAuthStore.getState().setSession({
       user: r.data.user,
       accessToken: r.data.access_token,
@@ -27,8 +28,12 @@ async function doRefresh(): Promise<string | null> {
     });
     return r.data.access_token as string;
   } catch {
-    useAuthStore.getState().clear();
-    queryClient.clear();
+    // Only clear if the user hasn't logged in fresh since this refresh started.
+    // Guards against: stale refresh races a successful login and wipes the new session.
+    if (useAuthStore.getState().refreshToken === tokenAtStart) {
+      useAuthStore.getState().clear();
+      queryClient.clear();
+    }
     return null;
   }
 }

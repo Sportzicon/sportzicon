@@ -2,9 +2,18 @@ import type { AxiosInstance } from "axios";
 
 export type SearchMode = "players" | "clubs" | "opportunities";
 
+export interface SearchPage<T> {
+  data: T[];
+  nextCursor: string | null;
+  total: number;
+}
+
 export interface PlayerSearchParams {
   q?: string;
   sport?: string;
+  sort?: "newest" | "verified";
+  cursor?: string;
+  limit?: number;
   country?: string;
   state?: string;
   city?: string;
@@ -15,28 +24,31 @@ export interface PlayerSearchParams {
   position?: string;
   available?: boolean;
   verified?: boolean;
-  limit?: number;
 }
 
 export interface ClubSearchParams {
   q?: string;
   sport?: string;
+  sort?: "newest" | "verified";
+  cursor?: string;
+  limit?: number;
   country?: string;
   state?: string;
   city?: string;
   org_type?: string;
   verified?: boolean;
-  limit?: number;
 }
 
 export interface OpportunitySearchParams {
   q?: string;
   sport?: string;
-  type?: string;
+  sort?: "newest" | "deadline";
+  cursor?: string;
+  limit?: number;
   country?: string;
   city?: string;
+  type?: string;
   status?: string;
-  limit?: number;
 }
 
 export type SearchParams = PlayerSearchParams | ClubSearchParams | OpportunitySearchParams;
@@ -44,20 +56,18 @@ export type SearchParams = PlayerSearchParams | ClubSearchParams | OpportunitySe
 export class SearchService {
   constructor(private readonly client: AxiosInstance) {}
 
-  async search<T = unknown>(mode: SearchMode, params: SearchParams): Promise<T[]> {
-    const res = await this.client.get<{ items: T[] }>(`/search/${mode}`, { params });
-    return res.data.items;
+  async searchPlayers(params: PlayerSearchParams): Promise<SearchPage<Record<string, unknown>>> {
+    const res = await this.client.get<SearchPage<Record<string, unknown>>>("/search/players", { params });
+    return res.data;
   }
 
-  async searchPlayers(params: PlayerSearchParams) {
-    return this.search<Record<string, unknown>>("players", params);
+  async searchClubs(params: ClubSearchParams): Promise<SearchPage<Record<string, unknown>>> {
+    const res = await this.client.get<SearchPage<Record<string, unknown>>>("/search/clubs", { params });
+    return res.data;
   }
 
-  async searchClubs(params: ClubSearchParams) {
-    return this.search<Record<string, unknown>>("clubs", params);
-  }
-
-  async searchOpportunities(params: OpportunitySearchParams) {
-    return this.search<Record<string, unknown>>("opportunities", params);
+  async searchOpportunities(params: OpportunitySearchParams): Promise<SearchPage<Record<string, unknown>>> {
+    const res = await this.client.get<SearchPage<Record<string, unknown>>>("/search/opportunities", { params });
+    return res.data;
   }
 }

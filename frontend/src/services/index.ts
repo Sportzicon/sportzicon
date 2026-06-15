@@ -36,7 +36,7 @@ export const commentService      = build(new CommentService(api),      "CommentS
 export const messageService      = build(new MessageService(api),      "MessageService");
 export const notificationService = build(new NotificationService(api), "NotificationService");
 export const userService         = build(new UserService(api),         "UserService");
-export const authService         = build(new AuthService(api),         "AuthService");
+export const authService         = withLogging(new AuthService(api),         "AuthService");
 export const organizationService = build(new OrganizationService(api), "OrganizationService");
 export const reelService         = build(new ReelService(api),         "ReelService");
 export const searchService       = build(new SearchService(api),       "SearchService");
@@ -68,5 +68,5 @@ export { withRetry }   from "./decorators/withRetry";
 
 export type { LoginRequest, LoginResponse } from "./auth.service";
 export type { CreateReelRequest, UpdateReelRequest } from "./reel.service";
-export type { SearchMode, SearchParams, PlayerSearchParams, ClubSearchParams, OpportunitySearchParams } from "./search.service";
+export type { SearchMode, SearchParams, SearchPage, PlayerSearchParams, ClubSearchParams, OpportunitySearchParams } from "./search.service";
 export type { ScoringMatch, ScoringTournament, ScoringBall, ScoringPlayerStats, CreateTournamentRequest, CreateMatchRequest, AddBallRequest } from "./scoring.service";

@@ -1,28 +1,75 @@
 import { prisma } from "../../config/prisma";
-import type { User, Organization } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 
-// Phase 1: indexed SQL filters server-side + case-insensitive substring in-memory.
-// Phase 2 upgrade path: replace in-memory text filter with pg full-text search (tsvector).
+type PaginatedResult<T> = {
+  data: T[];
+  nextCursor: string | null;
+  total: number;
+};
 
-function rankPlayers(items: User[]) {
-  return items.sort((a, b) => {
-    const va = a.verification_status === "approved" ? 1 : 0;
-    const vb = b.verification_status === "approved" ? 1 : 0;
-    return va !== vb ? vb - va : b.updated_at.getTime() - a.updated_at.getTime();
-  });
+type PlayerCard = {
+  id: string;
+  full_name: string;
+  role: string;
+  dob: string | null;
+  profile_photo_url: string | null;
+  cover_photo_url: string | null;
+  country: string | null;
+  state: string | null;
+  city: string | null;
+  bio: string | null;
+  verification: { status: string; badges: string[] };
+  athlete_data: Record<string, unknown> | undefined;
+  follower_count: number;
+};
+
+type ClubRow = {
+  id: string;
+  org_name: string;
+  org_type: string;
+  description: string | null;
+  logo_url: string | null;
+  sport_categories: string[];
+  city: string | null;
+  country: string | null;
+  verification_status: string;
+  verification_badges: string[];
+  updated_at: Date;
+};
+
+type OppRow = {
+  id: string;
+  title: string;
+  type: string;
+  sport: string;
+  status: string;
+  city: string;
+  country: string;
+  application_deadline: string;
+  vacancies: number | null;
+  application_count: number;
+  org_name: string;
+  created_at: Date;
+};
+
+function encodeCursor(id: string, ts: Date): string {
+  return Buffer.from(JSON.stringify({ id, ts: ts.toISOString() })).toString("base64url");
 }
 
-function rankOrgs(items: Organization[]) {
-  return items.sort((a, b) => {
-    const va = a.verification_status === "approved" ? 1 : 0;
-    const vb = b.verification_status === "approved" ? 1 : 0;
-    return va !== vb ? vb - va : b.updated_at.getTime() - a.updated_at.getTime();
-  });
+function decodeCursor(cursor: string): { id: string; ts: string } | null {
+  try {
+    return JSON.parse(Buffer.from(cursor, "base64url").toString("utf8"));
+  } catch {
+    return null;
+  }
 }
 
 export async function searchPlayers(q: {
   q?: string;
   sport?: string;
+  sort?: string;
+  cursor?: string;
+  limit: number;
   country?: string;
   state?: string;
   city?: string;
@@ -33,167 +80,300 @@ export async function searchPlayers(q: {
   position?: string;
   available?: boolean;
   verified?: boolean;
-  limit: number;
-}) {
-  const where: Record<string, unknown> = { role: "athlete" };
-  if (q.country) where.country = { contains: q.country, mode: "insensitive" };
-  if (q.state) where.state = { contains: q.state, mode: "insensitive" };
-  if (q.city) where.city = { contains: q.city, mode: "insensitive" };
-  if (q.gender) where.gender = q.gender;
-  if (q.verified) where.verification_status = "approved";
+}): Promise<PaginatedResult<PlayerCard>> {
+  const limit = Math.min(q.limit, 50);
+  const hasFTS = Boolean(q.q?.trim());
 
-  let items = await prisma.user.findMany({
-    where,
-    take: Math.min(q.limit * 3, 500)
-  });
+  const conditions: Prisma.Sql[] = [Prisma.sql`u.role = 'athlete'`];
 
-  // In-memory filters for JSON fields and age
+  if (hasFTS) {
+    conditions.push(
+      Prisma.sql`u.search_vector @@ plainto_tsquery('english', ${q.q!.trim()})`
+    );
+  }
   if (q.sport) {
-    const sportLower = q.sport.toLowerCase();
-    items = items.filter((u) => {
-      const d = u.athlete_data as Record<string, unknown> | null;
-      return String(d?.primary_sport ?? "").toLowerCase() === sportLower;
-    });
+    conditions.push(
+      Prisma.sql`lower(u.athlete_data->>'primary_sport') = lower(${q.sport})`
+    );
   }
   if (q.experience_level) {
-    items = items.filter((u) => {
-      const d = u.athlete_data as Record<string, unknown> | null;
-      return d?.experience_level === q.experience_level;
-    });
+    conditions.push(
+      Prisma.sql`u.athlete_data->>'experience_level' = ${q.experience_level}`
+    );
   }
   if (q.position) {
-    const posLower = q.position.toLowerCase();
-    items = items.filter((u) => {
-      const d = u.athlete_data as Record<string, unknown> | null;
-      return String(d?.position ?? "").toLowerCase().includes(posLower);
-    });
+    conditions.push(
+      Prisma.sql`lower(u.athlete_data->>'position') LIKE lower(${`%${q.position}%`})`
+    );
   }
   if (q.available) {
-    items = items.filter((u) => {
-      const d = u.athlete_data as Record<string, unknown> | null;
-      return d?.availability === "available" || d?.availability === "open_to_offers";
-    });
+    conditions.push(
+      Prisma.sql`(u.athlete_data->>'availability' = 'available' OR u.athlete_data->>'availability' = 'open_to_offers')`
+    );
   }
-  if (q.age_min != null || q.age_max != null) {
-    items = items.filter((u) => {
-      if (!u.dob) return false;
-      const age = Math.floor((Date.now() - new Date(u.dob).getTime()) / (365.25 * 24 * 3600 * 1000));
-      if (q.age_min != null && age < q.age_min) return false;
-      if (q.age_max != null && age > q.age_max) return false;
-      return true;
-    });
+  if (q.verified) {
+    conditions.push(Prisma.sql`u.verification_status = 'approved'`);
   }
-  if (q.q) {
-    const needle = q.q.toLowerCase();
-    items = items.filter((u) => {
-      const d = u.athlete_data as Record<string, unknown> | null;
-      return (
-        u.full_name_lower?.includes(needle) ||
-        u.city?.toLowerCase().includes(needle) ||
-        u.bio?.toLowerCase().includes(needle) ||
-        String(d?.primary_sport ?? "").toLowerCase().includes(needle)
-      );
-    });
+  if (q.city) {
+    conditions.push(Prisma.sql`lower(u.city) LIKE lower(${`%${q.city}%`})`);
+  }
+  if (q.country) {
+    conditions.push(Prisma.sql`lower(u.country) LIKE lower(${`%${q.country}%`})`);
+  }
+  if (q.gender) {
+    conditions.push(Prisma.sql`u.gender = ${q.gender}`);
+  }
+  if (q.age_min != null) {
+    const cutoff = new Date();
+    cutoff.setFullYear(cutoff.getFullYear() - q.age_min);
+    conditions.push(Prisma.sql`u.dob::date <= ${cutoff.toISOString().slice(0, 10)}::date`);
+  }
+  if (q.age_max != null) {
+    const cutoff = new Date();
+    cutoff.setFullYear(cutoff.getFullYear() - q.age_max - 1);
+    conditions.push(Prisma.sql`u.dob::date > ${cutoff.toISOString().slice(0, 10)}::date`);
   }
 
-  return rankPlayers(items).slice(0, q.limit).map(playerCard);
+  const decoded = q.cursor ? decodeCursor(q.cursor) : null;
+  if (decoded) {
+    conditions.push(
+      Prisma.sql`(u.updated_at < ${new Date(decoded.ts)}::timestamptz OR (u.updated_at = ${new Date(decoded.ts)}::timestamptz AND u.id::text < ${decoded.id}))`
+    );
+  }
+
+  const where = Prisma.join(conditions, " AND ");
+
+  const rankExpr = hasFTS
+    ? Prisma.sql`ts_rank(u.search_vector, plainto_tsquery('english', ${q.q!.trim()}))`
+    : Prisma.sql`0`;
+
+  const [rows, countRows] = await Promise.all([
+    prisma.$queryRaw<(PlayerCard & { updated_at: Date; verification_status: string; verification_badges: string[] })[]>(
+      Prisma.sql`
+        SELECT u.id, u.full_name, u.role, u.dob,
+               u.profile_photo_url, u.cover_photo_url,
+               u.country, u.state, u.city, u.bio,
+               u.verification_status, u.verification_badges,
+               u.athlete_data, u.follower_count, u.updated_at
+        FROM "User" u
+        WHERE ${where}
+        ORDER BY ${rankExpr} DESC,
+                 (u.verification_status = 'approved') DESC,
+                 u.updated_at DESC, u.id DESC
+        LIMIT ${limit + 1}
+      `
+    ),
+    prisma.$queryRaw<[{ count: bigint }]>(
+      Prisma.sql`SELECT COUNT(*) as count FROM "User" u WHERE ${where}`
+    ),
+  ]);
+
+  const hasMore = rows.length > limit;
+  const page = hasMore ? rows.slice(0, limit) : rows;
+  const last = page[page.length - 1];
+
+  return {
+    data: page.map((u) => ({
+      id: u.id,
+      full_name: u.full_name,
+      role: u.role,
+      dob: u.dob,
+      profile_photo_url: u.profile_photo_url,
+      cover_photo_url: u.cover_photo_url,
+      country: u.country,
+      state: u.state,
+      city: u.city,
+      bio: u.bio,
+      verification: {
+        status: u.verification_status,
+        badges: (u.verification_badges as string[] | null) ?? [],
+      },
+      athlete_data: u.athlete_data as Record<string, unknown> | undefined,
+      follower_count: Number(u.follower_count),
+    })),
+    nextCursor: hasMore && last ? encodeCursor(last.id, last.updated_at) : null,
+    total: Number(countRows[0]?.count ?? 0),
+  };
 }
 
 export async function searchClubs(q: {
   q?: string;
   sport?: string;
+  sort?: string;
+  cursor?: string;
+  limit: number;
   country?: string;
   state?: string;
   city?: string;
   org_type?: string;
   verified?: boolean;
-  limit: number;
-}) {
-  const where: Record<string, unknown> = {};
-  if (q.country) where.country = { contains: q.country, mode: "insensitive" };
-  if (q.state) where.state = { contains: q.state, mode: "insensitive" };
-  if (q.city) where.city = { contains: q.city, mode: "insensitive" };
-  if (q.org_type) where.org_type = q.org_type;
-  if (q.verified) where.verification_status = "approved";
+}): Promise<PaginatedResult<ClubRow>> {
+  const limit = Math.min(q.limit, 50);
+  const hasFTS = Boolean(q.q?.trim());
 
-  let items = await prisma.organization.findMany({ where, take: Math.min(q.limit * 3, 500) });
+  const conditions: Prisma.Sql[] = [Prisma.sql`1=1`];
 
-  if (q.sport) {
-    const sportLower = q.sport.toLowerCase();
-    items = items.filter((o) => o.sport_categories.some((s) => s.toLowerCase() === sportLower));
+  if (hasFTS) {
+    conditions.push(
+      Prisma.sql`o.search_vector @@ plainto_tsquery('english', ${q.q!.trim()})`
+    );
   }
-  if (q.q) {
-    const needle = q.q.toLowerCase();
-    items = items.filter(
-      (o) => o.org_name_lower?.includes(needle) || o.description?.toLowerCase().includes(needle)
+  if (q.sport) {
+    conditions.push(Prisma.sql`${q.sport} = ANY(o.sport_categories)`);
+  }
+  if (q.verified) {
+    conditions.push(Prisma.sql`o.verification_status = 'approved'`);
+  }
+  if (q.city) {
+    conditions.push(Prisma.sql`lower(o.city) LIKE lower(${`%${q.city}%`})`);
+  }
+  if (q.country) {
+    conditions.push(Prisma.sql`lower(o.country) LIKE lower(${`%${q.country}%`})`);
+  }
+  if (q.org_type) {
+    conditions.push(Prisma.sql`o.org_type = ${q.org_type}`);
+  }
+
+  const decoded = q.cursor ? decodeCursor(q.cursor) : null;
+  if (decoded) {
+    conditions.push(
+      Prisma.sql`(o.updated_at < ${new Date(decoded.ts)}::timestamptz OR (o.updated_at = ${new Date(decoded.ts)}::timestamptz AND o.id::text < ${decoded.id}))`
     );
   }
 
-  return rankOrgs(items).slice(0, q.limit);
+  const where = Prisma.join(conditions, " AND ");
+
+  const rankExpr = hasFTS
+    ? Prisma.sql`ts_rank(o.search_vector, plainto_tsquery('english', ${q.q!.trim()}))`
+    : Prisma.sql`0`;
+
+  const [rows, countRows] = await Promise.all([
+    prisma.$queryRaw<(ClubRow & { updated_at: Date })[]>(
+      Prisma.sql`
+        SELECT o.id, o.org_name, o.org_type, o.description, o.logo_url,
+               o.sport_categories, o.city, o.country,
+               o.verification_status, o.verification_badges, o.updated_at
+        FROM "Organization" o
+        WHERE ${where}
+        ORDER BY ${rankExpr} DESC,
+                 (o.verification_status = 'approved') DESC,
+                 o.updated_at DESC, o.id DESC
+        LIMIT ${limit + 1}
+      `
+    ),
+    prisma.$queryRaw<[{ count: bigint }]>(
+      Prisma.sql`SELECT COUNT(*) as count FROM "Organization" o WHERE ${where}`
+    ),
+  ]);
+
+  const hasMore = rows.length > limit;
+  const page = hasMore ? rows.slice(0, limit) : rows;
+  const last = page[page.length - 1];
+
+  return {
+    data: page,
+    nextCursor: hasMore && last ? encodeCursor(last.id, last.updated_at) : null,
+    total: Number(countRows[0]?.count ?? 0),
+  };
 }
 
 export async function searchOpportunities(q: {
   q?: string;
   sport?: string;
-  type?: string;
+  sort?: string;
+  cursor?: string;
+  limit: number;
   country?: string;
   city?: string;
+  type?: string;
   status?: string;
-  limit: number;
-}) {
-  const where: Record<string, unknown> = { status: q.status ?? "open" };
-  if (q.sport) where.sport = { contains: q.sport, mode: "insensitive" };
-  if (q.type) where.type = q.type;
-  if (q.country) where.country = { contains: q.country, mode: "insensitive" };
-  if (q.city) where.city = { contains: q.city, mode: "insensitive" };
+}): Promise<PaginatedResult<OppRow>> {
+  const limit = Math.min(q.limit, 50);
+  const hasFTS = Boolean(q.q?.trim());
+  const status = q.status ?? "open";
 
-  let items = await prisma.opportunity.findMany({
-    where,
-    orderBy: { created_at: "desc" },
-    take: Math.min(q.limit * 3, 500),
-    include: { organization: { select: { org_name: true } } }
-  });
+  const conditions: Prisma.Sql[] = [Prisma.sql`opp.status = ${status}`];
 
-  if (q.q) {
-    const needle = q.q.toLowerCase();
-    items = items.filter(
-      (o) =>
-        o.title_lower?.includes(needle) ||
-        o.description?.toLowerCase().includes(needle) ||
-        o.organization.org_name.toLowerCase().includes(needle)
+  if (hasFTS) {
+    conditions.push(
+      Prisma.sql`opp.search_vector @@ plainto_tsquery('english', ${q.q!.trim()})`
     );
   }
+  if (q.sport) {
+    conditions.push(Prisma.sql`lower(opp.sport) = lower(${q.sport})`);
+  }
+  if (q.type) {
+    conditions.push(Prisma.sql`opp.type = ${q.type}`);
+  }
+  if (q.city) {
+    conditions.push(Prisma.sql`lower(opp.city) LIKE lower(${`%${q.city}%`})`);
+  }
+  if (q.country) {
+    conditions.push(Prisma.sql`lower(opp.country) LIKE lower(${`%${q.country}%`})`);
+  }
 
-  return items.slice(0, q.limit);
-}
+  const decoded = q.cursor ? decodeCursor(q.cursor) : null;
+  if (decoded) {
+    if (q.sort === "deadline") {
+      conditions.push(
+        Prisma.sql`(opp.application_deadline > ${decoded.ts} OR (opp.application_deadline = ${decoded.ts} AND opp.id::text > ${decoded.id}))`
+      );
+    } else {
+      conditions.push(
+        Prisma.sql`(opp.created_at < ${new Date(decoded.ts)}::timestamptz OR (opp.created_at = ${new Date(decoded.ts)}::timestamptz AND opp.id::text < ${decoded.id}))`
+      );
+    }
+  }
 
-function playerCard(u: User) {
-  const d = u.athlete_data as Record<string, unknown> | null;
+  const where = Prisma.join(conditions, " AND ");
+
+  const rankExpr = hasFTS
+    ? Prisma.sql`ts_rank(opp.search_vector, plainto_tsquery('english', ${q.q!.trim()}))`
+    : Prisma.sql`0`;
+
+  const orderExpr =
+    q.sort === "deadline"
+      ? Prisma.sql`opp.application_deadline ASC, opp.id ASC`
+      : Prisma.sql`${rankExpr} DESC, opp.created_at DESC, opp.id DESC`;
+
+  const [rows, countRows] = await Promise.all([
+    prisma.$queryRaw<(OppRow & { created_at: Date })[]>(
+      Prisma.sql`
+        SELECT opp.id, opp.title, opp.type, opp.sport, opp.status,
+               opp.city, opp.country, opp.application_deadline,
+               opp.vacancies, opp.application_count,
+               opp.created_at,
+               org.org_name
+        FROM "Opportunity" opp
+        JOIN "Organization" org ON opp.org_id = org.id
+        WHERE ${where}
+        ORDER BY ${orderExpr}
+        LIMIT ${limit + 1}
+      `
+    ),
+    prisma.$queryRaw<[{ count: bigint }]>(
+      Prisma.sql`
+        SELECT COUNT(*) as count
+        FROM "Opportunity" opp
+        JOIN "Organization" org ON opp.org_id = org.id
+        WHERE ${where}
+      `
+    ),
+  ]);
+
+  const hasMore = rows.length > limit;
+  const page = hasMore ? rows.slice(0, limit) : rows;
+  const last = page[page.length - 1];
+
+  const nextCursorVal = hasMore && last
+    ? (q.sort === "deadline"
+        ? encodeCursor(last.id, new Date(last.application_deadline))
+        : encodeCursor(last.id, last.created_at))
+    : null;
+
   return {
-    id: u.id,
-    full_name: u.full_name,
-    role: u.role,
-    dob: u.dob,
-    profile_photo_url: u.profile_photo_url,
-    cover_photo_url: u.cover_photo_url,
-    country: u.country,
-    state: u.state,
-    city: u.city,
-    bio: u.bio,
-    verification: { status: u.verification_status, badges: u.verification_badges },
-    athlete_data: d
-      ? {
-          primary_sport: d.primary_sport,
-          position: d.position,
-          experience_level: d.experience_level,
-          availability: d.availability,
-          // Cricket-specific fields for scoring module
-          batting_style: d.batting_style,
-          bowling_style: d.bowling_style,
-          jersey_number: d.jersey_number,
-          cricket_role: d.cricket_role
-        }
-      : undefined,
-    follower_count: u.follower_count
+    data: page,
+    nextCursor: nextCursorVal,
+    total: Number(countRows[0]?.count ?? 0),
   };
 }

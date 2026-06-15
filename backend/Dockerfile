@@ -42,8 +42,11 @@ RUN apk add --no-cache tini openssl && addgroup -S app && adduser -S app -G app
 ENV NODE_ENV=production
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
+COPY --from=build /app/prisma ./prisma
 COPY package.json ./
 USER app
 EXPOSE 8080
 ENTRYPOINT ["/sbin/tini","--"]
-CMD ["node","dist/server.js"]
+# Run pending migrations then start the server. If migrate deploy fails the
+# container exits non-zero, Cloud Run keeps traffic on the previous revision.
+CMD ["sh","-c","./node_modules/.bin/prisma migrate deploy && node dist/server.js"]

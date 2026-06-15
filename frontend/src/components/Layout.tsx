@@ -7,7 +7,12 @@ import { hasRole, isAdmin } from "../utils/roles";
 import { Bell, Home, Search, Briefcase, FileText, MessageCircle, ShieldCheck, LogOut, User as UserIcon, Menu, X, Trophy, ChevronDown, Building2, Target, Activity, Video } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 
-function GlobalSearch({ user, inputRef }: { user: any; inputRef: React.RefObject<HTMLInputElement> }) {
+function GlobalSearch({ user, inputRef, mobileOpen, onMobileClose }: {
+  user: any;
+  inputRef: React.RefObject<HTMLInputElement>;
+  mobileOpen: boolean;
+  onMobileClose: () => void;
+}) {
   const navigate = useNavigate();
   const [q, setQ] = useState("");
   const isRecruiter = hasRole(user.role, "club", "scout", "organizer");
@@ -15,18 +20,43 @@ function GlobalSearch({ user, inputRef }: { user: any; inputRef: React.RefObject
   function handleKey(e: React.KeyboardEvent) {
     if (e.key === "Enter" && q.trim()) {
       navigate(isRecruiter ? `/search?q=${encodeURIComponent(q.trim())}` : `/opportunities?q=${encodeURIComponent(q.trim())}`);
-      setQ(""); inputRef.current?.blur();
+      setQ(""); inputRef.current?.blur(); onMobileClose();
     }
-    if (e.key === "Escape") { setQ(""); inputRef.current?.blur(); }
+    if (e.key === "Escape") { setQ(""); inputRef.current?.blur(); onMobileClose(); }
   }
 
   return (
-    <div className="relative flex-1 max-w-xs hidden sm:block">
-      <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-ink-faint pointer-events-none" />
-      <input ref={inputRef} className="input w-full pl-8 text-[12px]" style={{ height: 34 }}
-        placeholder={isRecruiter ? "Search players, clubs… (⌘K)" : "Search opportunities, athletes… (⌘K)"}
-        value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={handleKey} />
-    </div>
+    <>
+      {/* Desktop search bar */}
+      <div className="relative flex-1 max-w-xs hidden sm:block">
+        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-ink-faint pointer-events-none" />
+        <input ref={inputRef} className="input w-full pl-8 text-[12px]" style={{ height: 34 }}
+          placeholder={isRecruiter ? "Search players, clubs… (⌘K)" : "Search opportunities… (⌘K)"}
+          value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={handleKey} />
+      </div>
+
+      {/* Mobile expanded search overlay */}
+      {mobileOpen && (
+        <div className="absolute inset-0 z-50 flex items-center bg-panel px-3 gap-2 sm:hidden">
+          <Search className="h-4 w-4 text-ink-faint flex-shrink-0" />
+          <input
+            ref={inputRef}
+            autoFocus
+            className="flex-1 bg-transparent border-none outline-none text-sm text-ink placeholder:text-ink-faint min-h-[44px]"
+            placeholder={isRecruiter ? "Search players, clubs…" : "Search opportunities…"}
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            onKeyDown={handleKey}
+          />
+          <button
+            className="p-2 min-h-[44px] flex items-center text-ink-sub"
+            onClick={() => { setQ(""); onMobileClose(); }}
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+      )}
+    </>
   );
 }
 
@@ -57,6 +87,7 @@ export function Layout() {
   const [sidebarHovered, setSidebarHovered] = useState(false);
   const touchStartXRef = useRef<number | null>(null);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -132,9 +163,24 @@ export function Layout() {
             </Link>
           </div>
 
-          <GlobalSearch user={user} inputRef={searchInputRef} />
+          <GlobalSearch
+            user={user}
+            inputRef={searchInputRef}
+            mobileOpen={mobileSearchOpen}
+            onMobileClose={() => setMobileSearchOpen(false)}
+          />
 
           <div className="flex items-center gap-2">
+            {/* Mobile search icon — visible only when overlay is closed */}
+            {!mobileSearchOpen && (
+              <button
+                className="sm:hidden rounded p-2 text-ink-70 hover:bg-fill min-h-[44px] min-w-[44px] flex items-center justify-center"
+                aria-label="Search"
+                onClick={() => setMobileSearchOpen(true)}
+              >
+                <Search className="h-5 w-5" />
+              </button>
+            )}
             <NavLink to="/notifications" className="relative rounded p-2 text-ink-70 hover:bg-fill">
               <Bell className="h-5 w-5" />
               {!!count.data && count.data > 0 && (
