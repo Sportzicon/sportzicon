@@ -7,7 +7,11 @@ import { queryKeys } from "../hooks/queryKeys";
 import { useNotificationCount, useNotifications } from "../hooks";
 import { useNotificationStore } from "../store/notifications";
 import { hasRole, isAdmin } from "../utils/roles";
-import { Bell, Home, Search, Briefcase, FileText, MessageCircle, ShieldCheck, LogOut, User as UserIcon, Menu, X, Trophy, ChevronDown, Building2, Target, Activity, Video } from "lucide-react";
+import {
+  Bell, Home, Search, Briefcase, FileText, MessageCircle, ShieldCheck, LogOut,
+  User as UserIcon, Menu, X, Trophy, ChevronDown, Building2, Target, Activity,
+  Video, Plus, Flag, Users,
+} from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import type { Notification } from "../models";
 
@@ -183,6 +187,59 @@ function NotificationDropdown({
   );
 }
 
+/** Role-based bottom nav items (mobile only, 5 per role). */
+function getMobileNavItems(user: { id: string; role: string }) {
+  const profileTo = `/profile/${user.id}`;
+  const base = [
+    { to: "/dashboard",   icon: <Home className="h-5 w-5" />,          label: "Home" },
+  ];
+
+  if (user.role === "admin") {
+    return [
+      ...base,
+      { to: "/admin/users",         icon: <Users className="h-5 w-5" />,       label: "Users" },
+      { to: "/admin/reports",       icon: <Flag className="h-5 w-5" />,        label: "Reports" },
+      { to: "/admin/verifications", icon: <ShieldCheck className="h-5 w-5" />, label: "Verifs" },
+      { to: profileTo,              icon: <UserIcon className="h-5 w-5" />,    label: "Profile" },
+    ];
+  }
+  if (user.role === "club") {
+    return [
+      ...base,
+      { to: "/opportunities/new",  icon: <Plus className="h-5 w-5" />,         label: "Post Opp" },
+      { to: "/my-organizations",   icon: <Briefcase className="h-5 w-5" />,    label: "Applications" },
+      { to: "/messages",           icon: <MessageCircle className="h-5 w-5" />,label: "Messages" },
+      { to: profileTo,             icon: <UserIcon className="h-5 w-5" />,     label: "Profile" },
+    ];
+  }
+  if (user.role === "scout") {
+    return [
+      ...base,
+      { to: "/search", icon: <Search className="h-5 w-5" />,           label: "Search" },
+      { to: "/feed",   icon: <FileText className="h-5 w-5" />,         label: "Feed" },
+      { to: "/messages", icon: <MessageCircle className="h-5 w-5" />,  label: "Messages" },
+      { to: profileTo,  icon: <UserIcon className="h-5 w-5" />,        label: "Profile" },
+    ];
+  }
+  if (user.role === "organizer") {
+    return [
+      ...base,
+      { to: "/opportunities/new", icon: <Plus className="h-5 w-5" />,         label: "Post Opp" },
+      { to: "/tournaments",       icon: <Trophy className="h-5 w-5" />,       label: "Tournaments" },
+      { to: "/messages",          icon: <MessageCircle className="h-5 w-5" />,label: "Messages" },
+      { to: profileTo,            icon: <UserIcon className="h-5 w-5" />,     label: "Profile" },
+    ];
+  }
+  // athlete (default)
+  return [
+    ...base,
+    { to: "/opportunities", icon: <Briefcase className="h-5 w-5" />,    label: "Trials" },
+    { to: "/feed",          icon: <FileText className="h-5 w-5" />,     label: "Feed" },
+    { to: "/messages",      icon: <MessageCircle className="h-5 w-5" />,label: "Messages" },
+    { to: profileTo,        icon: <UserIcon className="h-5 w-5" />,     label: "Profile" },
+  ];
+}
+
 export function Layout() {
   const { user, clear } = useAuthStore();
   const navigate = useNavigate();
@@ -190,9 +247,7 @@ export function Layout() {
   const mainRef = useRef<HTMLElement>(null);
   const qc = useQueryClient();
   const [isDesktop, setIsDesktop] = useState(() => window.innerWidth >= 1024);
-  const [sidebarOpen, setSidebarOpen] = useState(() => window.innerWidth >= 1024);
   const [sidebarHovered, setSidebarHovered] = useState(false);
-  const touchStartXRef = useRef<number | null>(null);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [notifDropdownOpen, setNotifDropdownOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
@@ -218,7 +273,6 @@ export function Layout() {
     const onResize = () => {
       const desktop = window.innerWidth >= 1024;
       setIsDesktop(desktop);
-      if (desktop) setSidebarOpen(true);
     };
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
@@ -271,30 +325,33 @@ export function Layout() {
     ...(isAdmin(user.role) ? [{ to: "/admin", icon: <ShieldCheck className="h-4 w-4" />, label: "Admin", badge: pendingVerifCount.data ?? 0 }] : [])
   ];
 
+  const mobileNavItems = getMobileNavItems(user);
+
+  const isLiveScoring = /^\/scoring\/matches\/[^/]+\/score(\/|$)/.test(location.pathname);
+
   return (
     <div className="flex h-screen flex-col bg-paper">
-      <header className="shrink-0 sticky top-0 z-40 border-b border-hair bg-panel">
-        <div className="flex items-center justify-between gap-4 px-5 py-3">
-          <div className="flex items-center gap-4">
-            <button onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="rounded p-2 transition hover:bg-fill lg:hidden" aria-label="Toggle sidebar">
-              {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-            </button>
-            <Link to="/dashboard" aria-label="Sportzicon" className="flex flex-col items-start">
-              <div style={{ width: 155, height: 48, backgroundImage: 'url(/logo.png)', backgroundSize: 'auto 450%', backgroundRepeat: 'no-repeat', backgroundPosition: 'center', flexShrink: 0 }} />
-              <span className="lab hidden sm:inline" style={{ fontSize: 9, marginTop: -4, marginLeft: 86, letterSpacing: '0.12em' }}>EST. 2026</span>
-            </Link>
+      {/* ── Header ─────────────────────────────────────────────────────────── */}
+      <header className="shrink-0 sticky top-0 z-40 border-b border-hair bg-panel" style={{ height: 56 }}>
+        <div className="flex items-center justify-between gap-4 px-4 h-full relative">
+          {/* Logo */}
+          <Link to="/dashboard" aria-label="Sportzicon" className="flex flex-col items-start flex-shrink-0">
+            <div style={{ width: 100, height: 40, backgroundImage: 'url(/logo.png)', backgroundSize: 'auto 450%', backgroundRepeat: 'no-repeat', backgroundPosition: 'center' }} />
+          </Link>
+
+          {/* Desktop search (hidden on mobile) */}
+          <div className="hidden sm:flex flex-1 max-w-xs">
+            <GlobalSearch
+              user={user}
+              inputRef={searchInputRef}
+              mobileOpen={false}
+              onMobileClose={() => {}}
+            />
           </div>
 
-          <GlobalSearch
-            user={user}
-            inputRef={searchInputRef}
-            mobileOpen={mobileSearchOpen}
-            onMobileClose={() => setMobileSearchOpen(false)}
-          />
-
-          <div className="flex items-center gap-2">
-            {/* Mobile search icon — visible only when overlay is closed */}
+          {/* Right side actions */}
+          <div className="flex items-center gap-1">
+            {/* Mobile search icon */}
             {!mobileSearchOpen && (
               <button
                 className="sm:hidden rounded p-2 text-ink-70 hover:bg-fill min-h-[44px] min-w-[44px] flex items-center justify-center"
@@ -304,6 +361,37 @@ export function Layout() {
                 <Search className="h-5 w-5" />
               </button>
             )}
+
+            {/* Mobile search overlay */}
+            {mobileSearchOpen && (
+              <div className="absolute inset-0 z-50 flex items-center bg-panel px-3 gap-2 sm:hidden">
+                <Search className="h-4 w-4 text-ink-faint flex-shrink-0" />
+                <input
+                  ref={searchInputRef}
+                  autoFocus
+                  className="flex-1 bg-transparent border-none outline-none text-sm text-ink placeholder:text-ink-faint min-h-[44px]"
+                  placeholder={hasRole(user.role, "club", "scout", "organizer") ? "Search players, clubs…" : "Search opportunities…"}
+                  onKeyDown={(e) => {
+                    const val = (e.target as HTMLInputElement).value;
+                    if (e.key === "Enter" && val.trim()) {
+                      navigate(hasRole(user.role, "club", "scout", "organizer")
+                        ? `/search?q=${encodeURIComponent(val.trim())}`
+                        : `/opportunities?q=${encodeURIComponent(val.trim())}`);
+                      setMobileSearchOpen(false);
+                    }
+                    if (e.key === "Escape") setMobileSearchOpen(false);
+                  }}
+                />
+                <button
+                  className="p-2 min-h-[44px] flex items-center text-ink-sub"
+                  onClick={() => setMobileSearchOpen(false)}
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+            )}
+
+            {/* Notification bell */}
             <div ref={notifDropdownRef} className="relative">
               <button
                 className="relative rounded p-2 text-ink-70 hover:bg-fill min-h-[44px] min-w-[44px] flex items-center justify-center"
@@ -330,7 +418,9 @@ export function Layout() {
                 />
               )}
             </div>
-            <div ref={profileMenuRef} className="relative">
+
+            {/* Profile menu (desktop) */}
+            <div ref={profileMenuRef} className="relative hidden sm:block">
               <button onClick={() => setProfileMenuOpen((o) => !o)} className="btn-ghost">
                 <UserIcon className="h-4 w-4" />
                 <span className="hidden sm:inline normal-case tracking-normal">{user.full_name}</span>
@@ -354,33 +444,33 @@ export function Layout() {
       </header>
 
       <div className="flex flex-1 min-h-0 overflow-hidden">
-        {/* Mobile backdrop — tap to close sidebar */}
-        {!isDesktop && sidebarOpen && (
-          <div
-            className="fixed inset-0 z-[19] bg-black/40"
-            onClick={() => setSidebarOpen(false)}
-            aria-hidden="true"
-          />
-        )}
-        <aside onMouseEnter={() => setSidebarHovered(true)} onMouseLeave={() => setSidebarHovered(false)}
-          className="h-full shrink-0 overflow-y-auto overflow-x-hidden border-r border-hair bg-panel transition-all duration-200 flex flex-col z-20"
-          style={{ width: isDesktop ? (sidebarHovered ? 240 : 64) : (sidebarOpen ? 240 : 0) }}>
+        {/* ── Desktop sidebar (lg+ only) ──────────────────────────────────── */}
+        <aside
+          onMouseEnter={() => setSidebarHovered(true)}
+          onMouseLeave={() => setSidebarHovered(false)}
+          className="hidden lg:flex h-full shrink-0 overflow-y-auto overflow-x-hidden border-r border-hair bg-panel transition-all duration-200 flex-col z-20"
+          style={{ width: sidebarHovered ? 240 : 64 }}
+        >
           <nav className="flex flex-col h-full">
             <div className="space-y-0.5 p-3 flex-1">
               {navItems.map((item) => (
-                <NavItem key={item.to} to={item.to} icon={item.icon} label={item.label}
-                  isCollapsed={isDesktop ? !sidebarHovered : !sidebarOpen}
+                <NavItem
+                  key={item.to}
+                  to={item.to}
+                  icon={item.icon}
+                  label={item.label}
+                  isCollapsed={!sidebarHovered}
                   badge={"badge" in item ? (item as any).badge : undefined}
-                  onClick={() => { if (!isDesktop) setSidebarOpen(false); }} />
+                />
               ))}
             </div>
-            <div className={`p-3 border-t border-hairsoft transition-all ${isDesktop && !sidebarHovered ? "opacity-0 invisible" : "opacity-100 visible"}`}>
+            <div className={`p-3 border-t border-hairsoft transition-all ${!sidebarHovered ? "opacity-0 invisible" : "opacity-100 visible"}`}>
               {hasRole(user.role, "athlete") ? (
-                <Link to="/opportunities" className="btn-primary w-full text-center text-[11px] mb-3" onClick={() => setSidebarOpen(false)}>
+                <Link to="/opportunities" className="btn-primary w-full text-center text-[11px] mb-3">
                   Find a trial →
                 </Link>
               ) : hasRole(user.role, "club", "organizer") ? (
-                <Link to="/opportunities/new" className="btn-primary w-full text-center text-[11px] mb-3" onClick={() => setSidebarOpen(false)}>
+                <Link to="/opportunities/new" className="btn-primary w-full text-center text-[11px] mb-3">
                   + Post opportunity
                 </Link>
               ) : null}
@@ -392,28 +482,41 @@ export function Layout() {
           </nav>
         </aside>
 
-        {(() => {
-          const isLiveScoring = /^\/scoring\/matches\/[^/]+\/score(\/|$)/.test(location.pathname);
-          return (
-            <main
-              ref={mainRef}
-              onTouchStart={(e) => { touchStartXRef.current = e.touches[0].clientX; }}
-              onTouchEnd={(e) => {
-                if (touchStartXRef.current === null) return;
-                const dx = e.changedTouches[0].clientX - touchStartXRef.current;
-                if (!isDesktop) {
-                  if (dx > 60 && touchStartXRef.current < 40) setSidebarOpen(true);
-                  if (dx < -60 && sidebarOpen) setSidebarOpen(false);
-                }
-                touchStartXRef.current = null;
-              }}
-              className={`min-w-0 flex-1 relative ${
-                isLiveScoring ? "overflow-hidden p-0" : "overflow-y-auto px-3 py-4 sm:px-6 sm:py-7"}`}>
-              <Outlet />
-            </main>
-          );
-        })()}
+        {/* ── Main content ────────────────────────────────────────────────── */}
+        <main
+          ref={mainRef}
+          className={`min-w-0 flex-1 relative ${
+            isLiveScoring
+              ? "overflow-hidden p-0"
+              : "overflow-y-auto px-3 py-4 sm:px-6 sm:py-7 pb-[calc(56px+env(safe-area-inset-bottom))] lg:pb-7"
+          }`}
+        >
+          <Outlet />
+        </main>
       </div>
+
+      {/* ── Mobile bottom navigation (< lg only) ────────────────────────── */}
+      {!isLiveScoring && (
+        <nav
+          className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-panel border-t border-hair flex"
+          style={{ paddingBottom: "env(safe-area-inset-bottom)", height: "calc(56px + env(safe-area-inset-bottom))" }}
+        >
+          {mobileNavItems.map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              className={({ isActive }) =>
+                `flex-1 flex flex-col items-center justify-center gap-0.5 min-w-[44px] transition-colors ${
+                  isActive ? "text-brand-500" : "text-ink-faint"
+                }`
+              }
+            >
+              {item.icon}
+              <span className="text-[10px] font-mononum leading-none">{item.label}</span>
+            </NavLink>
+          ))}
+        </nav>
+      )}
     </div>
   );
 }

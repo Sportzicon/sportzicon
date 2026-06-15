@@ -209,10 +209,10 @@ export default function AdminUserDetail() {
               <input className="input" value={ad("current_team")} onChange={(e) => setAd("current_team", e.target.value)} />
             </Field>
             <Field label="Height (cm)">
-              <input className="input" type="number" value={ad("height_cm")} onChange={(e) => setAd("height_cm", Number(e.target.value))} />
+              <input className="input min-h-[44px]" type="number" inputMode="numeric" value={ad("height_cm")} onChange={(e) => setAd("height_cm", Number(e.target.value))} />
             </Field>
             <Field label="Weight (kg)">
-              <input className="input" type="number" value={ad("weight_kg")} onChange={(e) => setAd("weight_kg", Number(e.target.value))} />
+              <input className="input min-h-[44px]" type="number" inputMode="numeric" value={ad("weight_kg")} onChange={(e) => setAd("weight_kg", Number(e.target.value))} />
             </Field>
             <Field label="CV URL">
               <input className="input" value={ad("cv_url")} onChange={(e) => setAd("cv_url", e.target.value)} />
@@ -236,7 +236,7 @@ export default function AdminUserDetail() {
               <input className="input" value={cd("sport")} onChange={(e) => setCd("sport", e.target.value)} />
             </Field>
             <Field label="Years of experience">
-              <input className="input" type="number" value={cd("experience_years")} onChange={(e) => setCd("experience_years", Number(e.target.value))} />
+              <input className="input min-h-[44px]" type="number" inputMode="numeric" value={cd("experience_years")} onChange={(e) => setCd("experience_years", Number(e.target.value))} />
             </Field>
             <Field label="Hiring status">
               <select className="input" value={cd("hiring_status")} onChange={(e) => setCd("hiring_status", e.target.value)}>

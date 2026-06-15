@@ -171,8 +171,9 @@ export default function AdminCreateUser() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field label="Email" required>
               <input
-                className="input"
+                className="input min-h-[44px]"
                 type="email"
+                inputMode="email"
                 value={draft.email}
                 onChange={(e) => setF("email", e.target.value)}
                 onBlur={() => touch1("email")}

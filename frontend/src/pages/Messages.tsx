@@ -541,6 +541,7 @@ export default function Messages() {
             {/* Input area */}
             <form
               onSubmit={send}
+              noValidate
               className="px-3 sm:px-[22px] py-3.5 border-t border-hair bg-panel flex gap-2 items-end flex-shrink-0 pb-[calc(env(safe-area-inset-bottom,0px)+14px)]"
             >
               <textarea

@@ -92,12 +92,13 @@ export default function ScoringGate({ children }: { children: React.ReactNode })
 
         {error && <p className="text-[12px] text-red-600 bg-red-50 px-3 py-2 rounded">{error}</p>}
 
-        <form onSubmit={submitLogin} className="space-y-3">
+        <form onSubmit={submitLogin} noValidate className="space-y-3">
           <div>
             <label className="lab block mb-1">Email</label>
             <input
-              className="input w-full"
+              className="input w-full min-h-[44px]"
               type="email"
+              inputMode="email"
               value={fallbackForm.email}
               onChange={e => setFallbackForm(f => ({ ...f, email: e.target.value }))}
               required

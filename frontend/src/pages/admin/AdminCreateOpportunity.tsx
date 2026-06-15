@@ -411,8 +411,9 @@ export default function AdminCreateOpportunity() {
               </Field>
               <Field label="Contact email">
                 <input
-                  className="input"
+                  className="input min-h-[44px]"
                   type="email"
+                  inputMode="email"
                   value={draft.contact_email}
                   onChange={(e) => setF("contact_email", e.target.value)}
                   onBlur={() => touch(setTouched3, "contact_email")}

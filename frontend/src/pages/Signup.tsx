@@ -350,6 +350,7 @@ export default function Signup() {
                   <input
                     className="input"
                     type="email"
+                    inputMode="email"
                     value={d.email}
                     onChange={(e) => { patch({ email: e.target.value }); setEmailExists(false); setResumedUserId(null); }}
                   />

@@ -131,7 +131,7 @@ export default function NewTournament() {
   const set = (k: string, v: any) => setForm((f) => ({ ...f, [k]: v }));
 
   return (
-    <form onSubmit={submit} className="space-y-6 max-w-3xl">
+    <form onSubmit={submit} noValidate className="space-y-6 max-w-3xl">
       <PageHeader
         title={isEdit ? "Edit tournament" : "Post a tournament"}
         subtitle="Competitive events"
@@ -206,7 +206,7 @@ export default function NewTournament() {
           </Field>
         </div>
         <Field label="Max participants">
-          <input className="input font-mononum" type="number" value={form.vacancies ?? ""} onChange={(e) => set("vacancies", e.target.value ? Number(e.target.value) : undefined)} />
+          <input className="input font-mononum min-h-[44px]" type="number" inputMode="numeric" value={form.vacancies ?? ""} onChange={(e) => set("vacancies", e.target.value ? Number(e.target.value) : undefined)} />
         </Field>
       </div>
 

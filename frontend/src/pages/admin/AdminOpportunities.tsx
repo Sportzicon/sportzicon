@@ -234,16 +234,16 @@ export default function AdminOpportunities() {
                                 <input className="input" value={editForm.city} onChange={(e) => setF("city", e.target.value)} />
                               </Field>
                               <Field label="Age min">
-                                <input className="input" type="number" value={editForm.age_min} onChange={(e) => setF("age_min", e.target.value)} />
+                                <input className="input min-h-[44px]" type="number" inputMode="numeric" value={editForm.age_min} onChange={(e) => setF("age_min", e.target.value)} />
                               </Field>
                               <Field label="Age max">
-                                <input className="input" type="number" value={editForm.age_max} onChange={(e) => setF("age_max", e.target.value)} />
+                                <input className="input min-h-[44px]" type="number" inputMode="numeric" value={editForm.age_max} onChange={(e) => setF("age_max", e.target.value)} />
                               </Field>
                               <Field label="Vacancies">
-                                <input className="input" type="number" value={editForm.vacancies} onChange={(e) => setF("vacancies", e.target.value)} />
+                                <input className="input min-h-[44px]" type="number" inputMode="numeric" value={editForm.vacancies} onChange={(e) => setF("vacancies", e.target.value)} />
                               </Field>
                               <Field label="Entry fee">
-                                <input className="input" type="number" value={editForm.entry_fee} onChange={(e) => setF("entry_fee", e.target.value)} />
+                                <input className="input min-h-[44px]" type="number" inputMode="numeric" value={editForm.entry_fee} onChange={(e) => setF("entry_fee", e.target.value)} />
                               </Field>
                               <Field label="App deadline">
                                 <input className="input" type="date" value={editForm.application_deadline} onChange={(e) => setF("application_deadline", e.target.value)} />
