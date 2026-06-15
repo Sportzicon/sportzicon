@@ -96,7 +96,8 @@ model User {
   comments       Comment[]
   messages_sent  Message[]       @relation("Sender")
   unread_counts  UnreadCount[]
-  notifications  Notification[]
+  notifications         Notification[]  @relation("NotificationRecipient")
+  actor_notifications   Notification[]  @relation("NotificationActor")
   followers      Follow[]        @relation("Followee")
   following      Follow[]        @relation("Follower")
   reports_made   Report[]        @relation("Reporter")
@@ -359,6 +360,7 @@ model Message {
 model Notification {
   id         String   @id @default(uuid()) @db.Uuid
   user_id    String   @db.Uuid
+  actor_id   String?  @db.Uuid
   type       String
   title      String
   body       String
@@ -366,7 +368,8 @@ model Notification {
   read       Boolean  @default(false)
   created_at DateTime @default(now())
 
-  user User @relation(fields: [user_id], references: [id])
+  user  User  @relation("NotificationRecipient", fields: [user_id], references: [id])
+  actor User? @relation("NotificationActor", fields: [actor_id], references: [id])
 
   @@index([user_id, created_at(sort: Desc)])
   @@index([user_id, read])

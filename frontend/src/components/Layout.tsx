@@ -2,10 +2,12 @@ import { Link, NavLink, Outlet, useNavigate, useLocation } from "react-router-do
 import { useAuthStore } from "../store/auth";
 import { useQueryClient } from "@tanstack/react-query";
 import { authService } from "../services";
-import { useNotificationCount } from "../hooks";
+import { useNotificationCount, useNotifications } from "../hooks";
+import { useNotificationStore } from "../store/notifications";
 import { hasRole, isAdmin } from "../utils/roles";
 import { Bell, Home, Search, Briefcase, FileText, MessageCircle, ShieldCheck, LogOut, User as UserIcon, Menu, X, Trophy, ChevronDown, Building2, Target, Activity, Video } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
+import type { Notification } from "../models";
 
 function GlobalSearch({ user, inputRef, mobileOpen, onMobileClose }: {
   user: any;
@@ -76,6 +78,93 @@ function NavItem({ to, icon, label, onClick, isCollapsed }: { to: string; icon: 
   );
 }
 
+function relativeTime(ts: number): string {
+  const diff = Date.now() - ts;
+  const mins = Math.floor(diff / 60_000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  return `${days}d ago`;
+}
+
+function NotificationDropdown({
+  onClose,
+  onNavigate,
+}: {
+  onClose: () => void;
+  onNavigate: (path: string) => void;
+}) {
+  const { list, markAllRead, markOneRead } = useNotifications();
+  const allItems: Notification[] = list.data?.pages.flatMap((p) => p.data) ?? [];
+  const unread = allItems.filter((n) => !n.read).length;
+
+  const handleItem = (n: Notification) => {
+    if (!n.read) markOneRead.mutate(n.id);
+    if (n.link) onNavigate(n.link);
+    onClose();
+  };
+
+  return (
+    <div className="absolute right-0 mt-1 w-80 panel shadow-pop z-50 overflow-hidden">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-hairsoft">
+        <span className="text-[13px] font-semibold text-ink">Notifications</span>
+        {unread > 0 && (
+          <button
+            className="text-[11px] text-brand-500 hover:underline font-mononum"
+            onClick={() => { markAllRead.mutate(); }}
+          >
+            Mark all read
+          </button>
+        )}
+      </div>
+      <div className="max-h-96 overflow-y-auto divide-y divide-hairsoft">
+        {list.isLoading ? (
+          <div className="py-8 flex justify-center text-ink-sub text-sm">Loading…</div>
+        ) : allItems.length === 0 ? (
+          <div className="py-8 text-center text-ink-sub text-sm">All caught up!</div>
+        ) : (
+          allItems.slice(0, 15).map((n) => (
+            <button
+              key={n.id}
+              onClick={() => handleItem(n)}
+              className={`w-full flex gap-3 px-4 py-3 text-left hover:bg-fill/60 transition min-h-[64px] items-start
+                ${!n.read ? "border-l-2 border-brand-500 bg-fill/20" : "border-l-2 border-transparent"}`}
+            >
+              {n.actor?.profile_photo_url ? (
+                <img src={n.actor.profile_photo_url} alt="" className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
+              ) : (
+                <div className="w-8 h-8 rounded-full bg-fill border border-hair flex items-center justify-center text-[11px] font-semibold text-ink-70 flex-shrink-0">
+                  {n.actor?.full_name ? n.actor.full_name[0].toUpperCase() : "?"}
+                </div>
+              )}
+              <div className="flex-1 min-w-0">
+                <div className={`text-[12.5px] leading-snug line-clamp-1 ${!n.read ? "font-semibold text-ink" : "text-ink-70"}`}>
+                  {n.title}
+                </div>
+                {n.body && (
+                  <div className="text-[11.5px] text-ink-sub mt-0.5 line-clamp-2 leading-snug">{n.body}</div>
+                )}
+                <div className="text-[10px] text-ink-faint mt-0.5 font-mononum">{relativeTime(n.created_at)}</div>
+              </div>
+              {!n.read && <span className="w-1.5 h-1.5 rounded-full bg-brand-500 mt-1.5 flex-shrink-0" />}
+            </button>
+          ))
+        )}
+      </div>
+      <div className="border-t border-hairsoft px-4 py-2.5">
+        <button
+          className="w-full text-center text-[12px] text-brand-500 hover:underline font-mononum"
+          onClick={() => { onNavigate("/notifications"); onClose(); }}
+        >
+          View all notifications →
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function Layout() {
   const { user, clear } = useAuthStore();
   const navigate = useNavigate();
@@ -87,11 +176,14 @@ export function Layout() {
   const [sidebarHovered, setSidebarHovered] = useState(false);
   const touchStartXRef = useRef<number | null>(null);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const [notifDropdownOpen, setNotifDropdownOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement>(null);
+  const notifDropdownRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  const { count } = useNotificationCount(!!user);
+  useNotificationCount(!!user);
+  const unreadCount = useNotificationStore((s) => s.unreadCount);
 
   useEffect(() => {
     const onResize = () => {
@@ -107,6 +199,8 @@ export function Layout() {
     function onClickOutside(e: MouseEvent) {
       if (profileMenuRef.current && !profileMenuRef.current.contains(e.target as Node))
         setProfileMenuOpen(false);
+      if (notifDropdownRef.current && !notifDropdownRef.current.contains(e.target as Node))
+        setNotifDropdownOpen(false);
     }
     document.addEventListener("mousedown", onClickOutside);
     return () => document.removeEventListener("mousedown", onClickOutside);
@@ -181,14 +275,32 @@ export function Layout() {
                 <Search className="h-5 w-5" />
               </button>
             )}
-            <NavLink to="/notifications" className="relative rounded p-2 text-ink-70 hover:bg-fill">
-              <Bell className="h-5 w-5" />
-              {!!count.data && count.data > 0 && (
-                <span className="font-mononum absolute -top-0.5 -right-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-brand-500 px-1 text-[10px] font-medium text-white">
-                  {count.data}
-                </span>
+            <div ref={notifDropdownRef} className="relative">
+              <button
+                className="relative rounded p-2 text-ink-70 hover:bg-fill min-h-[44px] min-w-[44px] flex items-center justify-center"
+                aria-label="Notifications"
+                onClick={() => {
+                  if (!isDesktop) {
+                    navigate("/notifications");
+                  } else {
+                    setNotifDropdownOpen((o) => !o);
+                  }
+                }}
+              >
+                <Bell className="h-5 w-5" />
+                {unreadCount > 0 && (
+                  <span className="font-mononum absolute -top-0.5 -right-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-brand-500 px-1 text-[10px] font-medium text-white">
+                    {unreadCount > 99 ? "99+" : unreadCount}
+                  </span>
+                )}
+              </button>
+              {isDesktop && notifDropdownOpen && (
+                <NotificationDropdown
+                  onClose={() => setNotifDropdownOpen(false)}
+                  onNavigate={navigate}
+                />
               )}
-            </NavLink>
+            </div>
             <div ref={profileMenuRef} className="relative">
               <button onClick={() => setProfileMenuOpen((o) => !o)} className="btn-ghost">
                 <UserIcon className="h-4 w-4" />

@@ -1,5 +1,7 @@
 import { prisma } from "../../config/prisma";
 import { Forbidden, NotFound } from "../../utils/errors";
+import { eventBus } from "../../lib/EventBus";
+import { POST_LIKED, type PostLikedEvent } from "../../events/types";
 
 export async function createPost(authorId: string, input: Record<string, unknown>) {
   const author = await prisma.user.findUnique({
@@ -98,13 +100,30 @@ export async function feedForUser(userId: string, limit = 20, cursor?: string) {
 }
 
 export async function likePost(postId: string, userId: string) {
-  const exists = await prisma.post.findUnique({ where: { id: postId }, select: { id: true } });
-  if (!exists) throw NotFound("Post not found");
+  const post = await prisma.post.findUnique({
+    where: { id: postId },
+    select: { id: true, author_id: true },
+  });
+  if (!post) throw NotFound("Post not found");
 
   await prisma.$transaction([
     prisma.$executeRaw`INSERT INTO "PostLike" (post_id, user_id) VALUES (${postId}, ${userId}) ON CONFLICT DO NOTHING`,
     prisma.$executeRaw`UPDATE "Post" SET like_count = (SELECT COUNT(*) FROM "PostLike" WHERE post_id = ${postId}) WHERE id = ${postId}`
   ]);
+
+  // Notify the author (skip if liking own post)
+  if (post.author_id !== userId) {
+    const actor = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { full_name: true },
+    });
+    eventBus.emit<PostLikedEvent>(POST_LIKED, {
+      postId,
+      actorId: userId,
+      actorName: actor?.full_name ?? "Someone",
+      authorId: post.author_id,
+    });
+  }
 
   const updated = await prisma.post.findUnique({ where: { id: postId }, select: { like_count: true } });
   return { like_count: updated?.like_count ?? 0, liked: true };

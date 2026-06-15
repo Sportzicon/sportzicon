@@ -1,5 +1,5 @@
 import type { AxiosInstance } from "axios";
-import type { Notification } from "../models";
+import type { Notification, NotificationPage } from "../models";
 
 export class NotificationService {
   constructor(private readonly client: AxiosInstance) {}
@@ -9,12 +9,18 @@ export class NotificationService {
     return res.data.unread;
   }
 
-  async list(): Promise<Notification[]> {
-    const res = await this.client.get<{ items: Notification[] }>("/notifications");
-    return res.data.items;
+  async list(cursor?: string, limit = 20): Promise<NotificationPage> {
+    const params: Record<string, unknown> = { limit };
+    if (cursor) params.cursor = cursor;
+    const res = await this.client.get<NotificationPage>("/notifications", { params });
+    return res.data;
   }
 
   async markAllRead(): Promise<void> {
-    await this.client.post("/notifications/read-all");
+    await this.client.patch("/notifications/read-all");
+  }
+
+  async markOneRead(id: string): Promise<void> {
+    await this.client.patch(`/notifications/${id}/read`);
   }
 }

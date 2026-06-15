@@ -11,10 +11,10 @@ router.get(
   "/",
   requireAuth,
   asyncHandler(async (req, res) => {
-    const limit = Math.min(Number(req.query.limit) || 50, 100);
-    const unreadOnly = req.query.unread === "true";
-    const items = await svc.listForUser(req.user!.sub, limit, unreadOnly);
-    res.json({ items });
+    const limit = Math.min(Number(req.query.limit) || 20, 50);
+    const cursor = typeof req.query.cursor === "string" ? req.query.cursor : undefined;
+    const page = await svc.listForUser(req.user!.sub, limit, cursor);
+    res.json(page);
   })
 );
 
@@ -27,6 +27,25 @@ router.get(
   })
 );
 
+router.patch(
+  "/read-all",
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const r = await svc.markRead(req.user!.sub, []);
+    res.json(r);
+  })
+);
+
+router.patch(
+  "/:id/read",
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const r = await svc.markOneRead(req.user!.sub, req.params.id);
+    res.json(r);
+  })
+);
+
+// Legacy endpoint kept for backwards compat
 router.post(
   "/read",
   requireAuth,

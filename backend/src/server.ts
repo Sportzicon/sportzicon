@@ -4,6 +4,7 @@ import { logger } from "./config/logger";
 import { ensureBuckets } from "./config/storage";
 import { bootstrapAdminIfNeeded } from "./modules/auth/auth.service";
 import { checkAndCloseExpiredOpportunities } from "./modules/opportunities/opportunities.service";
+import { deleteOldNotifications } from "./modules/notifications/notifications.service";
 import { prisma } from "./config/prisma";
 
 async function main() {
@@ -28,6 +29,11 @@ async function main() {
   void checkAndCloseExpiredOpportunities();
   const autoCloseTimer = setInterval(() => void checkAndCloseExpiredOpportunities(), 5 * 60 * 1000);
   autoCloseTimer.unref();
+
+  // Delete notifications older than 90 days — runs once daily.
+  void deleteOldNotifications();
+  const notifCleanupTimer = setInterval(() => void deleteOldNotifications(), 24 * 60 * 60 * 1000);
+  notifCleanupTimer.unref();
 
   // Graceful shutdown — Cloud Run sends SIGTERM at the end of a revision's lifecycle.
   const shutdown = (signal: string) => {

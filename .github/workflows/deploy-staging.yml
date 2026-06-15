@@ -175,6 +175,23 @@ jobs:
             "projects/${{ secrets.GCP_PROJECT_ID }}/locations/asia-south1/services/sportivox-scoring-api-staging" \
             2>&1 || true
 
+      - name: Import existing DIRECT_URL secret into Terraform state
+        working-directory: infra/terraform
+        run: |
+          # The sportivox-direct-url-staging secret was created outside this
+          # Terraform workspace's state (different GCS prefix). Import it so
+          # Terraform manages it without a 409 re-creation error.
+          # || true — no-op if already in state or secret doesn't exist yet.
+          terraform import \
+            -var-file=terraform.tfvars.staging \
+            -var="database_url=${{ secrets.DATABASE_URL }}" \
+            -var="direct_url=${{ secrets.DIRECT_URL }}" \
+            -var="scoring_database_url=${{ secrets.SCORING_DATABASE_URL }}" \
+            -var="scoring_direct_url=${{ secrets.SCORING_DIRECT_URL }}" \
+            'google_secret_manager_secret.direct_url' \
+            "projects/${{ secrets.GCP_PROJECT_ID }}/secrets/sportivox-direct-url-staging" \
+            2>&1 || true
+
       - name: Terraform Plan
         working-directory: infra/terraform
         run: |
