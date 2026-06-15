@@ -95,6 +95,7 @@ model User {
   blogs          Blog[]
   comments       Comment[]
   messages_sent  Message[]       @relation("Sender")
+  unread_counts  UnreadCount[]
   notifications  Notification[]
   followers      Follow[]        @relation("Followee")
   following      Follow[]        @relation("Follower")
@@ -320,9 +321,23 @@ model Conversation {
   created_at      DateTime @default(now())
   updated_at      DateTime @updatedAt
 
-  messages Message[]
+  messages      Message[]
+  unread_counts_table UnreadCount[]
 
   @@index([participant_ids])
+}
+
+model UnreadCount {
+  id              String   @id @default(uuid()) @db.Uuid
+  conversation_id String   @db.Uuid
+  user_id         String   @db.Uuid
+  count           Int      @default(0)
+
+  conversation Conversation @relation(fields: [conversation_id], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([conversation_id, user_id])
+  @@index([user_id])
 }
 
 model Message {

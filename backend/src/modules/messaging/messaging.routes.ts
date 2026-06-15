@@ -7,6 +7,7 @@ import * as svc from "./messaging.service";
 
 const router = Router();
 
+// List conversations for the current user
 router.get(
   "/conversations",
   requireAuth,
@@ -16,31 +17,68 @@ router.get(
   })
 );
 
+// Create a conversation (without sending a message)
+router.post(
+  "/conversations",
+  requireAuth,
+  validate(z.object({ recipient_id: z.string().uuid() })),
+  asyncHandler(async (req, res) => {
+    const result = await svc.createConversation(req.user!.sub, req.body.recipient_id);
+    res.status(result.created ? 201 : 200).json(result);
+  })
+);
+
+// Send a message (creates conversation if needed)
 router.post(
   "/messages",
   requireAuth,
-  validate(z.object({ recipient_id: z.string().min(8), body: z.string().min(1).max(4000) })),
+  validate(z.object({
+    recipient_id: z.string().uuid(),
+    body: z.string().min(1).max(5000).trim()
+  })),
   asyncHandler(async (req, res) => {
     const r = await svc.sendMessage(req.user!.sub, req.body.recipient_id, req.body.body);
     res.status(201).json(r);
   })
 );
 
+// Get messages in a conversation (paginated)
 router.get(
   "/conversations/:id/messages",
   requireAuth,
-  validate(z.object({ id: z.string().min(8) }), "params"),
+  validate(z.object({ id: z.string().uuid() }), "params"),
   asyncHandler(async (req, res) => {
     const limit = Math.min(Number(req.query.limit) || 50, 100);
-    const r = await svc.listMessages(req.user!.sub, req.params.id, limit, req.query.cursor as string | undefined);
+    const r = await svc.listMessages(
+      req.user!.sub,
+      req.params.id,
+      limit,
+      req.query.cursor as string | undefined
+    );
     res.json(r);
   })
 );
 
+// Long-poll for new messages (holds open up to 25 seconds)
+router.get(
+  "/conversations/:id/poll",
+  requireAuth,
+  validate(z.object({ id: z.string().uuid() }), "params"),
+  asyncHandler(async (req, res) => {
+    await svc.pollForNewMessages(
+      req.user!.sub,
+      req.params.id,
+      req.query.after as string | undefined,
+      res
+    );
+  })
+);
+
+// Mark conversation as read
 router.post(
   "/conversations/:id/read",
   requireAuth,
-  validate(z.object({ id: z.string().min(8) }), "params"),
+  validate(z.object({ id: z.string().uuid() }), "params"),
   asyncHandler(async (req, res) => {
     const r = await svc.markRead(req.user!.sub, req.params.id);
     res.json(r);

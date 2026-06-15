@@ -46,7 +46,7 @@ bootstrap_admin_password = ""
 # Scoring API — built and deployed on every push to main
 scoring_api_image          = "asia-south1-docker.pkg.dev/sportzicon-app/sportivox/scoring-api:latest"
 scoring_api_custom_domain  = "scoring-api.sportzicon.com"
-scoring_cors_origin        = "https://sportzicon.com"
+scoring_cors_origin        = "*"
 optional_scoring_secrets   = []
 
 # GCP Terraform state bucket

@@ -28,8 +28,10 @@ locals {
 # DIRECT_URL secret — used by Cloud Build's migrate step.
 # Populated from the direct_url Terraform variable (port 5432, not the pooler).
 resource "google_secret_manager_secret" "direct_url" {
-  secret_id  = "sportivox-direct-url-${var.env}"
-  replication { auto {} }
+  secret_id = "sportivox-direct-url-${var.env}"
+  replication {
+    auto {}
+  }
   depends_on = [google_project_service.apis]
 }
 

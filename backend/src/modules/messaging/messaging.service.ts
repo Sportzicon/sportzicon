@@ -2,10 +2,56 @@ import { prisma } from "../../config/prisma";
 import { BadRequest, Forbidden, NotFound } from "../../utils/errors";
 import { eventBus } from "../../lib/EventBus";
 import { MESSAGE_SENT, type MessageSentEvent } from "../../events/types";
+import type { Response } from "express";
+
+// Map of conversationId → Set of waiting long-poll responses
+const pollWaiters = new Map<string, Set<Response>>();
+
+function notifyPollers(conversationId: string) {
+  const waiters = pollWaiters.get(conversationId);
+  if (!waiters) return;
+  for (const res of waiters) {
+    if (!res.headersSent) res.json({ hasNew: true });
+  }
+  pollWaiters.delete(conversationId);
+}
+
+async function assertParticipant(userId: string, conversationId: string) {
+  const conv = await prisma.conversation.findUnique({
+    where: { id: conversationId },
+    select: { participant_ids: true }
+  });
+  if (!conv) throw NotFound("Conversation not found");
+  if (!conv.participant_ids.includes(userId)) throw Forbidden("Not a participant");
+  return conv;
+}
+
+export async function createConversation(userAId: string, userBId: string) {
+  if (userAId === userBId) throw BadRequest("Cannot message yourself");
+
+  const [userA, userB] = await Promise.all([
+    prisma.user.findUnique({ where: { id: userAId }, select: { id: true, full_name: true } }),
+    prisma.user.findUnique({ where: { id: userBId }, select: { id: true, status: true } })
+  ]);
+  if (!userA) throw NotFound("User not found");
+  if (!userB) throw NotFound("Recipient not found");
+  if (userB.status === "suspended") throw Forbidden("Recipient cannot receive messages");
+
+  const existing = await prisma.conversation.findFirst({
+    where: { participant_ids: { hasEvery: [userAId, userBId] } },
+    select: { id: true }
+  });
+  if (existing) return { id: existing.id, created: false };
+
+  const conv = await prisma.conversation.create({
+    data: { participant_ids: [userAId, userBId] },
+    select: { id: true }
+  });
+  return { id: conv.id, created: true };
+}
 
 export async function sendMessage(senderId: string, recipientId: string, body: string) {
   if (senderId === recipientId) throw BadRequest("Cannot message yourself");
-  if (!body.trim()) throw BadRequest("Message body cannot be empty");
 
   const [sender, recipient] = await Promise.all([
     prisma.user.findUnique({ where: { id: senderId }, select: { id: true, full_name: true } }),
@@ -17,50 +63,60 @@ export async function sendMessage(senderId: string, recipientId: string, body: s
 
   let conversation = await prisma.conversation.findFirst({
     where: { participant_ids: { hasEvery: [senderId, recipientId] } },
-    select: { id: true, unread_counts: true }
+    select: { id: true }
   });
 
   if (!conversation) {
     conversation = await prisma.conversation.create({
-      data: {
-        participant_ids: [senderId, recipientId],
-        last_message: { body, sender_id: senderId, at: new Date() },
-        unread_counts: { [senderId]: 0, [recipientId]: 1 }
-      },
-      select: { id: true, unread_counts: true }
-    });
-  } else {
-    const counts = (conversation.unread_counts as Record<string, number>) ?? {};
-    await prisma.conversation.update({
-      where: { id: conversation.id },
-      data: {
-        last_message: { body, sender_id: senderId, at: new Date() },
-        unread_counts: { ...counts, [recipientId]: (counts[recipientId] ?? 0) + 1 }
-      }
+      data: { participant_ids: [senderId, recipientId] },
+      select: { id: true }
     });
   }
 
-  const message = await prisma.message.create({
-    data: { conversation_id: conversation.id, sender_id: senderId, recipient_id: recipientId, body }
-  });
+  const convId = conversation.id;
+
+  const [message] = await prisma.$transaction([
+    prisma.message.create({
+      data: { conversation_id: convId, sender_id: senderId, recipient_id: recipientId, body }
+    }),
+    prisma.conversation.update({
+      where: { id: convId },
+      data: { last_message: { body, sender_id: senderId, at: new Date() } }
+    }),
+    // Atomic unread count increment for recipient using raw SQL (ON CONFLICT DO UPDATE)
+    prisma.$executeRaw`
+      INSERT INTO "UnreadCount" (id, conversation_id, user_id, count)
+      VALUES (gen_random_uuid(), ${convId}::uuid, ${recipientId}::uuid, 1)
+      ON CONFLICT (conversation_id, user_id)
+      DO UPDATE SET count = "UnreadCount".count + 1
+    `
+  ]);
 
   eventBus.emit<MessageSentEvent>(MESSAGE_SENT, {
     messageId: message.id,
     senderId,
     senderName: sender.full_name,
     recipientId,
-    conversationId: conversation.id,
+    conversationId: convId,
     bodyPreview: body.length > 120 ? body.slice(0, 117) + "..." : body,
   });
 
-  return { conversation_id: conversation.id, id: message.id };
+  notifyPollers(convId);
+
+  return { conversation_id: convId, id: message.id };
 }
 
 export async function listConversations(userId: string, limit = 50) {
   const convs = await prisma.conversation.findMany({
     where: { participant_ids: { has: userId } },
     orderBy: { updated_at: "desc" },
-    take: limit
+    take: limit,
+    include: {
+      unread_counts_table: {
+        where: { user_id: userId },
+        select: { count: true }
+      }
+    }
   });
 
   const otherIds = [...new Set(
@@ -70,7 +126,7 @@ export async function listConversations(userId: string, limit = 50) {
   const users = otherIds.length
     ? await prisma.user.findMany({
         where: { id: { in: otherIds } },
-        select: { id: true, full_name: true, role: true }
+        select: { id: true, full_name: true, role: true, profile_photo_url: true }
       })
     : [];
 
@@ -79,17 +135,21 @@ export async function listConversations(userId: string, limit = 50) {
   return convs.map((c) => {
     const otherId = c.participant_ids.find((p) => p !== userId);
     const other   = otherId ? userMap[otherId] : null;
-    return { ...c, _other_name: other?.full_name ?? null, _other_sub: other?.role ?? null };
+    const unreadRow = c.unread_counts_table[0];
+    return {
+      ...c,
+      unread_counts_table: undefined,
+      _unread_count: unreadRow?.count ?? 0,
+      _other_name: other?.full_name ?? null,
+      _other_sub:  other?.role ?? null,
+      _other_avatar: other?.profile_photo_url ?? null,
+      _other_id: otherId ?? null,
+    };
   });
 }
 
 export async function listMessages(userId: string, conversationId: string, limit = 50, cursor?: string) {
-  const conv = await prisma.conversation.findUnique({
-    where: { id: conversationId },
-    select: { participant_ids: true }
-  });
-  if (!conv) throw NotFound("Conversation not found");
-  if (!conv.participant_ids.includes(userId)) throw Forbidden("Not a participant");
+  await assertParticipant(userId, conversationId);
 
   const items = await prisma.message.findMany({
     where: { conversation_id: conversationId },
@@ -104,17 +164,55 @@ export async function listMessages(userId: string, conversationId: string, limit
 }
 
 export async function markRead(userId: string, conversationId: string) {
-  const conv = await prisma.conversation.findUnique({
-    where: { id: conversationId },
-    select: { participant_ids: true, unread_counts: true }
-  });
-  if (!conv) throw NotFound("Conversation not found");
-  if (!conv.participant_ids.includes(userId)) throw Forbidden("Not a participant");
+  await assertParticipant(userId, conversationId);
 
-  const counts = (conv.unread_counts as Record<string, number>) ?? {};
-  await prisma.conversation.update({
-    where: { id: conversationId },
-    data: { unread_counts: { ...counts, [userId]: 0 } }
-  });
+  await prisma.$executeRaw`
+    UPDATE "UnreadCount"
+    SET count = 0
+    WHERE conversation_id = ${conversationId}::uuid
+      AND user_id = ${userId}::uuid
+  `;
   return { ok: true };
+}
+
+export async function pollForNewMessages(
+  userId: string,
+  conversationId: string,
+  afterMessageId: string | undefined,
+  res: Response
+) {
+  await assertParticipant(userId, conversationId);
+
+  // Check if there are already new messages
+  const where = afterMessageId
+    ? { conversation_id: conversationId, id: { gt: afterMessageId } }
+    : { conversation_id: conversationId };
+
+  const count = await prisma.message.count({ where });
+  if (count > 0) {
+    res.json({ hasNew: true });
+    return;
+  }
+
+  // Hold open for up to 25 seconds
+  if (!pollWaiters.has(conversationId)) pollWaiters.set(conversationId, new Set());
+  pollWaiters.get(conversationId)!.add(res);
+
+  const timer = setTimeout(() => {
+    const waiters = pollWaiters.get(conversationId);
+    if (waiters) {
+      waiters.delete(res);
+      if (waiters.size === 0) pollWaiters.delete(conversationId);
+    }
+    if (!res.headersSent) res.status(204).end();
+  }, 25_000);
+
+  res.on("close", () => {
+    clearTimeout(timer);
+    const waiters = pollWaiters.get(conversationId);
+    if (waiters) {
+      waiters.delete(res);
+      if (waiters.size === 0) pollWaiters.delete(conversationId);
+    }
+  });
 }
