@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { scoringApi } from "../../api/scoringClient";
+import { queryKeys } from "../../hooks/queryKeys";
 import { useAuthStore } from "../../store/auth";
 import { CheckCircle, AlertCircle, Undo2, BarChart3, Radio, ArrowLeftRight, Trophy, Plus, X, HeartPulse, RotateCcw } from "lucide-react";
 import {
@@ -173,19 +174,19 @@ function ScoringLiveInner() {
   const [resultForm, setResultForm] = useState({ winner_team_id:"", result_summary:"" });
 
   const { data: match, isLoading } = useQuery({
-    queryKey: ["scoring-match-live", matchId],
+    queryKey: queryKeys.scoringMatchLive(matchId ?? ""),
     queryFn: () => scoringApi.get(`/matches/${matchId}`).then(r => r.data.match),
     refetchInterval: 5_000
   });
 
   const { data: xiData } = useQuery({
-    queryKey: ["scoring-xi-live", matchId],
+    queryKey: queryKeys.scoringXiLive(matchId ?? ""),
     queryFn: () => scoringApi.get(`/matches/${matchId}/xi`).then(r => r.data),
     enabled: !!matchId
   });
 
   const { data: ballsData } = useQuery({
-    queryKey: ["scoring-balls-live", activeInningsId],
+    queryKey: queryKeys.scoringBallsLive(activeInningsId ?? ""),
     queryFn: () => scoringApi.get(`/innings/${activeInningsId}/balls`).then(r => r.data.balls ?? []),
     enabled: !!activeInningsId,
     refetchInterval: 5_000
@@ -258,10 +259,10 @@ function ScoringLiveInner() {
     ? [50, 100, 150, 200].find(n => n === milestone?.runs) ?? null : null;
 
   const invalidate = () => {
-    qc.invalidateQueries({ queryKey: ["scoring-match-live", matchId] });
-    qc.invalidateQueries({ queryKey: ["scoring-match", matchId] });
-    qc.invalidateQueries({ queryKey: ["scoring-balls-live", activeInningsId] });
-    qc.invalidateQueries({ queryKey: ["scoring-retired-hurt", activeInningsId] });
+    qc.invalidateQueries({ queryKey: queryKeys.scoringMatchLive(matchId ?? "") });
+    qc.invalidateQueries({ queryKey: queryKeys.scoringMatch(matchId ?? "") });
+    qc.invalidateQueries({ queryKey: queryKeys.scoringBallsLive(activeInningsId ?? "") });
+    qc.invalidateQueries({ queryKey: queryKeys.scoringRetiredHurt(activeInningsId ?? "") });
   };
 
   const fb = (type: "success"|"error", msg: string) => {
@@ -361,7 +362,7 @@ function ScoringLiveInner() {
 
   // Retired hurt players for this innings
   const { data: retiredHurtData } = useQuery({
-    queryKey: ["scoring-retired-hurt", activeInningsId],
+    queryKey: queryKeys.scoringRetiredHurt(activeInningsId ?? ""),
     queryFn: () => scoringApi.get(`/innings/${activeInningsId}/retired-hurt`).then(r => r.data.players ?? []),
     enabled: !!activeInningsId
   });

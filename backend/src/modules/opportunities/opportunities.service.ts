@@ -2,7 +2,29 @@ import { prisma } from "../../config/prisma";
 import { eventBus } from "../../lib/EventBus";
 import { Forbidden, NotFound, UnprocessableEntity } from "../../utils/errors";
 import { logger } from "../../config/logger";
+import { cacheGet, cacheSet, cacheDel } from "../../config/redis";
 import type { Role } from "../../types/domain";
+
+const OPP_VERSION_KEY = "opps:version";
+
+async function getOppVersion(): Promise<string> {
+  const v = await cacheGet(OPP_VERSION_KEY);
+  return v ?? "0";
+}
+
+async function invalidateOppListCache(): Promise<void> {
+  const v = await cacheGet(OPP_VERSION_KEY);
+  const next = String((parseInt(v ?? "0", 10) + 1) % 1_000_000);
+  await cacheSet(OPP_VERSION_KEY, next, 7 * 24 * 60 * 60);
+}
+
+async function oppListCacheKey(q: Record<string, unknown>): Promise<string> {
+  const sorted = Object.keys(q).sort().reduce<Record<string, unknown>>((acc, k) => {
+    acc[k] = q[k]; return acc;
+  }, {});
+  const version = await getOppVersion();
+  return `opps:list:v${version}:${JSON.stringify(sorted)}`;
+}
 
 export async function createOpportunity(actorId: string, actorRole: Role, input: Record<string, unknown>) {
   const org = await prisma.organization.findUnique({ where: { id: input.org_id as string } });
@@ -10,7 +32,7 @@ export async function createOpportunity(actorId: string, actorRole: Role, input:
   if (org.owner_user_id !== actorId && actorRole !== "admin")
     throw Forbidden("You can only post opportunities for your own organization");
 
-  return prisma.opportunity.create({
+  const created = await prisma.opportunity.create({
     data: {
       org_id: org.id,
       posted_by_user_id: actorId,
@@ -37,6 +59,8 @@ export async function createOpportunity(actorId: string, actorRole: Role, input:
       contact_phone: (input.contact_phone as string) ?? org.contact_phone ?? undefined
     }
   });
+  await invalidateOppListCache();
+  return created;
 }
 
 export async function updateOpportunity(id: string, actorId: string, actorRole: Role, patch: Record<string, unknown>) {
@@ -66,7 +90,9 @@ export async function updateOpportunity(id: string, actorId: string, actorRole: 
   }
   if (patch.title) data.title_lower = String(patch.title).toLowerCase();
 
-  return prisma.opportunity.update({ where: { id }, data });
+  const updated = await prisma.opportunity.update({ where: { id }, data });
+  await invalidateOppListCache();
+  return updated;
 }
 
 export async function getOpportunity(id: string) {
@@ -126,6 +152,8 @@ export async function deleteOpportunity(id: string, actorId: string, actorRole: 
     prisma.opportunity.delete({ where: { id } })
   ]);
 
+  await invalidateOppListCache();
+
   // Emit notification events for each withdrawn application
   for (const app of appsToWithdraw) {
     eventBus.emit("application.status_changed", {
@@ -156,6 +184,10 @@ export async function listOpportunities(q: {
   q?: string;
   verified_org?: boolean;
 }) {
+  const cacheKey = await oppListCacheKey(q as Record<string, unknown>);
+  const cached = await cacheGet(cacheKey);
+  if (cached !== null) return JSON.parse(cached);
+
   const where: Record<string, unknown> = {
     status: q.status ?? "open"
   };
@@ -193,7 +225,9 @@ export async function listOpportunities(q: {
     org_name: organization?.org_name,
     application_count: _count.applications
   }));
-  return { data, nextCursor: hasMore ? data[data.length - 1].id : null, total };
+  const result = { data, nextCursor: hasMore ? data[data.length - 1].id : null, total };
+  await cacheSet(cacheKey, JSON.stringify(result), 60);
+  return result;
 }
 
 export async function bumpApplicationCount(id: string, delta: number) {
@@ -220,6 +254,7 @@ export async function checkAndCloseExpiredOpportunities(): Promise<void> {
     `;
     if (result > 0) {
       logger.info({ count: result }, "auto-closed expired opportunities");
+      await invalidateOppListCache();
     }
   } catch (err) {
     logger.error({ err }, "failed to auto-close expired opportunities");

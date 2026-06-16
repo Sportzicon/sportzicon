@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { scoringApi } from "../../api/scoringClient";
+import { queryKeys } from "../../hooks/queryKeys";
 import { useAuthStore } from "../../store/auth";
 import { hasRole } from "../../utils/roles";
 import { Trophy, Plus, Filter } from "lucide-react";
@@ -30,7 +31,7 @@ function ScoringTournamentsInner() {
   const [status, setStatus] = useState("");
 
   const { data, isLoading } = useQuery({
-    queryKey: ["scoring-tournaments", sport, status],
+    queryKey: queryKeys.scoringTournaments({ sport, status }),
     queryFn: () => scoringApi.get(`/tournaments?${new URLSearchParams({ ...(sport && { sport }), ...(status && { status }) })}`).then(r => r.data)
   });
 

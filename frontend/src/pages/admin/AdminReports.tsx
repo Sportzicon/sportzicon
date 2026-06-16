@@ -38,7 +38,7 @@ export default function AdminReports() {
     mutationFn: async (vars: { id: string; action: "warned" | "banned" | "dismissed"; notes?: string }) =>
       api.patch(`/admin/reports/${vars.id}/resolve`, { action: vars.action, notes: vars.notes }),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["admin", "reports"] });
+      qc.invalidateQueries({ queryKey: queryKeys.adminReports() });
       setResolveId(null);
       setResolveNotes("");
       setActionErr(null);

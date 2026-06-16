@@ -1,6 +1,7 @@
 import { prisma } from "../../config/prisma";
 import { BadRequest, NotFound } from "../../utils/errors";
 import { eventBus } from "../../lib/EventBus";
+import { cacheDel } from "../../config/redis";
 import { USER_FOLLOWED, type UserFollowedEvent } from "../../events/types";
 
 export async function follow(followerId: string, followeeId: string) {
@@ -31,6 +32,7 @@ export async function follow(followerId: string, followeeId: string) {
     followeeId,
   });
 
+  await cacheDel(`user:profile:${followeeId}`, `user:profile:${followerId}`);
   return { ok: true };
 }
 
@@ -49,6 +51,7 @@ export async function unfollow(followerId: string, followeeId: string) {
     prisma.$executeRaw`UPDATE "User" SET following_count = GREATEST(0, following_count - 1) WHERE id = ${followerId}`,
   ]);
 
+  await cacheDel(`user:profile:${followeeId}`, `user:profile:${followerId}`);
   return { ok: true };
 }
 

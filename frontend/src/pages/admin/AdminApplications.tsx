@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import { humanizeError } from "../../api/client";
+import { queryKeys } from "../../hooks/queryKeys";
 import { PageHeader, Spinner, Badge, Pagination } from "../../components/UI";
 import { ChevronDown, ChevronRight } from "lucide-react";
 
@@ -26,11 +27,11 @@ export default function AdminApplications() {
   const [overrideReason, setOverrideReason] = useState("");
   const [overrideError, setOverrideError] = useState("");
 
-  const params: any = { limit: 200 };
+  const params: Record<string, string | number | undefined> = { limit: 200 };
   if (statusFilter) params.status = statusFilter;
 
   const q = useQuery({
-    queryKey: ["admin-applications", params],
+    queryKey: queryKeys.adminApplications(params),
     queryFn: async () => (await api.get("/admin/applications", { params })).data.items as any[]
   });
 
@@ -38,10 +39,10 @@ export default function AdminApplications() {
     mutationFn: async ({ id, status, reason }: { id: string; status: string; reason?: string }) =>
       api.patch(`/admin/applications/${id}/status`, { status, reason }),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["admin-applications"] });
+      qc.invalidateQueries({ queryKey: queryKeys.adminApplications() });
       setOverrideFor(null); setOverrideStatus(""); setOverrideReason(""); setOverrideError("");
     },
-    onError: (e: any) => setOverrideError(humanizeError(e))
+    onError: (e: unknown) => setOverrideError(humanizeError(e))
   });
 
   const allItems = q.data ?? [];
@@ -54,7 +55,7 @@ export default function AdminApplications() {
     setOverrideError("");
   }
 
-  function fmtDate(ts: any) {
+  function fmtDate(ts: string | number | null | undefined) {
     if (!ts) return "—";
     try { return new Date(Number(ts)).toLocaleDateString(); } catch { return String(ts).slice(0, 10); }
   }

@@ -40,6 +40,8 @@ const schema = z.object({
   EMAIL_FROM: z.string().email().default("no-reply@sportzicon.local"),
   EMAIL_FROM_NAME: z.string().default("Sportzicon"),
 
+  REDIS_URL: z.string().url().optional(),
+
   BOOTSTRAP_ADMIN_EMAIL: z.string().email().optional(),
   BOOTSTRAP_ADMIN_PASSWORD: z.string().min(8).optional()
 });

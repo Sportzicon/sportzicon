@@ -2,6 +2,7 @@ import { prisma } from "../../config/prisma";
 import { BadRequest, Forbidden, NotFound } from "../../utils/errors";
 import { createNotification } from "../notifications/notifications.service";
 import { eventBus } from "../../lib/EventBus";
+import { cacheDel } from "../../config/redis";
 import type { EntityType } from "../../types/domain";
 
 const VALID_TYPES: Record<EntityType, string[]> = {
@@ -176,6 +177,7 @@ export async function approveOrg(orgId: string, adminId: string) {
   ]);
 
   eventBus.emit("org.verified", { orgId, adminId });
+  await cacheDel(`org:${orgId}`);
 
   await createNotification({
     user_id: org.owner_user_id,
@@ -214,6 +216,7 @@ export async function rejectOrg(orgId: string, adminId: string, reason: string) 
   ]);
 
   eventBus.emit("org.verification_rejected", { orgId, adminId, reason });
+  await cacheDel(`org:${orgId}`);
 
   await createNotification({
     user_id: org.owner_user_id,

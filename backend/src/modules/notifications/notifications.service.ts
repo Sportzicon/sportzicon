@@ -1,6 +1,7 @@
 import { repositories } from "../../repositories";
 import { logger } from "../../config/logger";
 import { sendMail } from "../../config/mailer";
+import { cacheGet, cacheSet, cacheDel } from "../../config/redis";
 
 export async function createNotification(input: {
   user_id: string;
@@ -19,6 +20,9 @@ export async function createNotification(input: {
     body: input.body,
     link: input.link,
   });
+
+  // Invalidate unread count cache for the recipient
+  await cacheDel(`notif:count:${input.user_id}`);
 
   if (input.email) {
     try {
@@ -45,15 +49,25 @@ export async function listForUser(userId: string, limit = 20, cursor?: string) {
 }
 
 export async function countUnread(userId: string) {
-  return repositories.notification.countUnread(userId);
+  const key = `notif:count:${userId}`;
+  const cached = await cacheGet(key);
+  if (cached !== null) return JSON.parse(cached) as number;
+
+  const count = await repositories.notification.countUnread(userId);
+  await cacheSet(key, JSON.stringify(count), 30);
+  return count;
 }
 
 export async function markRead(userId: string, ids: string[]) {
-  return repositories.notification.markRead(userId, ids.length ? ids : undefined);
+  const result = await repositories.notification.markRead(userId, ids.length ? ids : undefined);
+  await cacheDel(`notif:count:${userId}`);
+  return result;
 }
 
 export async function markOneRead(userId: string, id: string) {
-  return repositories.notification.markOneRead(userId, id);
+  const result = await repositories.notification.markOneRead(userId, id);
+  await cacheDel(`notif:count:${userId}`);
+  return result;
 }
 
 export async function deleteOldNotifications(): Promise<number> {

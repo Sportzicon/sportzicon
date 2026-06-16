@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { hasRole } from "../utils/roles";
 import { api } from "../api/client";
+import { queryKeys } from "../hooks/queryKeys";
 import { useAuthStore } from "../store/auth";
 import { PageHeader, Spinner, EmptyState, StatusPill, Kicker, Pagination } from "../components/UI";
 
@@ -34,13 +35,13 @@ export default function Tournaments() {
   if (sport) params.sport = sport;
 
   const q = useQuery({
-    queryKey: ["tournaments", params],
+    queryKey: queryKeys.tournaments(params),
     queryFn: async () => (await api.get<{ data: Opportunity[] }>("/opportunities", { params })).data.data
   });
 
   const deleteOpp = useMutation({
     mutationFn: async (id: string) => api.delete(`/opportunities/${id}`),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["tournaments"] }); setPendingDeleteId(null); }
+    onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.tournaments() }); setPendingDeleteId(null); }
   });
 
   const canPost = hasRole(user?.role ?? "", "club", "organizer");

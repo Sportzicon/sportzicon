@@ -1,5 +1,6 @@
 import { Route, Routes, useLocation } from "react-router-dom";
 import { useEffect } from "react";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 
 function ScrollToTop() {
   const { pathname } = useLocation();

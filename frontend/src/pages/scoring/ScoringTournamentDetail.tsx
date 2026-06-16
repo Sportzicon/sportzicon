@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useParams } from "react-router-dom";
 import { scoringApi } from "../../api/scoringClient";
 import { api } from "../../api/client";
+import { queryKeys } from "../../hooks/queryKeys";
 import { useAuthStore } from "../../store/auth";
 import { hasRole } from "../../utils/roles";
 import {
@@ -63,7 +64,7 @@ function PlayerRow({ player, tournamentId, teamId, canManage, onDeleted }: any) 
   const qc = useQueryClient();
   const del = useMutation({
     mutationFn: () => scoringApi.delete(`/tournaments/${tournamentId}/teams/${teamId}/players/${player.id}`),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["scoring-tournament", tournamentId] }); onDeleted?.(); }
+    onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.scoringTournament(tournamentId) }); onDeleted?.(); }
   });
   const roleColor: Record<string, string> = {
     "batsman": "text-blue-600", "bowler": "text-purple-600",
@@ -118,7 +119,7 @@ function AddPlayerForm({ tournamentId, teamId, onDone }: any) {
 
   // Load only cricket athletes — strictly filtered by primary_sport=cricket
   const { data: cricketUsers = [], isLoading: loadingUsers } = useQuery({
-    queryKey: ["cricket-athletes"],
+    queryKey: queryKeys.cricketAthletes(),
     queryFn: () =>
       api.get("/search/players?sport=cricket&limit=500")
         .then(r => r.data.items ?? []),
@@ -127,7 +128,7 @@ function AddPlayerForm({ tournamentId, teamId, onDone }: any) {
 
   // Existing players already in this team (to exclude from dropdown)
   const { data: teamData } = useQuery({
-    queryKey: ["scoring-tournament", tournamentId],
+    queryKey: queryKeys.scoringTournament(tournamentId),
     enabled: false  // already in cache from parent
   });
   const existingUserIds = new Set<string>(
@@ -153,7 +154,7 @@ function AddPlayerForm({ tournamentId, teamId, onDone }: any) {
       }
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["scoring-tournament", tournamentId] });
+      qc.invalidateQueries({ queryKey: queryKeys.scoringTournament(tournamentId) });
       setSelected([]);
       setSearch("");
       onDone?.();
@@ -286,7 +287,7 @@ function TeamPanel({ team, tournamentId, canManage }: any) {
   const qc = useQueryClient();
   const delTeam = useMutation({
     mutationFn: () => scoringApi.delete(`/tournaments/${tournamentId}/teams/${team.id}`),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["scoring-tournament", tournamentId] })
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.scoringTournament(tournamentId) })
   });
   const players = team.players ?? [];
   const roleOrder: Record<string, number> = { "batsman":0, "wicket-keeper":1, "all-rounder":2, "bowler":3 };
@@ -352,7 +353,7 @@ function InlineTeamForm({ tournamentId, onCreated }: { tournamentId: string; onC
   const mut = useMutation({
     mutationFn: () => scoringApi.post(`/tournaments/${tournamentId}/teams`, f),
     onSuccess: (data) => {
-      qc.invalidateQueries({ queryKey: ["scoring-tournament", tournamentId] });
+      qc.invalidateQueries({ queryKey: queryKeys.scoringTournament(tournamentId) });
       const teamId = data?.data?.team?.id || data?.data?.id;
       onCreated(teamId);
     }
@@ -438,7 +439,7 @@ function ScheduleMatchForm({ tournament, onDone }: { tournament: any; onDone: ()
       return matchId;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["scoring-tournament", tournament.id] });
+      qc.invalidateQueries({ queryKey: queryKeys.scoringTournament(tournament.id) });
       onDone();
     }
   });
@@ -478,7 +479,7 @@ function ScheduleMatchForm({ tournament, onDone }: { tournament: any; onDone: ()
           {showNewTeam1 && (
             <div className="bg-fill rounded p-2.5 space-y-2 border border-hairsoft">
               <InlineTeamForm tournamentId={tournament.id} onCreated={(teamId) => {
-                qc.invalidateQueries({ queryKey: ["scoring-tournament", tournament.id] });
+                qc.invalidateQueries({ queryKey: queryKeys.scoringTournament(tournament.id) });
                 s("team1_id", teamId);
                 setShowNewTeam1(false);
               }} />
@@ -510,7 +511,7 @@ function ScheduleMatchForm({ tournament, onDone }: { tournament: any; onDone: ()
           {showNewTeam2 && (
             <div className="bg-fill rounded p-2.5 space-y-2 border border-hairsoft">
               <InlineTeamForm tournamentId={tournament.id} onCreated={(teamId) => {
-                qc.invalidateQueries({ queryKey: ["scoring-tournament", tournament.id] });
+                qc.invalidateQueries({ queryKey: queryKeys.scoringTournament(tournament.id) });
                 s("team2_id", teamId);
                 setShowNewTeam2(false);
               }} />
@@ -685,7 +686,7 @@ function AddTeamForm({ tournamentId, onDone }: { tournamentId: string; onDone: (
   const [f, setF] = useState({ name: "", short_name: "", color: "#14110D" });
   const mut = useMutation({
     mutationFn: () => scoringApi.post(`/tournaments/${tournamentId}/teams`, f),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["scoring-tournament", tournamentId] }); onDone(); }
+    onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.scoringTournament(tournamentId) }); onDone(); }
   });
 
   return (
@@ -719,7 +720,7 @@ function AddTeamForm({ tournamentId, onDone }: { tournamentId: string; onDone: (
 // ── Standings ─────────────────────────────────────────────────────────────────
 function StandingsTable({ tournamentId }: { tournamentId: string }) {
   const { data } = useQuery({
-    queryKey: ["scoring-standings", tournamentId],
+    queryKey: queryKeys.scoringStandings(tournamentId),
     queryFn: () => scoringApi.get(`/tournaments/${tournamentId}/standings`).then(r => r.data)
   });
   const standings = data?.standings;
@@ -765,7 +766,7 @@ function ScoringTournamentDetailInner() {
   const [activeSection, setActiveSection] = useState<"matches"|"teams">("matches");
 
   const { data, isLoading } = useQuery({
-    queryKey: ["scoring-tournament", id],
+    queryKey: queryKeys.scoringTournament(id ?? ""),
     queryFn: () => scoringApi.get(`/tournaments/${id}`).then(r => r.data.tournament),
     refetchInterval: 10_000
   });

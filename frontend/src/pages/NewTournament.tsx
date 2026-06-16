@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, humanizeError } from "../api/client";
+import { queryKeys } from "../hooks/queryKeys";
 import { useAuthStore } from "../store/auth";
 import { PageHeader, Spinner, SectionHead } from "../components/UI";
 
@@ -24,14 +25,14 @@ export default function NewTournament() {
   const isEdit = !!id;
 
   const orgsQ = useQuery({
-    queryKey: ["my-orgs", isAdmin],
+    queryKey: [...queryKeys.myOrgs(), isAdmin],
     queryFn: async () => isAdmin
       ? (await api.get("/organizations")).data.items as any[]
       : (await api.get("/organizations/mine")).data.items as any[]
   });
 
   const oppQ = useQuery({
-    queryKey: ["opp", id],
+    queryKey: queryKeys.opportunity(id ?? ""),
     queryFn: async () => (await api.get(`/opportunities/${id}`)).data.opportunity,
     enabled: !!id
   });
@@ -104,8 +105,8 @@ export default function NewTournament() {
         ? await api.put(`/opportunities/${id}`, payload)
         : await api.post("/opportunities", payload);
 
-      await qc.invalidateQueries({ queryKey: ["opp"] });
-      await qc.invalidateQueries({ queryKey: ["tournaments"] });
+      await qc.invalidateQueries({ queryKey: queryKeys.opportunities() });
+      await qc.invalidateQueries({ queryKey: queryKeys.tournaments() });
 
       navigate(`/opportunities/${r.data.opportunity.id}`);
     } catch (e) {

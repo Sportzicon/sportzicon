@@ -4,6 +4,7 @@ import { scoringApi } from "../../api/scoringClient";
 import { useAuthStore } from "../../store/auth";
 import { Radio, Trophy, Plus } from "lucide-react";
 import { PageHeader } from "../../components/UI";
+import { queryKeys } from "../../hooks/queryKeys";
 
 function oversFromBalls(b: number) {
   return `${Math.floor(b / 6)}.${b % 6}`;
@@ -63,13 +64,13 @@ function ScoringHomeInner() {
   const user = useAuthStore(s => s.user);
 
   const { data: liveData } = useQuery({
-    queryKey: ["scoring-live"],
+    queryKey: queryKeys.scoringLive(),
     queryFn: () => scoringApi.get("/matches/live").then(r => r.data),
     refetchInterval: 15_000
   });
 
   const { data: tourData } = useQuery({
-    queryKey: ["scoring-tournaments"],
+    queryKey: queryKeys.scoringTournaments(),
     queryFn: () => scoringApi.get("/tournaments?status=ongoing&limit=6").then(r => r.data)
   });
 

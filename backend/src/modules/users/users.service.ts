@@ -2,8 +2,13 @@ import { prisma } from "../../config/prisma";
 import { BadRequest, Conflict, Forbidden, NotFound } from "../../utils/errors";
 import { omitSensitive } from "../../utils/user";
 import { validateAthleteSportProfile } from "./sportProfile";
+import { cacheGet, cacheSet, cacheDel } from "../../config/redis";
 
 export async function getUserById(id: string) {
+  const key = `user:profile:${id}`;
+  const cached = await cacheGet(key);
+  if (cached !== null) return JSON.parse(cached);
+
   const user = await prisma.user.findUnique({
     where: { id },
     include: {
@@ -12,11 +17,13 @@ export async function getUserById(id: string) {
   });
   if (!user) throw NotFound("User not found");
   const { _count, ...rest } = user;
-  return omitSensitive({
+  const result = omitSensitive({
     ...rest,
     follower_count: _count.followers,
     following_count: _count.following
   });
+  await cacheSet(key, JSON.stringify(result), 300);
+  return result;
 }
 
 export async function updateProfile(userId: string, patch: Record<string, unknown>) {
@@ -46,6 +53,7 @@ export async function updateProfile(userId: string, patch: Record<string, unknow
   }
 
   const updated = await prisma.user.update({ where: { id: userId }, data });
+  await cacheDel(`user:profile:${userId}`);
   return omitSensitive(updated);
 }
 
@@ -62,6 +70,7 @@ export async function updateAthleteFields(userId: string, fields: Record<string,
     where: { id: userId },
     data: { athlete_data: merged as object }
   });
+  await cacheDel(`user:profile:${userId}`);
   return omitSensitive(updated);
 }
 
@@ -76,5 +85,6 @@ export async function updateCoachFields(userId: string, fields: Record<string, u
     where: { id: userId },
     data: { coach_data: { ...existing, ...fields } as object }
   });
+  await cacheDel(`user:profile:${userId}`);
   return omitSensitive(updated);
 }

@@ -1,6 +1,7 @@
 import { prisma } from "../../config/prisma";
 import { Forbidden, NotFound } from "../../utils/errors";
 import { formatOrg } from "../../utils/org";
+import { cacheGet, cacheSet, cacheDel } from "../../config/redis";
 import type { Role } from "../../types/domain";
 
 export async function createOrganization(ownerId: string, ownerRole: Role, input: Record<string, unknown>) {
@@ -51,13 +52,20 @@ export async function updateOrganization(orgId: string, actorId: string, actorRo
   if (patch.org_name) data.org_name_lower = String(patch.org_name).toLowerCase();
 
   const updated = await prisma.organization.update({ where: { id: orgId }, data });
+  await cacheDel(`org:${orgId}`);
   return formatOrg(updated);
 }
 
 export async function getOrganization(orgId: string) {
+  const key = `org:${orgId}`;
+  const cached = await cacheGet(key);
+  if (cached !== null) return JSON.parse(cached);
+
   const org = await prisma.organization.findUnique({ where: { id: orgId } });
   if (!org) throw NotFound("Organization not found");
-  return formatOrg(org);
+  const result = formatOrg(org);
+  await cacheSet(key, JSON.stringify(result), 300);
+  return result;
 }
 
 export async function listAllOrganizations(q: string, limit: number) {
@@ -104,5 +112,6 @@ export async function deleteOrganization(orgId: string, actorId: string, isAdmin
   if (org.owner_user_id !== actorId && !isAdmin)
     throw Forbidden("Only the org owner or an admin can delete this organization");
   await prisma.organization.delete({ where: { id: orgId } });
+  await cacheDel(`org:${orgId}`);
   return { ok: true };
 }

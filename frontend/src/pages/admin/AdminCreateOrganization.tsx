@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { api, humanizeError } from "../../api/client";
+import { queryKeys } from "../../hooks/queryKeys";
 import { Wizard } from "../../components/Wizard";
 import { PageHeader } from "../../components/UI";
 
@@ -147,11 +148,11 @@ export default function AdminCreateOrganization() {
       return api.post("/admin/organizations", body);
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["admin-organizations"] });
+      qc.invalidateQueries({ queryKey: queryKeys.adminOrganizations() });
       localStorage.removeItem(DRAFT_KEY);
       navigate("/admin/organizations");
     },
-    onError: (e: any) => setSubmitError(humanizeError(e)),
+    onError: (e: unknown) => setSubmitError(humanizeError(e)),
   });
 
   function stepCanProceed() {

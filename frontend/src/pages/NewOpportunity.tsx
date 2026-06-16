@@ -116,7 +116,7 @@ export default function NewOpportunity() {
         ? await opportunityService.update(id!, payload)
         : await opportunityService.create(payload);
 
-      await qc.invalidateQueries({ queryKey: ["opportunities"] });
+      await qc.invalidateQueries({ queryKey: queryKeys.opportunitiesInfinite() });
       if (isEdit) await qc.invalidateQueries({ queryKey: queryKeys.opportunity(id!) });
       navigate(`/opportunities/${saved.id}`);
     } catch (e) {

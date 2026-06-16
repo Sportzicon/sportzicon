@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { api, humanizeError } from "../../api/client";
+import { queryKeys } from "../../hooks/queryKeys";
 import { Wizard } from "../../components/Wizard";
 import { PageHeader } from "../../components/UI";
 
@@ -124,11 +125,11 @@ export default function AdminCreateUser() {
       return api.post("/admin/users", body);
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["admin-users"] });
+      qc.invalidateQueries({ queryKey: queryKeys.adminUsers() });
       localStorage.removeItem(DRAFT_KEY);
       navigate("/admin/users");
     },
-    onError: (e: any) => setSubmitError(humanizeError(e)),
+    onError: (e: unknown) => setSubmitError(humanizeError(e)),
   });
 
   function goNext() {

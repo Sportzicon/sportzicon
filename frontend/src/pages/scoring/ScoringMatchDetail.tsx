@@ -4,6 +4,7 @@ import { Link, useParams } from "react-router-dom";
 import { scoringApi } from "../../api/scoringClient";
 import { useAuthStore } from "../../store/auth";
 import { hasRole } from "../../utils/roles";
+import { queryKeys } from "../../hooks/queryKeys";
 import { Radio, Trophy, TrendingUp, Activity, MapPin, Zap, Users, CheckCircle2, User } from "lucide-react";
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -88,7 +89,7 @@ function PlayingXIPanel({ matchId, canManage }: { matchId: string; canManage: bo
   const [editing, setEditing] = useState(false);
 
   const { data: xi, isLoading } = useQuery({
-    queryKey: ["scoring-xi", matchId],
+    queryKey: queryKeys.scoringXi(matchId),
     queryFn: () => scoringApi.get(`/matches/${matchId}/xi`).then(r => r.data)
   });
 
@@ -102,8 +103,8 @@ function PlayingXIPanel({ matchId, canManage }: { matchId: string; canManage: bo
       team2_player_ids: [...t2Sel]
     }),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["scoring-xi", matchId] });
-      qc.invalidateQueries({ queryKey: ["scoring-match", matchId] });
+      qc.invalidateQueries({ queryKey: queryKeys.scoringXi(matchId) });
+      qc.invalidateQueries({ queryKey: queryKeys.scoringMatch(matchId) });
       setEditing(false);
     }
   });
@@ -440,7 +441,7 @@ function ScoringMatchDetailInner() {
   const canManage = hasRole(user?.role ?? "", "organizer", "scorer");
 
   const { data, isLoading } = useQuery({
-    queryKey: ["scoring-match", matchId],
+    queryKey: queryKeys.scoringMatch(matchId ?? ""),
     queryFn: () => scoringApi.get(`/matches/${matchId}`).then(r => r.data.match),
     refetchInterval: (q) => q.state.data?.status === "live" ? 5_000 : false
   });

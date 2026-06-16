@@ -1,4 +1,5 @@
 import { Link, NavLink, Outlet, useNavigate, useLocation } from "react-router-dom";
+import { ErrorBoundary } from "./ErrorBoundary";
 import { useAuthStore } from "../store/auth";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { authService } from "../services";
@@ -14,9 +15,10 @@ import {
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import type { Notification } from "../models";
+import type { User } from "../types";
 
 function GlobalSearch({ user, inputRef, mobileOpen, onMobileClose }: {
-  user: any;
+  user: User;
   inputRef: React.RefObject<HTMLInputElement>;
   mobileOpen: boolean;
   onMobileClose: () => void;
@@ -491,7 +493,9 @@ export function Layout() {
               : "overflow-y-auto px-3 py-4 sm:px-6 sm:py-7 pb-[calc(56px+env(safe-area-inset-bottom))] lg:pb-7"
           }`}
         >
-          <Outlet />
+          <ErrorBoundary>
+            <Outlet />
+          </ErrorBoundary>
         </main>
       </div>
 

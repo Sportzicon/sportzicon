@@ -1,5 +1,6 @@
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Activity } from "lucide-react";
+import { ErrorBoundary } from "./ErrorBoundary";
 
 // ============================================================================
 // Shared shell for public marketing pages (Landing + HowItWorks).
@@ -61,7 +62,9 @@ export default function PublicLayout() {
 <div className="h-[116px]" />
 
       {/* ── Page content ──────────────────────────────────────────────────── */}
-      <Outlet />
+      <ErrorBoundary>
+        <Outlet />
+      </ErrorBoundary>
 
       {/* ── Footer ────────────────────────────────────────────────────────── */}
       <footer className="flex flex-wrap items-center justify-between gap-2 border-t border-hair px-4 sm:px-8 lg:px-11 py-4 lg:py-5">

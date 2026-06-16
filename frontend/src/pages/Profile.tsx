@@ -27,7 +27,7 @@ function CricketStatRow({ label, values }: { label: string; values: (string | nu
 
 function CricketStatsSection({ userId, sport }: { userId: string; sport?: string }) {
   const { data, isLoading } = useQuery({
-    queryKey: ["cricket-stats-by-user", userId],
+    queryKey: queryKeys.cricketStatsByUser(userId),
     queryFn: () => scoringApi.get(`/players/by-user/${userId}/stats`).then(r => r.data),
     enabled: !!userId && sport?.toLowerCase() === "cricket"
   });
@@ -240,40 +240,40 @@ export default function Profile() {
   }
 
   const userQ = useQuery({
-    queryKey: ["user", id],
+    queryKey: queryKeys.user(id),
     queryFn: async () => (await api.get<{ user: User }>(`/users/${id}`)).data.user
   });
   const postsQ = useQuery({
-    queryKey: ["user-posts", id],
+    queryKey: queryKeys.userPosts(id),
     queryFn: async () => (await api.get<{ items: Post[] }>("/posts", { params: { author_id: id, limit: 10 } })).data.items
   });
   const followStatus = useQuery({
-    queryKey: ["follow-status", id],
+    queryKey: queryKeys.followStatus(id),
     queryFn: async () => (await api.get<{ following: boolean }>(`/follow/status/${id}`)).data.following,
     enabled: !isMe
   });
   const followersQ = useQuery({
-    queryKey: ["followers", id],
+    queryKey: queryKeys.followers(id),
     queryFn: async () => (await api.get<{ items: User[] }>(`/follow/${id}/followers`)).data.items,
     enabled: tab === "followers"
   });
   const followingQ = useQuery({
-    queryKey: ["following", id],
+    queryKey: queryKeys.following(id),
     queryFn: async () => (await api.get<{ items: User[] }>(`/follow/${id}/following`)).data.items,
     enabled: tab === "following"
   });
   const reelsQ = useQuery({
-    queryKey: ["user-reels", id],
+    queryKey: queryKeys.userReels(id),
     queryFn: async () => (await api.get<{ items: any[] }>("/reels", { params: { author_id: id, limit: 3 } })).data.items
   });
 
   const docsQ = useQuery({
-    queryKey: ["user-docs", id],
+    queryKey: queryKeys.userDocs(id),
     queryFn: async () => (await api.get<{ items: any[] }>(`/users/${id}/documents`)).data.items,
   });
 
   const emailLogsQ = useQuery({
-    queryKey: ["email-logs", id],
+    queryKey: queryKeys.emailLogs(id),
     queryFn: async () =>
       (await api.get<{ items: any[]; total: number; stats: any }>(`/users/${id}/email-logs`)).data,
     enabled: tab === "emails" && (isMe || isAdmin(me?.role ?? ""))
@@ -294,7 +294,7 @@ export default function Profile() {
       });
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["user-docs", id] });
+      qc.invalidateQueries({ queryKey: queryKeys.userDocs(id) });
       setUploadProgress(null);
       setUploadingName("");
     },
@@ -306,13 +306,13 @@ export default function Profile() {
 
   const deleteDoc = useMutation({
     mutationFn: async (docId: string) => api.delete(`/users/${id}/documents/${docId}`),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["user-docs", id] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.userDocs(id) }),
   });
 
   async function toggleFollow() {
     if (followStatus.data) await api.delete(`/follow/${id}`);
     else await api.post(`/follow/${id}`);
-    qc.invalidateQueries({ queryKey: ["follow-status", id] });
+    qc.invalidateQueries({ queryKey: queryKeys.followStatus(id) });
     // Invalidate both profiles so follower_count / following_count refresh
     qc.invalidateQueries({ queryKey: queryKeys.user(id) });
     if (me?.id) qc.invalidateQueries({ queryKey: queryKeys.user(me.id) });

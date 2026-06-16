@@ -313,7 +313,7 @@ export default function OpportunityDetail() {
   const deleteOpp = useMutation({
     mutationFn: (oppId: string) => opportunityService.delete(oppId),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["opportunities"] });
+      qc.invalidateQueries({ queryKey: queryKeys.opportunitiesInfinite() });
       navigate("/opportunities");
     }
   });

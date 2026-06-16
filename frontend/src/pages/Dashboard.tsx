@@ -8,6 +8,7 @@ import { useAuthStore } from "../store/auth";
 import { queryKeys } from "../hooks/queryKeys";
 import { hasRole, isAdmin } from "../utils/roles";
 import { StatusPill, Spinner, EmptyState, Avatar } from "../components/UI";
+import { ErrorBoundary } from "../components/ErrorBoundary";
 import { ChevronDown, ChevronUp, Search, Briefcase, ShieldCheck, Flag, Users } from "lucide-react";
 import type { Application, Opportunity, Post, User } from "../models";
 
@@ -563,8 +564,8 @@ export default function Dashboard() {
   const { user } = useAuthStore();
   if (!user) return null;
 
-  if (isAdmin(user.role)) return <AdminDashboard />;
-  if (user.role === "scout") return <ScoutDashboard />;
-  if (hasRole(user.role, "club", "organizer")) return <ClubDashboard />;
-  return <AthleteDashboard />;
+  if (isAdmin(user.role)) return <ErrorBoundary><AdminDashboard /></ErrorBoundary>;
+  if (user.role === "scout") return <ErrorBoundary><ScoutDashboard /></ErrorBoundary>;
+  if (hasRole(user.role, "club", "organizer")) return <ErrorBoundary><ClubDashboard /></ErrorBoundary>;
+  return <ErrorBoundary><AthleteDashboard /></ErrorBoundary>;
 }

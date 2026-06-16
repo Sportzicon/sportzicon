@@ -2,6 +2,7 @@ import { Fragment, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { api, humanizeError } from "../../api/client";
+import { queryKeys } from "../../hooks/queryKeys";
 import { PageHeader, Spinner, Badge, Pagination } from "../../components/UI";
 import { Pencil, Plus } from "lucide-react";
 
@@ -62,11 +63,11 @@ export default function AdminOrganizations() {
   const [formError, setFormError] = useState("");
   const [formSuccess, setFormSuccess] = useState("");
 
-  const params: any = { limit: 200 };
+  const params: Record<string, string | number | undefined> = { limit: 200 };
   if (search) params.q = search;
 
   const q = useQuery({
-    queryKey: ["admin-organizations", params],
+    queryKey: queryKeys.adminOrganizations(params),
     queryFn: async () => (await api.get("/admin/organizations", { params })).data.items as any[]
   });
 
@@ -74,10 +75,10 @@ export default function AdminOrganizations() {
     mutationFn: async ({ id, patch }: { id: string; patch: Record<string, any> }) =>
       api.patch(`/admin/organizations/${id}`, patch),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["admin-organizations"] });
+      qc.invalidateQueries({ queryKey: queryKeys.adminOrganizations() });
       setEditId(null); setFormError(""); setFormSuccess("Saved.");
     },
-    onError: (e: any) => { setFormError(humanizeError(e)); setFormSuccess(""); }
+    onError: (e: unknown) => { setFormError(humanizeError(e)); setFormSuccess(""); }
   });
 
   const allItems = q.data ?? [];

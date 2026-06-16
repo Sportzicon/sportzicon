@@ -43,7 +43,7 @@ export default function AdminUsers() {
   const setStatus = useMutation({
     mutationFn: async (vars: { id: string; status: string }) =>
       api.patch(`/admin/users/${vars.id}/status`, { status: vars.status }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin", "users"] }); setActionErr(null); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.adminUsers() }); setActionErr(null); },
     onError: (e) => setActionErr(humanizeError(e))
   });
 
@@ -51,7 +51,7 @@ export default function AdminUsers() {
     mutationFn: async (vars: { id: string; reason: string }) =>
       api.patch(`/admin/users/${vars.id}/ban`, { reason: vars.reason }),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["admin", "users"] });
+      qc.invalidateQueries({ queryKey: queryKeys.adminUsers() });
       setBanTargetId(null);
       setBanReason("");
       setBanErr(null);
@@ -62,14 +62,14 @@ export default function AdminUsers() {
 
   const unbanUser = useMutation({
     mutationFn: async (id: string) => api.patch(`/admin/users/${id}/unban`),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin", "users"] }); setActionErr(null); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.adminUsers() }); setActionErr(null); },
     onError: (e) => setActionErr(humanizeError(e))
   });
 
   const deleteUser = useMutation({
     mutationFn: async (id: string) => api.delete(`/admin/users/${id}`),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["admin", "users"] });
+      qc.invalidateQueries({ queryKey: queryKeys.adminUsers() });
       setPendingDeleteId(null);
       setActionErr(null);
     },

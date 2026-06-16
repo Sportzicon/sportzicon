@@ -2,6 +2,7 @@ import { Fragment, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { api, humanizeError } from "../../api/client";
+import { queryKeys } from "../../hooks/queryKeys";
 import { PageHeader, Spinner, Badge, Pagination } from "../../components/UI";
 import { Pencil, Trash2, X, Check, Plus } from "lucide-react";
 
@@ -96,13 +97,13 @@ export default function AdminOpportunities() {
   const [deletePendingId, setDeletePendingId] = useState<string | null>(null);
   const [formError, setFormError] = useState("");
 
-  const params: any = {};
+  const params: Record<string, string | number | undefined> = {};
   if (typeFilter) params.type = typeFilter;
   if (statusFilter) params.status = statusFilter;
   params.limit = 200;
 
   const q = useQuery({
-    queryKey: ["admin-opportunities", params],
+    queryKey: queryKeys.adminOpportunities(params),
     queryFn: async () => (await api.get("/admin/opportunities", { params })).data.items as any[]
   });
 
@@ -110,16 +111,16 @@ export default function AdminOpportunities() {
     mutationFn: async ({ id, patch }: { id: string; patch: Record<string, any> }) =>
       api.patch(`/admin/opportunities/${id}`, patch),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["admin-opportunities"] });
+      qc.invalidateQueries({ queryKey: queryKeys.adminOpportunities() });
       setEditId(null); setFormError("");
     },
-    onError: (e: any) => setFormError(humanizeError(e))
+    onError: (e: unknown) => setFormError(humanizeError(e))
   });
 
   const deleteOpp = useMutation({
     mutationFn: async (id: string) => api.delete(`/admin/opportunities/${id}`),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["admin-opportunities"] });
+      qc.invalidateQueries({ queryKey: queryKeys.adminOpportunities() });
       setDeletePendingId(null);
     }
   });

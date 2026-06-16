@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { scoringApi } from "../api/scoringClient";
+import { queryKeys } from "../hooks/queryKeys";
 import { MapPin, RefreshCw, ChevronRight, TrendingUp, Zap, Radio } from "lucide-react";
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -968,7 +969,7 @@ export default function LiveScoreDetail() {
   const [activeTab, setActiveTab] = useState("Live");
 
   const { data: match, isLoading, isFetching, refetch } = useQuery({
-    queryKey: ["live-match-detail", matchId],
+    queryKey: queryKeys.liveMatchDetail(matchId ?? ""),
     queryFn: () => scoringApi.get(`/matches/${matchId}`).then(r => r.data.match),
     refetchInterval: 5_000
   });
@@ -978,7 +979,7 @@ export default function LiveScoreDetail() {
 
   // Fetch balls for active innings (live updates)
   const { data: activeBallsData } = useQuery({
-    queryKey: ["live-balls", activeInnId],
+    queryKey: queryKeys.liveBalls(activeInnId ?? ""),
     queryFn: () => scoringApi.get(`/innings/${activeInnId}/balls`).then(r => r.data.balls ?? []),
     enabled: !!activeInnId,
     refetchInterval: 5_000

@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useParams, useNavigate } from "react-router-dom";
 import { scoringApi } from "../../api/scoringClient";
+import { queryKeys } from "../../hooks/queryKeys";
 import { ArrowLeft, TrendingUp, Target, Zap } from "lucide-react";
 
 function StatCard({ label, value, hint }: { label: string; value: string | number; hint?: string }) {
@@ -39,13 +40,13 @@ function ScoringInningsAnalyticsInner() {
   const navigate = useNavigate();
 
   const { data, isLoading } = useQuery({
-    queryKey: ["scoring-innings-analytics", inningsId],
+    queryKey: queryKeys.scoringInningsAnalytics(inningsId ?? ""),
     queryFn: () => scoringApi.get(`/innings/${inningsId}/analytics`).then(r => r.data),
     enabled: Boolean(inningsId), refetchInterval: 10_000
   });
 
   const { data: partnerships } = useQuery({
-    queryKey: ["scoring-innings-partnerships", inningsId],
+    queryKey: queryKeys.scoringInningsPartnerships(inningsId ?? ""),
     queryFn: () => scoringApi.get(`/innings/${inningsId}/partnerships`).then(r => r.data.partnerships),
     enabled: Boolean(inningsId)
   });

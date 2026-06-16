@@ -3,6 +3,7 @@ import { useFeed } from "../hooks";
 import { useAuthStore } from "../store/auth";
 import { PageHeader, Spinner, EmptyState, Avatar, Tabs } from "../components/UI";
 import { CommentSection } from "../components/CommentSection";
+import { ErrorBoundary } from "../components/ErrorBoundary";
 import { Heart, Trash2, Pencil, MoreVertical, MessageCircle, Image, RefreshCw } from "lucide-react";
 import { Link } from "react-router-dom";
 import { humanizeError } from "../api/client";
@@ -283,6 +284,7 @@ export default function Feed() {
       <PullIndicator distance={pullDistance} isRefreshing={isRefreshing} />
 
       {/* Create post — collapsed tap-target on mobile, always open on desktop */}
+      <ErrorBoundary>
       <div className="panel p-4">
         {/* Mobile collapsed state */}
         <div className="lg:hidden">
@@ -314,8 +316,11 @@ export default function Feed() {
         </div>
       </div>
 
+      </ErrorBoundary>
+
       <Tabs tabs={["All", "Updates", "Training logs"]} active={tab} onChange={setTab} />
 
+      <ErrorBoundary>
       {feedQuery.isLoading ? (
         <div className="panel p-8 flex justify-center">
           <Spinner className="text-brand-500" />
@@ -413,6 +418,7 @@ export default function Feed() {
           )}
         </>
       )}
+      </ErrorBoundary>
 
     </div>
   );

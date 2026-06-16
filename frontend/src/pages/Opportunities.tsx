@@ -5,6 +5,7 @@ import { hasRole } from "../utils/roles";
 import { useAuthStore } from "../store/auth";
 import { PageHeader, Spinner, EmptyState, StatusPill, SectionHead } from "../components/UI";
 import { MobileDrawer } from "../components/MobileDrawer";
+import { ErrorBoundary } from "../components/ErrorBoundary";
 import { SPORTS_LIST } from "../data/sportPositions";
 import { SlidersHorizontal, Trash2, Pencil, MoreVertical, Bookmark } from "lucide-react";
 import type { Opportunity, OpportunityFilters } from "../models";
@@ -196,6 +197,7 @@ export default function Opportunities() {
         </div>
 
         {/* ── Results ────────────────────────────────────────────────── */}
+        <ErrorBoundary>
         <div>
           <div className="hidden lg:block">
             <PageHeader
@@ -342,6 +344,7 @@ export default function Opportunities() {
             </>
           )}
         </div>
+        </ErrorBoundary>
       </div>
     </div>
   );

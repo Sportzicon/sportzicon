@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { scoringApi } from "../../api/scoringClient";
+import { queryKeys } from "../../hooks/queryKeys";
 import { PageHeader } from "../../components/UI";
 
 const SPORTS = ["cricket", "football", "basketball", "volleyball", "hockey", "kabaddi"];
@@ -22,7 +23,7 @@ function ScoringNewTournamentInner() {
   const [error, setError] = useState("");
 
   const { data: existing } = useQuery({
-    queryKey: ["scoring-tournament", id],
+    queryKey: queryKeys.scoringTournament(id ?? ""),
     queryFn: () => scoringApi.get(`/tournaments/${id}`).then(r => r.data.tournament),
     enabled: isEdit
   });
@@ -36,7 +37,7 @@ function ScoringNewTournamentInner() {
       ? scoringApi.put(`/tournaments/${id}`, data).then(r => r.data.tournament)
       : scoringApi.post("/tournaments", data).then(r => r.data.tournament),
     onSuccess: (t) => {
-      qc.invalidateQueries({ queryKey: ["scoring-tournaments"] });
+      qc.invalidateQueries({ queryKey: queryKeys.scoringTournaments() });
       navigate(`/scoring/tournaments/${t.id}`);
     },
     onError: (err: any) => setError(err.response?.data?.error?.message || "Failed to save")

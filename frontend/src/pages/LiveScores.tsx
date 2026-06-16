@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { scoringApi } from "../api/scoringClient";
+import { queryKeys } from "../hooks/queryKeys";
 import { Activity, MapPin, RefreshCw, ChevronRight, Trophy } from "lucide-react";
 
 const ov  = (b: number) => `${Math.floor(b / 6)}.${b % 6}`;
@@ -99,7 +100,7 @@ function MatchCard({ match }: { match: any }) {
 
 export default function LiveScores() {
   const { data, isLoading, dataUpdatedAt, isFetching, refetch } = useQuery({
-    queryKey: ["live-matches-public"],
+    queryKey: queryKeys.liveMatches(),
     queryFn: () => scoringApi.get("/matches/live").then(r => r.data.matches as any[]),
     refetchInterval: 5_000
   });

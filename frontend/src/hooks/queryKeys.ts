@@ -41,8 +41,16 @@ export const queryKeys = {
   myOrganizations: () => ["my-orgs"] as const,
   adminVerifications: () => ["admin-verifs"] as const,
 
-  // Users
-  user:           (id: string) => ["user", id] as const,
+  // Users / Profile
+  user:            (id: string) => ["user", id] as const,
+  userPosts:       (id: string) => ["user-posts", id] as const,
+  userReels:       (id: string) => ["user-reels", id] as const,
+  userDocs:        (id: string) => ["user-docs", id] as const,
+  followStatus:    (id: string) => ["follow-status", id] as const,
+  followers:       (id: string) => ["followers", id] as const,
+  following:       (id: string) => ["following", id] as const,
+  emailLogs:       (id: string) => ["email-logs", id] as const,
+  cricketStatsByUser: (id: string) => ["cricket-stats-by-user", id] as const,
 
   // Comments
   comments:       (parentType: string, parentId: string) => ["comments", parentType, parentId] as const,
@@ -51,11 +59,39 @@ export const queryKeys = {
   search:         (mode: string, params: Record<string, unknown>) => ["search", mode, params] as const,
 
   // Admin
-  adminUsers:     (filters?: Record<string, unknown>) => ["admin", "users", filters ?? {}] as const,
-  adminReports:   (filters?: Record<string, unknown>) => ["admin", "reports", filters ?? {}] as const,
-  adminAuditLog:  (filters?: Record<string, unknown>) => ["admin", "audit-log", filters ?? {}] as const,
-  adminAnalytics: () => ["admin", "analytics"] as const,
+  adminUsers:         (filters?: Record<string, unknown>) => ["admin", "users", filters ?? {}] as const,
+  adminUserDetail:    (id: string) => ["admin", "user-detail", id] as const,
+  adminReports:       (filters?: Record<string, unknown>) => ["admin", "reports", filters ?? {}] as const,
+  adminAuditLog:      (filters?: Record<string, unknown>) => ["admin", "audit-log", filters ?? {}] as const,
+  adminAnalytics:     () => ["admin", "analytics"] as const,
   adminOpportunities: (filters?: Record<string, unknown>) => ["admin", "opportunities", filters ?? {}] as const,
   adminOrganizations: (filters?: Record<string, unknown>) => ["admin", "organizations", filters ?? {}] as const,
   adminApplications:  (filters?: Record<string, unknown>) => ["admin", "applications", filters ?? {}] as const,
+
+  // Tournaments
+  tournaments:    (filters?: Record<string, unknown>) => ["tournaments", filters ?? {}] as const,
+  tournament:     (id: string) => ["tournament", id] as const,
+
+  // Org sub-resources
+  orgOpportunities: (orgId: string) => ["org-opps", orgId] as const,
+
+  // Live scores (public, no auth)
+  liveMatches:    () => ["live-matches-public"] as const,
+  liveMatchDetail:(id: string) => ["live-match-detail", id] as const,
+  liveBalls:      (innId: string) => ["live-balls", innId] as const,
+
+  // Scoring subsystem (separate auth context)
+  scoringLive:                  () => ["scoring-live"] as const,
+  scoringInningsAnalytics:      (innId: string) => ["scoring-innings-analytics", innId] as const,
+  scoringTournaments:           (filters?: Record<string, unknown>) => ["scoring-tournaments", filters ?? {}] as const,
+  scoringTournament:            (id: string) => ["scoring-tournament", id] as const,
+  scoringMatch:                 (id: string) => ["scoring-match", id] as const,
+  scoringMatchLive:             (id: string) => ["scoring-match-live", id] as const,
+  scoringXi:                    (matchId: string) => ["scoring-xi", matchId] as const,
+  scoringXiLive:                (matchId: string) => ["scoring-xi-live", matchId] as const,
+  scoringBallsLive:             (innId: string) => ["scoring-balls-live", innId] as const,
+  scoringRetiredHurt:           (innId: string) => ["scoring-retired-hurt", innId] as const,
+  scoringInningsPartnerships:   (innId: string) => ["scoring-innings-partnerships", innId] as const,
+  scoringStandings:             (tournamentId: string) => ["scoring-standings", tournamentId] as const,
+  cricketAthletes:              () => ["cricket-athletes"] as const,
 } as const;

@@ -29,7 +29,7 @@ export default function OrganizationDetail() {
   });
 
   const oppsQ = useQuery({
-    queryKey: ["org-opps", id],
+    queryKey: queryKeys.orgOpportunities(id ?? ""),
     queryFn: async () =>
       (await api.get("/opportunities", { params: { org_id: id, status: "open", limit: 10 } })).data.data as any[],
     enabled: !!id

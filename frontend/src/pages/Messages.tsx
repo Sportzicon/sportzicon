@@ -5,6 +5,7 @@ import { messageService, userService, searchService } from "../services";
 import { useAuthStore } from "../store/auth";
 import { PageHeader, Spinner, Avatar } from "../components/UI";
 import { MobileDrawer } from "../components/MobileDrawer";
+import { ErrorBoundary } from "../components/ErrorBoundary";
 import { queryKeys } from "../hooks/queryKeys";
 import { Send, Plus, Search, ArrowLeft, X } from "lucide-react";
 import type { Conversation, Message } from "../models";
@@ -359,6 +360,7 @@ export default function Messages() {
         <div className="grid h-full sm:grid-cols-[320px_1fr] sm:divide-x sm:divide-hair">
 
           {/* ── Conversation list ──────────────────────────────────────────── */}
+          <ErrorBoundary>
           <aside className={`${mobileView === "thread" ? "hidden sm:flex" : "flex"} flex-col overflow-hidden`}>
             <div className="px-[18px] py-[18px] border-b border-hair flex items-center justify-between">
               <div>
@@ -441,8 +443,10 @@ export default function Messages() {
               )}
             </div>
           </aside>
+          </ErrorBoundary>
 
           {/* ── Message thread ─────────────────────────────────────────────── */}
+          <ErrorBoundary>
           <section className={`${mobileView === "list" ? "hidden sm:flex" : "flex"} flex-col overflow-hidden min-w-0`}>
             {(activeConv || recipientId) ? (
               <div className="px-3 sm:px-[22px] py-3.5 border-b border-hair bg-panel flex items-center gap-3 flex-shrink-0">
@@ -573,6 +577,7 @@ export default function Messages() {
               </button>
             </form>
           </section>
+          </ErrorBoundary>
         </div>
       </div>
     </div>

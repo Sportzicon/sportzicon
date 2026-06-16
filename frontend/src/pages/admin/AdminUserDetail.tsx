@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import { humanizeError } from "../../api/client";
+import { queryKeys } from "../../hooks/queryKeys";
 import { PageHeader, Spinner } from "../../components/UI";
 import { clearSportSpecific, validateAthleteSportProfile } from "../../data/sportProfile";
 import { ArrowLeft, Save } from "lucide-react";
@@ -29,7 +30,7 @@ export default function AdminUserDetail() {
   const [success, setSuccess] = useState("");
 
   const q = useQuery({
-    queryKey: ["admin-user-detail", id],
+    queryKey: queryKeys.adminUserDetail(id ?? ""),
     queryFn: async () => (await api.get(`/admin/users/${id}`)).data as Record<string, any>
   });
 
@@ -76,29 +77,29 @@ export default function AdminUserDetail() {
       await api.patch(`/admin/users/${id}/profile`, body);
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["admin-user-detail", id] });
-      qc.invalidateQueries({ queryKey: ["admin-users"] });
+      qc.invalidateQueries({ queryKey: queryKeys.adminUserDetail(id ?? "") });
+      qc.invalidateQueries({ queryKey: queryKeys.adminUsers() });
       setSuccess("Profile saved."); setError("");
     },
-    onError: (e: any) => { setError(humanizeError(e)); setSuccess(""); }
+    onError: (e: unknown) => { setError(humanizeError(e)); setSuccess(""); }
   });
 
   const saveRole = useMutation({
     mutationFn: async () => api.patch(`/admin/users/${id}/role`, { role }),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["admin-user-detail", id] });
-      qc.invalidateQueries({ queryKey: ["admin-users"] });
+      qc.invalidateQueries({ queryKey: queryKeys.adminUserDetail(id ?? "") });
+      qc.invalidateQueries({ queryKey: queryKeys.adminUsers() });
       setSuccess("Role updated."); setError("");
     },
-    onError: (e: any) => { setError(humanizeError(e)); setSuccess(""); }
+    onError: (e: unknown) => { setError(humanizeError(e)); setSuccess(""); }
   });
 
   const p = (key: string) => profile[key] ?? "";
   const setP = (key: string, val: string) => setProfile((prev) => ({ ...prev, [key]: val }));
   const ad = (key: string) => athleteData[key] ?? "";
-  const setAd = (key: string, val: any) => setAthleteData((prev) => ({ ...prev, [key]: val }));
+  const setAd = (key: string, val: string | number | boolean) => setAthleteData((prev) => ({ ...prev, [key]: val }));
   const cd = (key: string) => coachData[key] ?? "";
-  const setCd = (key: string, val: any) => setCoachData((prev) => ({ ...prev, [key]: val }));
+  const setCd = (key: string, val: string | number | boolean) => setCoachData((prev) => ({ ...prev, [key]: val }));
 
   if (q.isLoading) return <Spinner />;
   if (q.isError) return <div className="p-6 text-red-700">Failed to load user.</div>;

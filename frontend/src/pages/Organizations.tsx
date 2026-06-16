@@ -2,6 +2,11 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
+interface OrganizationSearchResult extends Pick<import("../models").Organization, "id" | "org_name" | "sport_categories" | "logo_url" | "city" | "state" | "country" | "website"> {
+  name?: string;
+  is_verified?: boolean;
+  org_type?: string;
+}
 import { PageHeader, Spinner, EmptyState } from "../components/UI";
 import { Building2, Filter, X } from "lucide-react";
 import { SPORTS_LIST } from "../data/sportPositions";
@@ -27,11 +32,11 @@ export default function Organizations() {
   const res = useQuery({
     queryKey: queryKeys.organizations(filters),
     queryFn: async () =>
-      (await api.get("/search/clubs", { params: filters })).data.items as any[],
+      (await api.get<{ items: OrganizationSearchResult[] }>("/search/clubs", { params: filters })).data.items,
     placeholderData: (prev) => prev
   });
 
-  const results: any[] = res.data ?? [];
+  const results: OrganizationSearchResult[] = res.data ?? [];
 
   function reset() {
     setQ("");
@@ -140,7 +145,7 @@ export default function Organizations() {
         />
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {results.map((org: any) => (
+          {results.map((org) => (
             <Link
               key={org.id}
               to={`/organizations/${org.id}`}
