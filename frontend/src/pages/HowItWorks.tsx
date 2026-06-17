@@ -89,7 +89,6 @@ export default function HowItWorks() {
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
       <section className="grid grid-cols-1 border-b border-hair lg:grid-cols-[1.4fr_1fr]">
         <div className="border-r border-hair px-11 py-12">
-          <div className="kicker">Platform guide — Issue No. 02</div>
           <h1 className="font-disp mt-4 text-6xl leading-[0.95] lg:text-7xl">
             Built for how<br />sport <span className="text-brand-500">actually</span><br />works.
           </h1>

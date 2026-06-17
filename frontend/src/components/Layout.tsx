@@ -199,10 +199,10 @@ function getMobileNavItems(user: { id: string; role: string }) {
   if (user.role === "admin") {
     return [
       ...base,
-      { to: "/admin/users",         icon: <Users className="h-5 w-5" />,       label: "Users" },
-      { to: "/admin/reports",       icon: <Flag className="h-5 w-5" />,        label: "Reports" },
-      { to: "/admin/verifications", icon: <ShieldCheck className="h-5 w-5" />, label: "Verifs" },
-      { to: profileTo,              icon: <UserIcon className="h-5 w-5" />,    label: "Profile" },
+      { to: "/admin/users",   icon: <Users className="h-5 w-5" />,         label: "Users" },
+      { to: "/admin/reports", icon: <Flag className="h-5 w-5" />,          label: "Reports" },
+      { to: "/messages",      icon: <MessageCircle className="h-5 w-5" />, label: "Messages" },
+      { to: profileTo,        icon: <UserIcon className="h-5 w-5" />,      label: "Profile" },
     ];
   }
   if (user.role === "club") {
@@ -319,7 +319,7 @@ export function Layout() {
     { to: "/opportunities",icon: <Briefcase className="h-4 w-4" />,     label: "Opportunities" },
     { to: "/tournaments",  icon: <Trophy className="h-4 w-4" />,        label: "Tournaments" },
     { to: "/messages",     icon: <MessageCircle className="h-4 w-4" />, label: "Messages" },
-    ...(hasRole(user.role, "athlete") ? [{ to: "/applications", icon: <Briefcase className="h-4 w-4" />, label: "My Applications" }] : []),
+    ...(user.role === "athlete" ? [{ to: "/applications", icon: <Briefcase className="h-4 w-4" />, label: "My Applications" }] : []),
     ...(hasRole(user.role, "club", "organizer")
       ? [{ to: "/my-organizations", icon: <Building2 className="h-4 w-4" />, label: "Organizations" }]
       : [{ to: "/organizations", icon: <Building2 className="h-4 w-4" />, label: "Organizations" }]),
@@ -432,10 +432,16 @@ export function Layout() {
               )}
             </div>
 
-            {/* Profile menu (desktop) */}
-            <div ref={profileMenuRef} className="relative hidden sm:block">
-              <button onClick={() => setProfileMenuOpen((o) => !o)} className="btn-ghost">
-                <UserIcon className="h-4 w-4" />
+            {/* Profile menu (all screen sizes) */}
+            <div ref={profileMenuRef} className="relative">
+              <button onClick={() => setProfileMenuOpen((o) => !o)} className="btn-ghost !px-2">
+                {user.profile_photo_url ? (
+                  <img src={user.profile_photo_url} alt={user.full_name} className="w-7 h-7 rounded-full object-cover flex-shrink-0" />
+                ) : (
+                  <div className="w-7 h-7 rounded-full bg-brand-500 flex items-center justify-center text-[11px] font-semibold text-white flex-shrink-0">
+                    {user.full_name?.[0]?.toUpperCase() ?? <UserIcon className="h-4 w-4" />}
+                  </div>
+                )}
                 <span className="hidden sm:inline normal-case tracking-normal">{user.full_name}</span>
                 <ChevronDown className="h-3 w-3 hidden sm:block" />
               </button>

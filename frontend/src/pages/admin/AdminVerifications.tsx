@@ -33,7 +33,11 @@ export default function AdminVerifications() {
 
   const q = useQuery({
     queryKey: queryKeys.adminVerifications(),
-    queryFn: async () => (await api.get("/verifications/pending")).data.items as VerificationItem[]
+    queryFn: async () => {
+      const res = await api.get("/verifications/pending");
+      const raw = res.data?.items ?? res.data ?? [];
+      return (Array.isArray(raw) ? raw : []) as VerificationItem[];
+    }
   });
 
   const review = useMutation({
@@ -148,7 +152,7 @@ export default function AdminVerifications() {
                     <td className="px-4 py-3 text-ink-sub text-xs">{formatDate(v.created_at)}</td>
                     <td className="px-4 py-3">
                       <div className="flex flex-col gap-1">
-                        {v.documents.map((d, i) => (
+                        {(Array.isArray(v.documents) ? v.documents : []).map((d, i) => (
                           <a key={i} href={d} target="_blank" rel="noreferrer"
                             className="flex items-center gap-1 text-brand-500 hover:underline text-xs min-h-[44px]">
                             <FileText className="h-3.5 w-3.5 flex-shrink-0" />
@@ -239,7 +243,7 @@ export default function AdminVerifications() {
                     <>
                       {v.notes && <p className="text-sm text-ink-sub italic">{v.notes}</p>}
                       <div className="space-y-1">
-                        {v.documents.map((d, i) => (
+                        {(Array.isArray(v.documents) ? v.documents : []).map((d, i) => (
                           <a key={i} href={d} target="_blank" rel="noreferrer"
                             className="flex items-center gap-2 text-sm text-brand-500 min-h-[44px]">
                             <FileText className="h-4 w-4 flex-shrink-0" />

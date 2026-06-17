@@ -87,7 +87,6 @@ export default function Landing({ initialView = "home" }: { initialView?: View }
           {/* hero */}
           <section className="grid grid-cols-1 border-b border-hair lg:grid-cols-[1.25fr_1fr]">
             <div className="border-b border-hair lg:border-b-0 lg:border-r px-4 sm:px-8 lg:px-11 py-8 lg:py-12">
-              <div className="kicker">Issue No. 01 — Talent, Verified</div>
               <h1 className="font-disp mt-4 text-5xl leading-[0.95] sm:text-6xl lg:text-7xl">
                 Where talent<br />gets <span className="text-brand-500">seen.</span>
               </h1>
