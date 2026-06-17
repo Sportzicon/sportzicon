@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, humanizeError } from "../api/client";
 import { hasRole, isAdmin as checkAdmin } from "../utils/roles";
@@ -10,7 +10,7 @@ import { useAuthStore } from "../store/auth";
 import { useFavoritesStore } from "../store/favorites";
 import { useReels } from "../hooks/useReels";
 import { queryKeys } from "../hooks/queryKeys";
-import { Heart, Trash2, Pencil, MessageCircle, Eye, Bookmark, Plus, Upload, X } from "lucide-react";
+import { Heart, Trash2, Pencil, MessageCircle, Eye, Bookmark, Plus, Upload, X, Share2, Play } from "lucide-react";
 import type { Reel } from "../models";
 import type { CreateReelRequest } from "../services/reel.service";
 
@@ -374,42 +374,126 @@ function MobileReelSlide({
 }) {
   const canManage = reel.author_id === currentUserId || isAdmin;
   const displayTitle = reel.title ?? reel.caption;
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [shareToast, setShareToast] = useState(false);
+
+  // Play when scrolled into view, pause when scrolled away
+  useEffect(() => {
+    const video = videoRef.current;
+    const container = containerRef.current;
+    if (!video || !container) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          video.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
+        } else {
+          video.pause();
+          setIsPlaying(false);
+        }
+      },
+      { threshold: 0.6 }
+    );
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, [reel.video_url]);
+
+  function togglePlay(e: React.MouseEvent) {
+    // Don't toggle when clicking action buttons
+    if ((e.target as HTMLElement).closest("button")) return;
+    const video = videoRef.current;
+    if (!video) return;
+    if (video.paused) {
+      video.play().then(() => setIsPlaying(true)).catch(() => {});
+    } else {
+      video.pause();
+      setIsPlaying(false);
+    }
+  }
+
+  async function handleShare(e: React.MouseEvent) {
+    e.stopPropagation();
+    const url = `${window.location.origin}/reels`;
+    const shareData = {
+      title: displayTitle ?? "Check out this reel on Sportivox",
+      text: reel.description
+        ? `${reel.description} — ${reel.author?.full_name ?? ""} on Sportivox`
+        : `${reel.author?.full_name ?? ""} posted a reel on Sportivox`,
+      url,
+    };
+    try {
+      if (navigator.share && navigator.canShare?.(shareData)) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(url);
+        setShareToast(true);
+        setTimeout(() => setShareToast(false), 2000);
+      }
+    } catch {
+      // user cancelled native share — no action needed
+    }
+  }
 
   return (
-    <div className="relative h-screen snap-start overflow-hidden bg-black flex items-center justify-center">
+    <div
+      ref={containerRef}
+      className="relative h-screen snap-start overflow-hidden bg-black flex items-center justify-center"
+      onClick={togglePlay}
+    >
       <video
+        ref={videoRef}
         src={reel.video_url}
         poster={reel.thumbnail_url ?? undefined}
         className="h-full w-full object-cover"
         muted
         playsInline
         loop
+        preload="metadata"
       />
 
       {/* Gradient overlays */}
       <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/20 pointer-events-none" />
 
+      {/* Centre play icon when paused */}
+      {!isPlaying && (
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <div className="bg-black/40 rounded-full p-5">
+            <Play className="h-10 w-10 text-white fill-white" />
+          </div>
+        </div>
+      )}
+
       {/* Right action bar */}
       <div className="absolute right-3 bottom-32 flex flex-col gap-4 items-center">
         <button
-          onClick={onLike}
+          onClick={(e) => { e.stopPropagation(); onLike(); }}
           className="flex flex-col items-center gap-1 min-h-[56px] min-w-[56px] justify-center"
         >
           <Heart className="h-7 w-7 text-white drop-shadow" fill={isLiked ? "#ef4444" : "none"} stroke={isLiked ? "#ef4444" : "white"} />
           <span className="text-white text-xs font-medium drop-shadow">{reel.like_count}</span>
         </button>
         <button
-          onClick={onComment}
+          onClick={(e) => { e.stopPropagation(); onComment(); }}
           className="flex flex-col items-center gap-1 min-h-[56px] min-w-[56px] justify-center"
         >
           <MessageCircle className="h-7 w-7 text-white drop-shadow" />
           <span className="text-white text-xs font-medium drop-shadow">{reel.comment_count}</span>
         </button>
         <button
-          onClick={onFavorite}
+          onClick={(e) => { e.stopPropagation(); onFavorite(); }}
           className="flex flex-col items-center gap-1 min-h-[56px] min-w-[56px] justify-center"
         >
           <Bookmark className="h-7 w-7 text-white drop-shadow" fill={isFavorite ? "#eab308" : "none"} stroke={isFavorite ? "#eab308" : "white"} />
+        </button>
+        <button
+          onClick={handleShare}
+          className="flex flex-col items-center gap-1 min-h-[56px] min-w-[56px] justify-center"
+          aria-label="Share reel"
+        >
+          <Share2 className="h-7 w-7 text-white drop-shadow" />
+          <span className="text-white text-xs font-medium drop-shadow">Share</span>
         </button>
         <div className="flex flex-col items-center gap-1 min-h-[44px] min-w-[44px] justify-center">
           <Eye className="h-6 w-6 text-white/70 drop-shadow" />
@@ -417,10 +501,10 @@ function MobileReelSlide({
         </div>
         {canManage && (
           <>
-            <button onClick={onEdit} className="min-h-[44px] min-w-[44px] flex items-center justify-center">
+            <button onClick={(e) => { e.stopPropagation(); onEdit(); }} className="min-h-[44px] min-w-[44px] flex items-center justify-center">
               <Pencil className="h-5 w-5 text-white/70 drop-shadow" />
             </button>
-            <button onClick={onDelete} className="min-h-[44px] min-w-[44px] flex items-center justify-center">
+            <button onClick={(e) => { e.stopPropagation(); onDelete(); }} className="min-h-[44px] min-w-[44px] flex items-center justify-center">
               <Trash2 className="h-5 w-5 text-red-400 drop-shadow" />
             </button>
           </>
@@ -442,6 +526,13 @@ function MobileReelSlide({
         )}
       </div>
 
+      {/* Share toast (clipboard fallback) */}
+      {shareToast && (
+        <div className="absolute top-16 left-1/2 -translate-x-1/2 bg-black/80 text-white text-sm px-4 py-2 rounded-full pointer-events-none">
+          Link copied!
+        </div>
+      )}
+
       <span className="absolute top-3 right-3 text-white/50 text-xs">#{idx + 1}</span>
     </div>
   );
@@ -457,9 +548,33 @@ function DesktopReelCard({
 }) {
   const canManage = reel.author_id === currentUserId || isAdmin;
   const displayTitle = reel.title ?? reel.caption;
+  const [shareToast, setShareToast] = useState(false);
+
+  async function handleShare(e: React.MouseEvent) {
+    e.stopPropagation();
+    const url = `${window.location.origin}/reels`;
+    const shareData = {
+      title: displayTitle ?? "Check out this reel on Sportivox",
+      text: reel.description
+        ? `${reel.description} — ${reel.author?.full_name ?? ""} on Sportivox`
+        : `${reel.author?.full_name ?? ""} posted a reel on Sportivox`,
+      url,
+    };
+    try {
+      if (navigator.share && navigator.canShare?.(shareData)) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(url);
+        setShareToast(true);
+        setTimeout(() => setShareToast(false), 2000);
+      }
+    } catch {
+      // user cancelled
+    }
+  }
 
   return (
-    <div className="group panel overflow-hidden">
+    <div className="group panel overflow-hidden relative">
       <div
         onClick={onOpen}
         className="relative aspect-[9/16] cursor-pointer overflow-hidden bg-ink"
@@ -472,9 +587,7 @@ function DesktopReelCard({
         />
         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
           <div className="opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 rounded-full p-3">
-            <svg className="h-6 w-6 text-black" fill="currentColor" viewBox="0 0 20 20">
-              <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" />
-            </svg>
+            <Play className="h-6 w-6 text-black fill-black" />
           </div>
         </div>
         {reel.sport && (
@@ -503,9 +616,16 @@ function DesktopReelCard({
           </button>
           <button
             onClick={onFavorite}
-            className={`flex items-center gap-1 text-xs min-h-[44px] ml-auto transition ${isFavorite ? "text-yellow-500" : "text-ink-sub hover:text-yellow-500"}`}
+            className={`flex items-center gap-1 text-xs min-h-[44px] transition ${isFavorite ? "text-yellow-500" : "text-ink-sub hover:text-yellow-500"}`}
           >
             <Bookmark className="h-4 w-4" fill={isFavorite ? "currentColor" : "none"} />
+          </button>
+          <button
+            onClick={handleShare}
+            className="flex items-center gap-1 text-xs min-h-[44px] text-ink-sub hover:text-brand-500 transition ml-auto"
+            title="Share reel"
+          >
+            <Share2 className="h-4 w-4" />
           </button>
           {canManage && (
             <>
@@ -519,6 +639,12 @@ function DesktopReelCard({
           )}
         </div>
       </div>
+
+      {shareToast && (
+        <div className="absolute top-2 left-1/2 -translate-x-1/2 bg-black/80 text-white text-xs px-3 py-1.5 rounded-full pointer-events-none z-10">
+          Link copied!
+        </div>
+      )}
     </div>
   );
 }

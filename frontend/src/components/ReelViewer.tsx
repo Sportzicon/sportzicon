@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Heart, MessageCircle, Bookmark, Eye, ChevronUp, ChevronDown, Volume2, VolumeX, Play, Pause, X } from "lucide-react";
+import { Heart, MessageCircle, Bookmark, Eye, ChevronUp, ChevronDown, Volume2, VolumeX, Play, Pause, X, Share2 } from "lucide-react";
 import { MobileDrawer } from "./MobileDrawer";
 import { CommentSection } from "./CommentSection";
 import type { Reel } from "../types";
@@ -30,6 +30,7 @@ export function ReelViewer({
   const [isMuted, setIsMuted] = useState(true);
   const [progress, setProgress] = useState(0);
   const [commentOpen, setCommentOpen] = useState(false);
+  const [shareToast, setShareToast] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -78,6 +79,29 @@ export function ReelViewer({
     setCommentOpen(true);
     onCommentClick(currentReel.id);
   }, [currentReel.id, onCommentClick]);
+
+  const handleShare = useCallback(async () => {
+    const url = `${window.location.origin}/reels`;
+    const displayTitle = currentReel.title ?? currentReel.caption;
+    const shareData = {
+      title: displayTitle ?? "Check out this reel on Sportivox",
+      text: currentReel.description
+        ? `${currentReel.description} — ${currentReel.author?.full_name ?? ""} on Sportivox`
+        : `${currentReel.author?.full_name ?? ""} posted a reel on Sportivox`,
+      url,
+    };
+    try {
+      if (navigator.share && navigator.canShare?.(shareData)) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(url);
+        setShareToast(true);
+        setTimeout(() => setShareToast(false), 2000);
+      }
+    } catch {
+      // user cancelled
+    }
+  }, [currentReel]);
 
   return (
     <div
@@ -180,6 +204,16 @@ export function ReelViewer({
             <span className="text-white text-xs drop-shadow">Save</span>
           </button>
 
+          {/* Share */}
+          <button
+            onClick={handleShare}
+            className="flex flex-col items-center gap-1 h-14 w-14 justify-center min-h-[56px]"
+            aria-label="Share reel"
+          >
+            <Share2 className="h-7 w-7 text-white drop-shadow" />
+            <span className="text-white text-xs drop-shadow">Share</span>
+          </button>
+
           {/* Views */}
           <div className="flex flex-col items-center gap-1 h-14 w-14 justify-center">
             <Eye className="h-6 w-6 text-white/70 drop-shadow" />
@@ -226,6 +260,13 @@ export function ReelViewer({
         <div className="hidden lg:block absolute bottom-4 left-1/2 -translate-x-1/2 text-white/40 text-xs text-center whitespace-nowrap">
           Space play/pause · ↑↓ navigate · ESC close
         </div>
+
+        {/* Share toast */}
+        {shareToast && (
+          <div className="absolute top-16 left-1/2 -translate-x-1/2 bg-black/80 text-white text-sm px-4 py-2 rounded-full pointer-events-none z-10">
+            Link copied!
+          </div>
+        )}
       </div>
 
       {/* Comments MobileDrawer */}
