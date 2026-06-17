@@ -253,6 +253,7 @@ export function Layout() {
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [notifDropdownOpen, setNotifDropdownOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement>(null);
   const notifDropdownRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -336,9 +337,19 @@ export function Layout() {
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <header className="shrink-0 sticky top-0 z-40 border-b border-hair bg-panel" style={{ height: 56 }}>
         <div className="flex items-center justify-between gap-4 px-4 h-full relative">
+          {/* Mobile hamburger */}
+          <button
+            className="lg:hidden rounded p-2 text-ink-70 hover:bg-fill min-h-[44px] min-w-[44px] flex items-center justify-center flex-shrink-0"
+            aria-label="Open menu"
+            onClick={() => setMobileMenuOpen(true)}
+          >
+            <Menu className="h-5 w-5" />
+          </button>
+
           {/* Logo */}
-          <Link to="/dashboard" aria-label="Sportzicon" className="flex flex-col items-start flex-shrink-0">
-            <div style={{ width: 100, height: 40, backgroundImage: 'url(/logo.png)', backgroundSize: 'auto 450%', backgroundRepeat: 'no-repeat', backgroundPosition: 'center' }} />
+          <Link to="/dashboard" aria-label="Sportzicon" className="flex items-center flex-shrink-0">
+            <div style={{ width: 140, height: 44, backgroundImage: 'url(/logo.png)', backgroundSize: 'auto 425%', backgroundRepeat: 'no-repeat', backgroundPosition: 'center', flexShrink: 0 }} />
+            <span className="lab hidden sm:inline" style={{ fontSize: 8, marginTop: 39, marginLeft: -59, letterSpacing: '0.12em' }}>EST. 2026</span>
           </Link>
 
           {/* Desktop search (hidden on mobile) */}
@@ -450,8 +461,8 @@ export function Layout() {
         <aside
           onMouseEnter={() => setSidebarHovered(true)}
           onMouseLeave={() => setSidebarHovered(false)}
-          className="hidden lg:flex h-full shrink-0 overflow-y-auto overflow-x-hidden border-r border-hair bg-panel transition-all duration-200 flex-col z-20"
-          style={{ width: sidebarHovered ? 240 : 64 }}
+          className="hidden lg:flex h-full shrink-0 overflow-x-hidden border-r border-hair bg-panel transition-all duration-200 flex-col z-20"
+          style={{ width: sidebarHovered ? 240 : 64, overflowY: sidebarHovered ? "auto" : "hidden" }}
         >
           <nav className="flex flex-col h-full">
             <div className="space-y-0.5 p-3 flex-1">
@@ -465,21 +476,6 @@ export function Layout() {
                   badge={"badge" in item ? (item as any).badge : undefined}
                 />
               ))}
-            </div>
-            <div className={`p-3 border-t border-hairsoft transition-all ${!sidebarHovered ? "opacity-0 invisible" : "opacity-100 visible"}`}>
-              {hasRole(user.role, "athlete") ? (
-                <Link to="/opportunities" className="btn-primary w-full text-center text-[11px] mb-3">
-                  Find a trial →
-                </Link>
-              ) : hasRole(user.role, "club", "organizer") ? (
-                <Link to="/opportunities/new" className="btn-primary w-full text-center text-[11px] mb-3">
-                  + Post opportunity
-                </Link>
-              ) : null}
-              <div className="lab mt-2 text-[10px] leading-relaxed text-ink-faint">
-                <div className="font-semibold text-ink">{user.full_name}</div>
-                <div className="mt-1"><span className="capitalize">{user.role}</span> · Sportzicon</div>
-              </div>
             </div>
           </nav>
         </aside>
@@ -498,6 +494,63 @@ export function Layout() {
           </ErrorBoundary>
         </main>
       </div>
+
+      {/* ── Mobile full-menu drawer (< lg only) ─────────────────────────── */}
+      {mobileMenuOpen && (
+        <>
+          {/* Backdrop */}
+          <div
+            className="lg:hidden fixed inset-0 z-50 bg-black/40"
+            onClick={() => setMobileMenuOpen(false)}
+          />
+          {/* Slide-in panel */}
+          <div className="lg:hidden fixed inset-y-0 left-0 z-50 w-72 bg-panel border-r border-hair flex flex-col shadow-xl">
+            {/* Drawer header */}
+            <div className="flex items-center justify-between px-4 border-b border-hair" style={{ height: 56 }}>
+              <div style={{ width: 140, height: 44, backgroundImage: 'url(/logo.png)', backgroundSize: 'auto 450%', backgroundRepeat: 'no-repeat', backgroundPosition: 'center', flexShrink: 0 }} />
+              <span className="lab hidden sm:inline" style={{ fontSize: 9, marginTop: -4, marginLeft: 86, letterSpacing: '0.12em' }}>EST. 2026</span>
+              <button
+                className="rounded p-2 text-ink-70 hover:bg-fill min-h-[44px] min-w-[44px] flex items-center justify-center"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            {/* Nav items */}
+            <nav className="flex-1 overflow-y-auto p-3 space-y-0.5">
+              {navItems.map((item) => (
+                <NavItem
+                  key={item.to}
+                  to={item.to}
+                  icon={item.icon}
+                  label={item.label}
+                  isCollapsed={false}
+                  badge={"badge" in item ? (item as any).badge : undefined}
+                  onClick={() => setMobileMenuOpen(false)}
+                />
+              ))}
+            </nav>
+            {/* User info + logout at bottom */}
+            <div className="p-3 border-t border-hairsoft">
+              <div className="flex items-center gap-3 px-3 py-2 mb-2">
+                <div className="w-8 h-8 rounded-full bg-fill border border-hair flex items-center justify-center text-[11px] font-semibold text-ink flex-shrink-0">
+                  {user.full_name?.[0]?.toUpperCase() ?? "U"}
+                </div>
+                <div className="min-w-0">
+                  <div className="text-[12.5px] font-semibold text-ink truncate">{user.full_name}</div>
+                  <div className="text-[11px] text-ink-sub capitalize">{user.role}</div>
+                </div>
+              </div>
+              <button
+                onClick={() => { setMobileMenuOpen(false); logout(); }}
+                className="w-full flex items-center gap-2 px-3 py-2.5 text-[12.5px] text-red-600 hover:bg-red-50 rounded min-h-[44px]"
+              >
+                <LogOut className="h-4 w-4" /> Log out
+              </button>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* ── Mobile bottom navigation (< lg only) ────────────────────────── */}
       {!isLiveScoring && (

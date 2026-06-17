@@ -171,16 +171,18 @@ export default function Opportunities() {
       </div>
 
       {/* ── Mobile filter drawer ───────────────────────────────────── */}
-      <MobileDrawer isOpen={drawerOpen} onClose={() => setDrawerOpen(false)} title="Filter opportunities">
-        <FilterContent
-          type={type} setType={setType}
-          sport={sport} setSport={setSport}
-          verifiedOnly={verifiedOnly} setVerifiedOnly={setVerifiedOnly}
-          q={q} setQ={setQ}
-          sort={sort} setSort={setSort}
-          onReset={() => { resetFilters(); setDrawerOpen(false); }}
-        />
-      </MobileDrawer>
+      <div className="lg:hidden">
+        <MobileDrawer isOpen={drawerOpen} onClose={() => setDrawerOpen(false)} title="Filter opportunities">
+          <FilterContent
+            type={type} setType={setType}
+            sport={sport} setSport={setSport}
+            verifiedOnly={verifiedOnly} setVerifiedOnly={setVerifiedOnly}
+            q={q} setQ={setQ}
+            sort={sort} setSort={setSort}
+            onReset={() => { resetFilters(); setDrawerOpen(false); }}
+          />
+        </MobileDrawer>
+      </div>
 
       <div className="grid gap-6 lg:grid-cols-[240px_1fr] items-start">
         {/* ── Desktop filter rail ────────────────────────────────────── */}

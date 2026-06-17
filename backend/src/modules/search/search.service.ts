@@ -143,9 +143,9 @@ export async function searchPlayers(q: {
 
   const where = Prisma.join(conditions, " AND ");
 
-  const rankExpr = hasFTS
-    ? Prisma.sql`ts_rank(u.search_vector, plainto_tsquery('english', ${q.q!.trim()}))`
-    : Prisma.sql`0`;
+  const orderBy = hasFTS
+    ? Prisma.sql`ts_rank(u.search_vector, plainto_tsquery('english', ${q.q!.trim()})) DESC, (u.verification_status = 'approved') DESC, u.updated_at DESC, u.id DESC`
+    : Prisma.sql`(u.verification_status = 'approved') DESC, u.updated_at DESC, u.id DESC`;
 
   const [rows, countRows] = await Promise.all([
     prisma.$queryRaw<(PlayerCard & { updated_at: Date; verification_status: string; verification_badges: string[] })[]>(
@@ -157,9 +157,7 @@ export async function searchPlayers(q: {
                u.athlete_data, u.follower_count, u.updated_at
         FROM "User" u
         WHERE ${where}
-        ORDER BY ${rankExpr} DESC,
-                 (u.verification_status = 'approved') DESC,
-                 u.updated_at DESC, u.id DESC
+        ORDER BY ${orderBy}
         LIMIT ${limit + 1}
       `
     ),
@@ -243,9 +241,9 @@ export async function searchClubs(q: {
 
   const where = Prisma.join(conditions, " AND ");
 
-  const rankExpr = hasFTS
-    ? Prisma.sql`ts_rank(o.search_vector, plainto_tsquery('english', ${q.q!.trim()}))`
-    : Prisma.sql`0`;
+  const orderBy = hasFTS
+    ? Prisma.sql`ts_rank(o.search_vector, plainto_tsquery('english', ${q.q!.trim()})) DESC, (o.verification_status = 'approved') DESC, o.updated_at DESC, o.id DESC`
+    : Prisma.sql`(o.verification_status = 'approved') DESC, o.updated_at DESC, o.id DESC`;
 
   const [rows, countRows] = await Promise.all([
     prisma.$queryRaw<(ClubRow & { updated_at: Date })[]>(
@@ -255,9 +253,7 @@ export async function searchClubs(q: {
                o.verification_status, o.verification_badges, o.updated_at
         FROM "Organization" o
         WHERE ${where}
-        ORDER BY ${rankExpr} DESC,
-                 (o.verification_status = 'approved') DESC,
-                 o.updated_at DESC, o.id DESC
+        ORDER BY ${orderBy}
         LIMIT ${limit + 1}
       `
     ),
@@ -327,14 +323,12 @@ export async function searchOpportunities(q: {
 
   const where = Prisma.join(conditions, " AND ");
 
-  const rankExpr = hasFTS
-    ? Prisma.sql`ts_rank(opp.search_vector, plainto_tsquery('english', ${q.q!.trim()}))`
-    : Prisma.sql`0`;
-
   const orderExpr =
     q.sort === "deadline"
       ? Prisma.sql`opp.application_deadline ASC, opp.id ASC`
-      : Prisma.sql`${rankExpr} DESC, opp.created_at DESC, opp.id DESC`;
+      : hasFTS
+        ? Prisma.sql`ts_rank(opp.search_vector, plainto_tsquery('english', ${q.q!.trim()})) DESC, opp.created_at DESC, opp.id DESC`
+        : Prisma.sql`opp.created_at DESC, opp.id DESC`;
 
   const [rows, countRows] = await Promise.all([
     prisma.$queryRaw<(OppRow & { created_at: Date })[]>(

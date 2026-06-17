@@ -39,7 +39,7 @@ function Toggle({ on, onChange, label }: { on: boolean; onChange: (v: boolean) =
   return (
     <button
       type="button"
-      className="flex items-center justify-between w-full cursor-pointer py-2 min-h-[44px]"
+      className="flex items-center justify-between w-full cursor-pointer py-1 min-h-[38px]"
       onClick={() => onChange(!on)}
     >
       <span className="text-sm text-ink">{label}</span>
@@ -58,8 +58,8 @@ function Toggle({ on, onChange, label }: { on: boolean; onChange: (v: boolean) =
 
 function FilterSection({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="pb-4 mb-4 border-b border-hairsoft last:border-0 last:mb-0 last:pb-0">
-      <div className="lab mb-2">{label}</div>
+    <div className="pb-2 mb-2 border-b border-hairsoft last:border-0 last:mb-0 last:pb-0">
+      <div className="lab mb-1">{label}</div>
       {children}
     </div>
   );
@@ -193,7 +193,7 @@ export default function Search() {
         <div className="relative">
           <SearchIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-ink-faint pointer-events-none" />
           <input
-            className="input w-full pl-8 text-sm min-h-[44px]"
+            className="input w-full pl-8 text-sm min-h-[38px]"
             placeholder="Search…"
             value={q}
             onChange={(e) => setQ(e.target.value)}
@@ -209,18 +209,9 @@ export default function Search() {
         </div>
       </FilterSection>
 
-      {(mode === "players" || mode === "opportunities") && (
+      {(mode === "players" || mode === "opportunities" || mode === "clubs") && (
         <FilterSection label="Sport">
-          <select className="input w-full text-sm min-h-[44px]" value={sport} onChange={(e) => setSport(e.target.value)}>
-            <option value="">All sports</option>
-            {SPORTS.map((s) => <option key={s} value={s}>{s}</option>)}
-          </select>
-        </FilterSection>
-      )}
-
-      {mode === "clubs" && (
-        <FilterSection label="Sport">
-          <select className="input w-full text-sm min-h-[44px]" value={sport} onChange={(e) => setSport(e.target.value)}>
+          <select className="input w-full text-sm min-h-[38px]" value={sport} onChange={(e) => setSport(e.target.value)}>
             <option value="">All sports</option>
             {SPORTS.map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
@@ -229,7 +220,7 @@ export default function Search() {
 
       <FilterSection label="City">
         <input
-          className="input w-full text-sm min-h-[44px]"
+          className="input w-full text-sm min-h-[38px]"
           placeholder="e.g. Mumbai"
           value={city}
           onChange={(e) => setCity(e.target.value)}
@@ -240,18 +231,18 @@ export default function Search() {
         <>
           <FilterSection label="Position / Role">
             <input
-              className="input w-full text-sm min-h-[44px]"
+              className="input w-full text-sm min-h-[38px]"
               placeholder="e.g. Striker"
               value={playRole}
               onChange={(e) => setPlayRole(e.target.value)}
             />
           </FilterSection>
           <FilterSection label="Experience level">
-            <select className="input w-full text-sm min-h-[44px]" value={level} onChange={(e) => setLevel(e.target.value)}>
+            <select className="input w-full text-sm min-h-[38px]" value={level} onChange={(e) => setLevel(e.target.value)}>
               {LEVELS.map((l) => <option key={l.value} value={l.value}>{l.label}</option>)}
             </select>
           </FilterSection>
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-0">
             <Toggle on={verifiedOnly} onChange={setVerifiedOnly} label="Verified only" />
             <Toggle on={availOnly} onChange={setAvailOnly} label="Available / open to offers" />
           </div>
@@ -260,7 +251,7 @@ export default function Search() {
 
       {mode === "clubs" && (
         <FilterSection label="Organisation type">
-          <select className="input w-full text-sm min-h-[44px]" value={orgType} onChange={(e) => setOrgType(e.target.value)}>
+          <select className="input w-full text-sm min-h-[38px]" value={orgType} onChange={(e) => setOrgType(e.target.value)}>
             <option value="">Any type</option>
             <option value="club">Club</option>
             <option value="academy">Academy</option>
@@ -272,19 +263,19 @@ export default function Search() {
       {mode === "opportunities" && (
         <>
           <FilterSection label="Opportunity type">
-            <select className="input w-full text-sm min-h-[44px]" value={oppType} onChange={(e) => setOppType(e.target.value)}>
+            <select className="input w-full text-sm min-h-[38px]" value={oppType} onChange={(e) => setOppType(e.target.value)}>
               {OPP_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
             </select>
           </FilterSection>
           <FilterSection label="Sort by">
-            <select className="input w-full text-sm min-h-[44px]" value={oppSort} onChange={(e) => setOppSort(e.target.value as "newest" | "deadline")}>
+            <select className="input w-full text-sm min-h-[38px]" value={oppSort} onChange={(e) => setOppSort(e.target.value as "newest" | "deadline")}>
               {OPP_SORTS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
             </select>
           </FilterSection>
         </>
       )}
 
-      <button onClick={resetFilters} className="mt-4 w-full btn-secondary text-sm min-h-[44px]">
+      <button onClick={resetFilters} className="mt-2 w-full btn-secondary text-sm min-h-[38px]">
         Reset filters
       </button>
     </>
@@ -338,9 +329,11 @@ export default function Search() {
       </div>
 
       {/* Mobile filter drawer */}
-      <MobileDrawer isOpen={filtersOpen} onClose={() => setFiltersOpen(false)} title="Filters">
-        {filterContent}
-      </MobileDrawer>
+      <div className="lg:hidden">
+        <MobileDrawer isOpen={filtersOpen} onClose={() => setFiltersOpen(false)} title="Filters">
+          {filterContent}
+        </MobileDrawer>
+      </div>
 
       <div className="grid gap-6 lg:grid-cols-[240px_1fr] items-start">
         {/* Desktop filter sidebar */}
@@ -378,12 +371,12 @@ export default function Search() {
             <EmptyState
               title="No results found"
               hint={
-                activeFilterCount > 0
-                  ? "Try loosening your filters or resetting them."
-                  : "Enter a keyword above to search."
+                activeFilterCount > 0 || q
+                  ? "Try loosening your filters or using a different keyword."
+                  : `No ${mode} found yet. Try searching by name, sport, or city.`
               }
               action={
-                activeFilterCount > 0 ? (
+                (activeFilterCount > 0 || q) ? (
                   <button onClick={resetFilters} className="btn-secondary min-h-[44px]">
                     Reset filters
                   </button>

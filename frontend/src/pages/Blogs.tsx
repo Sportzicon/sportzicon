@@ -205,8 +205,8 @@ export default function Blogs() {
         }
       />
 
-      {/* Search + filter bar */}
-      <div className="flex gap-2">
+      {/* Mobile filter bar */}
+      <div className="lg:hidden flex gap-2">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-ink-faint pointer-events-none" />
           <input
@@ -224,10 +224,9 @@ export default function Blogs() {
             </button>
           )}
         </div>
-        {/* Mobile: filter button */}
         <button
           onClick={() => setFilterDrawerOpen(true)}
-          className="lg:hidden btn-secondary min-h-[44px] flex items-center gap-1.5 relative"
+          className="btn-secondary min-h-[44px] flex items-center gap-1.5 relative"
         >
           <SlidersHorizontal className="h-4 w-4" />
           Filters
@@ -237,117 +236,152 @@ export default function Blogs() {
             </span>
           )}
         </button>
-        {/* Desktop: clear filters button */}
-        {activeFilterCount > 0 && (
-          <button onClick={clearFilters} className="hidden lg:flex btn-ghost min-h-[44px] items-center gap-1 text-[12px]">
-            <X className="h-3.5 w-3.5" /> Clear
-          </button>
-        )}
       </div>
 
-      {/* Tag chips row (horizontal scroll) */}
-      <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
-        {POPULAR_TAGS.map((t) => (
-          <button
-            key={t}
-            onClick={() => setTag(tag === t ? "" : t)}
-            className={`whitespace-nowrap px-3 py-1.5 rounded-full border text-[12px] min-h-[36px] transition shrink-0 ${
-              tag === t
-                ? "bg-brand-500 text-white border-brand-500"
-                : "bg-fill text-ink-70 border-hair hover:border-brand-500"
-            }`}
-          >
-            #{t}
-          </button>
-        ))}
-      </div>
+      {/* Main layout: sidebar + content */}
+      <div className="flex gap-6 items-start">
 
-      {/* Desktop filters */}
-      <div className="hidden lg:flex gap-3 flex-wrap">
-        <select
-          className="input w-40 min-h-[44px]"
-          value={status}
-          onChange={(e) => setStatus(e.target.value)}
-        >
-          <option value="">All statuses</option>
-          <option value="published">Published</option>
-          <option value="draft">Draft</option>
-        </select>
-        <select
-          className="input w-44 min-h-[44px]"
-          value={sport}
-          onChange={(e) => setSport(e.target.value)}
-        >
-          <option value="">All sports</option>
-          {SPORTS.map((s) => <option key={s} value={s}>{s}</option>)}
-        </select>
+        {/* Desktop sidebar */}
+        <aside className="hidden lg:flex flex-col w-60 flex-shrink-0 sticky top-4 self-start">
+          <div className="panel p-5 space-y-0">
+            <div className="lab mb-4 font-semibold text-ink">Filters</div>
+
+            {/* Search */}
+            <div className="pb-4 mb-4 border-b border-hairsoft">
+              <div className="lab mb-2">Search</div>
+              <div className="relative">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-ink-faint pointer-events-none" />
+                <input
+                  className="input w-full pl-8 text-sm"
+                  placeholder="Search blogs…"
+                  value={searchRaw}
+                  onChange={(e) => setSearchRaw(e.target.value)}
+                />
+              </div>
+            </div>
+
+            {/* Status */}
+            <div className="pb-4 mb-4 border-b border-hairsoft">
+              <div className="lab mb-2">Status</div>
+              <select
+                className="input w-full text-sm min-h-[40px]"
+                value={status}
+                onChange={(e) => setStatus(e.target.value)}
+              >
+                <option value="">All statuses</option>
+                <option value="published">Published</option>
+                <option value="draft">Draft</option>
+              </select>
+            </div>
+
+            {/* Sport */}
+            <div className="pb-4 mb-4 border-b border-hairsoft">
+              <div className="lab mb-2">Sport</div>
+              <select
+                className="input w-full text-sm min-h-[40px]"
+                value={sport}
+                onChange={(e) => setSport(e.target.value)}
+              >
+                <option value="">All sports</option>
+                {SPORTS.map((s) => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+
+            {/* Popular Tags */}
+            <div>
+              <div className="lab mb-2">Popular Tags</div>
+              <div className="flex flex-col gap-0.5">
+                {POPULAR_TAGS.map((t) => (
+                  <button
+                    key={t}
+                    onClick={() => setTag(tag === t ? "" : t)}
+                    className={`text-left px-3 py-2 rounded text-sm transition-colors min-h-[36px] ${
+                      tag === t
+                        ? "bg-brand-500 text-white"
+                        : "hover:bg-fill text-ink-70"
+                    }`}
+                  >
+                    #{t}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {(searchRaw || activeFilterCount > 0) && (
+              <button
+                onClick={() => { setSearchRaw(""); clearFilters(); }}
+                className="mt-4 w-full btn-ghost min-h-[44px] text-sm"
+              >
+                Clear all filters
+              </button>
+            )}
+          </div>
+        </aside>
+
+        {/* Blog content */}
+        <div className="flex-1 min-w-0">
+          {infinite.isLoading ? (
+            <div className="panel p-8 flex justify-center">
+              <Spinner className="text-brand-500" />
+            </div>
+          ) : allItems.length === 0 ? (
+            <EmptyState
+              title="No blogs found"
+              hint={searchDebounced || activeFilterCount > 0 ? "Try adjusting your search or filters." : "Be the first to write a blog."}
+              action={
+                <div className="flex flex-wrap gap-2 justify-center">
+                  {(searchDebounced || activeFilterCount > 0) && (
+                    <button onClick={() => { setSearchRaw(""); clearFilters(); }} className="btn-secondary">
+                      Clear filters
+                    </button>
+                  )}
+                  {canWrite && <Link to="/blogs/new" className="btn-accent">+ Write blog</Link>}
+                </div>
+              }
+            />
+          ) : (
+            <>
+              <div className="grid gap-4 sm:grid-cols-2">
+                {allItems.map((b: Blog) => <BlogCard key={b.id} b={b} layout="grid" />)}
+              </div>
+
+              {infinite.hasNextPage && (
+                <div className="flex justify-center pt-4">
+                  <button
+                    onClick={() => infinite.fetchNextPage()}
+                    disabled={infinite.isFetchingNextPage}
+                    className="btn-secondary min-h-[44px] px-8"
+                  >
+                    {infinite.isFetchingNextPage ? (
+                      <span className="flex items-center gap-2"><Spinner className="text-ink-sub" /> Loading…</span>
+                    ) : (
+                      "Load more"
+                    )}
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+
       </div>
 
       {/* Mobile filter drawer */}
-      <MobileDrawer
-        isOpen={filterDrawerOpen}
-        onClose={() => setFilterDrawerOpen(false)}
-        title={`Filters${activeFilterCount > 0 ? ` (${activeFilterCount})` : ""}`}
-        footer={
-          <div className="p-3 flex gap-2">
-            <button onClick={clearFilters} className="btn-secondary flex-1 min-h-[44px]">Clear all</button>
-            <button onClick={() => setFilterDrawerOpen(false)} className="btn-accent flex-1 min-h-[44px]">Apply</button>
-          </div>
-        }
-      >
-        {filterContent}
-      </MobileDrawer>
-
-      {/* Results */}
-      {infinite.isLoading ? (
-        <div className="panel p-8 flex justify-center">
-          <Spinner className="text-brand-500" />
-        </div>
-      ) : allItems.length === 0 ? (
-        <EmptyState
-          title="No blogs found"
-          hint={searchDebounced || activeFilterCount > 0 ? "Try adjusting your search or filters." : "Be the first to write a blog."}
-          action={
-            <div className="flex flex-wrap gap-2 justify-center">
-              {(searchDebounced || activeFilterCount > 0) && (
-                <button onClick={() => { setSearchRaw(""); clearFilters(); }} className="btn-secondary">
-                  Clear filters
-                </button>
-              )}
-              {canWrite && <Link to="/blogs/new" className="btn-accent">+ Write blog</Link>}
+      <div className="lg:hidden">
+        <MobileDrawer
+          isOpen={filterDrawerOpen}
+          onClose={() => setFilterDrawerOpen(false)}
+          title={`Filters${activeFilterCount > 0 ? ` (${activeFilterCount})` : ""}`}
+          footer={
+            <div className="p-3 flex gap-2">
+              <button onClick={clearFilters} className="btn-secondary flex-1 min-h-[44px]">Clear all</button>
+              <button onClick={() => setFilterDrawerOpen(false)} className="btn-accent flex-1 min-h-[44px]">Apply</button>
             </div>
           }
-        />
-      ) : (
-        <>
-          {/* Mobile: single column grid */}
-          <div className="grid gap-4 sm:grid-cols-2 lg:hidden">
-            {allItems.map((b: Blog) => <BlogCard key={b.id} b={b} layout="grid" />)}
-          </div>
-
-          {/* Desktop: list layout */}
-          <div className="hidden lg:grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
-            {allItems.map((b: Blog) => <BlogCard key={b.id} b={b} layout="grid" />)}
-          </div>
-
-          {/* Load more */}
-          {infinite.hasNextPage && (
-            <div className="flex justify-center pt-4">
-              <button
-                onClick={() => infinite.fetchNextPage()}
-                disabled={infinite.isFetchingNextPage}
-                className="btn-secondary min-h-[44px] px-8"
-              >
-                {infinite.isFetchingNextPage ? (
-                  <span className="flex items-center gap-2"><Spinner className="text-ink-sub" /> Loading…</span>
-                ) : (
-                  "Load more"
-                )}
-              </button>
-            </div>
-          )}
-        </>
-      )}
+        >
+          {filterContent}
+        </MobileDrawer>
+      </div>
     </div>
   );
 }
