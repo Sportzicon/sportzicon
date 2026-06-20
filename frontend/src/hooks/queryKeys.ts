@@ -96,5 +96,7 @@ export const queryKeys = {
   scoringRetiredHurt:           (innId: string) => ["scoring-retired-hurt", innId] as const,
   scoringInningsPartnerships:   (innId: string) => ["scoring-innings-partnerships", innId] as const,
   scoringStandings:             (tournamentId: string) => ["scoring-standings", tournamentId] as const,
+  scoringAllMatches:            (filters?: Record<string, unknown>) => ["scoring-all-matches", filters ?? {}] as const,
+  scoringPlayerStats:           (playerId: string) => ["scoring-player-stats", playerId] as const,
   cricketAthletes:              () => ["cricket-athletes"] as const,
 } as const;

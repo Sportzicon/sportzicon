@@ -1,6 +1,6 @@
 # Multi-stage Dockerfile for the Sportivox web app.
 # - dev: vite dev server
-# - prod: static build served by nginx via Cloud Run
+# - runtime: static build served by nginx via Cloud Run
 
 FROM node:20-alpine AS deps
 WORKDIR /app
@@ -14,17 +14,23 @@ CMD ["npm","run","dev"]
 
 FROM deps AS build
 ARG VITE_API_BASE_URL=http://localhost:8080
-ARG VITE_SCORING_API_URL=""
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
-ENV VITE_SCORING_API_URL=$VITE_SCORING_API_URL
+# VITE_SCORING_API_URL is intentionally NOT baked in — nginx proxies /scoring-api/ at runtime.
 COPY . .
 RUN npm run build
 
-# Tiny final image — nginx serves the built static assets.
 FROM nginx:1.27-alpine AS runtime
-RUN apk add --no-cache tini
+# gettext provides envsubst to inject SCORING_API_URL into nginx config at startup.
+RUN apk add --no-cache tini gettext
 COPY --from=build /app/dist /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY nginx.conf /etc/nginx/templates/nginx.conf.template
 EXPOSE 8080
 ENTRYPOINT ["/sbin/tini","--"]
-CMD ["nginx","-g","daemon off;"]
+# envsubst replaces ${SCORING_API_URL} only; all other nginx $variables are left untouched.
+# Default fallback returns 502 if scoring backend is not deployed in this environment.
+CMD ["sh", "-c", \
+  "SCORING_API_URL=${SCORING_API_URL:-http://127.0.0.1:1} \
+   envsubst '${SCORING_API_URL}' \
+     < /etc/nginx/templates/nginx.conf.template \
+     > /etc/nginx/conf.d/default.conf \
+  && nginx -g 'daemon off;'"]

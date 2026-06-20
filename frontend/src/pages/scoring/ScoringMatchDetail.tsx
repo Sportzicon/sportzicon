@@ -5,7 +5,7 @@ import { scoringApi } from "../../api/scoringClient";
 import { useAuthStore } from "../../store/auth";
 import { hasRole } from "../../utils/roles";
 import { queryKeys } from "../../hooks/queryKeys";
-import { Radio, Trophy, TrendingUp, Activity, MapPin, Zap, Users, CheckCircle2, User } from "lucide-react";
+import { Radio, Trophy, TrendingUp, Activity, MapPin, Zap, Users, CheckCircle2, User, Settings } from "lucide-react";
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 const ov  = (b: number) => `${Math.floor(b / 6)}.${b % 6}`;
@@ -495,6 +495,10 @@ function ScoringMatchDetailInner() {
         </div>
         {canManage && (
           <div className="flex gap-2 shrink-0">
+            <Link to={`/scoring/matches/${matchId}/config`} className="btn-secondary text-sm flex items-center gap-1" title="Configure match">
+              <Settings className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Configure</span>
+            </Link>
             {(data.status === "live" || data.status === "upcoming") && (
               <Link to={`/scoring/matches/${matchId}/score`} className="btn-primary text-sm flex items-center gap-1">
                 <Radio className="w-3.5 h-3.5" /> {data.status === "live" ? "Score Match" : "Start"}

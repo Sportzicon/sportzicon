@@ -160,6 +160,16 @@ resource "google_cloud_run_v2_service" "api" {
   ]
 }
 
+locals {
+  # Resolve the scoring backend URL in priority order:
+  #  1. Explicit var.scoring_api_url (set in tfvars after first scoring deploy)
+  #  2. Auto-detected from scoring Cloud Run service (when deployed in same apply)
+  #  3. Fallback — nginx returns 502 for /scoring-api/* (scoring not deployed)
+  scoring_api_url = var.scoring_api_url != "" ? var.scoring_api_url : (
+    try(google_cloud_run_v2_service.scoring_api[0].uri, "http://127.0.0.1:1")
+  )
+}
+
 resource "google_cloud_run_v2_service" "web" {
   name     = "sportivox-web-${var.env}"
   location = var.region
@@ -184,6 +194,12 @@ resource "google_cloud_run_v2_service" "web" {
           memory = "256Mi"
         }
         cpu_idle = true
+      }
+
+      # nginx reads this at startup to proxy /scoring-api/* to the scoring backend.
+      env {
+        name  = "SCORING_API_URL"
+        value = local.scoring_api_url
       }
     }
   }

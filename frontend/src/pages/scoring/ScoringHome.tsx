@@ -192,12 +192,12 @@ function ScoringHomeInner() {
   });
 
   const { data: upcomingData, isLoading: loadingUpcoming } = useQuery({
-    queryKey: ["scoring-upcoming-home"],
+    queryKey: queryKeys.scoringAllMatches({ status: "upcoming", limit: 6 }),
     queryFn: () => scoringApi.get("/matches", { params: { status: "upcoming", limit: 6 } }).then(r => r.data)
   });
 
   const { data: completedData, isLoading: loadingCompleted } = useQuery({
-    queryKey: ["scoring-completed-home"],
+    queryKey: queryKeys.scoringAllMatches({ status: "completed", limit: 6 }),
     queryFn: () => scoringApi.get("/matches", { params: { status: "completed", limit: 6 } }).then(r => r.data)
   });
 
@@ -264,8 +264,8 @@ function ScoringHomeInner() {
           icon={<Radio className="w-4 h-4 text-red-500 animate-pulse" />}
           title="Live Now"
           count={liveMatches.length}
-          href="/scoring/tournaments"
-          hrefLabel="All tournaments"
+          href="/scoring/matches"
+          hrefLabel="All matches"
         >
           {loadingLive ? (
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -290,7 +290,7 @@ function ScoringHomeInner() {
           icon={<Clock className="w-4 h-4 text-blue-500" />}
           title="Upcoming Matches"
           count={upcomingMatches.length}
-          href="/scoring/tournaments"
+          href="/scoring/matches"
           hrefLabel="View all"
         >
           {loadingUpcoming ? (
@@ -311,7 +311,7 @@ function ScoringHomeInner() {
           icon={<CheckCircle className="w-4 h-4 text-ink-sub" />}
           title="Recent Results"
           count={completedMatches.length}
-          href="/scoring/tournaments"
+          href="/scoring/matches"
           hrefLabel="View all"
         >
           {loadingCompleted ? (

@@ -72,6 +72,9 @@ import ScoringTournamentDetail from "./pages/scoring/ScoringTournamentDetail";
 import ScoringMatchDetail from "./pages/scoring/ScoringMatchDetail";
 import ScoringLive from "./pages/scoring/ScoringLive";
 import ScoringInningsAnalytics from "./pages/scoring/ScoringInningsAnalytics";
+import ScoringAllMatches from "./pages/scoring/ScoringAllMatches";
+import ScoringPlayerStats from "./pages/scoring/ScoringPlayerStats";
+import ScoringMatchConfig from "./pages/scoring/ScoringMatchConfig";
 
 export default function App() {
   return (
@@ -146,9 +149,12 @@ export default function App() {
         <Route path="/scoring/tournaments/new" element={<ProtectedRoute><ScoringNewTournament /></ProtectedRoute>} />
         <Route path="/scoring/tournaments/:id/edit" element={<ProtectedRoute><ScoringNewTournament /></ProtectedRoute>} />
         <Route path="/scoring/tournaments/:id" element={<ProtectedRoute><ScoringTournamentDetail /></ProtectedRoute>} />
+        <Route path="/scoring/matches" element={<ProtectedRoute><ScoringAllMatches /></ProtectedRoute>} />
         <Route path="/scoring/matches/:matchId" element={<ProtectedRoute><ScoringMatchDetail /></ProtectedRoute>} />
         <Route path="/scoring/matches/:matchId/score" element={<ProtectedRoute><ScoringLive /></ProtectedRoute>} />
+        <Route path="/scoring/matches/:matchId/config" element={<ProtectedRoute><ScoringMatchConfig /></ProtectedRoute>} />
         <Route path="/scoring/innings/:inningsId/analytics" element={<ProtectedRoute><ScoringInningsAnalytics /></ProtectedRoute>} />
+        <Route path="/scoring/players/:playerId" element={<ProtectedRoute><ScoringPlayerStats /></ProtectedRoute>} />
       </Route>
 
       <Route path="*" element={<div className="p-10 text-center text-slate-600">404 — not found</div>} />

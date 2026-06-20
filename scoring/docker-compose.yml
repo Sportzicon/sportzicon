@@ -37,20 +37,5 @@ services:
       - ./backend/src:/app/src
     command: npm run dev
 
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile.dev
-    ports:
-      - "5174:5174"
-    environment:
-      VITE_API_URL: http://localhost:4000
-      BACKEND_URL: http://backend:4000
-    depends_on:
-      - backend
-    volumes:
-      - ./frontend/src:/app/src
-    command: npm run dev -- --host
-
 volumes:
   scoring_pgdata:

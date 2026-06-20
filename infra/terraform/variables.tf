@@ -249,3 +249,9 @@ variable "scoring_direct_url" {
   default     = ""
   description = "PostgreSQL direct connection URL for the scoring database (port 5432). Used by Prisma for migrations."
 }
+
+variable "scoring_api_url" {
+  type        = string
+  default     = ""
+  description = "Public URL of the scoring backend (e.g. https://sportivox-scoring-api-stg.run.app). Set after first scoring deploy. Used by the web nginx to proxy /scoring-api/ requests."
+}
