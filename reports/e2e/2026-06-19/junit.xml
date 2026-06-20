@@ -1,0 +1,288 @@
+<testsuites id="" name="" tests="46" failures="0" skipped="29" errors="0" time="129.1373">
+<testsuite name="sportivox/auth.spec.ts" timestamp="2026-06-19T14:24:44.385Z" hostname="sportivox-chromium" tests="6" failures="0" skipped="5" time="65.515" errors="0">
+<testcase name="@auth Sportivox authentication › @critical admin can sign in" classname="sportivox/auth.spec.ts">
+<properties>
+<property name="skip" value="Seed missing for admin@sportivox.local — load demo data with `make seed`">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="@auth Sportivox authentication › @critical athlete can sign in" classname="sportivox/auth.spec.ts">
+<properties>
+<property name="skip" value="Seed missing for athlete@demo.sportivox — load demo data with `make seed`">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="@auth Sportivox authentication › @critical club can sign in" classname="sportivox/auth.spec.ts">
+<properties>
+<property name="skip" value="Seed missing for club@demo.sportivox — load demo data with `make seed`">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="@auth Sportivox authentication › @critical scout can sign in" classname="sportivox/auth.spec.ts">
+<properties>
+<property name="skip" value="Seed missing for scout@demo.sportivox — load demo data with `make seed`">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="@auth Sportivox authentication › invalid credentials show an inline error" classname="sportivox/auth.spec.ts" time="2.432">
+</testcase>
+<testcase name="@auth Sportivox authentication › logout returns to landing" classname="sportivox/auth.spec.ts">
+<properties>
+<property name="skip" value="Seed missing">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="sportivox/landing.spec.ts" timestamp="2026-06-19T14:24:44.385Z" hostname="sportivox-chromium" tests="6" failures="0" skipped="0" time="7.061" errors="0">
+<testcase name="Sportivox landing &amp; public surfaces › @smoke @critical landing page renders headline and CTA" classname="sportivox/landing.spec.ts" time="1.22">
+</testcase>
+<testcase name="Sportivox landing &amp; public surfaces › @smoke login page accepts inputs" classname="sportivox/landing.spec.ts" time="1.199">
+</testcase>
+<testcase name="Sportivox landing &amp; public surfaces › @smoke signup page loads (multi-step)" classname="sportivox/landing.spec.ts" time="1.25">
+</testcase>
+<testcase name="Sportivox landing &amp; public surfaces › @smoke forgot password page exists" classname="sportivox/landing.spec.ts" time="1.171">
+</testcase>
+<testcase name="Sportivox landing &amp; public surfaces › @critical browse opportunities works unauthenticated" classname="sportivox/landing.spec.ts" time="1.394">
+</testcase>
+<testcase name="Sportivox landing &amp; public surfaces › 404 handler returns a friendly page" classname="sportivox/landing.spec.ts" time="0.827">
+</testcase>
+</testsuite>
+<testsuite name="sportivox/opportunities.spec.ts" timestamp="2026-06-19T14:24:44.385Z" hostname="sportivox-chromium" tests="4" failures="0" skipped="4" time="47.551" errors="0">
+<testcase name="Opportunities flow › @critical athlete can browse and open an opportunity" classname="sportivox/opportunities.spec.ts">
+<properties>
+<property name="skip" value="Seed missing">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Opportunities flow › @critical club user sees post-opportunity CTA" classname="sportivox/opportunities.spec.ts">
+<properties>
+<property name="skip" value="Seed missing">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Opportunities flow › scout can search and filter" classname="sportivox/opportunities.spec.ts">
+<properties>
+<property name="skip" value="Seed missing">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Opportunities flow › organizer Tournaments page shows cricket scoring link" classname="sportivox/opportunities.spec.ts">
+<properties>
+<property name="skip" value="Seed missing">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="sportivox/social.spec.ts" timestamp="2026-06-19T14:24:44.385Z" hostname="sportivox-chromium" tests="6" failures="0" skipped="6" time="71.631" errors="0">
+<testcase name="Social surfaces › @smoke feed renders" classname="sportivox/social.spec.ts">
+<properties>
+<property name="skip" value="Seed missing">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Social surfaces › @smoke reels page loads without error" classname="sportivox/social.spec.ts">
+<properties>
+<property name="skip" value="Seed missing">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Social surfaces › @smoke blogs index loads" classname="sportivox/social.spec.ts">
+<properties>
+<property name="skip" value="Seed missing">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Social surfaces › @smoke notifications page loads" classname="sportivox/social.spec.ts">
+<properties>
+<property name="skip" value="Seed missing">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Social surfaces › @smoke messages page loads" classname="sportivox/social.spec.ts">
+<properties>
+<property name="skip" value="Seed missing">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Social surfaces › profile shows user info" classname="sportivox/social.spec.ts">
+<properties>
+<property name="skip" value="Seed missing">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="scoring/analytics.spec.ts" timestamp="2026-06-19T14:24:44.385Z" hostname="scoring-chromium" tests="3" failures="0" skipped="3" time="0" errors="0">
+<testcase name="@scoring Analytics dashboard › @critical analytics page renders all sections" classname="scoring/analytics.spec.ts">
+<properties>
+<property name="skip" value="Scoring API unreachable">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="@scoring Analytics dashboard › partnership row appears after the wicket" classname="scoring/analytics.spec.ts">
+<properties>
+<property name="skip" value="Scoring API unreachable">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="@scoring Analytics dashboard › fielding leaderboard shows the catcher" classname="scoring/analytics.spec.ts">
+<properties>
+<property name="skip" value="Scoring API unreachable">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="scoring/auth.spec.ts" timestamp="2026-06-19T14:24:44.385Z" hostname="scoring-chromium" tests="4" failures="0" skipped="1" time="14.085" errors="0">
+<testcase name="Scoring console — auth › @smoke login page renders" classname="scoring/auth.spec.ts" time="0.72">
+</testcase>
+<testcase name="Scoring console — auth › @smoke signup page renders" classname="scoring/auth.spec.ts" time="0.641">
+</testcase>
+<testcase name="Scoring console — auth › @critical admin/organizer can sign in" classname="scoring/auth.spec.ts">
+<properties>
+<property name="skip" value="Scoring seed/account missing — start scoring backend with seed">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Scoring console — auth › rejected credentials stay on login" classname="scoring/auth.spec.ts" time="1.5">
+</testcase>
+</testsuite>
+<testsuite name="scoring/live-scoring.spec.ts" timestamp="2026-06-19T14:24:44.385Z" hostname="scoring-chromium" tests="5" failures="0" skipped="5" time="0" errors="0">
+<testcase name="@scoring Live scoring — PPTX Level 1 + Level 2 › @critical scorer can record a Level 1 ball" classname="scoring/live-scoring.spec.ts">
+<properties>
+<property name="skip" value="Scoring API/seed not reachable">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="@scoring Live scoring — PPTX Level 1 + Level 2 › @critical scorer can record a 4 and innings boundary counter updates" classname="scoring/live-scoring.spec.ts">
+<properties>
+<property name="skip" value="Scoring API/seed not reachable">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="@scoring Live scoring — PPTX Level 1 + Level 2 › @critical scorer can record a Level 2 wicket (caught)" classname="scoring/live-scoring.spec.ts">
+<properties>
+<property name="skip" value="Scoring API/seed not reachable">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="@scoring Live scoring — PPTX Level 1 + Level 2 › @critical scorer can undo last ball" classname="scoring/live-scoring.spec.ts">
+<properties>
+<property name="skip" value="Scoring API/seed not reachable">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="@scoring Live scoring — PPTX Level 1 + Level 2 › derived metrics strip renders on scoreboard" classname="scoring/live-scoring.spec.ts">
+<properties>
+<property name="skip" value="Scoring API/seed not reachable">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="scoring/match-config.spec.ts" timestamp="2026-06-19T14:24:44.385Z" hostname="scoring-chromium" tests="2" failures="0" skipped="2" time="0" errors="0">
+<testcase name="@scoring Match configuration › @critical config screen renders all PPTX sections" classname="scoring/match-config.spec.ts">
+<properties>
+<property name="skip" value="Scoring API unreachable">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="@scoring Match configuration › organizer can save configuration" classname="scoring/match-config.spec.ts">
+<properties>
+<property name="skip" value="Scoring API unreachable">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="scoring/tournaments.spec.ts" timestamp="2026-06-19T14:24:44.385Z" hostname="scoring-chromium" tests="4" failures="0" skipped="3" time="23.829" errors="0">
+<testcase name="Scoring console — tournaments › @smoke unauthenticated tournament list loads" classname="scoring/tournaments.spec.ts" time="0.546">
+</testcase>
+<testcase name="Scoring console — tournaments › @critical organizer can open the new tournament form" classname="scoring/tournaments.spec.ts">
+<properties>
+<property name="skip" value="Scoring seed missing — start scoring backend with admin@scoring.local">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Scoring console — tournaments › @critical organizer can create a tournament" classname="scoring/tournaments.spec.ts">
+<properties>
+<property name="skip" value="Scoring seed missing — start scoring backend with admin@scoring.local">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Scoring console — tournaments › tournament detail page renders teams section" classname="scoring/tournaments.spec.ts">
+<properties>
+<property name="skip" value="No tournaments seeded">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="sportivox/landing.spec.ts" timestamp="2026-06-19T14:24:44.385Z" hostname="mobile-chrome" tests="6" failures="0" skipped="0" time="7.779" errors="0">
+<testcase name="Sportivox landing &amp; public surfaces › @smoke @critical landing page renders headline and CTA" classname="sportivox/landing.spec.ts" time="1.452">
+</testcase>
+<testcase name="Sportivox landing &amp; public surfaces › @smoke login page accepts inputs" classname="sportivox/landing.spec.ts" time="1.252">
+</testcase>
+<testcase name="Sportivox landing &amp; public surfaces › @smoke signup page loads (multi-step)" classname="sportivox/landing.spec.ts" time="1.32">
+</testcase>
+<testcase name="Sportivox landing &amp; public surfaces › @smoke forgot password page exists" classname="sportivox/landing.spec.ts" time="1.215">
+</testcase>
+<testcase name="Sportivox landing &amp; public surfaces › @critical browse opportunities works unauthenticated" classname="sportivox/landing.spec.ts" time="1.589">
+</testcase>
+<testcase name="Sportivox landing &amp; public surfaces › 404 handler returns a friendly page" classname="sportivox/landing.spec.ts" time="0.951">
+</testcase>
+</testsuite>
+</testsuites>

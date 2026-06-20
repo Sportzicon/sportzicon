@@ -1,4 +1,4 @@
-# Playwright e2e — 2026-06-20
+# Playwright e2e — 2026-06-19
 
 | Outcome | Count |
 |---|---|
@@ -8,4 +8,4 @@
 | Skipped | 29 |
 | **Total** | **46** |
 
-Artifacts: see GitHub Actions run 27869715675.
+Artifacts: see GitHub Actions run 27831362969.
