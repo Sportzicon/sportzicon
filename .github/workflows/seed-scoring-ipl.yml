@@ -33,9 +33,9 @@ jobs:
       - name: Generate Prisma client
         run: npx prisma generate
         env:
-          DATABASE_URL: ${{ secrets.SCORING_DIRECT_URL }}
+          DATABASE_URL: ${{ secrets.SCORING_DATABASE_URL }}
 
       - name: Run IPL 2026 Final seed
         run: npx tsx prisma/seed-ipl2026-final.ts
         env:
-          DATABASE_URL: ${{ secrets.SCORING_DIRECT_URL }}
+          DATABASE_URL: ${{ secrets.SCORING_DATABASE_URL }}
