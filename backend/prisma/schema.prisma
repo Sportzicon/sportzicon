@@ -213,6 +213,7 @@ model Opportunity {
   contact_phone             String?
   status                    OpportunityStatus @default(open)
   application_count         Int               @default(0)
+  scoring_tournament_id     String?
 
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
