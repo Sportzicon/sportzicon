@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useNavigate } from "react-router-dom";
 import { scoringApi } from "../../api/scoringClient";
 import { api } from "../../api/client";
 import { queryKeys } from "../../hooks/queryKeys";
@@ -8,7 +8,8 @@ import { useAuthStore } from "../../store/auth";
 import { hasRole } from "../../utils/roles";
 import {
   Trophy, Users, Calendar, MapPin, Radio, Edit2, ChevronRight,
-  Plus, ChevronDown, ChevronUp, Trash2, User, Search, X
+  Plus, ChevronDown, ChevronUp, Trash2, User, Search, X,
+  Play, CheckCircle, Clock, XCircle, AlertTriangle, Link2, ExternalLink, FileText
 } from "lucide-react";
 
 const ov = (b: number) => `${Math.floor(b / 6)}.${b % 6}`;
@@ -26,16 +27,25 @@ function StatusPill({ status }: { status: string }) {
 }
 
 // ── Match row ─────────────────────────────────────────────────────────────────
-function MatchRow({ match }: { match: any }) {
+function MatchRow({
+  match, canManage, onDelete, deleteLoading
+}: {
+  match: any; canManage?: boolean; onDelete?: (id: string) => void; deleteLoading?: boolean
+}) {
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const inn1 = match.innings?.find((i: any) => i.innings_number === 1);
   const inn2 = match.innings?.find((i: any) => i.innings_number === 2);
   const t1   = match.team1; const t2 = match.team2;
+  const isLive = match.status === "live";
+
   return (
-    <Link to={`/scoring/matches/${match.id}`} className="flex items-center gap-3 p-3 rounded hover:bg-fill transition-colors group">
-      <div className="w-7 h-7 rounded-full bg-fill flex items-center justify-center lab text-ink-faint shrink-0">
+    <div className="flex items-start gap-3 p-3 rounded hover:bg-fill transition-colors group">
+      <div className="w-7 h-7 rounded-full bg-fill flex items-center justify-center lab text-ink-faint shrink-0 mt-0.5">
         {match.match_number ?? "–"}
       </div>
-      <div className="flex-1 min-w-0">
+
+      {/* Clickable details area */}
+      <Link to={`/scoring/matches/${match.id}`} className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap text-sm">
           <span className="font-semibold text-ink">{t1?.short_name || t1?.name || "TBD"}</span>
           {inn1 && <span className="font-mononum text-ink">{inn1.total_runs}/{inn1.total_wickets} <span className="text-ink-faint text-xs">({ov(inn1.total_balls)})</span></span>}
@@ -50,12 +60,64 @@ function MatchRow({ match }: { match: any }) {
             Toss: {match.toss_winner_id === t1?.id ? t1?.name : t2?.name} won · elected to {match.toss_decision}
           </p>
         )}
-      </div>
-      <div className="flex items-center gap-2 shrink-0">
+        {match.scheduled_at && !match.result_summary && (
+          <p className="lab text-ink-faint mt-0.5 flex items-center gap-1">
+            <Calendar className="w-3 h-3" />
+            {new Date(match.scheduled_at).toLocaleDateString("en-IN", { day:"numeric", month:"short" })}
+            {" · "}{new Date(match.scheduled_at).toLocaleTimeString("en-IN", { hour:"2-digit", minute:"2-digit" })}
+          </p>
+        )}
+      </Link>
+
+      {/* Right side: status + actions */}
+      <div className="flex items-center gap-1.5 shrink-0">
         <StatusPill status={match.status} />
-        <ChevronRight className="w-4 h-4 text-ink-faint group-hover:text-ink" />
+
+        {canManage && (
+          <>
+            {/* Score button — visible for live/upcoming */}
+            {(isLive || match.status === "upcoming") && (
+              <Link
+                to={`/scoring/matches/${match.id}/score`}
+                className="p-1.5 rounded hover:bg-brand-50 text-brand-500 transition"
+                title={isLive ? "Continue scoring" : "Start scoring"}
+                onClick={e => e.stopPropagation()}
+              >
+                <Play className="w-3.5 h-3.5" />
+              </Link>
+            )}
+
+            {/* Delete button — disabled for live matches */}
+            {confirmDelete ? (
+              <div className="flex items-center gap-1 bg-red-50 rounded px-2 py-1">
+                <span className="lab text-red-600 text-[10px]">Delete?</span>
+                <button
+                  onClick={() => { onDelete?.(match.id); setConfirmDelete(false); }}
+                  disabled={deleteLoading}
+                  className="lab text-red-600 font-semibold text-[10px] hover:text-red-700"
+                >
+                  Yes
+                </button>
+                <button onClick={() => setConfirmDelete(false)} className="lab text-ink-faint text-[10px] hover:text-ink">
+                  No
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => !isLive && setConfirmDelete(true)}
+                disabled={isLive}
+                title={isLive ? "Cannot delete a live match" : "Delete match"}
+                className={`p-1.5 rounded transition ${isLive ? "text-ink-faint/40 cursor-not-allowed" : "hover:bg-red-50 text-ink-faint hover:text-red-500"}`}
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </>
+        )}
+
+        {!canManage && <ChevronRight className="w-4 h-4 text-ink-faint group-hover:text-ink" />}
       </div>
-    </Link>
+    </div>
   );
 }
 
@@ -755,15 +817,97 @@ function StandingsTable({ tournamentId }: { tournamentId: string }) {
   );
 }
 
+// ── Linked opportunity panel ──────────────────────────────────────────────────
+function LinkedOpportunityPanel({ opportunityId }: { opportunityId: string }) {
+  const { data, isLoading } = useQuery({
+    queryKey: ["opportunity", opportunityId],
+    queryFn: () => api.get(`/opportunities/${opportunityId}`).then(r => r.data.opportunity),
+    staleTime: 5 * 60_000
+  });
+
+  if (isLoading) return <div className="card p-4 animate-pulse h-16 bg-fill" />;
+  if (!data) return null;
+
+  return (
+    <div className="card p-4 border-brand-200 bg-brand-50/30">
+      <div className="flex items-start gap-3">
+        <div className="w-8 h-8 rounded-lg bg-brand-100 flex items-center justify-center shrink-0">
+          <Link2 className="w-4 h-4 text-brand-500" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <p className="lab text-brand-600 font-semibold">Linked Tournament Opportunity</p>
+            <Link
+              to={`/opportunities/${opportunityId}`}
+              className="lab text-brand-500 hover:underline flex items-center gap-0.5 text-[11px]"
+            >
+              View post <ExternalLink className="w-3 h-3" />
+            </Link>
+          </div>
+          <p className="font-semibold text-ink mt-0.5">{data.title}</p>
+          <div className="flex gap-4 mt-1.5 flex-wrap">
+            <span className="lab text-ink-faint flex items-center gap-1">
+              <FileText className="w-3 h-3" />
+              {data.application_count ?? 0} applications
+            </span>
+            {data.vacancies && (
+              <span className="lab text-ink-faint">{data.vacancies} spots</span>
+            )}
+            {data.application_deadline && (
+              <span className="lab text-ink-faint flex items-center gap-1">
+                <Calendar className="w-3 h-3" />
+                Apply by {data.application_deadline}
+              </span>
+            )}
+            {data.age_min && data.age_max && (
+              <span className="lab text-ink-faint">Age {data.age_min}–{data.age_max}</span>
+            )}
+            <span className={`lab px-2 py-0.5 rounded-full capitalize ${
+              data.status === "open" ? "bg-green-100 text-green-700" : "bg-fill text-ink-sub"
+            }`}>{data.status}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+type MatchFilter = "all" | "live" | "upcoming" | "completed" | "abandoned";
+
+const MATCH_FILTER_TABS: { value: MatchFilter; label: string; icon: React.ReactNode }[] = [
+  { value: "all",       label: "All",       icon: null },
+  { value: "live",      label: "Live",      icon: <Radio className="w-3 h-3 text-red-500 animate-pulse" /> },
+  { value: "upcoming",  label: "Upcoming",  icon: <Clock className="w-3 h-3 text-blue-500" /> },
+  { value: "completed", label: "Results",   icon: <CheckCircle className="w-3 h-3 text-ink-faint" /> },
+  { value: "abandoned", label: "Abandoned", icon: <XCircle className="w-3 h-3 text-ink-faint" /> },
+];
+
 // ── Main page ─────────────────────────────────────────────────────────────────
 function ScoringTournamentDetailInner() {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const user = useAuthStore(s => s.user);
   const canManage = hasRole(user?.role ?? "", "organizer", "scorer");
+  const qc = useQueryClient();
 
   const [addingTeam, setAddingTeam]   = useState(false);
   const [scheduling, setScheduling]   = useState(false);
   const [activeSection, setActiveSection] = useState<"matches"|"teams">("matches");
+  const [matchFilter, setMatchFilter] = useState<MatchFilter>("all");
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  const deleteMatch = useMutation({
+    mutationFn: (matchId: string) => scoringApi.delete(`/matches/${matchId}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.scoringTournament(id ?? "") })
+  });
+
+  const deleteTournament = useMutation({
+    mutationFn: () => scoringApi.delete(`/tournaments/${id}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.scoringTournaments({}) });
+      navigate("/scoring/tournaments");
+    }
+  });
 
   const { data, isLoading } = useQuery({
     queryKey: queryKeys.scoringTournament(id ?? ""),
@@ -783,6 +927,15 @@ function ScoringTournamentDetailInner() {
   const liveMatches     = matches.filter((m: any) => m.status === "live");
   const upcomingMatches = matches.filter((m: any) => m.status === "upcoming");
   const completedMatches= matches.filter((m: any) => m.status === "completed");
+  const abandonedMatches= matches.filter((m: any) => m.status === "abandoned" || m.status === "no_result");
+
+  const filteredMatches: any[] = matchFilter === "all" ? matches
+    : matchFilter === "abandoned" ? abandonedMatches
+    : matches.filter((m: any) => m.status === matchFilter);
+
+  const countOf = (f: MatchFilter) => f === "all" ? matches.length
+    : f === "abandoned" ? abandonedMatches.length
+    : matches.filter((m: any) => m.status === f).length;
 
   return (
     <div className="space-y-5 max-w-4xl">
@@ -810,14 +963,27 @@ function ScoringTournamentDetailInner() {
               </div>
             </div>
             {canManage && (
-              <Link to={`/scoring/tournaments/${id}/edit`} className="btn-secondary text-sm shrink-0 flex items-center gap-1 min-h-0 px-3 py-2">
-                <Edit2 className="w-3.5 h-3.5" /> Edit
-              </Link>
+              <div className="flex items-center gap-2 shrink-0">
+                <Link to={`/scoring/tournaments/${id}/edit`} className="btn-secondary text-sm flex items-center gap-1 min-h-0 px-3 py-2">
+                  <Edit2 className="w-3.5 h-3.5" /> Edit
+                </Link>
+                <button
+                  onClick={() => setShowDeleteConfirm(true)}
+                  className="btn-secondary text-sm flex items-center gap-1 min-h-0 px-3 py-2 text-red-500 hover:bg-red-50 border-red-200 hover:border-red-300"
+                >
+                  <Trash2 className="w-3.5 h-3.5" /> Delete
+                </button>
+              </div>
             )}
           </div>
           {data.description && <p className="mt-3 text-sm text-ink-70">{data.description}</p>}
         </div>
       </div>
+
+      {/* Linked opportunity panel */}
+      {data.opportunity_id && (
+        <LinkedOpportunityPanel opportunityId={data.opportunity_id} />
+      )}
 
       {/* Action bar */}
       {canManage && (
@@ -865,36 +1031,144 @@ function ScoringTournamentDetailInner() {
       {/* MATCHES tab */}
       {activeSection === "matches" && (
         <div className="space-y-4">
-          {liveMatches.length > 0 && (
-            <div className="card p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <Radio className="w-4 h-4 text-red-500 animate-pulse" />
-                <h2 className="font-semibold text-ink">Live</h2>
-              </div>
-              <div className="divide-y divide-hairsoft">{liveMatches.map((m: any) => <MatchRow key={m.id} match={m} />)}</div>
+          {/* Quick stats */}
+          {matches.length > 0 && (
+            <div className="flex gap-3 flex-wrap">
+              {liveMatches.length > 0 && (
+                <div className="flex items-center gap-1.5 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
+                  <Radio className="w-3.5 h-3.5 text-red-500 animate-pulse" />
+                  <span className="lab text-red-600 font-semibold">{liveMatches.length} Live</span>
+                </div>
+              )}
+              {upcomingMatches.length > 0 && (
+                <div className="flex items-center gap-1.5 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
+                  <Clock className="w-3.5 h-3.5 text-blue-500" />
+                  <span className="lab text-blue-600">{upcomingMatches.length} Upcoming</span>
+                </div>
+              )}
+              {completedMatches.length > 0 && (
+                <div className="flex items-center gap-1.5 bg-fill border border-hair rounded-lg px-3 py-2">
+                  <CheckCircle className="w-3.5 h-3.5 text-ink-faint" />
+                  <span className="lab text-ink-sub">{completedMatches.length} Played</span>
+                </div>
+              )}
             </div>
           )}
-          {upcomingMatches.length > 0 && (
-            <div className="card p-4">
-              <h2 className="font-semibold text-ink mb-2">Upcoming</h2>
-              <div className="divide-y divide-hairsoft">{upcomingMatches.map((m: any) => <MatchRow key={m.id} match={m} />)}</div>
+
+          {/* Filter tabs */}
+          {matches.length > 1 && (
+            <div className="flex gap-0 border-b border-hair overflow-x-auto scrollbar-none">
+              {MATCH_FILTER_TABS.map(tab => {
+                const count = countOf(tab.value);
+                if (count === 0 && tab.value !== "all" && matchFilter !== tab.value) return null;
+                return (
+                  <button
+                    key={tab.value}
+                    onClick={() => setMatchFilter(tab.value)}
+                    className={`shrink-0 flex items-center gap-1.5 px-4 py-2.5 lab transition-colors border-b-2 -mb-px ${
+                      matchFilter === tab.value
+                        ? "border-brand-500 text-brand-500"
+                        : "border-transparent text-ink-sub hover:text-ink"
+                    }`}
+                  >
+                    {tab.icon}
+                    {tab.label}
+                    {count > 0 && (
+                      <span className={`text-[10px] rounded-full px-1.5 py-0.5 ${
+                        matchFilter === tab.value ? "bg-brand-100 text-brand-600" : "bg-fill text-ink-faint"
+                      }`}>{count}</span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
           )}
-          {completedMatches.length > 0 && (
-            <div className="card p-4">
-              <h2 className="font-semibold text-ink mb-2">Results</h2>
-              <div className="divide-y divide-hairsoft">{completedMatches.map((m: any) => <MatchRow key={m.id} match={m} />)}</div>
-            </div>
-          )}
-          {matches.length === 0 && !scheduling && (
+
+          {/* Match list — grouped for "all", flat for filtered */}
+          {filteredMatches.length === 0 && !scheduling ? (
             <div className="panel p-10 text-center">
-              <p className="font-disp text-xl text-ink mb-1">No matches yet</p>
-              {canManage && teams.length >= 2
-                ? <button onClick={() => setScheduling(true)} className="btn-accent text-sm mt-3 gap-1"><Radio className="w-3.5 h-3.5" /> Schedule First Match</button>
-                : <p className="lab text-ink-faint mt-2">Add at least 2 teams first</p>
-              }
+              <p className="font-disp text-xl text-ink mb-1">
+                {matches.length === 0 ? "No matches yet" : `No ${matchFilter} matches`}
+              </p>
+              {matches.length === 0 && canManage && teams.length >= 2 && (
+                <button onClick={() => setScheduling(true)} className="btn-accent text-sm mt-3 gap-1">
+                  <Radio className="w-3.5 h-3.5" /> Schedule First Match
+                </button>
+              )}
+              {matches.length === 0 && (!canManage || teams.length < 2) && (
+                <p className="lab text-ink-faint mt-2">Add at least 2 teams first</p>
+              )}
+            </div>
+          ) : matchFilter === "all" ? (
+            /* Grouped sections */
+            <div className="space-y-4">
+              {liveMatches.length > 0 && (
+                <div className="card overflow-hidden">
+                  <div className="flex items-center gap-2 px-4 py-3 bg-red-50 border-b border-red-100">
+                    <Radio className="w-4 h-4 text-red-500 animate-pulse" />
+                    <h2 className="font-semibold text-red-700">Live Now</h2>
+                    <span className="ml-auto lab text-red-400">{liveMatches.length} match{liveMatches.length > 1 ? "es" : ""}</span>
+                  </div>
+                  <div className="divide-y divide-hairsoft">
+                    {liveMatches.map((m: any) => (
+                      <MatchRow key={m.id} match={m} canManage={canManage} onDelete={id => deleteMatch.mutate(id)} deleteLoading={deleteMatch.isPending} />
+                    ))}
+                  </div>
+                </div>
+              )}
+              {upcomingMatches.length > 0 && (
+                <div className="card overflow-hidden">
+                  <div className="flex items-center gap-2 px-4 py-3 bg-blue-50 border-b border-blue-100">
+                    <Clock className="w-4 h-4 text-blue-500" />
+                    <h2 className="font-semibold text-blue-700">Upcoming</h2>
+                    <span className="ml-auto lab text-blue-400">{upcomingMatches.length} match{upcomingMatches.length > 1 ? "es" : ""}</span>
+                  </div>
+                  <div className="divide-y divide-hairsoft">
+                    {upcomingMatches.map((m: any) => (
+                      <MatchRow key={m.id} match={m} canManage={canManage} onDelete={id => deleteMatch.mutate(id)} deleteLoading={deleteMatch.isPending} />
+                    ))}
+                  </div>
+                </div>
+              )}
+              {completedMatches.length > 0 && (
+                <div className="card overflow-hidden">
+                  <div className="flex items-center gap-2 px-4 py-3 bg-fill border-b border-hair">
+                    <CheckCircle className="w-4 h-4 text-ink-faint" />
+                    <h2 className="font-semibold text-ink">Results</h2>
+                    <span className="ml-auto lab text-ink-faint">{completedMatches.length} match{completedMatches.length > 1 ? "es" : ""}</span>
+                  </div>
+                  <div className="divide-y divide-hairsoft">
+                    {completedMatches.map((m: any) => (
+                      <MatchRow key={m.id} match={m} canManage={canManage} onDelete={id => deleteMatch.mutate(id)} deleteLoading={deleteMatch.isPending} />
+                    ))}
+                  </div>
+                </div>
+              )}
+              {abandonedMatches.length > 0 && (
+                <div className="card overflow-hidden">
+                  <div className="flex items-center gap-2 px-4 py-3 bg-fill border-b border-hair">
+                    <XCircle className="w-4 h-4 text-ink-faint" />
+                    <h2 className="font-semibold text-ink-sub">Abandoned / No Result</h2>
+                  </div>
+                  <div className="divide-y divide-hairsoft">
+                    {abandonedMatches.map((m: any) => (
+                      <MatchRow key={m.id} match={m} canManage={canManage} onDelete={id => deleteMatch.mutate(id)} deleteLoading={deleteMatch.isPending} />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            /* Flat filtered list */
+            <div className="card p-4">
+              <div className="divide-y divide-hairsoft">
+                {filteredMatches.map((m: any) => (
+                  <MatchRow key={m.id} match={m} canManage={canManage} onDelete={id => deleteMatch.mutate(id)} deleteLoading={deleteMatch.isPending} />
+                ))}
+              </div>
             </div>
           )}
+
           {/* Points table */}
           {matches.length > 0 && (
             <div className="card p-4">
@@ -919,6 +1193,46 @@ function ScoringTournamentDetailInner() {
           {teams.map((team: any) => (
             <TeamPanel key={team.id} team={team} tournamentId={id!} canManage={canManage} />
           ))}
+        </div>
+      )}
+
+      {/* Delete tournament confirmation modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={() => setShowDeleteConfirm(false)}>
+          <div className="bg-paper rounded-2xl shadow-2xl max-w-sm w-full p-6 space-y-4" onClick={e => e.stopPropagation()}>
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center shrink-0">
+                <AlertTriangle className="w-5 h-5 text-red-500" />
+              </div>
+              <div>
+                <p className="font-semibold text-ink">Delete tournament?</p>
+                <p className="lab text-ink-sub mt-1">
+                  This will permanently delete <span className="font-semibold text-ink">"{data?.name}"</span> and all its matches, teams, and player data. This cannot be undone.
+                </p>
+              </div>
+            </div>
+            {deleteTournament.isError && (
+              <p className="lab text-red-600 text-sm">
+                {(deleteTournament.error as any)?.response?.data?.error?.message || "Failed to delete tournament"}
+              </p>
+            )}
+            <div className="flex gap-3 pt-1">
+              <button
+                onClick={() => deleteTournament.mutate()}
+                disabled={deleteTournament.isPending}
+                className="flex-1 btn-primary bg-red-600 hover:bg-red-700 border-red-600 hover:border-red-700 text-sm"
+              >
+                {deleteTournament.isPending ? "Deleting…" : "Yes, delete"}
+              </button>
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                disabled={deleteTournament.isPending}
+                className="flex-1 btn-secondary text-sm"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

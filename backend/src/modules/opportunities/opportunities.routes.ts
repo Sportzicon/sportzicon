@@ -66,4 +66,16 @@ router.delete(
   })
 );
 
+// Link / unlink a scoring tournament to this opportunity
+router.patch(
+  "/:id/scoring-link",
+  requireAuth,
+  requireRole(...ROLES.CLUB_MANAGERS),
+  validate(idParam, "params"),
+  asyncHandler(async (req, res) => {
+    const r = await svc.linkScoringTournament(req.params.id, req.user!.sub, req.user!.role, req.body.scoring_tournament_id ?? null);
+    res.json({ opportunity: r });
+  })
+);
+
 export default router;

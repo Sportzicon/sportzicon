@@ -1,7 +1,7 @@
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/auth";
 import { api } from "../api/client";
-import { Trophy, Radio, Home, LogOut, User, PlusCircle, Menu, X } from "lucide-react";
+import { Trophy, Radio, Home, LogOut, PlusCircle, Menu, X, History } from "lucide-react";
 import { useState } from "react";
 
 export default function Layout() {
@@ -32,6 +32,7 @@ export default function Layout() {
           <nav className="hidden sm:flex items-center gap-1 flex-1">
             <NavItem to="/" icon={<Home className="w-4 h-4" />} label="Home" />
             <NavItem to="/tournaments" icon={<Trophy className="w-4 h-4" />} label="Tournaments" />
+            <NavItem to="/matches" icon={<History className="w-4 h-4" />} label="Matches" />
             <NavItem to="/?live=1" icon={<Radio className="w-4 h-4" />} label="Live" />
           </nav>
 
@@ -62,6 +63,7 @@ export default function Layout() {
           <div className="sm:hidden border-t border-gray-200 bg-white px-4 py-3 flex flex-col gap-2" onClick={() => setMenuOpen(false)}>
             <Link to="/" className="flex items-center gap-2 py-2 text-sm"><Home className="w-4 h-4" /> Home</Link>
             <Link to="/tournaments" className="flex items-center gap-2 py-2 text-sm"><Trophy className="w-4 h-4" /> Tournaments</Link>
+            <Link to="/matches" className="flex items-center gap-2 py-2 text-sm"><History className="w-4 h-4" /> Matches</Link>
             {canManage && <Link to="/tournaments/new" className="flex items-center gap-2 py-2 text-sm text-emerald-600"><PlusCircle className="w-4 h-4" /> New Tournament</Link>}
           </div>
         )}

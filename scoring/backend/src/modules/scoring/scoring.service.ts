@@ -93,6 +93,7 @@ export async function createTournament(actorId: string, actorRole: string, input
       logo_url: nullIfEmpty(input.logo_url),
       banner_url: nullIfEmpty(input.banner_url),
       is_public: input.is_public ?? true,
+      opportunity_id: nullIfEmpty(input.opportunity_id),
       created_by: actorId
     }
   });
@@ -100,7 +101,7 @@ export async function createTournament(actorId: string, actorRole: string, input
 
 export async function updateTournament(id: string, actorId: string, actorRole: string, patch: any) {
   await assertManager(id, actorId, actorRole);
-  const stringFields = ["format", "season", "match_type", "description", "start_date", "end_date", "location", "logo_url", "banner_url"];
+  const stringFields = ["format", "season", "match_type", "description", "start_date", "end_date", "location", "logo_url", "banner_url", "opportunity_id"];
   const data: any = {};
   if (patch.name !== undefined) data.name = patch.name;
   if (patch.sport !== undefined) data.sport = patch.sport.toLowerCase();
@@ -446,7 +447,11 @@ export async function createMatch(tournamentId: string, actorId: string, actorRo
       title: input.title,
       match_number: input.match_number,
       venue: input.venue,
-      scheduled_at: input.scheduled_at ? new Date(input.scheduled_at) : undefined
+      scheduled_at: input.scheduled_at ? new Date(input.scheduled_at) : undefined,
+      umpire1: input.umpire1 ?? null,
+      umpire2: input.umpire2 ?? null,
+      tv_umpire: input.tv_umpire ?? null,
+      match_referee: input.match_referee ?? null
     },
     include: {
       team1: { select: { id: true, name: true, short_name: true, logo_url: true, color: true } },
@@ -455,11 +460,40 @@ export async function createMatch(tournamentId: string, actorId: string, actorRo
   });
 }
 
+export async function listAllMatches(status?: string, sport?: string, tournamentId?: string, limit = 20, cursor?: string) {
+  const where: any = {};
+  if (status && status !== "all") where.status = status;
+  if (sport) where.sport = sport.toLowerCase();
+  if (tournamentId) where.tournament_id = tournamentId;
+
+  const matches = await prisma.match.findMany({
+    where,
+    orderBy: [{ scheduled_at: "desc" }, { created_at: "desc" }],
+    take: limit + 1,
+    ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+    include: {
+      tournament: { select: { id: true, name: true, sport: true, format: true, season: true, location: true } },
+      team1: { select: { id: true, name: true, short_name: true, logo_url: true, color: true } },
+      team2: { select: { id: true, name: true, short_name: true, logo_url: true, color: true } },
+      innings: {
+        select: { id: true, innings_number: true, batting_team_id: true, total_runs: true, total_wickets: true, total_balls: true, is_completed: true }
+      }
+    }
+  });
+
+  let nextCursor: string | null = null;
+  if (matches.length > limit) {
+    nextCursor = matches[limit].id;
+    matches.pop();
+  }
+  return { matches, nextCursor };
+}
+
 export async function getMatch(matchId: string) {
   const match = await prisma.match.findUnique({
     where: { id: matchId },
     include: {
-      tournament: { select: { id: true, name: true, overs_per_innings: true, format: true } },
+      tournament: { select: { id: true, name: true, overs_per_innings: true, format: true, ball_type: true, season: true, location: true, powerplay_overs: true } },
       team1: { include: { players: { orderBy: [{ is_captain: "desc" }, { jersey_number: "asc" }] } } },
       team2: { include: { players: { orderBy: [{ is_captain: "desc" }, { jersey_number: "asc" }] } } },
       innings: {
@@ -754,7 +788,7 @@ export async function updateMatch(matchId: string, actorId: string, actorRole: s
   await assertManager(match.tournament_id, actorId, actorRole);
 
   const data: any = {};
-  for (const k of ["title", "venue", "status", "winner_team_id", "result_summary", "toss_winner_id", "toss_decision", "match_type"]) {
+  for (const k of ["title", "venue", "status", "winner_team_id", "result_summary", "toss_winner_id", "toss_decision", "match_type", "umpire1", "umpire2", "tv_umpire", "match_referee"]) {
     if (patch[k] !== undefined) data[k] = patch[k];
   }
   if (patch.scheduled_at) data.scheduled_at = new Date(patch.scheduled_at);

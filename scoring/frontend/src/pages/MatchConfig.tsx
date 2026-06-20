@@ -30,6 +30,18 @@ export default function MatchConfig() {
 
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; msg: string } | null>(null);
   const [cfg, setCfg] = useState<any>({});
+  const [officials, setOfficials] = useState({ umpire1: "", umpire2: "", tv_umpire: "", match_referee: "" });
+  useEffect(() => {
+    if (match) {
+      setOfficials({
+        umpire1: match.umpire1 ?? "",
+        umpire2: match.umpire2 ?? "",
+        tv_umpire: match.tv_umpire ?? "",
+        match_referee: match.match_referee ?? ""
+      });
+    }
+  }, [match]);
+
   useEffect(() => {
     if (!tournament) return;
     setCfg({
@@ -49,7 +61,10 @@ export default function MatchConfig() {
   }, [tournament, match?.format]);
 
   const save = useMutation({
-    mutationFn: () => api.put(`/matches/${matchId}/config`, cfg),
+    mutationFn: async () => {
+      await api.put(`/matches/${matchId}/config`, cfg);
+      await api.put(`/matches/${matchId}`, officials);
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["match", matchId] });
       qc.invalidateQueries({ queryKey: ["tournament", match?.tournament_id] });
@@ -168,6 +183,24 @@ export default function MatchConfig() {
               <option value="shared">Shared trophy</option>
             </select>
           </label>
+        </div>
+      </div>
+
+      <div className="card p-5 space-y-4">
+        <h2 className="font-semibold">Match Officials</h2>
+        <p className="text-xs text-gray-500">Optional — displayed in the About tab on the match page.</p>
+        <div className="grid sm:grid-cols-2 gap-3">
+          {(["umpire1", "umpire2", "tv_umpire", "match_referee"] as const).map(k => (
+            <label key={k} className="block">
+              <span className="label">{k === "tv_umpire" ? "TV Umpire" : k === "match_referee" ? "Match Referee" : k === "umpire1" ? "Umpire 1" : "Umpire 2"}</span>
+              <input
+                className="input"
+                value={officials[k]}
+                onChange={e => setOfficials(o => ({ ...o, [k]: e.target.value }))}
+                placeholder="Name"
+              />
+            </label>
+          ))}
         </div>
       </div>
 

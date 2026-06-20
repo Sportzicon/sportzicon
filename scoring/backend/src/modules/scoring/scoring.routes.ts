@@ -91,6 +91,12 @@ router.get("/tournaments/:id/teams/:teamId/suggested-players", requireAuth, asyn
 
 // ── Matches ───────────────────────────────────────────────────────────────────
 
+router.get("/matches", optionalAuth, asyncHandler(async (req: any, res: any) => {
+  const { status, sport, tournament_id, limit, cursor } = req.query;
+  const r = await svc.listAllMatches(status, sport, tournament_id, Number(limit) || 20, cursor);
+  res.json(r);
+}));
+
 router.get("/matches/live", optionalAuth, asyncHandler(async (_req: any, res: any) => {
   const r = await svc.getLiveMatches();
   res.json({ matches: r });

@@ -1,9 +1,11 @@
 import { useState, useEffect } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { scoringApi } from "../../api/scoringClient";
+import { api } from "../../api/client";
 import { queryKeys } from "../../hooks/queryKeys";
 import { PageHeader } from "../../components/UI";
+import { Link2, Trophy } from "lucide-react";
 
 const SPORTS = ["cricket", "football", "basketball", "volleyball", "hockey", "kabaddi"];
 const FORMATS: Record<string, string[]> = {
@@ -13,31 +15,97 @@ const FORMATS: Record<string, string[]> = {
 };
 const MATCH_TYPES = ["league", "tournament", "friendly", "trial", "academy", "knockout"];
 
+type FormState = {
+  name: string; sport: string; format: string; season: string;
+  match_type: string; description: string; start_date: string;
+  end_date: string; location: string; is_public: boolean;
+};
+
 function ScoringNewTournamentInner() {
   const { id } = useParams<{ id?: string }>();
+  const [searchParams] = useSearchParams();
   const isEdit = Boolean(id);
   const navigate = useNavigate();
   const qc = useQueryClient();
 
-  const [form, setForm] = useState({ name: "", sport: "cricket", format: "T20", season: "", match_type: "tournament", description: "", start_date: "", end_date: "", location: "", is_public: true });
+  // Pre-fill source: opportunity_id from URL (when launched from main app tournament)
+  const opportunityId = searchParams.get("opportunity_id") ?? null;
+
+  const [form, setForm] = useState<FormState>({
+    name: "", sport: "cricket", format: "T20", season: "",
+    match_type: "tournament", description: "", start_date: "",
+    end_date: "", location: "", is_public: true
+  });
   const [error, setError] = useState("");
 
+  // Load existing scoring tournament (edit mode)
   const { data: existing } = useQuery({
     queryKey: queryKeys.scoringTournament(id ?? ""),
     queryFn: () => scoringApi.get(`/tournaments/${id}`).then(r => r.data.tournament),
     enabled: isEdit
   });
 
+  // Load source opportunity (create mode, when launched from main app)
+  const { data: sourceOpportunity } = useQuery({
+    queryKey: ["opportunity", opportunityId],
+    queryFn: () => api.get(`/opportunities/${opportunityId}`).then(r => r.data.opportunity),
+    enabled: !isEdit && Boolean(opportunityId),
+    staleTime: 60_000
+  });
+
+  // Pre-fill from existing scoring tournament (edit)
   useEffect(() => {
-    if (existing) setForm({ name: existing.name || "", sport: existing.sport || "cricket", format: existing.format || "T20", season: existing.season || "", match_type: existing.match_type || "tournament", description: existing.description || "", start_date: existing.start_date || "", end_date: existing.end_date || "", location: existing.location || "", is_public: existing.is_public ?? true });
+    if (existing) {
+      setForm({
+        name: existing.name || "",
+        sport: existing.sport || "cricket",
+        format: existing.format || "T20",
+        season: existing.season || "",
+        match_type: existing.match_type || "tournament",
+        description: existing.description || "",
+        start_date: existing.start_date || "",
+        end_date: existing.end_date || "",
+        location: existing.location || "",
+        is_public: existing.is_public ?? true
+      });
+    }
   }, [existing]);
 
+  // Pre-fill from linked opportunity (create from main app)
+  useEffect(() => {
+    if (sourceOpportunity && !isEdit) {
+      setForm(f => ({
+        ...f,
+        name: sourceOpportunity.title || f.name,
+        sport: sourceOpportunity.sport || f.sport,
+        description: sourceOpportunity.description || f.description,
+        start_date: sourceOpportunity.start_date || f.start_date,
+        end_date: sourceOpportunity.end_date || f.end_date,
+        location: sourceOpportunity.city ? `${sourceOpportunity.city}${sourceOpportunity.state ? ", " + sourceOpportunity.state : ""}` : f.location
+      }));
+    }
+  }, [sourceOpportunity, isEdit]);
+
   const mutation = useMutation({
-    mutationFn: (data: any) => isEdit
-      ? scoringApi.put(`/tournaments/${id}`, data).then(r => r.data.tournament)
-      : scoringApi.post("/tournaments", data).then(r => r.data.tournament),
+    mutationFn: async (data: FormState & { opportunity_id?: string }) => {
+      if (isEdit) {
+        return scoringApi.put(`/tournaments/${id}`, data).then(r => r.data.tournament);
+      }
+      const t = await scoringApi.post("/tournaments", data).then(r => r.data.tournament);
+      // After creating scoring tournament, back-link to the opportunity in main app
+      if (opportunityId && t?.id) {
+        await api.patch(`/opportunities/${opportunityId}/scoring-link`, {
+          scoring_tournament_id: t.id
+        }).catch(() => {}); // non-fatal
+      }
+      return t;
+    },
     onSuccess: (t) => {
-      qc.invalidateQueries({ queryKey: queryKeys.scoringTournaments() });
+      qc.invalidateQueries({ queryKey: queryKeys.scoringTournaments({}) });
+      if (opportunityId) {
+        qc.invalidateQueries({ queryKey: queryKeys.opportunities({}) });
+        qc.invalidateQueries({ queryKey: ["opportunity", opportunityId] });
+      }
       navigate(`/scoring/tournaments/${t.id}`);
     },
     onError: (err: any) => setError(err.response?.data?.error?.message || "Failed to save")
@@ -47,14 +115,48 @@ function ScoringNewTournamentInner() {
 
   return (
     <div className="space-y-5 max-w-2xl">
-      <PageHeader title={isEdit ? "Edit Tournament" : "New Tournament"} subtitle="Cricket & multi-sport scoring" />
+      <PageHeader
+        title={isEdit ? "Edit Tournament" : "Set Up Scoring"}
+        subtitle={sourceOpportunity ? `Setting up scoring for: ${sourceOpportunity.title}` : "Cricket & multi-sport scoring"}
+      />
+
+      {/* Banner when linked to a main app tournament */}
+      {sourceOpportunity && !isEdit && (
+        <div className="card p-4 border-brand-200 bg-brand-50/50 flex items-start gap-3">
+          <Link2 className="w-4 h-4 text-brand-500 mt-0.5 shrink-0" />
+          <div>
+            <p className="text-sm font-semibold text-ink">Linking to tournament opportunity</p>
+            <p className="lab text-ink-sub mt-0.5">
+              <span className="font-medium">{sourceOpportunity.title}</span>
+              {" · "}{sourceOpportunity.sport}
+              {sourceOpportunity.city && ` · ${sourceOpportunity.city}`}
+            </p>
+            <p className="lab text-ink-faint mt-0.5">
+              {sourceOpportunity.application_count ?? 0} applications ·
+              deadline {sourceOpportunity.application_deadline}
+            </p>
+          </div>
+        </div>
+      )}
 
       {error && <div className="panel p-3 text-sm text-red-600 bg-red-50 border-red-200">{error}</div>}
 
-      <form onSubmit={e => { e.preventDefault(); mutation.mutate(form); }} className="card p-6 space-y-5">
+      <form
+        onSubmit={e => {
+          e.preventDefault();
+          mutation.mutate({ ...form, ...(opportunityId ? { opportunity_id: opportunityId } : {}) });
+        }}
+        className="card p-6 space-y-5"
+      >
         <div>
           <label className="lab block mb-1">Tournament name *</label>
-          <input className="input w-full" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} required placeholder="e.g. Summer Cricket Cup 2026" />
+          <input
+            className="input w-full"
+            value={form.name}
+            onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+            required
+            placeholder="e.g. Summer Cricket Cup 2026"
+          />
         </div>
         <div className="grid sm:grid-cols-2 gap-4">
           <div>
@@ -105,7 +207,7 @@ function ScoringNewTournamentInner() {
         </label>
         <div className="flex gap-3 pt-1">
           <button type="submit" disabled={mutation.isPending} className="btn-primary">
-            {mutation.isPending ? "Saving…" : isEdit ? "Save changes" : "Create tournament"}
+            {mutation.isPending ? "Saving…" : isEdit ? "Save changes" : opportunityId ? "Set up scoring" : "Create tournament"}
           </button>
           <button type="button" onClick={() => navigate(-1)} className="btn-secondary">Cancel</button>
         </div>

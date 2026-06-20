@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import { PageHeader, Spinner } from "../../components/UI";
 import { queryKeys } from "../../hooks/queryKeys";
-import { Users, Building2, Briefcase, FileText, AlertTriangle, ShieldCheck, ClipboardList } from "lucide-react";
+import { Users, Building2, Briefcase, FileText, AlertTriangle, ShieldCheck, ClipboardList, Activity } from "lucide-react";
 
 export default function Admin() {
   const q = useQuery({
@@ -18,7 +18,8 @@ export default function Admin() {
     { to: "/admin/applications", icon: <ClipboardList className="h-5 w-5" />, title: "Applications", desc: "Override application status on behalf of users", color: "text-orange-600" },
     { to: "/admin/verifications", icon: <ShieldCheck className="h-5 w-5" />, title: "Verifications", desc: "Approve KYC and badges", color: "text-brand-600", badge: q.data?.pending_verifications },
     { to: "/admin/reports", icon: <AlertTriangle className="h-5 w-5" />, title: "Reports", desc: "Abuse and dispute reports", color: "text-red-600", badge: q.data?.open_reports },
-    { to: "/admin/audit", icon: <FileText className="h-5 w-5" />, title: "Audit log", desc: "Every moderation action with timestamp", color: "text-slate-600" }
+    { to: "/admin/audit", icon: <FileText className="h-5 w-5" />, title: "Audit log", desc: "Every moderation action with timestamp", color: "text-slate-600" },
+    { to: "/admin/scoring", icon: <Activity className="h-5 w-5" />, title: "Live Scoring", desc: "All matches — live, upcoming, results. View scorecards and manage via scoring console.", color: "text-red-600", badge: q.data?.live_match_count }
   ];
 
   return (

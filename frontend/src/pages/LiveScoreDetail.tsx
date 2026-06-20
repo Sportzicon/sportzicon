@@ -204,25 +204,250 @@ function generateCommentary(
 }
 
 // ── Tab bar ───────────────────────────────────────────────────────────────────
-function TabBar({ active, onChange }: { active: string; onChange: (t: string) => void }) {
+const ALL_TABS = ["Live", "Scorecard", "Playing XI", "About"] as const;
+type TabName = typeof ALL_TABS[number];
+
+function TabBar({ active, onChange, isLive }: { active: string; onChange: (t: TabName) => void; isLive: boolean }) {
   return (
-    <div className="flex border-b border-hair bg-panel">
-      {["Live", "Scorecard"].map(t => (
-        <button
-          key={t}
-          onClick={() => onChange(t)}
-          className={`px-5 py-3 lab transition-colors ${
-            active === t
-              ? "border-b-2 border-brand-500 text-brand-500"
-              : "text-ink-sub hover:text-ink"
-          }`}
-        >
-          {t === "Live" && (
-            <span className="mr-1.5 inline-block w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse align-middle" />
+    <div className="flex border-b border-hair bg-panel overflow-x-auto">
+      {ALL_TABS.map(t => {
+        if (t === "Live" && !isLive) return null;
+        return (
+          <button
+            key={t}
+            onClick={() => onChange(t)}
+            className={`shrink-0 px-5 py-3 lab transition-colors ${
+              active === t
+                ? "border-b-2 border-brand-500 text-brand-500"
+                : "text-ink-sub hover:text-ink"
+            }`}
+          >
+            {t === "Live" && (
+              <span className="mr-1.5 inline-block w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse align-middle" />
+            )}
+            {t}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── PLAYING XI TAB ────────────────────────────────────────────────────────────
+function PlayingXITab({ matchId, match }: { matchId: string; match: any }) {
+  const { data, isLoading } = useQuery({
+    queryKey: ["match-xi", matchId],
+    queryFn: () => scoringApi.get(`/matches/${matchId}/xi`).then(r => r.data)
+  });
+
+  if (isLoading) return (
+    <div className="animate-pulse space-y-3 p-4">
+      <div className="h-48 bg-fill rounded" />
+      <div className="h-48 bg-fill rounded" />
+    </div>
+  );
+
+  const renderTeam = (team: any) => {
+    if (!team) return null;
+    const players: any[] = team.players ?? [];
+    const xiPlayers   = players.filter((p: any) => p.in_xi);
+    const benchPlayers = players.filter((p: any) => !p.in_xi);
+    const hasXI = xiPlayers.length > 0;
+
+    return (
+      <div className="bg-panel border border-hair rounded-lg overflow-hidden">
+        {/* Team header */}
+        <div className="flex items-center gap-2 px-4 py-3 bg-fill border-b border-hair">
+          {team.logo_url ? (
+            <img src={team.logo_url} className="w-7 h-7 rounded-full object-cover" alt="" />
+          ) : (
+            <div className="w-7 h-7 rounded-full bg-brand-100 flex items-center justify-center text-xs font-bold text-brand-600">
+              {(team.short_name || team.name || "?").charAt(0)}
+            </div>
           )}
-          {t}
-        </button>
-      ))}
+          <div>
+            <p className="font-semibold text-ink text-sm">{team.name}</p>
+            {team.short_name && <p className="lab text-ink-faint">{team.short_name}</p>}
+          </div>
+          {!hasXI && <span className="ml-auto lab text-ink-faint">XI not announced</span>}
+        </div>
+
+        {hasXI ? (
+          <>
+            <p className="lab text-ink-faint px-4 py-1.5 border-b border-hairsoft bg-fill/50">PLAYING XI</p>
+            {xiPlayers.map((p: any, idx: number) => (
+              <div key={p.id} className="flex items-center gap-3 px-4 py-2.5 border-b border-hairsoft last:border-0">
+                <span className="lab text-ink-faint w-5 text-right shrink-0">{idx + 1}</span>
+                {p.jersey_number != null && (
+                  <span className="lab font-mononum bg-fill border border-hair rounded px-1.5 py-0.5 text-ink-sub w-9 text-center shrink-0">
+                    #{p.jersey_number}
+                  </span>
+                )}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="font-semibold text-ink text-sm">{p.name}</span>
+                    {p.is_captain && (
+                      <span className="lab px-1.5 py-0.5 rounded bg-yellow-100 text-yellow-700 font-semibold">C</span>
+                    )}
+                    {p.is_keeper && (
+                      <span className="lab px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 font-semibold">WK</span>
+                    )}
+                  </div>
+                  {(p.role || p.batting_style) && (
+                    <p className="lab text-ink-faint">{[p.role, p.batting_style].filter(Boolean).join(" · ")}</p>
+                  )}
+                </div>
+              </div>
+            ))}
+
+            {benchPlayers.length > 0 && (
+              <>
+                <p className="lab text-ink-faint px-4 py-1.5 border-t border-hair bg-fill/50">SQUAD (NOT PLAYING)</p>
+                {benchPlayers.map((p: any) => (
+                  <div key={p.id} className="flex items-center gap-3 px-4 py-2 border-b border-hairsoft last:border-0 opacity-40">
+                    {p.jersey_number != null && (
+                      <span className="lab font-mononum text-ink-faint w-9 text-center">#{p.jersey_number}</span>
+                    )}
+                    <span className="text-ink text-sm">{p.name}</span>
+                    {p.role && <span className="lab text-ink-faint ml-auto">{p.role}</span>}
+                  </div>
+                ))}
+              </>
+            )}
+          </>
+        ) : (
+          <div>
+            {players.length > 0 ? (
+              <>
+                <p className="lab text-ink-faint px-4 py-1.5 border-b border-hairsoft bg-fill/50">FULL SQUAD</p>
+                {players.map((p: any) => (
+                  <div key={p.id} className="flex items-center gap-3 px-4 py-2.5 border-b border-hairsoft last:border-0">
+                    {p.jersey_number != null && (
+                      <span className="lab font-mononum bg-fill border border-hair rounded px-1.5 py-0.5 text-ink-faint w-9 text-center shrink-0">
+                        #{p.jersey_number}
+                      </span>
+                    )}
+                    <div className="flex-1">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-ink text-sm font-medium">{p.name}</span>
+                        {p.is_captain && <span className="lab text-yellow-600 font-semibold">(c)</span>}
+                        {p.is_keeper && <span className="lab text-blue-600">(wk)</span>}
+                      </div>
+                      {p.role && <p className="lab text-ink-faint">{p.role}</p>}
+                    </div>
+                  </div>
+                ))}
+              </>
+            ) : (
+              <p className="p-8 text-center lab text-ink-faint">No squad data yet.</p>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const xiData = data ?? { team1: match?.team1, team2: match?.team2 };
+
+  return (
+    <div className="p-4 space-y-4">
+      {data?.xi_locked && (
+        <div className="flex items-center gap-2 px-3 py-2 rounded bg-green-50 border border-green-200 lab text-green-700 text-xs">
+          ✓ Playing XI locked
+        </div>
+      )}
+      <div className="grid md:grid-cols-2 gap-4">
+        {renderTeam(xiData.team1)}
+        {renderTeam(xiData.team2)}
+      </div>
+    </div>
+  );
+}
+
+// ── ABOUT TAB ─────────────────────────────────────────────────────────────────
+function AboutTab({ match }: { match: any }) {
+  const t = match.tournament ?? {};
+
+  const Row = ({ label, value }: { label: string; value?: string | null }) => {
+    if (!value) return null;
+    return (
+      <div className="flex gap-3 py-2.5 border-b border-hairsoft last:border-0">
+        <span className="lab text-ink-faint w-36 shrink-0">{label}</span>
+        <span className="text-sm text-ink font-medium flex-1">{value}</span>
+      </div>
+    );
+  };
+
+  const Section = ({ title, children }: { title: string; children: React.ReactNode }) => (
+    <div className="bg-panel border border-hair rounded-lg overflow-hidden">
+      <div className="px-4 py-2.5 bg-fill border-b border-hair">
+        <p className="lab text-ink-sub font-semibold">{title}</p>
+      </div>
+      <div className="px-4">{children}</div>
+    </div>
+  );
+
+  const tossTeam = match.toss_winner_id === match.team1?.id
+    ? match.team1?.name
+    : match.toss_winner_id === match.team2?.id
+    ? match.team2?.name
+    : null;
+
+  return (
+    <div className="p-4 space-y-4">
+      {/* Match result */}
+      {match.result_summary && (
+        <div className="px-4 py-3 rounded-lg bg-green-50 border border-green-200 text-sm font-semibold text-green-700">
+          {match.result_summary}
+        </div>
+      )}
+
+      <Section title="Match Details">
+        <Row label="Match" value={match.title ?? (match.match_number ? `Match #${match.match_number}` : null)} />
+        <Row label="Sport" value={match.sport ? match.sport.charAt(0).toUpperCase() + match.sport.slice(1) : null} />
+        <Row label="Format" value={match.format ?? t.format} />
+        <Row label="Match Type" value={match.match_type ? match.match_type.charAt(0).toUpperCase() + match.match_type.slice(1) : null} />
+        <Row label="Status" value={match.status ? match.status.charAt(0).toUpperCase() + match.status.slice(1) : null} />
+      </Section>
+
+      <Section title="Venue & Schedule">
+        <Row label="Venue" value={match.venue} />
+        <Row label="Location" value={t.location} />
+        {match.scheduled_at && (
+          <div className="flex gap-3 py-2.5 border-b border-hairsoft last:border-0">
+            <span className="lab text-ink-faint w-36 shrink-0">Date & Time</span>
+            <span className="text-sm text-ink font-medium flex-1">
+              {new Date(match.scheduled_at).toLocaleDateString("en-IN", {
+                weekday: "long", day: "numeric", month: "long", year: "numeric"
+              })}
+              {" at "}
+              {new Date(match.scheduled_at).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
+            </span>
+          </div>
+        )}
+      </Section>
+
+      {tossTeam && (
+        <Section title="Toss">
+          <Row label="Won by" value={tossTeam} />
+          <Row label="Decision" value={match.toss_decision ? `Elected to ${match.toss_decision}` : null} />
+        </Section>
+      )}
+
+      <Section title="Tournament">
+        <Row label="Tournament" value={t.name} />
+        <Row label="Season" value={t.season} />
+        <Row label="Ball Type" value={t.ball_type ? t.ball_type.charAt(0).toUpperCase() + t.ball_type.slice(1) + " ball" : null} />
+      </Section>
+
+      {(match.umpire1 || match.umpire2 || match.tv_umpire || match.match_referee) && (
+        <Section title="Match Officials">
+          <Row label="Umpire 1" value={match.umpire1} />
+          <Row label="Umpire 2" value={match.umpire2} />
+          <Row label="TV Umpire" value={match.tv_umpire} />
+          <Row label="Match Referee" value={match.match_referee} />
+        </Section>
+      )}
     </div>
   );
 }
@@ -966,7 +1191,7 @@ function ScorecardTab({ match, balls }: { match: any; balls: any[] }) {
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function LiveScoreDetail() {
   const { matchId } = useParams<{ matchId: string }>();
-  const [activeTab, setActiveTab] = useState("Live");
+  const [activeTab, setActiveTab] = useState<TabName | null>(null);
 
   const { data: match, isLoading, isFetching, refetch } = useQuery({
     queryKey: queryKeys.liveMatchDetail(matchId ?? ""),
@@ -1002,6 +1227,9 @@ export default function LiveScoreDetail() {
   }, [match?.innings, activeInnId, activeBallsData]);
 
   const balls = activeBallsData ?? [];
+
+  // Auto-select default tab once match loads
+  const resolvedTab: TabName = activeTab ?? (match?.status === "live" ? "Live" : "Scorecard");
 
   if (isLoading) return (
     <div className="py-24 flex items-center justify-center">
@@ -1061,12 +1289,12 @@ export default function LiveScoreDetail() {
           </div>
         </div>
 
-        <TabBar active={activeTab} onChange={setActiveTab} />
+        <TabBar active={resolvedTab} onChange={setActiveTab} isLive={match.status === "live"} />
 
-        {activeTab === "Live"
-          ? <LiveTab match={match} balls={balls} />
-          : <ScorecardTab match={match} balls={allBalls} />
-        }
+        {resolvedTab === "Live"       && <LiveTab match={match} balls={balls} />}
+        {resolvedTab === "Scorecard"  && <ScorecardTab match={match} balls={allBalls} />}
+        {resolvedTab === "Playing XI" && <PlayingXITab matchId={matchId!} match={match} />}
+        {resolvedTab === "About"      && <AboutTab match={match} />}
       </div>
     </div>
   );

@@ -4,6 +4,7 @@ import Home from "./pages/Home";
 import TournamentList from "./pages/TournamentList";
 import TournamentDetail from "./pages/TournamentDetail";
 import NewTournament from "./pages/NewTournament";
+import AllMatches from "./pages/AllMatches";
 import MatchDetail from "./pages/MatchDetail";
 import LiveScoring from "./pages/LiveScoring";
 import PlayerStats from "./pages/PlayerStats";
@@ -25,6 +26,7 @@ export default function App() {
         <Route path="/tournaments/new" element={<ProtectedRoute><NewTournament /></ProtectedRoute>} />
         <Route path="/tournaments/:id" element={<TournamentDetail />} />
         <Route path="/tournaments/:id/edit" element={<ProtectedRoute><NewTournament /></ProtectedRoute>} />
+        <Route path="/matches" element={<AllMatches />} />
         <Route path="/matches/:matchId" element={<MatchDetail />} />
         <Route path="/matches/:matchId/score" element={<ProtectedRoute><LiveScoring /></ProtectedRoute>} />
         <Route path="/matches/:matchId/config" element={<ProtectedRoute><MatchConfig /></ProtectedRoute>} />

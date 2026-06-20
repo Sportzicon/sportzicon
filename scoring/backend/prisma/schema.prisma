@@ -98,6 +98,9 @@ model Tournament {
   banner_url  String?
   is_public   Boolean          @default(true)
 
+  // Link to main Sportivox Opportunity (type=tournament) — cross-DB reference, no FK
+  opportunity_id String?       @db.Uuid
+
   created_by  String           @db.Uuid
   creator     User             @relation(fields: [created_by], references: [id], onDelete: Cascade)
 
@@ -109,6 +112,7 @@ model Tournament {
 
   @@index([status, sport])
   @@index([created_by])
+  @@index([opportunity_id])
 }
 
 model Team {
@@ -184,6 +188,15 @@ model Match {
   // Match context for analytics filtering
   match_type     String?     // "league" · "friendly" · "trial" · "academy" · "knockout"
 
+  // Match officials
+  umpire1        String?
+  umpire2        String?
+  tv_umpire      String?
+  match_referee  String?
+
+  // Player of the Match — no FK (cross-team reference, UUID only)
+  player_of_match_id String? @db.Uuid
+
   // For non-cricket sports: flexible event-based score data
   match_data     Json?       // { team1_score: 0, team2_score: 0, events: [] }
 
@@ -210,6 +223,7 @@ model MatchPlayer {
   team_id          String  @db.Uuid
   player_id        String  @db.Uuid
   batting_position Int?    // 1-11, set when XI is locked
+  is_impact_player Boolean @default(false) // IPL Impact Player rule substitution
 
   match   Match   @relation(fields: [match_id], references: [id], onDelete: Cascade)
   team    Team    @relation(fields: [team_id], references: [id], onDelete: Cascade)

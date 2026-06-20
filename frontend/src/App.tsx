@@ -61,6 +61,7 @@ import AdminApplications from "./pages/admin/AdminApplications";
 import AdminCreateUser from "./pages/admin/AdminCreateUser";
 import AdminCreateOrganization from "./pages/admin/AdminCreateOrganization";
 import AdminCreateOpportunity from "./pages/admin/AdminCreateOpportunity";
+import AdminScoring from "./pages/admin/AdminScoring";
 
 import LiveScores from "./pages/LiveScores";
 import LiveScoreDetail from "./pages/LiveScoreDetail";
@@ -137,6 +138,7 @@ export default function App() {
         <Route path="/admin/reports" element={<ProtectedRoute roles={["admin"]}><AdminReports /></ProtectedRoute>} />
         <Route path="/admin/verifications" element={<ProtectedRoute roles={["admin"]}><AdminVerifications /></ProtectedRoute>} />
         <Route path="/admin/audit" element={<ProtectedRoute roles={["admin"]}><AdminAuditLog /></ProtectedRoute>} />
+        <Route path="/admin/scoring" element={<ProtectedRoute roles={["admin"]}><AdminScoring /></ProtectedRoute>} />
 
         {/* Scoring console — integrated into main app */}
         <Route path="/scoring" element={<ProtectedRoute><ScoringHome /></ProtectedRoute>} />

@@ -76,9 +76,12 @@ export const queryKeys = {
   orgOpportunities: (orgId: string) => ["org-opps", orgId] as const,
 
   // Live scores (public, no auth)
-  liveMatches:    () => ["live-matches-public"] as const,
-  liveMatchDetail:(id: string) => ["live-match-detail", id] as const,
-  liveBalls:      (innId: string) => ["live-balls", innId] as const,
+  liveMatches:        () => ["live-matches-public"] as const,
+  upcomingMatches:    () => ["upcoming-matches-public"] as const,
+  recentMatches:      () => ["recent-matches-public"] as const,
+  allMatchesByStatus: (status: string) => ["all-matches-public", status] as const,
+  liveMatchDetail:    (id: string) => ["live-match-detail", id] as const,
+  liveBalls:          (innId: string) => ["live-balls", innId] as const,
 
   // Scoring subsystem (separate auth context)
   scoringLive:                  () => ["scoring-live"] as const,

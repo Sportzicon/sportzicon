@@ -8,7 +8,7 @@ import { useAuthStore } from "../store/auth";
 import { PageHeader, Spinner, EmptyState, StatusPill, Kicker, Pagination } from "../components/UI";
 
 const PAGE_SIZE = 10;
-import { Trash2, Pencil, MoreVertical } from "lucide-react";
+import { Trash2, Pencil, MoreVertical, Radio, Link2 } from "lucide-react";
 import type { Opportunity } from "../types";
 
 export default function Tournaments() {
@@ -99,6 +99,25 @@ export default function Tournaments() {
                     <div><div className="lab">Registered</div><div className="font-mononum text-sm text-ink mt-0.5">{o.application_count}</div></div>
                   </div>
                 </Link>
+
+                {/* Scoring integration */}
+                <div className="px-5 pb-3 pt-3 border-t border-hairsoft flex items-center gap-2 flex-wrap">
+                  {(o as any).scoring_tournament_id ? (
+                    <Link
+                      to={`/scoring/tournaments/${(o as any).scoring_tournament_id}`}
+                      className="btn-secondary text-xs min-h-0 px-3 py-1.5 flex items-center gap-1 text-red-600 border-red-200 hover:bg-red-50"
+                    >
+                      <Radio className="w-3 h-3" /> Live Scoring
+                    </Link>
+                  ) : hasRole(user?.role ?? "", "organizer", "scorer") ? (
+                    <Link
+                      to={`/scoring/tournaments/new?opportunity_id=${o.id}`}
+                      className="btn-secondary text-xs min-h-0 px-3 py-1.5 flex items-center gap-1"
+                    >
+                      <Link2 className="w-3 h-3" /> Set up scoring
+                    </Link>
+                  ) : null}
+                </div>
 
                 {isPoster && (
                   <div className="px-5 pb-4 flex justify-end relative border-t border-hairsoft pt-3">

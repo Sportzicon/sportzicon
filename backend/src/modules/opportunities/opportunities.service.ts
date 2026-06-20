@@ -95,6 +95,23 @@ export async function updateOpportunity(id: string, actorId: string, actorRole: 
   return updated;
 }
 
+export async function linkScoringTournament(id: string, actorId: string, actorRole: Role, scoringTournamentId: string | null) {
+  const opp = await prisma.opportunity.findUnique({
+    where: { id },
+    include: { organization: { select: { owner_user_id: true } } }
+  });
+  if (!opp) throw NotFound("Opportunity not found");
+  if (opp.organization.owner_user_id !== actorId && actorRole !== "admin")
+    throw Forbidden("Only the organization owner or an admin can link a scoring tournament");
+
+  const updated = await prisma.opportunity.update({
+    where: { id },
+    data: { scoring_tournament_id: scoringTournamentId }
+  });
+  await invalidateOppListCache();
+  return updated;
+}
+
 export async function getOpportunity(id: string) {
   const opp = await prisma.opportunity.findUnique({
     where: { id },

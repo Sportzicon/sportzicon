@@ -201,6 +201,9 @@ model Opportunity {
   status                    OpportunityStatus @default(open)
   application_count         Int               @default(0)
 
+  // Link to scoring console Tournament — cross-DB reference, no FK
+  scoring_tournament_id     String?
+
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 
