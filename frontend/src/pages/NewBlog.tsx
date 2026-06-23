@@ -209,7 +209,7 @@ export default function NewBlog() {
 
       await qc.invalidateQueries({ queryKey: queryKeys.blogs() });
       if (id) await qc.invalidateQueries({ queryKey: queryKeys.blog(id) });
-      navigate(`/blogs/${r.data.blog.slug || r.data.blog.id}`);
+      navigate(`/blogs/${r.data.blog.id}`);
     } catch (e) {
       setErr(humanizeError(e));
     } finally {

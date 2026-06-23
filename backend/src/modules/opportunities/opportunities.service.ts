@@ -187,6 +187,37 @@ export async function deleteOpportunity(id: string, actorId: string, actorRole: 
   return { ok: true };
 }
 
+export async function listMyOpportunities(actorId: string) {
+  const orgs = await prisma.organization.findMany({
+    where: { owner_user_id: actorId },
+    select: { id: true },
+  });
+  const orgIds = orgs.map((o) => o.id);
+
+  const rows = await prisma.opportunity.findMany({
+    where: { org_id: { in: orgIds } },
+    orderBy: { created_at: "desc" },
+    include: {
+      organization: { select: { org_name: true, city: true, state: true, country: true } },
+      _count: { select: { applications: true } },
+    },
+  });
+
+  return rows.map((r) => ({
+    ...r,
+    org_name: r.organization?.org_name,
+    city: r.organization?.city,
+    state: r.organization?.state,
+    country: r.organization?.country,
+    application_count: r._count.applications,
+    created_at: (r.created_at as unknown as Date).getTime(),
+    updated_at: (r.updated_at as unknown as Date).getTime(),
+    application_deadline: r.application_deadline
+      ? (r.application_deadline as unknown as Date).toISOString()
+      : null,
+  }));
+}
+
 export async function listOpportunities(q: {
   sport?: string;
   type?: string;

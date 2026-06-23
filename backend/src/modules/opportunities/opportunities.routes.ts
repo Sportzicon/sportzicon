@@ -26,6 +26,16 @@ router.post(
 );
 
 router.get(
+  "/mine",
+  requireAuth,
+  requireRole(...ROLES.CLUB_MANAGERS),
+  asyncHandler(async (req, res) => {
+    const items = await svc.listMyOpportunities(req.user!.sub);
+    res.json({ items });
+  })
+);
+
+router.get(
   "/",
   optionalAuth,
   validate(listOpportunitiesQuery, "query"),

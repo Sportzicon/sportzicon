@@ -3,6 +3,13 @@ import { opportunityService, organizationService } from "../services";
 import { queryKeys } from "./queryKeys";
 import type { OpportunityFilters, CreateOpportunityRequest, UpdateOpportunityRequest } from "../models";
 
+export function useMyOpportunities() {
+  return useQuery({
+    queryKey: queryKeys.myOpportunities(),
+    queryFn: () => opportunityService.getMine(),
+  });
+}
+
 export function useOpportunities(filters: OpportunityFilters = {}) {
   const qc = useQueryClient();
 

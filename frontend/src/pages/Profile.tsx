@@ -9,7 +9,7 @@ import { isAdmin } from "../utils/roles";
 import { Spinner, VerifiedBadge, Avatar, SectionHead, Kicker, StatCard, Placeholder, Badge, StatusPill } from "../components/UI";
 import type { Post, User } from "../types";
 import { useSavedOpportunities } from "../store/savedOpportunities";
-import { Bookmark, Camera, FileText, Trash2, Upload, X } from "lucide-react";
+import { ArrowLeft, Bookmark, Camera, FileText, Trash2, Upload, X } from "lucide-react";
 
 // ── Cricbuzz-style cricket stats table ───────────────────────────────────────
 function CricketStatRow({ label, values }: { label: string; values: (string | number)[] }) {
@@ -309,14 +309,21 @@ export default function Profile() {
     onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.userDocs(id) }),
   });
 
-  async function toggleFollow() {
-    if (followStatus.data) await api.delete(`/follow/${id}`);
-    else await api.post(`/follow/${id}`);
-    qc.invalidateQueries({ queryKey: queryKeys.followStatus(id) });
-    // Invalidate both profiles so follower_count / following_count refresh
-    qc.invalidateQueries({ queryKey: queryKeys.user(id) });
-    if (me?.id) qc.invalidateQueries({ queryKey: queryKeys.user(me.id) });
-  }
+  const [followError, setFollowError] = useState<string | null>(null);
+
+  const followMutation = useMutation({
+    mutationFn: async () => {
+      if (followStatus.data) return api.delete(`/follow/${id}`);
+      return api.post(`/follow/${id}`);
+    },
+    onSuccess: () => {
+      setFollowError(null);
+      qc.invalidateQueries({ queryKey: queryKeys.followStatus(id) });
+      qc.invalidateQueries({ queryKey: queryKeys.user(id) });
+      if (me?.id) qc.invalidateQueries({ queryKey: queryKeys.user(me.id) });
+    },
+    onError: (err) => setFollowError(humanizeError(err)),
+  });
 
   if (userQ.isLoading) return <div className="flex justify-center p-12"><Spinner className="text-brand-500" /></div>;
   const u = userQ.data;
@@ -345,6 +352,15 @@ export default function Profile() {
 
   return (
     <div className="space-y-6">
+      {/* Back navigation */}
+      <button
+        onClick={() => navigate(-1)}
+        className="flex items-center gap-1.5 text-sm text-ink-sub hover:text-ink transition min-h-[44px] -mb-2"
+      >
+        <ArrowLeft className="h-4 w-4" />
+        Back
+      </button>
+
       {/* Cover band */}
       <div className="card overflow-hidden">
         <div className="relative h-32 bg-ink group/cover">
@@ -450,8 +466,16 @@ export default function Profile() {
               )}
               {!isMe && (
                 <>
-                  <button className="btn-primary w-full sm:w-auto min-h-[44px]" onClick={toggleFollow}>
-                    {followStatus.data ? "Following ✓" : "Follow"}
+                  <button
+                    className="btn-primary w-full sm:w-auto min-h-[44px] disabled:opacity-60"
+                    onClick={() => followMutation.mutate()}
+                    disabled={followMutation.isPending || followStatus.isLoading}
+                  >
+                    {followMutation.isPending
+                      ? "…"
+                      : followStatus.data
+                      ? "Following ✓"
+                      : "Follow"}
                   </button>
                   <button className="btn-secondary w-full sm:w-auto min-h-[44px]" onClick={() => navigate(`/messages?to=${u.id}`)}>
                     Message
@@ -460,6 +484,10 @@ export default function Profile() {
               )}
             </div>
           </div>
+
+          {followError && (
+            <div className="mt-2 rounded border border-red-200 bg-red-50 px-3 py-2 text-[12px] text-red-700">{followError}</div>
+          )}
 
           {/* Bio — full width, wraps correctly */}
           {u.bio && <p className="mt-5 text-[15px] leading-relaxed text-ink-70">{u.bio}</p>}

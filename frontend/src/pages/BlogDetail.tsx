@@ -52,7 +52,7 @@ function TableOfContents({ items, className }: { items: TocItem[]; className?: s
 export default function BlogDetail() {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
-  const { idOrSlug = "" } = useParams();
+  const { id: idOrSlug = "" } = useParams();
   const [pendingDelete, setPendingDelete] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [tocOpen, setTocOpen] = useState(false);

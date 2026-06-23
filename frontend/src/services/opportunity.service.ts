@@ -16,6 +16,11 @@ export class OpportunityService {
     return res.data;
   }
 
+  async getMine(): Promise<Opportunity[]> {
+    const res = await this.client.get<{ items: Opportunity[] }>("/opportunities/mine");
+    return res.data.items;
+  }
+
   async get(id: string): Promise<Opportunity> {
     const res = await this.client.get<{ opportunity: Opportunity }>(`/opportunities/${id}`);
     return res.data.opportunity;

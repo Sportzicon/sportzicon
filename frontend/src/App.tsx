@@ -118,7 +118,7 @@ export default function App() {
         <Route path="/blogs" element={<ProtectedRoute><Blogs /></ProtectedRoute>} />
         <Route path="/blogs/new" element={<ProtectedRoute><NewBlog /></ProtectedRoute>} />
         <Route path="/blogs/:id/edit" element={<ProtectedRoute><NewBlog /></ProtectedRoute>} />
-        <Route path="/blogs/:idOrSlug" element={<ProtectedRoute><BlogDetail /></ProtectedRoute>} />
+        <Route path="/blogs/:id" element={<ProtectedRoute><BlogDetail /></ProtectedRoute>} />
         <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
         <Route path="/messages/:id" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
         <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />

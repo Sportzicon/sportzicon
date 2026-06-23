@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { userService } from "../services";
 import { api } from "../api/client";
-import { useFeed, useOpportunities, useMyApplications } from "../hooks";
+import { useFeed, useOpportunities, useMyApplications, useMyOpportunities } from "../hooks";
 import { useAuthStore } from "../store/auth";
 import { queryKeys } from "../hooks/queryKeys";
 import { hasRole, isAdmin } from "../utils/roles";
@@ -273,8 +273,8 @@ function ClubDashboard() {
   const { user } = useAuthStore();
   if (!user) return null;
 
-  const { list: openOpps } = useOpportunities({ status: "open", limit: 5 });
-  const openCount = openOpps.data?.length ?? 0;
+  const openOpps = useMyOpportunities();
+  const openCount = (openOpps.data ?? []).filter((o: Opportunity) => o.status === "open").length;
 
   return (
     <div className="space-y-5">
@@ -311,9 +311,9 @@ function ClubDashboard() {
         </div>
         {openOpps.isLoading ? (
           <div className="panel p-6 flex justify-center"><Spinner className="text-brand-500" /></div>
-        ) : openOpps.data && openOpps.data.length > 0 ? (
+        ) : openOpps.data && openOpps.data.filter((o: Opportunity) => o.status === "open").length > 0 ? (
           <ul className="panel divide-y divide-hairsoft">
-            {openOpps.data.map((o: Opportunity) => {
+            {openOpps.data.filter((o: Opportunity) => o.status === "open").slice(0, 5).map((o: Opportunity) => {
               const days = Math.ceil((new Date(o.application_deadline).getTime() - Date.now()) / 86400_000);
               return (
                 <li key={o.id}>

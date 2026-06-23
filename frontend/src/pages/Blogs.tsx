@@ -28,7 +28,7 @@ function BlogCard({ b, layout }: { b: Blog; layout: "grid" | "list" }) {
     // Desktop: image left, content right
     return (
       <Link
-        to={`/blogs/${b.slug || b.id}`}
+        to={`/blogs/${b.id}`}
         className="panel overflow-hidden hover:shadow-card transition group flex gap-0"
       >
         {b.cover_image_url ? (
@@ -70,7 +70,7 @@ function BlogCard({ b, layout }: { b: Blog; layout: "grid" | "list" }) {
   // Grid card (mobile + desktop grid)
   return (
     <Link
-      to={`/blogs/${b.slug || b.id}`}
+      to={`/blogs/${b.id}`}
       className="panel overflow-hidden hover:shadow-card transition group flex flex-col"
     >
       {b.cover_image_url && (

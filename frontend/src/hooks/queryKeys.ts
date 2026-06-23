@@ -13,6 +13,7 @@ export const queryKeys = {
   opportunities:  (filters?: OpportunityFilters) => ["opportunities", filters ?? {}] as const,
   opportunitiesInfinite: (filters?: OpportunityFilters) => ["opportunities", "infinite", filters ?? {}] as const,
   opportunity:    (id: string) => ["opportunity", id] as const,
+  myOpportunities: () => ["opportunities", "mine"] as const,
   myOrgs:         () => ["my-orgs"] as const,
 
   // Applications
