@@ -173,6 +173,7 @@ function ScoringTournamentsInner() {
       <PageHeader
         title="Tournaments"
         subtitle={ongoingItems.length > 0 ? `${ongoingItems.length} tournament${ongoingItems.length > 1 ? "s" : ""} ongoing now` : "All tournaments — scoring & upcoming"}
+        sticky
         action={canManage && (
           <Link to="/scoring/tournaments/new" className="btn-accent text-sm flex items-center gap-1">
             <Plus className="w-3.5 h-3.5" /> New tournament

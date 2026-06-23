@@ -261,6 +261,7 @@ export default function NewOrganization() {
       <PageHeader
         title={isEdit ? "Edit organization" : "Create an organization"}
         subtitle={isEdit ? `Editing ${orgQ.data?.org_name ?? "…"}` : "Build your presence"}
+        sticky
         action={
           <div className="hidden sm:flex gap-2">
             <button type="button" className="btn-ghost" onClick={() => navigate(-1)}>Cancel</button>
@@ -465,7 +466,7 @@ export default function NewOrganization() {
       {err && <div className="rounded bg-red-50 border border-red-200 p-3 text-sm text-red-800">{err}</div>}
 
       {/* Sticky bottom bar on mobile */}
-      <div className="fixed bottom-0 left-0 right-0 sm:hidden bg-panel border-t border-hair px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] flex gap-2 z-40">
+      <div className="fixed bottom-[calc(56px+env(safe-area-inset-bottom))] left-0 right-0 sm:hidden bg-panel border-t border-hair px-4 py-3 flex gap-2 z-40">
         <button type="button" className="btn-ghost flex-1 min-h-[44px]" onClick={() => navigate(-1)}>Cancel</button>
         <button type="submit" className="btn-accent flex-1 min-h-[44px]" disabled={busy || !!uploading}>
           {busy ? (isEdit ? "Saving…" : "Creating…") : isEdit ? "Save changes" : "Create →"}

@@ -297,6 +297,7 @@ export default function Applicants() {
       <PageHeader
         title={opp ? opp.title : "Applicant review"}
         subtitle="Post → Review → Select"
+        sticky
         action={
           <Link to={`/opportunities/${id}`} className="btn-ghost text-[12.5px] min-h-[44px] flex items-center">
             View listing →

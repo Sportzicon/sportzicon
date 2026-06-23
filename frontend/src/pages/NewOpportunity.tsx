@@ -150,6 +150,7 @@ export default function NewOpportunity() {
         <PageHeader
           title={isEdit ? "Edit opportunity" : "Post an opportunity"}
           subtitle="New listing"
+          sticky
           action={
             <div className="flex gap-2">
               <button type="button" className="btn-ghost min-h-[44px]" onClick={() => navigate(-1)}>Cancel</button>
@@ -307,7 +308,7 @@ export default function NewOpportunity() {
       </div>
 
       {/* Mobile sticky bottom bar */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-paper border-t border-hair px-4 py-3 pb-[calc(12px+env(safe-area-inset-bottom))] flex gap-3">
+      <div className="lg:hidden fixed bottom-[calc(56px+env(safe-area-inset-bottom))] left-0 right-0 z-40 bg-paper border-t border-hair px-4 py-3 flex gap-3">
         <button type="button" className="btn-ghost flex-1 min-h-[44px]" onClick={() => navigate(-1)}>Cancel</button>
         <button type="submit" className="btn-accent flex-1 min-h-[44px]" disabled={busy}>
           {busy ? (isEdit ? "Saving…" : "Publishing…") : isEdit ? "Save changes" : "Publish →"}

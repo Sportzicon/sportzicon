@@ -11,6 +11,15 @@ import {
   bowlerVariantFromShort, bowlerShortFromVariant
 } from "../../data/cricket";
 
+function useLiveClock() {
+  const [time, setTime] = useState(() => new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }));
+  useEffect(() => {
+    const id = setInterval(() => setTime(new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })), 1000);
+    return () => clearInterval(id);
+  }, []);
+  return time;
+}
+
 const ov  = (b: number) => `${Math.floor(b / 6)}.${b % 6}`;
 const sr  = (r: number, b: number) => b > 0 ? ((r / b) * 100).toFixed(0) : "–";
 const eco = (r: number, b: number) => b > 0 ? ((r / b) * 6).toFixed(2) : "–";
@@ -162,6 +171,7 @@ function ScoringLiveInner() {
   const navigate    = useNavigate();
   const qc          = useQueryClient();
   const user        = useAuthStore(s => s.user);
+  const liveTime    = useLiveClock();
 
   const [activeInningsId, setActiveInningsId] = useState<string | null>(null);
   const [ball, setBall] = useState<BallInput>({ ...DEFAULT_BALL });
@@ -459,8 +469,11 @@ function ScoringLiveInner() {
 
         {/* Controls */}
         <div className="flex items-center gap-0.5 shrink-0">
-          <span className="lab text-[10px] text-white bg-red-500 px-2 py-0.5 rounded-full flex items-center gap-1 animate-pulse mr-2">
-            <Radio className="w-2.5 h-2.5" /> LIVE
+          <span className="flex items-center gap-2 mr-2">
+            <span className="lab text-[10px] text-white bg-red-500 px-2 py-0.5 rounded-full flex items-center gap-1 animate-pulse">
+              <Radio className="w-2.5 h-2.5" /> LIVE
+            </span>
+            <span className="font-mononum text-[11px] text-paper/60 tabular-nums">{liveTime}</span>
           </span>
           {activeInnings && (
             <Link to={`/scoring/innings/${activeInnings.id}/analytics`}

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useParams } from "react-router-dom";
 import { scoringApi } from "../../api/scoringClient";
@@ -18,6 +18,15 @@ const rrr = (tgt: number, r: number, b: number, maxB: number) => {
 };
 const proj = (r: number, b: number, maxB: number) =>
   b > 0 ? Math.round((r / b) * maxB) : 0;
+
+function useLiveClock() {
+  const [time, setTime] = useState(() => new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }));
+  useEffect(() => {
+    const id = setInterval(() => setTime(new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })), 1000);
+    return () => clearInterval(id);
+  }, []);
+  return time;
+}
 
 // ── Stat tile ─────────────────────────────────────────────────────────────────
 function Tile({ label, value, sub, accent }: { label: string; value: string | number; sub?: string; accent?: string }) {
@@ -189,6 +198,7 @@ function InningsPanel({ inn, match }: { inn: any; match: any }) {
   const maxBalls   = (match.tournament?.overs_per_innings ?? 20) * 6;
   const battingTeam = inn.batting_team_id === match.team1?.id ? match.team1 : match.team2;
   const isLive     = !inn.is_completed;
+  const liveTime   = useLiveClock();
 
   const batted = (inn.batting_entries ?? []).filter((e: any) => e.status !== "yet_to_bat");
   const dnb    = (inn.batting_entries ?? []).filter((e: any) => e.status === "yet_to_bat");
@@ -220,8 +230,11 @@ function InningsPanel({ inn, match }: { inn: any; match: any }) {
             {inn.innings_number === 1 ? "1st" : "2nd"} Innings · {battingTeam?.name}
           </p>
           {isLive && (
-            <span className="flex items-center gap-1 text-[11px] font-bold text-red-400 animate-pulse">
-              <Radio className="w-3 h-3" /> LIVE
+            <span className="flex items-center gap-2">
+              <span className="flex items-center gap-1 text-[11px] font-bold text-red-400 animate-pulse">
+                <Radio className="w-3 h-3" /> LIVE
+              </span>
+              <span className="font-mononum text-[11px] text-paper/50 tabular-nums">{liveTime}</span>
             </span>
           )}
         </div>
@@ -439,6 +452,7 @@ function ScoringMatchDetailInner() {
   const { matchId } = useParams<{ matchId: string }>();
   const user = useAuthStore(s => s.user);
   const canManage = hasRole(user?.role ?? "", "organizer", "scorer");
+  const liveTime = useLiveClock();
 
   const { data, isLoading } = useQuery({
     queryKey: queryKeys.scoringMatch(matchId ?? ""),
@@ -482,8 +496,11 @@ function ScoringMatchDetailInner() {
             {data.format && <span className="bg-fill rounded px-1.5 py-0.5 font-medium">{data.format}</span>}
             {data.venue && <span className="flex items-center gap-0.5"><MapPin className="w-3 h-3" />{data.venue}</span>}
             {data.status === "live" && (
-              <span className="font-mononum text-[10px] bg-red-100 text-red-600 px-2 py-0.5 rounded-full flex items-center gap-1 animate-pulse">
-                <Radio className="w-2.5 h-2.5" /> LIVE
+              <span className="flex items-center gap-2">
+                <span className="font-mononum text-[10px] bg-red-100 text-red-600 px-2 py-0.5 rounded-full flex items-center gap-1 animate-pulse">
+                  <Radio className="w-2.5 h-2.5" /> LIVE
+                </span>
+                <span className="font-mononum text-[11px] text-ink-sub tabular-nums">{liveTime}</span>
               </span>
             )}
           </div>

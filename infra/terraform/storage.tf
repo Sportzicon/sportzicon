@@ -11,7 +11,7 @@ resource "google_storage_bucket" "media" {
   public_access_prevention    = "inherited"
 
   cors {
-    origin          = [var.web_app_url]
+    origin          = concat([var.web_app_url], var.web_app_extra_origins)
     method          = ["GET", "HEAD", "PUT", "POST", "OPTIONS"]
     response_header = ["Content-Type", "x-goog-content-length-range"]
     max_age_seconds = 3600
@@ -49,7 +49,7 @@ resource "google_storage_bucket" "docs" {
   public_access_prevention    = "enforced"
 
   cors {
-    origin          = [var.web_app_url]
+    origin          = concat([var.web_app_url], var.web_app_extra_origins)
     method          = ["GET", "HEAD", "PUT", "POST", "OPTIONS"]
     response_header = ["Content-Type", "x-goog-content-length-range"]
     max_age_seconds = 3600

@@ -289,7 +289,7 @@ export default function LiveScores() {
           </div>
           <div className="flex items-center gap-3">
             {lastUpdated && (
-              <p className="lab text-ink-faint hidden sm:block">
+              <p className="lab text-ink-faint text-[10px] sm:text-xs">
                 Updated <span className="font-mononum">{lastUpdated}</span>
               </p>
             )}

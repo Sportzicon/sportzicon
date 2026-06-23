@@ -52,6 +52,7 @@ export default function Tournaments() {
       <PageHeader
         title="Tournaments"
         subtitle="Competitive events"
+        sticky
         action={
           <div className="flex gap-2">
             {isOrganizer && (

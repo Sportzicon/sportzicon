@@ -173,6 +173,7 @@ export default function EditProfile() {
       <PageHeader
         title="Edit profile"
         subtitle="Update your public profile"
+        sticky
         action={
           <div className="hidden lg:flex flex-wrap gap-2.5">
             <button type="button" className="btn-secondary" onClick={() => navigate(`/profile/${user.id}`)}>
@@ -689,7 +690,7 @@ export default function EditProfile() {
       </div>
 
       {/* Mobile sticky bottom save bar */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 lg:hidden bg-paper border-t border-hair px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] flex gap-2">
+      <div className="fixed bottom-[calc(56px+env(safe-area-inset-bottom))] left-0 right-0 z-40 lg:hidden bg-paper border-t border-hair px-4 py-3 flex gap-2">
         <button
           type="button"
           className="btn-secondary flex-1 min-h-[44px]"

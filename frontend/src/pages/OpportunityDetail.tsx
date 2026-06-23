@@ -536,20 +536,31 @@ export default function OpportunityDetail() {
       </div>
 
       {/* ── Mobile sticky bottom apply bar ── */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-paper border-t border-hair px-4 py-3 pb-[calc(12px+env(safe-area-inset-bottom))]">
+      <div className="lg:hidden fixed bottom-[calc(56px+env(safe-area-inset-bottom))] left-0 right-0 z-40 bg-paper border-t border-hair px-4 py-3">
         <div className="flex gap-3">
-          {user && !isPoster && (
-            <button
-              onClick={() => setSaved((s) => !s)}
-              className="btn-ghost min-h-[44px] px-3 flex-shrink-0"
-              title={saved ? "Unsave" : "Save"}
+          {isPoster ? (
+            <Link
+              to={`/opportunities/${o.id}/applicants`}
+              className="btn-secondary flex-1 min-h-[44px] flex items-center justify-center"
             >
-              {saved ? "★" : "☆"}
-            </button>
+              Review {o.application_count} applicants →
+            </Link>
+          ) : (
+            <>
+              {user && (
+                <button
+                  onClick={() => setSaved((s) => !s)}
+                  className="btn-ghost min-h-[44px] px-3 flex-shrink-0"
+                  title={saved ? "Unsave" : "Save"}
+                >
+                  {saved ? "★" : "☆"}
+                </button>
+              )}
+              <div className="flex-1">
+                <ApplyButton className="w-full" />
+              </div>
+            </>
           )}
-          <div className="flex-1">
-            <ApplyButton className="w-full" />
-          </div>
         </div>
       </div>
 

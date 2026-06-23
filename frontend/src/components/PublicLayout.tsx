@@ -51,6 +51,26 @@ export default function PublicLayout() {
     </nav>
   </div>
 
+  {/* Mobile-only secondary nav — horizontally scrollable pill row */}
+  <div
+    className="md:hidden flex items-center gap-2 border-t border-hair px-4 py-2"
+    style={{ overflowX: "scroll", WebkitOverflowScrolling: "touch", msOverflowStyle: "none", scrollbarWidth: "none" }}
+  >
+    <button onClick={() => handleScrollNav("for-athletes")} className="flex-shrink-0 font-mononum text-[11px] text-ink-70 hover:text-ink bg-fill border border-hair rounded px-3 py-1.5 min-h-[36px]">
+      For Athletes
+    </button>
+    <button onClick={() => handleScrollNav("for-clubs")} className="flex-shrink-0 font-mononum text-[11px] text-ink-70 hover:text-ink bg-fill border border-hair rounded px-3 py-1.5 min-h-[36px]">
+      For Clubs
+    </button>
+    <Link to="/how-it-works" className={`flex-shrink-0 font-mononum text-[11px] bg-fill border border-hair rounded px-3 py-1.5 min-h-[36px] flex items-center ${pathname === "/how-it-works" ? "text-ink border-brand-500" : "text-ink-70"}`}>
+      How it works
+    </Link>
+    <Link to="/live-scores" className={`flex-shrink-0 font-mononum text-[11px] bg-fill border border-hair rounded px-3 py-1.5 min-h-[36px] flex items-center gap-1 ${pathname === "/live-scores" ? "text-ink border-brand-500" : "text-ink-70"}`}>
+      <Activity className="w-3 h-3 text-red-500" />
+      Live Scores
+    </Link>
+  </div>
+
   {/* Ticker bar — fixed with the header */}
   <div className="flex flex-wrap items-center justify-between gap-1 border-t border-hair px-4 sm:px-8 lg:px-11 py-2.5">
     <span className="lab">The verified sports recruitment network</span>
@@ -58,8 +78,8 @@ export default function PublicLayout() {
   </div>
 </header>
 
-{/* Spacer = nav height (80px) + ticker height (~36px) = 116px */}
-<div className="h-[116px]" />
+{/* Spacer: mobile = nav(80) + sub-nav(44px) + ticker(36) = 160px; md+ = nav(80) + ticker(36) = 116px */}
+<div className="h-[160px] md:h-[116px]" />
 
       {/* ── Page content ──────────────────────────────────────────────────── */}
       <ErrorBoundary>

@@ -12,6 +12,7 @@ export default function AITips() {
       <PageHeader
         title="AI Performance Tips"
         subtitle="◆ AI coaching"
+        sticky
         action={
           <button className="btn-accent" disabled={m.isPending} onClick={() => m.mutate()}>
             {m.isPending ? "Thinking…" : "◆ Get tips"}

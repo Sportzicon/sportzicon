@@ -4,7 +4,7 @@ import { useAuthStore } from "../store/auth";
 import { PageHeader, Spinner, EmptyState, Avatar, Tabs } from "../components/UI";
 import { CommentSection } from "../components/CommentSection";
 import { ErrorBoundary } from "../components/ErrorBoundary";
-import { Heart, Trash2, Pencil, MoreVertical, MessageCircle, Image, RefreshCw } from "lucide-react";
+import { Heart, Trash2, Pencil, MoreVertical, MessageCircle, PenLine, RefreshCw } from "lucide-react";
 import { Link } from "react-router-dom";
 import { humanizeError } from "../api/client";
 import type { Post } from "../models";
@@ -298,7 +298,7 @@ export default function Feed() {
               <span className="flex-1 text-left text-sm text-ink-faint bg-fill rounded-full px-4 py-2">
                 Share an update…
               </span>
-              <Image className="h-5 w-5 text-ink-faint" />
+              <PenLine className="h-5 w-5 text-ink-faint" />
             </button>
           ) : (
             createForm

@@ -54,6 +54,7 @@ export default function MyOrganizations() {
       <PageHeader
         title={isAdmin ? "All organizations" : "My organizations"}
         subtitle={isAdmin ? "Platform-wide club & academy registry" : "Club & academy profiles"}
+        sticky
         action={
           <Link to="/organizations/new" className="hidden sm:inline-flex btn-accent min-h-[44px] items-center gap-1.5">
             <Plus className="h-4 w-4" /> New organization

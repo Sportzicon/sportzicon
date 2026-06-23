@@ -339,6 +339,7 @@ export default function Messages() {
       <PageHeader
         title="Messages"
         subtitle="Inbox"
+        sticky
         action={
           <button
             onClick={() => setPickerOpen(true)}

@@ -196,6 +196,7 @@ export default function Blogs() {
       <PageHeader
         title="Blogs"
         subtitle="Guides & insights"
+        sticky
         action={
           canWrite ? (
             <Link to="/blogs/new" className="btn-accent min-h-[44px] flex items-center">
@@ -295,7 +296,7 @@ export default function Blogs() {
                   <button
                     key={t}
                     onClick={() => setTag(tag === t ? "" : t)}
-                    className={`text-left px-3 py-2 rounded text-sm transition-colors min-h-[36px] ${
+                    className={`text-left px-3 py-2 rounded text-sm transition-colors min-h-[44px] ${
                       tag === t
                         ? "bg-brand-500 text-white"
                         : "hover:bg-fill text-ink-70"

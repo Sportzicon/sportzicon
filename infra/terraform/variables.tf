@@ -39,7 +39,13 @@ variable "web_image" {
 
 variable "web_app_url" {
   type        = string
-  description = "Public URL the web app is served on (used for CORS and email links). Set after first deploy."
+  description = "Primary public URL the web app is served on (used for email links). Set after first deploy."
+}
+
+variable "web_app_extra_origins" {
+  type        = list(string)
+  default     = []
+  description = "Additional CORS origins for the GCS buckets (e.g. www-prefixed domain, staging URL)."
 }
 
 variable "openai_api_key" {

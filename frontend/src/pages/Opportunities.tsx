@@ -28,7 +28,7 @@ function FilterGroup({ label, children }: { label: string; children: React.React
 
 function RadioItem({ label, on, onClick }: { label: string; on: boolean; onClick: () => void }) {
   return (
-    <div className="flex items-center gap-2 py-[5px] cursor-pointer min-h-[36px]" onClick={onClick}>
+    <div className="flex items-center gap-2 py-[5px] cursor-pointer min-h-[44px]" onClick={onClick}>
       <span className="w-3.5 h-3.5 rounded-full border flex-shrink-0 inline-flex items-center justify-center text-white text-[8px]"
         style={{ borderColor: on ? "#FA4D14" : "rgba(20,17,13,0.2)", background: on ? "#FA4D14" : "transparent" }}>
         {on ? "✓" : ""}
@@ -201,13 +201,13 @@ export default function Opportunities() {
         {/* ── Results ────────────────────────────────────────────────── */}
         <ErrorBoundary>
         <div>
-          <div className="hidden lg:block">
-            <PageHeader
-              title="Opportunities"
-              subtitle={oppsQuery.data ? `${oppsQuery.data.pages[0]?.total ?? 0} total` : "Opportunity index"}
-              action={canPost && <Link to="/opportunities/new" className="btn-accent">+ Post opportunity</Link>}
-            />
-          </div>
+          <PageHeader
+            title="Opportunities"
+            subtitle={oppsQuery.data ? `${oppsQuery.data.pages[0]?.total ?? 0} total` : "Opportunity index"}
+            action={canPost && <Link to="/opportunities/new" className="btn-accent min-h-[44px] flex items-center">+ Post opportunity</Link>}
+            sticky
+            className="hidden lg:flex"
+          />
 
           {oppsQuery.isLoading ? (
             <div className="panel p-8 flex justify-center"><Spinner className="text-brand-500" /></div>
@@ -286,7 +286,7 @@ export default function Opportunities() {
                           {hasRole(user?.role ?? "", "athlete") && !deadline.closed && spotsLeft !== 0 && (
                             <Link
                               to={`/opportunities/${o.id}`}
-                              className="btn-accent text-[11px] px-3 min-h-[36px] flex items-center"
+                              className="btn-accent text-[11px] px-3 min-h-[44px] flex items-center"
                             >
                               Apply
                             </Link>
@@ -319,8 +319,8 @@ export default function Opportunities() {
                                 <div className="absolute right-0 bottom-14 panel shadow-pop z-10 p-3 flex items-center gap-2 min-w-56">
                                   <span className="text-[12.5px] text-ink flex-1">Delete this opportunity?</span>
                                   <button onClick={() => deleteOpp.mutate(o.id, { onSuccess: () => setPendingDeleteId(null) })}
-                                    disabled={deleteOpp.isPending} className="btn-danger min-h-[36px]">Confirm</button>
-                                  <button onClick={() => setPendingDeleteId(null)} className="btn-secondary min-h-[36px]">Cancel</button>
+                                    disabled={deleteOpp.isPending} className="btn-danger min-h-[44px]">Confirm</button>
+                                  <button onClick={() => setPendingDeleteId(null)} className="btn-secondary min-h-[44px]">Cancel</button>
                                 </div>
                               )}
                             </div>

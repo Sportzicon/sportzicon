@@ -154,6 +154,7 @@ export default function AdminScoring() {
       <PageHeader
         title="Live Scoring"
         subtitle="All matches across all tournaments — live, upcoming, and completed."
+        sticky
         action={
           <div className="flex items-center gap-2">
             <button

@@ -9,9 +9,13 @@ import type { ReactNode } from "react";
 // are additive — adopt them where you want the full treatment.
 // ============================================================================
 
-export function PageHeader({ title, subtitle, action }: { title: string; subtitle?: string; action?: ReactNode }) {
+export function PageHeader({ title, subtitle, action, sticky, className }: { title: string; subtitle?: string; action?: ReactNode; sticky?: boolean; className?: string }) {
   return (
-    <div className="mb-6 flex flex-wrap items-end justify-between gap-3 border-b-[1.5px] border-ink pb-3">
+    <div className={clsx(
+      "mb-6 flex flex-wrap items-end justify-between gap-3 border-b-[1.5px] border-ink pb-3",
+      sticky && "sticky top-0 z-30 bg-paper pt-1",
+      className
+    )}>
       <div>
         {subtitle && <div className="lab mb-2 text-brand-500">{subtitle}</div>}
         <h1 className="font-disp text-3xl text-ink">{title}</h1>

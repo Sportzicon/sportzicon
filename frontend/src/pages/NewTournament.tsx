@@ -136,6 +136,7 @@ export default function NewTournament() {
       <PageHeader
         title={isEdit ? "Edit tournament" : "Post a tournament"}
         subtitle="Competitive events"
+        sticky
         action={
           <div className="flex gap-2">
             <button type="button" className="btn-ghost" onClick={() => navigate(-1)}>Cancel</button>
@@ -247,8 +248,8 @@ export default function NewTournament() {
       {err && <div className="rounded bg-red-50 border border-red-200 p-3 text-sm text-red-800">{err}</div>}
 
       <div className="flex justify-end gap-2">
-        <button type="button" className="btn-ghost" onClick={() => navigate(-1)}>Cancel</button>
-        <button type="submit" className="btn-accent" disabled={busy}>
+        <button type="button" className="btn-ghost min-h-[44px]" onClick={() => navigate(-1)}>Cancel</button>
+        <button type="submit" className="btn-accent min-h-[44px]" disabled={busy}>
           {busy ? (isEdit ? "Saving…" : "Posting…") : isEdit ? "Save changes" : "Post tournament →"}
         </button>
       </div>

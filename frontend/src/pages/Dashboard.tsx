@@ -14,6 +14,14 @@ import type { Application, Opportunity, Post, User } from "../models";
 
 // ── Shared helpers ──────────────────────────────────────────────────────────
 
+function getGreeting(): string {
+  const hour = new Date().getHours(); // uses browser's local time zone automatically
+  if (hour >= 5 && hour < 12) return "Good morning";
+  if (hour >= 12 && hour < 17) return "Good afternoon";
+  if (hour >= 17 && hour < 21) return "Good evening";
+  return "Good night";
+}
+
 function StatCard({ label, value, accent }: { label: string; value: React.ReactNode; accent?: boolean }) {
   return (
     <div className="panel px-4 py-4 flex-shrink-0">
@@ -125,7 +133,7 @@ function AthleteDashboard() {
       <div>
         <div className="text-[11px] font-mononum uppercase tracking-[0.06em] text-brand-500 mb-1">Your Sportzicon desk</div>
         <h1 className="font-disp text-3xl sm:text-4xl text-ink">
-          Good morning, {user.full_name?.split(" ")[0] ?? "there"}
+          {getGreeting()}, {user.full_name?.split(" ")[0] ?? "there"}
         </h1>
         {user.verification?.status === "verified" && (
           <span className="inline-flex items-center gap-1 mt-2 text-[11px] font-mononum text-green-700 bg-green-100 px-2 py-0.5 rounded-full">

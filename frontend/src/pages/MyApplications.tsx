@@ -200,6 +200,7 @@ export default function MyApplications() {
       <PageHeader
         title="My applications"
         subtitle="Track every application from submission to selection"
+        sticky
         action={
           <Link to="/opportunities" className="btn-secondary min-h-[44px] flex items-center">
             Browse opportunities →

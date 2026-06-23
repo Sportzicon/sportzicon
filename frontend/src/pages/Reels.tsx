@@ -189,7 +189,7 @@ export default function Reels() {
         {canUpload && (
           <button
             onClick={() => setUploadOpen(true)}
-            className="fixed bottom-[calc(56px+env(safe-area-inset-bottom)+16px)] right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-brand-500 text-white shadow-lg min-h-[56px]"
+            className="fixed bottom-[calc(56px+env(safe-area-inset-bottom)+16px)] right-4 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-brand-500 text-white shadow-lg min-h-[56px]"
             aria-label="Upload reel"
           >
             <Plus className="h-6 w-6" />

@@ -243,7 +243,7 @@ export default function BlogDetail() {
         <button
           onClick={handleLikeToggle}
           disabled={like.isPending || unlike.isPending}
-          className={`lg:hidden fixed bottom-[calc(56px+env(safe-area-inset-bottom)+16px)] right-4 z-30 h-14 w-14 rounded-full shadow-card flex items-center justify-center transition ${
+          className={`lg:hidden fixed bottom-[calc(56px+env(safe-area-inset-bottom)+16px)] right-4 z-50 h-14 w-14 rounded-full shadow-card flex items-center justify-center transition ${
             b.liked
               ? "bg-brand-500 text-white"
               : "bg-panel border border-hair text-ink-sub hover:text-brand-500"

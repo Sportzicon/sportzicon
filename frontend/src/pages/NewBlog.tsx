@@ -230,6 +230,7 @@ export default function NewBlog() {
       <PageHeader
         title={isEdit ? "Edit blog" : "Write a blog"}
         subtitle="Long reads"
+        sticky
         action={
           // Desktop action buttons in header
           <div className="hidden lg:flex gap-2">
@@ -367,14 +368,22 @@ export default function NewBlog() {
       </div>
 
       {/* Mobile sticky bottom bar */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-panel border-t border-hair flex gap-2 p-3 pb-[calc(12px+env(safe-area-inset-bottom))]">
+      <div className="lg:hidden fixed bottom-[calc(56px+env(safe-area-inset-bottom))] left-0 right-0 z-40 bg-panel border-t border-hair flex gap-2 p-3">
+        <button
+          type="button"
+          className="btn-ghost flex-1 min-h-[44px]"
+          disabled={busy}
+          onClick={() => navigate(isEdit ? `/blogs/${id}` : "/blogs")}
+        >
+          Cancel
+        </button>
         <button
           type="button"
           className="btn-secondary flex-1 min-h-[44px]"
           disabled={busy}
           onClick={() => submit("draft")}
         >
-          Save draft
+          Draft
         </button>
         <button
           type="button"
@@ -382,7 +391,7 @@ export default function NewBlog() {
           disabled={busy}
           onClick={() => submit("published")}
         >
-          {busy ? "Publishing…" : isEdit ? "Save & publish" : "Publish →"}
+          {busy ? "…" : isEdit ? "Save" : "Publish"}
         </button>
       </div>
     </div>
