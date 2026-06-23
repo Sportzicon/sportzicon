@@ -12,6 +12,9 @@ interface CommentSectionProps {
   parentType: CommentParentType;
   parentId: string;
   commentCount: number;
+  /** When true, skip the nested MobileDrawer and render full inline list+form.
+   *  Use this when CommentSection is already inside a MobileDrawer. */
+  inDrawer?: boolean;
 }
 
 function CommentItem({
@@ -109,7 +112,83 @@ function AddCommentForm({
   );
 }
 
-export function CommentSection({ parentType, parentId, commentCount: initialCount }: CommentSectionProps) {
+// Extracted as top-level component so React doesn't recreate the type every render.
+function InlineEditOrDelete({
+  c,
+  editingId,
+  pendingDeleteId,
+  onSaveEdit,
+  onCancelEdit,
+  onConfirmDelete,
+  onCancelDelete,
+  isUpdatePending,
+  isRemovePending,
+}: {
+  c: CommentDoc;
+  editingId: string | null;
+  pendingDeleteId: string | null;
+  onSaveEdit: (id: string, text: string) => void;
+  onCancelEdit: () => void;
+  onConfirmDelete: (id: string) => void;
+  onCancelDelete: () => void;
+  isUpdatePending: boolean;
+  isRemovePending: boolean;
+}) {
+  const [editText, setEditText] = useState(c.text);
+
+  if (editingId === c.id) {
+    return (
+      <div className="mt-2 flex gap-2">
+        <input
+          type="text"
+          value={editText}
+          onChange={(e) => setEditText(e.target.value)}
+          className="input flex-1 text-sm min-h-[44px]"
+          autoFocus
+        />
+        <button
+          onClick={() => onSaveEdit(c.id, editText)}
+          disabled={isUpdatePending || !editText.trim()}
+          className="btn-primary min-h-[44px]"
+        >
+          Save
+        </button>
+        <button onClick={onCancelEdit} className="btn-secondary min-h-[44px]">
+          ✕
+        </button>
+      </div>
+    );
+  }
+
+  if (pendingDeleteId === c.id) {
+    return (
+      <div className="mt-2 flex gap-2">
+        <button
+          onClick={() => onConfirmDelete(c.id)}
+          disabled={isRemovePending}
+          className="font-mononum text-[10px] uppercase tracking-[0.06em] text-red-600 hover:underline min-h-[44px]"
+        >
+          Confirm delete
+        </button>
+        <button
+          onClick={onCancelDelete}
+          className="font-mononum text-[10px] uppercase tracking-[0.06em] text-ink-sub hover:underline min-h-[44px]"
+        >
+          Cancel
+        </button>
+      </div>
+    );
+  }
+
+  return null;
+}
+
+export function CommentSection({
+  parentType,
+  parentId,
+  commentCount: initialCount,
+  inDrawer = false,
+}: CommentSectionProps) {
   const { user } = useAuthStore();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
@@ -121,71 +200,81 @@ export function CommentSection({ parentType, parentId, commentCount: initialCoun
   const previewComments = comments.slice(0, 3);
   const hasMore = comments.length > 3;
 
-  const handleEdit = (id: string) => setEditingId(id);
-  const handleDelete = (id: string) => setPendingDeleteId(id);
+  const handleEdit = (id: string) => {
+    setPendingDeleteId(null);
+    setEditingId(id);
+  };
+  const handleDelete = (id: string) => {
+    setEditingId(null);
+    setPendingDeleteId(id);
+  };
+  const handleSaveEdit = (id: string, text: string) => {
+    update.mutate({ id, text }, { onSuccess: () => setEditingId(null) });
+  };
+  const handleConfirmDelete = (id: string) => {
+    remove.mutate(id, { onSuccess: () => setPendingDeleteId(null) });
+  };
 
   const handleAddComment = async (text: string) => {
     await add.mutateAsync(text);
   };
 
-  function InlineEditOrDelete({ c }: { c: CommentDoc }) {
-    return (
-      <>
-        {editingId === c.id && (
-          <div className="mt-2 flex gap-2">
-            <input
-              id={`edit-${c.id}`}
-              type="text"
-              defaultValue={c.text}
-              className="input flex-1 text-sm min-h-[44px]"
+  const editDeleteProps = {
+    editingId,
+    pendingDeleteId,
+    onSaveEdit: handleSaveEdit,
+    onCancelEdit: () => setEditingId(null),
+    onConfirmDelete: handleConfirmDelete,
+    onCancelDelete: () => setPendingDeleteId(null),
+    isUpdatePending: update.isPending,
+    isRemovePending: remove.isPending,
+  };
+
+  const addForm = (
+    <AddCommentForm
+      onSubmit={handleAddComment}
+      isPending={add.isPending}
+      userId={user?.id}
+      userPhotoUrl={user?.profile_photo_url}
+      userName={user?.full_name}
+    />
+  );
+
+  const commentList = (
+    <div className="space-y-3">
+      {comments.length === 0 ? (
+        <p className="lab text-ink-faint">No comments yet. Be the first!</p>
+      ) : (
+        comments.map((c) => (
+          <div key={c.id}>
+            <CommentItem
+              c={c}
+              currentUserId={user?.id}
+              currentUserRole={user?.role}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
             />
-            <button
-              onClick={() => {
-                const el = document.getElementById(`edit-${c.id}`) as HTMLInputElement;
-                update.mutate({ id: c.id, text: el.value }, { onSuccess: () => setEditingId(null) });
-              }}
-              disabled={update.isPending}
-              className="btn-primary min-h-[44px]"
-            >
-              Save
-            </button>
-            <button onClick={() => setEditingId(null)} className="btn-secondary min-h-[44px]">
-              ✕
-            </button>
+            <InlineEditOrDelete c={c} key={`eod-${c.id}`} {...editDeleteProps} />
           </div>
-        )}
-        {pendingDeleteId === c.id && (
-          <div className="mt-2 flex gap-2">
-            <button
-              onClick={() =>
-                remove.mutate(c.id, { onSuccess: () => setPendingDeleteId(null) })
-              }
-              disabled={remove.isPending}
-              className="font-mononum text-[10px] uppercase tracking-[0.06em] text-red-600 hover:underline min-h-[44px]"
-            >
-              Confirm delete
-            </button>
-            <button
-              onClick={() => setPendingDeleteId(null)}
-              className="font-mononum text-[10px] uppercase tracking-[0.06em] text-ink-sub hover:underline min-h-[44px]"
-            >
-              Cancel
-            </button>
-          </div>
-        )}
-      </>
+        ))
+      )}
+    </div>
+  );
+
+  // When already inside a MobileDrawer (e.g. Reels page), render full inline
+  // view to avoid nested drawers conflicting with each other.
+  if (inDrawer) {
+    return (
+      <div className="flex flex-col gap-4">
+        {addForm}
+        <div className="border-t border-hairsoft pt-3">{commentList}</div>
+      </div>
     );
   }
 
   const drawerFooter = (
     <div className="p-3">
-      <AddCommentForm
-        onSubmit={handleAddComment}
-        isPending={add.isPending}
-        userId={user?.id}
-        userPhotoUrl={user?.profile_photo_url}
-        userName={user?.full_name}
-      />
+      {addForm}
     </div>
   );
 
@@ -212,7 +301,7 @@ export function CommentSection({ parentType, parentId, commentCount: initialCoun
                   onEdit={handleEdit}
                   onDelete={handleDelete}
                 />
-                <InlineEditOrDelete c={c} />
+                <InlineEditOrDelete c={c} key={`eod-${c.id}`} {...editDeleteProps} />
               </div>
             ))}
             {(hasMore || count > 3) && (
@@ -228,13 +317,7 @@ export function CommentSection({ parentType, parentId, commentCount: initialCoun
 
         {previewComments.length === 0 && (
           <div className="border-t border-hairsoft pt-3">
-            <AddCommentForm
-              onSubmit={handleAddComment}
-              isPending={add.isPending}
-              userId={user?.id}
-              userPhotoUrl={user?.profile_photo_url}
-              userName={user?.full_name}
-            />
+            {addForm}
           </div>
         )}
 
@@ -244,24 +327,7 @@ export function CommentSection({ parentType, parentId, commentCount: initialCoun
           title={`${count} ${count === 1 ? "Comment" : "Comments"}`}
           footer={drawerFooter}
         >
-          <div className="space-y-3">
-            {comments.length === 0 ? (
-              <p className="lab text-ink-faint">No comments yet. Be the first!</p>
-            ) : (
-              comments.map((c) => (
-                <div key={c.id}>
-                  <CommentItem
-                    c={c}
-                    currentUserId={user?.id}
-                    currentUserRole={user?.role}
-                    onEdit={handleEdit}
-                    onDelete={handleDelete}
-                  />
-                  <InlineEditOrDelete c={c} />
-                </div>
-              ))
-            )}
-          </div>
+          {commentList}
         </MobileDrawer>
       </div>
 
@@ -271,13 +337,7 @@ export function CommentSection({ parentType, parentId, commentCount: initialCoun
           ❝ {count} {count === 1 ? "comment" : "comments"}
         </div>
         <div className="border-t border-hairsoft pt-4 space-y-4">
-          <AddCommentForm
-            onSubmit={handleAddComment}
-            isPending={add.isPending}
-            userId={user?.id}
-            userPhotoUrl={user?.profile_photo_url}
-            userName={user?.full_name}
-          />
+          {addForm}
           <div className="space-y-3">
             {comments.length === 0 ? (
               <p className="lab text-ink-faint">No comments yet.</p>
@@ -291,7 +351,7 @@ export function CommentSection({ parentType, parentId, commentCount: initialCoun
                     onEdit={handleEdit}
                     onDelete={handleDelete}
                   />
-                  <InlineEditOrDelete c={c} />
+                  <InlineEditOrDelete c={c} key={`eod-${c.id}`} {...editDeleteProps} />
                 </div>
               ))
             )}

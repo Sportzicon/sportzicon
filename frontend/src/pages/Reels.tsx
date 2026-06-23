@@ -355,6 +355,7 @@ export default function Reels() {
             parentType="reel"
             parentId={commentReelId}
             commentCount={commentReel?.comment_count ?? 0}
+            inDrawer
           />
         )}
       </MobileDrawer>

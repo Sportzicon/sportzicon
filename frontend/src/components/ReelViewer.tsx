@@ -279,6 +279,7 @@ export function ReelViewer({
           parentType="reel"
           parentId={currentReel.id}
           commentCount={currentReel.comment_count}
+          inDrawer
         />
       </MobileDrawer>
     </div>

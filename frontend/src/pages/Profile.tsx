@@ -591,7 +591,7 @@ export default function Profile() {
           <SectionHead n="04" title="Highlights & media"
             right={reelsQ.data && reelsQ.data.length > 0
               ? <Link to="/reels" className="btn-ghost text-[12px]">All reels →</Link>
-              : isMe ? <Link to="/reels/upload" className="btn-ghost text-[12px]">+ Add</Link> : undefined}
+              : isMe ? <Link to="/reels" className="btn-ghost text-[12px]">+ Add</Link> : undefined}
           />
           {reelsQ.data && reelsQ.data.length > 0 ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">

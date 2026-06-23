@@ -980,6 +980,15 @@ function ScorecardTab({ match, balls }: { match: any; balls: any[] }) {
   const bowled = (inn?.bowling_entries ?? []).filter((e: any) => e.balls > 0)
     .sort((a: any, b: any) => b.wickets !== a.wickets ? b.wickets - a.wickets : a.runs_conceded - b.runs_conceded);
 
+  // Striker for live innings — used to show * only on the striker, not the non-striker
+  const strikerId = useMemo(() => {
+    if (!inn || inn.is_completed) return null;
+    const inningsBalls = balls.filter((b: any) => b.innings_id === inn.id);
+    const source = inningsBalls.length ? inningsBalls : balls;
+    const last = source.length ? source[source.length - 1] : null;
+    return last?.batsman_id ?? null;
+  }, [balls, inn]);
+
   // Fall of wickets from ball events
   const fow = useMemo(() => {
     if (!inn) return [];
@@ -1067,7 +1076,7 @@ function ScorecardTab({ match, balls }: { match: any; balls: any[] }) {
                     )}
                   </td>
 
-                  <td className="px-3 py-2.5 text-right font-mononum font-black text-ink text-base">{e.runs}{isNotOut && <span className="text-green-600 text-xs">*</span>}</td>
+                  <td className="px-3 py-2.5 text-right font-mononum font-black text-ink text-base">{e.runs}{isNotOut && e.player_id === strikerId && <span className="text-green-600 text-xs">*</span>}</td>
                   <td className="px-3 py-2.5 text-right font-mononum text-ink-sub">{e.balls_faced}</td>
                   <td className="px-3 py-2.5 text-right font-mononum text-ink">{e.fours}</td>
                   <td className="px-3 py-2.5 text-right font-mononum text-brand-500 font-semibold">{e.sixes}</td>
