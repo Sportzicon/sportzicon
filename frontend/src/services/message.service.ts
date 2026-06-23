@@ -39,8 +39,11 @@ export class MessageService {
         { signal, timeout: 30_000 }
       );
       return res.data;
-    } catch {
-      return null;
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { status?: number }; code?: string };
+      if (axiosErr?.response?.status === 429) throw err; // caller handles backoff
+      if (axiosErr?.code === "ERR_CANCELED") throw err;  // abort — don't retry
+      return null; // network / timeout — caller retries with delay
     }
   }
 }

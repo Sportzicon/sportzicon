@@ -13,6 +13,11 @@ export function useNotificationCount(enabled = true) {
     queryFn: () => notificationService.getUnreadCount(),
     refetchInterval: 30_000,
     enabled,
+    retry: (failureCount, err: unknown) => {
+      const axiosErr = err as { response?: { status?: number } };
+      if (axiosErr?.response?.status === 429) return false; // never retry on rate limit
+      return failureCount < 2;
+    },
   });
 
   useEffect(() => {
