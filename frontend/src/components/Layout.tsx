@@ -9,7 +9,7 @@ import { useNotificationCount, useNotifications } from "../hooks";
 import { useNotificationStore } from "../store/notifications";
 import { hasRole, isAdmin } from "../utils/roles";
 import {
-  Bell, Home, Search, Briefcase, FileText, MessageCircle, ShieldCheck, LogOut,
+  Bell, Home, Search, Briefcase, FileText, MessageCircle, LogOut,
   User as UserIcon, Menu, X, Trophy, ChevronDown, Building2, Target, Activity,
   Video, Plus, Flag, Users,
 } from "lucide-react";
@@ -198,7 +198,7 @@ function getMobileNavItems(user: { id: string; role: string }) {
 
   if (user.role === "admin") {
     return [
-      ...base,
+      { to: "/admin",         icon: <Home className="h-5 w-5" />,          label: "Home" },
       { to: "/admin/users",   icon: <Users className="h-5 w-5" />,         label: "Users" },
       { to: "/admin/reports", icon: <Flag className="h-5 w-5" />,          label: "Reports" },
       { to: "/messages",      icon: <MessageCircle className="h-5 w-5" />, label: "Messages" },
@@ -310,7 +310,7 @@ export function Layout() {
   };
 
   const navItems = [
-    { to: "/dashboard",    icon: <Home className="h-4 w-4" />,          label: "Dashboard" },
+    { to: isAdmin(user.role) ? "/admin" : "/dashboard", icon: <Home className="h-4 w-4" />, label: "Dashboard" },
     { to: "/live-scores",  icon: <Activity className="h-4 w-4" />,      label: "Live Scores" },
     { to: "/feed",         icon: <FileText className="h-4 w-4" />,      label: "Feed" },
     { to: "/reels",        icon: <Video className="h-4 w-4" />,         label: "Reels" },
@@ -324,8 +324,7 @@ export function Layout() {
       ? [{ to: "/my-organizations", icon: <Building2 className="h-4 w-4" />, label: "Organizations" }]
       : [{ to: "/organizations", icon: <Building2 className="h-4 w-4" />, label: "Organizations" }]),
     ...(hasRole(user.role, "organizer", "scorer")
-      ? [{ to: "/scoring", icon: <Target className="h-4 w-4" />, label: "Scoring" }] : []),
-    ...(isAdmin(user.role) ? [{ to: "/admin", icon: <ShieldCheck className="h-4 w-4" />, label: "Admin", badge: pendingVerifCount.data ?? 0 }] : [])
+      ? [{ to: "/scoring", icon: <Target className="h-4 w-4" />, label: "Scoring" }] : [])
   ];
 
   const mobileNavItems = getMobileNavItems(user);

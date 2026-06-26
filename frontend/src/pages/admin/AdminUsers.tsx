@@ -4,7 +4,8 @@ import { useNavigate } from "react-router-dom";
 import { api, humanizeError } from "../../api/client";
 import { PageHeader, Spinner, Badge } from "../../components/UI";
 import { queryKeys } from "../../hooks/queryKeys";
-import { Trash2, Pencil, Plus, Search, Ban, UserCheck } from "lucide-react";
+import { ALL_ROLES } from "../../utils/roles";
+import { Trash2, Pencil, Plus, Search, Ban, UserCheck, ShieldCheck } from "lucide-react";
 
 type UserItem = {
   id: string;
@@ -28,6 +29,9 @@ export default function AdminUsers() {
   const [banReason, setBanReason] = useState("");
   const [banErr, setBanErr] = useState<string | null>(null);
   const [actionErr, setActionErr] = useState<string | null>(null);
+  // Inline role edit state
+  const [roleEditId, setRoleEditId] = useState<string | null>(null);
+  const [roleEditValue, setRoleEditValue] = useState("");
 
   const filters: Record<string, unknown> = {};
   if (statusFilter) filters.status = statusFilter;
@@ -66,6 +70,17 @@ export default function AdminUsers() {
     onError: (e) => setActionErr(humanizeError(e))
   });
 
+  const changeRole = useMutation({
+    mutationFn: async (vars: { id: string; role: string }) =>
+      api.patch(`/admin/users/${vars.id}/role`, { role: vars.role }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.adminUsers() });
+      setRoleEditId(null);
+      setActionErr(null);
+    },
+    onError: (e) => setActionErr(humanizeError(e))
+  });
+
   const deleteUser = useMutation({
     mutationFn: async (id: string) => api.delete(`/admin/users/${id}`),
     onSuccess: () => {
@@ -81,12 +96,17 @@ export default function AdminUsers() {
     setSearch(searchInput.trim());
   }
 
+  function openRoleEdit(u: UserItem) {
+    setRoleEditId(u.id);
+    setRoleEditValue(u.role);
+  }
+
   const users = q.data ?? [];
-  const isActing = setStatus.isPending || banUser.isPending || unbanUser.isPending || deleteUser.isPending;
+  const isActing = setStatus.isPending || banUser.isPending || unbanUser.isPending || deleteUser.isPending || changeRole.isPending;
 
   return (
     <div className="space-y-4">
-      <PageHeader title="Users" subtitle="Manage account status and moderation" />
+      <PageHeader title="Users" subtitle="Manage accounts, roles and moderation" />
 
       {actionErr && (
         <div className="rounded bg-red-50 border border-red-200 p-3 text-sm text-red-800">{actionErr}</div>
@@ -120,11 +140,7 @@ export default function AdminUsers() {
           </select>
           <select className="input flex-1 min-w-[120px]" value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)}>
             <option value="">All roles</option>
-            <option>athlete</option>
-            <option>club</option>
-            <option>scout</option>
-            <option>organizer</option>
-            <option>admin</option>
+            {ALL_ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
           </select>
           <button className="btn-primary min-h-[44px] flex items-center gap-2 whitespace-nowrap" onClick={() => navigate("/admin/users/create")}>
             <Plus className="h-4 w-4" /> Create user
@@ -135,7 +151,7 @@ export default function AdminUsers() {
       {/* Ban reason dialog */}
       {banTargetId && (
         <div className="card card-body space-y-3 border-red-200 bg-red-50">
-          <div className="font-semibold text-red-900 text-sm">Ban user</div>
+          <div className="font-semibold text-red-900 text-sm">Ban user — provide reason</div>
           <textarea
             className="input w-full"
             rows={3}
@@ -192,9 +208,39 @@ export default function AdminUsers() {
                     )}
                   </div>
                 </div>
+
+                {/* Inline role change (mobile) */}
+                {roleEditId === u.id ? (
+                  <div className="flex gap-2 items-center">
+                    <select
+                      className="input flex-1 min-h-[44px]"
+                      value={roleEditValue}
+                      onChange={(e) => setRoleEditValue(e.target.value)}
+                    >
+                      {ALL_ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
+                    </select>
+                    <button
+                      onClick={() => changeRole.mutate({ id: u.id, role: roleEditValue })}
+                      disabled={isActing || roleEditValue === u.role}
+                      className="btn-primary btn-sm min-h-[44px] whitespace-nowrap"
+                    >
+                      Save
+                    </button>
+                    <button onClick={() => setRoleEditId(null)} className="btn-secondary btn-sm min-h-[44px]">✕</button>
+                  </div>
+                ) : null}
+
                 <div className="flex flex-wrap gap-2">
                   <button onClick={() => navigate(`/admin/users/${u.id}`)} className="btn-secondary btn-sm flex items-center gap-1 min-h-[44px]">
                     <Pencil className="h-3.5 w-3.5" /> Edit
+                  </button>
+                  <button
+                    onClick={() => openRoleEdit(u)}
+                    disabled={isActing}
+                    className="btn-secondary btn-sm flex items-center gap-1 min-h-[44px]"
+                    title="Change role"
+                  >
+                    <ShieldCheck className="h-3.5 w-3.5" /> Role
                   </button>
                   {u.is_banned ? (
                     <button onClick={() => unbanUser.mutate(u.id)} disabled={isActing} className="btn-primary btn-sm flex items-center gap-1 min-h-[44px]">
@@ -205,10 +251,7 @@ export default function AdminUsers() {
                       <Ban className="h-3.5 w-3.5" /> Ban
                     </button>
                   )}
-                  {!u.is_banned && u.status !== "suspended" && (
-                    <button onClick={() => setStatus.mutate({ id: u.id, status: "suspended" })} disabled={isActing} className="btn-secondary btn-sm min-h-[44px]">Suspend</button>
-                  )}
-                  {u.status !== "active" && !u.is_banned && (
+                  {u.status === "suspended" && !u.is_banned && (
                     <button onClick={() => setStatus.mutate({ id: u.id, status: "active" })} disabled={isActing} className="btn-primary btn-sm min-h-[44px]">Activate</button>
                   )}
                   {pendingDeleteId === u.id ? (
@@ -243,7 +286,36 @@ export default function AdminUsers() {
                   <tr key={u.id} className="hover:bg-slate-50">
                     <td className="p-3 font-medium">{u.full_name}</td>
                     <td className="p-3 text-slate-500 text-xs">{u.email}</td>
-                    <td className="p-3"><Badge color="blue">{u.role}</Badge></td>
+                    <td className="p-3">
+                      {roleEditId === u.id ? (
+                        <div className="flex gap-1.5 items-center">
+                          <select
+                            className="input text-xs py-1 min-h-[36px]"
+                            value={roleEditValue}
+                            onChange={(e) => setRoleEditValue(e.target.value)}
+                          >
+                            {ALL_ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
+                          </select>
+                          <button
+                            onClick={() => changeRole.mutate({ id: u.id, role: roleEditValue })}
+                            disabled={isActing || roleEditValue === u.role}
+                            className="btn-primary btn-sm min-h-[36px] whitespace-nowrap text-xs"
+                          >
+                            Save
+                          </button>
+                          <button onClick={() => setRoleEditId(null)} className="btn-secondary btn-sm min-h-[36px] text-xs">✕</button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => openRoleEdit(u)}
+                          className="flex items-center gap-1.5 group"
+                          title="Click to change role"
+                        >
+                          <Badge color="blue">{u.role}</Badge>
+                          <Pencil className="h-3 w-3 text-slate-300 group-hover:text-slate-500 transition-colors" />
+                        </button>
+                      )}
+                    </td>
                     <td className="p-3">
                       <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
                         u.is_banned ? "bg-red-100 text-red-700" :
@@ -266,7 +338,7 @@ export default function AdminUsers() {
                         </div>
                       ) : (
                         <div className="flex flex-wrap gap-1.5">
-                          <button onClick={() => navigate(`/admin/users/${u.id}`)} className="btn-secondary btn-sm min-h-[44px]" title="Edit">
+                          <button onClick={() => navigate(`/admin/users/${u.id}`)} className="btn-secondary btn-sm min-h-[44px]" title="Edit profile">
                             <Pencil className="h-3.5 w-3.5" />
                           </button>
                           {u.is_banned ? (
@@ -278,10 +350,7 @@ export default function AdminUsers() {
                               <Ban className="h-3.5 w-3.5" /> Ban
                             </button>
                           )}
-                          {!u.is_banned && u.status !== "suspended" && (
-                            <button onClick={() => setStatus.mutate({ id: u.id, status: "suspended" })} disabled={isActing} className="btn-secondary btn-sm min-h-[44px]">Suspend</button>
-                          )}
-                          {u.status !== "active" && !u.is_banned && (
+                          {u.status === "suspended" && !u.is_banned && (
                             <button onClick={() => setStatus.mutate({ id: u.id, status: "active" })} disabled={isActing} className="btn-primary btn-sm min-h-[44px]">Activate</button>
                           )}
                           <button onClick={() => setPendingDeleteId(u.id)} className="btn-danger btn-sm min-h-[44px]" title="Delete">

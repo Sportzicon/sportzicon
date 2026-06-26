@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, humanizeError } from "../api/client";
 import { queryKeys } from "../hooks";
 import { PageHeader, Spinner, SectionHead } from "../components/UI";
+import { BackButton } from "../components/BackButton";
 import { X } from "lucide-react";
 
 const MAX_CONTENT = 50000;
@@ -227,6 +228,7 @@ export default function NewBlog() {
   return (
     // Extra bottom padding on mobile for sticky bar
     <div className="space-y-5 max-w-3xl pb-[80px] lg:pb-0">
+      <BackButton />
       <PageHeader
         title={isEdit ? "Edit blog" : "Write a blog"}
         subtitle="Long reads"

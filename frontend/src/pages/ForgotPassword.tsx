@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
 import { api, humanizeError } from "../api/client";
+import { BackButton } from "../components/BackButton";
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState("");
@@ -37,7 +37,9 @@ export default function ForgotPassword() {
               <p className="text-sm text-ink-sub mt-2 leading-relaxed">
                 Don't see it? Check your <strong className="text-ink">spam or junk folder</strong>.
               </p>
-              <Link to="/login" className="btn-ghost mt-5 inline-flex w-full justify-center min-h-[44px] items-center">← Back to sign in</Link>
+              <div className="flex justify-center mt-5">
+                <BackButton to="/login" label="Back to sign in" />
+              </div>
             </div>
           ) : (
             <>
@@ -61,8 +63,8 @@ export default function ForgotPassword() {
                 <button className="btn-primary w-full min-h-[44px]" disabled={busy}>
                   {busy ? "Sending…" : "Send reset link →"}
                 </button>
-                <div className="text-center">
-                  <Link to="/login" className="lab text-ink-sub hover:text-ink">← Back to sign in</Link>
+                <div className="flex justify-center">
+                  <BackButton to="/login" label="Back to sign in" />
                 </div>
               </form>
             </>

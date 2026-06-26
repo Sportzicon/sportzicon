@@ -5,6 +5,7 @@ import { api, getApiError, humanizeError } from "../api/client";
 import { useAuthStore } from "../store/auth";
 import { queryKeys } from "../hooks/queryKeys";
 import { PageHeader, SectionHead } from "../components/UI";
+import { BackButton } from "../components/BackButton";
 import { SportPositionSelect } from "../components/SportPositionSelect";
 import { Camera, Plus, X } from "lucide-react";
 import { COUNTRIES, statesForCountry } from "../data/geo";
@@ -170,6 +171,7 @@ export default function EditProfile() {
 
   return (
     <form onSubmit={submit} noValidate className="max-w-3xl pb-28">
+      <BackButton className="mb-2" />
       <PageHeader
         title="Edit profile"
         subtitle="Update your public profile"

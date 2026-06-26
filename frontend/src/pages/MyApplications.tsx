@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useMyApplications } from "../hooks";
 import { MobileDrawer } from "../components/MobileDrawer";
 import { PageHeader, Spinner, EmptyState, StatusPill } from "../components/UI";
+import { BackButton } from "../components/BackButton";
 import { humanizeError } from "../api/client";
 import type { Application, ApplicationStatus } from "../models";
 
@@ -197,6 +198,7 @@ export default function MyApplications() {
 
   return (
     <div className="max-w-4xl space-y-5">
+      <BackButton />
       <PageHeader
         title="My applications"
         subtitle="Track every application from submission to selection"

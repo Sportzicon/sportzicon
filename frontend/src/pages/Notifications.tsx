@@ -2,6 +2,7 @@ import { useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useNotifications } from "../hooks";
 import { PageHeader, Spinner } from "../components/UI";
+import { BackButton } from "../components/BackButton";
 import type { Notification } from "../models";
 
 function relativeTime(ts: number): string {
@@ -143,6 +144,7 @@ export default function Notifications() {
 
   return (
     <div className="max-w-2xl w-full mx-auto">
+      <BackButton className="px-4 sm:px-0 pt-2" />
       <div className="flex items-center justify-between px-4 py-4 sm:px-0">
         <PageHeader title="Notifications" subtitle="Activity" />
         {unreadCount > 0 && (

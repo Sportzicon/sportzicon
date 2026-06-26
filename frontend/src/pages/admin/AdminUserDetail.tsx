@@ -1,14 +1,14 @@
 import { useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import { humanizeError } from "../../api/client";
 import { queryKeys } from "../../hooks/queryKeys";
 import { PageHeader, Spinner } from "../../components/UI";
+import { BackButton } from "../../components/BackButton";
 import { clearSportSpecific, validateAthleteSportProfile } from "../../data/sportProfile";
-import { ArrowLeft, Save } from "lucide-react";
-
-const ROLES = ["athlete", "club", "scout", "organizer", "admin", "scorer"] as const;
+import { Save } from "lucide-react";
+import { ALL_ROLES } from "../../utils/roles";
 const GENDERS = ["male", "female", "other", "prefer_not_to_say"] as const;
 const EXPERIENCE = ["beginner", "amateur", "semi_pro", "professional"] as const;
 const AVAILABILITY = ["available", "not_available", "open_to_offers"] as const;
@@ -24,7 +24,6 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 export default function AdminUserDetail() {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
   const qc = useQueryClient();
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -110,9 +109,7 @@ export default function AdminUserDetail() {
   return (
     <div className="space-y-6 max-w-3xl">
       <div className="flex items-center gap-3">
-        <button onClick={() => navigate("/admin/users")} className="btn-secondary btn-sm">
-          <ArrowLeft className="h-4 w-4" />
-        </button>
+        <BackButton to="/admin/users" label="Users" />
         <PageHeader title={`Edit user: ${user?.full_name ?? id}`} subtitle={user?.email} />
       </div>
 
@@ -125,7 +122,7 @@ export default function AdminUserDetail() {
         <div className="flex gap-3 items-end">
           <Field label="Role">
             <select className="input" value={role} onChange={(e) => setRole(e.target.value)}>
-              {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
+              {ALL_ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
             </select>
           </Field>
           <button

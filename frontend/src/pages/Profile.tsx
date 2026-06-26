@@ -7,9 +7,10 @@ import { scoringApi } from "../api/scoringClient";
 import { useAuthStore } from "../store/auth";
 import { isAdmin } from "../utils/roles";
 import { Spinner, VerifiedBadge, Avatar, SectionHead, Kicker, StatCard, Placeholder, Badge, StatusPill } from "../components/UI";
+import { BackButton } from "../components/BackButton";
 import type { Post, User } from "../types";
 import { useSavedOpportunities } from "../store/savedOpportunities";
-import { ArrowLeft, Bookmark, Camera, FileText, Trash2, Upload, X } from "lucide-react";
+import { Bookmark, Camera, FileText, Trash2, Upload, X } from "lucide-react";
 
 // ── Cricbuzz-style cricket stats table ───────────────────────────────────────
 function CricketStatRow({ label, values }: { label: string; values: (string | number)[] }) {
@@ -352,14 +353,7 @@ export default function Profile() {
 
   return (
     <div className="space-y-6">
-      {/* Back navigation */}
-      <button
-        onClick={() => navigate(-1)}
-        className="flex items-center gap-1.5 text-sm text-ink-sub hover:text-ink transition min-h-[44px] -mb-2"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        Back
-      </button>
+      <BackButton className="-mb-2" />
 
       {/* Cover band */}
       <div className="card overflow-hidden">

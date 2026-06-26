@@ -5,6 +5,7 @@ import { api, humanizeError } from "../../api/client";
 import { queryKeys } from "../../hooks/queryKeys";
 import { Wizard } from "../../components/Wizard";
 import { PageHeader } from "../../components/UI";
+import { BackButton } from "../../components/BackButton";
 
 const DRAFT_KEY = "admin_create_user_draft";
 
@@ -150,7 +151,7 @@ export default function AdminCreateUser() {
   return (
     <div className="max-w-2xl space-y-5">
       <div className="flex items-center gap-4">
-        <button className="btn-secondary btn-sm" onClick={() => navigate("/admin/users")}>← Back to users</button>
+        <BackButton to="/admin/users" label="Back to users" />
         <PageHeader title="Create User" subtitle="Add a new account to the platform" />
       </div>
 

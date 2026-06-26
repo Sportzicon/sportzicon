@@ -7,6 +7,7 @@ import { useAuthStore } from "../store/auth";
 import { hasRole } from "../utils/roles";
 import { useOpportunityApplication } from "../hooks/useApplications";
 import { Spinner, StatusPill, SectionHead, Kicker } from "../components/UI";
+import { BackButton } from "../components/BackButton";
 import { MobileDrawer } from "../components/MobileDrawer";
 import { Trash2, Pencil, MoreVertical, ChevronDown } from "lucide-react";
 import { queryKeys } from "../hooks/queryKeys";
@@ -370,7 +371,7 @@ export default function OpportunityDetail() {
 
   return (
     <div className="max-w-5xl pb-24 lg:pb-0">
-      <button onClick={() => navigate(-1)} className="btn-ghost text-[12.5px] mb-4 min-h-[44px]">← Opportunities</button>
+      <BackButton label="Opportunities" className="mb-4" />
 
       {/* header panel */}
       <div className="panel overflow-hidden mb-5">

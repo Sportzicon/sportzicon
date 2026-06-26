@@ -1,15 +1,13 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, Navigate, useNavigate } from "react-router-dom";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { userService } from "../services";
-import { api } from "../api/client";
 import { useFeed, useOpportunities, useMyApplications, useMyOpportunities } from "../hooks";
 import { useAuthStore } from "../store/auth";
-import { queryKeys } from "../hooks/queryKeys";
 import { hasRole, isAdmin } from "../utils/roles";
 import { StatusPill, Spinner, EmptyState, Avatar } from "../components/UI";
 import { ErrorBoundary } from "../components/ErrorBoundary";
-import { ChevronDown, ChevronUp, Search, Briefcase, ShieldCheck, Flag, Users } from "lucide-react";
+import { ChevronDown, ChevronUp, Search, Briefcase } from "lucide-react";
 import type { Application, Opportunity, Post, User } from "../models";
 
 // ── Shared helpers ──────────────────────────────────────────────────────────
@@ -448,131 +446,13 @@ function ScoutDashboard() {
   );
 }
 
-// ── Admin Dashboard ─────────────────────────────────────────────────────────
-
-function AdminDashboard() {
-  const { user } = useAuthStore();
-  if (!user) return null;
-
-  const analytics = useQuery({
-    queryKey: queryKeys.adminAnalytics(),
-    queryFn: async () => {
-      const r = await api.get("/admin/analytics");
-      return r.data as {
-        total_users: number;
-        new_today: number;
-        pending_verifications: number;
-        open_reports: number;
-      };
-    },
-    staleTime: 60_000,
-    refetchInterval: 120_000,
-  });
-
-  const data = analytics.data;
-
-  return (
-    <div className="space-y-5">
-      {/* Welcome */}
-      <div>
-        <div className="text-[11px] font-mononum uppercase tracking-[0.06em] text-brand-500 mb-1">Admin panel</div>
-        <h1 className="font-disp text-3xl sm:text-4xl text-ink">
-          Admin dashboard
-        </h1>
-      </div>
-
-      {/* Stat cards — stacked on mobile */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatCard label="Total users" value={analytics.isLoading ? <Spinner className="h-4 w-4" /> : (data?.total_users ?? "—")} />
-        <StatCard label="New today" value={analytics.isLoading ? <Spinner className="h-4 w-4" /> : (data?.new_today ?? "—")} accent />
-        <div className="panel px-4 py-4">
-          <div className="text-[11px] font-mononum uppercase tracking-[0.06em] text-ink-faint">Pending verifs</div>
-          <div className={`font-disp mt-1.5 text-3xl ${(data?.pending_verifications ?? 0) > 0 ? "text-orange-500" : "text-ink"}`}>
-            {analytics.isLoading ? <Spinner className="h-4 w-4" /> : (data?.pending_verifications ?? "—")}
-          </div>
-          {(data?.pending_verifications ?? 0) > 0 && (
-            <Link to="/admin/verifications" className="text-[11px] font-mononum text-brand-500 hover:underline mt-1 inline-block">
-              Review →
-            </Link>
-          )}
-        </div>
-        <div className="panel px-4 py-4">
-          <div className="text-[11px] font-mononum uppercase tracking-[0.06em] text-ink-faint">Open reports</div>
-          <div className={`font-disp mt-1.5 text-3xl ${(data?.open_reports ?? 0) > 0 ? "text-red-500" : "text-ink"}`}>
-            {analytics.isLoading ? <Spinner className="h-4 w-4" /> : (data?.open_reports ?? "—")}
-          </div>
-          {(data?.open_reports ?? 0) > 0 && (
-            <Link to="/admin/reports" className="text-[11px] font-mononum text-brand-500 hover:underline mt-1 inline-block">
-              Review →
-            </Link>
-          )}
-        </div>
-      </div>
-
-      {/* Priority CTAs */}
-      {(data?.pending_verifications ?? 0) > 0 && (
-        <Link
-          to="/admin/verifications"
-          className="flex items-center justify-between panel p-4 min-h-[64px] hover:border-brand-500 transition"
-        >
-          <div className="flex items-center gap-3">
-            <ShieldCheck className="h-5 w-5 text-orange-500 flex-shrink-0" />
-            <div>
-              <div className="text-sm font-semibold text-ink">{data!.pending_verifications} pending verification{data!.pending_verifications !== 1 ? "s" : ""}</div>
-              <div className="text-[11px] text-ink-sub mt-0.5">Review organization documents</div>
-            </div>
-          </div>
-          <span className="text-brand-500 text-sm font-mononum flex-shrink-0">Review →</span>
-        </Link>
-      )}
-      {(data?.open_reports ?? 0) > 0 && (
-        <Link
-          to="/admin/reports"
-          className="flex items-center justify-between panel p-4 min-h-[64px] hover:border-brand-500 transition"
-        >
-          <div className="flex items-center gap-3">
-            <Flag className="h-5 w-5 text-red-500 flex-shrink-0" />
-            <div>
-              <div className="text-sm font-semibold text-ink">{data!.open_reports} open report{data!.open_reports !== 1 ? "s" : ""}</div>
-              <div className="text-[11px] text-ink-sub mt-0.5">Review flagged content</div>
-            </div>
-          </div>
-          <span className="text-brand-500 text-sm font-mononum flex-shrink-0">Review →</span>
-        </Link>
-      )}
-
-      {/* Quick links */}
-      <div>
-        <SectionTitle>Admin sections</SectionTitle>
-        <div className="grid grid-cols-2 gap-3">
-          {[
-            { to: "/admin/users", icon: <Users className="h-5 w-5" />, label: "User management" },
-            { to: "/admin/verifications", icon: <ShieldCheck className="h-5 w-5" />, label: "Verifications" },
-            { to: "/admin/reports", icon: <Flag className="h-5 w-5" />, label: "Reports" },
-            { to: "/admin/audit", icon: <Briefcase className="h-5 w-5" />, label: "Audit log" },
-          ].map((item) => (
-            <Link
-              key={item.to}
-              to={item.to}
-              className="panel p-4 flex items-center gap-3 min-h-[64px] hover:border-brand-500 transition"
-            >
-              <span className="text-brand-500">{item.icon}</span>
-              <span className="text-sm font-semibold text-ink">{item.label}</span>
-            </Link>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ── Root component ──────────────────────────────────────────────────────────
 
 export default function Dashboard() {
   const { user } = useAuthStore();
   if (!user) return null;
 
-  if (isAdmin(user.role)) return <ErrorBoundary><AdminDashboard /></ErrorBoundary>;
+  if (isAdmin(user.role)) return <Navigate to="/admin" replace />;
   if (user.role === "scout") return <ErrorBoundary><ScoutDashboard /></ErrorBoundary>;
   if (hasRole(user.role, "club", "organizer")) return <ErrorBoundary><ClubDashboard /></ErrorBoundary>;
   return <ErrorBoundary><AthleteDashboard /></ErrorBoundary>;

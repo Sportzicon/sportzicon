@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { api, humanizeError } from "../api/client";
 import { Eye, EyeOff } from "lucide-react";
+import { BackButton } from "../components/BackButton";
 
 function PasswordRequirement({ met, text }: { met: boolean; text: string }) {
   return (
@@ -61,6 +62,7 @@ export default function ResetPassword() {
   return (
     <div className="min-h-[calc(100vh-10rem)] flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
+        <BackButton to="/login" label="Back to sign in" className="mb-4" />
         <div className="panel p-8">
           {done ? (
             <div className="text-center">

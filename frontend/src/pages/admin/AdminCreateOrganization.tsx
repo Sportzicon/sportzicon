@@ -5,6 +5,7 @@ import { api, humanizeError } from "../../api/client";
 import { queryKeys } from "../../hooks/queryKeys";
 import { Wizard } from "../../components/Wizard";
 import { PageHeader } from "../../components/UI";
+import { BackButton } from "../../components/BackButton";
 
 const DRAFT_KEY = "admin_create_org_draft";
 
@@ -174,7 +175,7 @@ export default function AdminCreateOrganization() {
   return (
     <div className="max-w-2xl space-y-5">
       <div className="flex items-center gap-4">
-        <button className="btn-secondary btn-sm" onClick={() => navigate("/admin/organizations")}>← Back to organizations</button>
+        <BackButton to="/admin/organizations" label="Back to organizations" />
         <PageHeader title="Create Organization" subtitle="Register a new organization on the platform" />
       </div>
 

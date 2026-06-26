@@ -1,10 +1,12 @@
 import { useState, useCallback } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { api, humanizeError } from "../../api/client";
 import { queryKeys } from "../../hooks/queryKeys";
+import { organizationService } from "../../services";
 import { Wizard } from "../../components/Wizard";
 import { PageHeader } from "../../components/UI";
+import { BackButton } from "../../components/BackButton";
 
 const DRAFT_KEY = "admin_create_opp_draft";
 
@@ -80,6 +82,13 @@ function Field({ label, required, hint, children }: {
 export default function AdminCreateOpportunity() {
   const navigate = useNavigate();
   const qc = useQueryClient();
+
+  const orgsQ = useQuery({
+    queryKey: queryKeys.myOrgs(),
+    queryFn: () => organizationService.list(),
+    staleTime: 60_000,
+  });
+
   const [draft, setDraftRaw] = useState<Draft>(loadDraft);
   const [draftSavedAt, setDraftSavedAt] = useState<Date | null>(
     localStorage.getItem(DRAFT_KEY) ? new Date() : null
@@ -206,7 +215,7 @@ export default function AdminCreateOpportunity() {
   return (
     <div className="max-w-2xl space-y-5">
       <div className="flex items-center gap-4">
-        <button className="btn-secondary btn-sm" onClick={() => navigate("/admin/opportunities")}>← Back to opportunities</button>
+        <BackButton to="/admin/opportunities" label="Back to opportunities" />
         <PageHeader title="Create Opportunity" subtitle="Create a tournament, trial or other opportunity" />
       </div>
 
@@ -228,14 +237,24 @@ export default function AdminCreateOpportunity() {
         {draft.step === 0 && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="sm:col-span-2">
-              <Field label="Organization ID" required hint="Find this on the Organizations page — copy the org's UUID from the URL or detail view">
-                <input
-                  className="input"
-                  value={draft.org_id}
-                  onChange={(e) => setF("org_id", e.target.value)}
-                  onBlur={() => touch(setTouched1, "org_id")}
-                  placeholder="e.g. 3f2504e0-4f89-11d3-9a0c-0305e82c3301"
-                />
+              <Field label="Organization" required>
+                {orgsQ.isLoading ? (
+                  <div className="input flex items-center text-slate-400 text-sm">Loading organizations…</div>
+                ) : orgsQ.isError ? (
+                  <div className="text-xs text-red-600">Failed to load organizations</div>
+                ) : (
+                  <select
+                    className="input"
+                    value={draft.org_id}
+                    onChange={(e) => { setF("org_id", e.target.value); touch(setTouched1, "org_id"); }}
+                    onBlur={() => touch(setTouched1, "org_id")}
+                  >
+                    <option value="">— select organization —</option>
+                    {(orgsQ.data ?? []).map((org) => (
+                      <option key={org.id} value={org.id}>{org.org_name}</option>
+                    ))}
+                  </select>
+                )}
                 {touched1.has("org_id") && step1Errors.org_id && (
                   <p className="text-xs text-red-600 mt-0.5">{step1Errors.org_id}</p>
                 )}

@@ -2,6 +2,7 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import { useBlog } from "../hooks";
 import { Spinner, StatusPill, Kicker, Avatar } from "../components/UI";
+import { BackButton } from "../components/BackButton";
 import { CommentSection } from "../components/CommentSection";
 import { useAuthStore } from "../store/auth";
 import { Trash2, Pencil, MoreVertical, Heart, ChevronDown, ChevronUp, List } from "lucide-react";
@@ -91,9 +92,7 @@ export default function BlogDetail() {
 
   return (
     <div className="max-w-5xl mx-auto">
-      <button onClick={() => navigate(-1)} className="btn-ghost text-[12.5px] mb-3 min-h-[44px]">
-        ← Blogs
-      </button>
+      <BackButton label="Blogs" className="mb-3" />
 
       <div className="lg:flex lg:gap-8 lg:items-start">
         {/* Main content */}
