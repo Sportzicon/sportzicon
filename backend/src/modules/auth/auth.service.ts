@@ -176,6 +176,9 @@ export async function login(email: string, password: string) {
   // Clear failed attempts on successful login
   await prisma.loginAttempt.deleteMany({ where: { email: emailLower } });
 
+  // Revoke all existing sessions before issuing a new one (single active session)
+  await revokeAllRefreshTokensForUser(user.id);
+
   await prisma.user.update({
     where: { id: user.id },
     data: { last_active_at: new Date() }

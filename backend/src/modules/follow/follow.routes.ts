@@ -3,6 +3,7 @@ import { z } from "zod";
 import { asyncHandler } from "../../utils/async";
 import { requireAuth } from "../../middleware/auth";
 import { validate } from "../../middleware/validate";
+import { logger } from "../../config/logger";
 import * as svc from "./follow.service";
 
 const router = Router();
@@ -14,6 +15,7 @@ router.post(
   requireAuth,
   validate(idParam, "params"),
   asyncHandler(async (req, res) => {
+    logger.info({ followerId: req.user!.sub, followeeId: req.params.id }, "follow: request");
     const r = await svc.follow(req.user!.sub, req.params.id);
     res.json(r);
   })
@@ -24,6 +26,7 @@ router.delete(
   requireAuth,
   validate(idParam, "params"),
   asyncHandler(async (req, res) => {
+    logger.info({ followerId: req.user!.sub, followeeId: req.params.id }, "unfollow: request");
     const r = await svc.unfollow(req.user!.sub, req.params.id);
     res.json(r);
   })

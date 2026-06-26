@@ -107,8 +107,8 @@ export async function likePost(postId: string, userId: string) {
   if (!post) throw NotFound("Post not found");
 
   await prisma.$transaction([
-    prisma.$executeRaw`INSERT INTO "PostLike" (post_id, user_id) VALUES (${postId}, ${userId}) ON CONFLICT DO NOTHING`,
-    prisma.$executeRaw`UPDATE "Post" SET like_count = (SELECT COUNT(*) FROM "PostLike" WHERE post_id = ${postId}) WHERE id = ${postId}`
+    prisma.$executeRaw`INSERT INTO "PostLike" (post_id, user_id) VALUES (${postId}::uuid, ${userId}::uuid) ON CONFLICT DO NOTHING`,
+    prisma.$executeRaw`UPDATE "Post" SET like_count = (SELECT COUNT(*) FROM "PostLike" WHERE post_id = ${postId}::uuid) WHERE id = ${postId}::uuid`
   ]);
 
   // Notify the author (skip if liking own post)
@@ -134,8 +134,8 @@ export async function unlikePost(postId: string, userId: string) {
   if (!exists) throw NotFound("Post not found");
 
   await prisma.$transaction([
-    prisma.$executeRaw`DELETE FROM "PostLike" WHERE post_id = ${postId} AND user_id = ${userId}`,
-    prisma.$executeRaw`UPDATE "Post" SET like_count = (SELECT COUNT(*) FROM "PostLike" WHERE post_id = ${postId}) WHERE id = ${postId}`
+    prisma.$executeRaw`DELETE FROM "PostLike" WHERE post_id = ${postId}::uuid AND user_id = ${userId}::uuid`,
+    prisma.$executeRaw`UPDATE "Post" SET like_count = (SELECT COUNT(*) FROM "PostLike" WHERE post_id = ${postId}::uuid) WHERE id = ${postId}::uuid`
   ]);
 
   const updated = await prisma.post.findUnique({ where: { id: postId }, select: { like_count: true } });

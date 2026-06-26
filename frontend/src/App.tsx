@@ -1,10 +1,36 @@
-import { Route, Routes, useLocation } from "react-router-dom";
+import { Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 import { ErrorBoundary } from "./components/ErrorBoundary";
+import { queryClient } from "./main";
 
 function ScrollToTop() {
   const { pathname } = useLocation();
   useEffect(() => { window.scrollTo(0, 0); }, [pathname]);
+  return null;
+}
+
+// Detects logout (or session clear) in another tab and clears this tab's session.
+function CrossTabSessionSync() {
+  const navigate = useNavigate();
+  useEffect(() => {
+    function onStorage(e: StorageEvent) {
+      if (e.key !== "sportivox.auth") return;
+      let hasSession = false;
+      if (e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          hasSession = !!(parsed?.state?.user && parsed?.state?.accessToken);
+        } catch { /* ignore */ }
+      }
+      if (!hasSession) {
+        useAuthStore.getState().clear();
+        queryClient.clear();
+        navigate("/login", { replace: true });
+      }
+    }
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, [navigate]);
   return null;
 }
 import { Layout } from "./components/Layout";
@@ -80,6 +106,7 @@ export default function App() {
   return (
     <>
     <ScrollToTop />
+    <CrossTabSessionSync />
     <Routes>
       {/* Public routes — all share the PublicLayout header */}
       <Route element={<PublicLayout />}>

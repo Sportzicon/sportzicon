@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, Navigate, useNavigate } from "react-router-dom";
 import { getApiError } from "../api/client";
 import { authService } from "../services";
 import { useAuthStore } from "../store/auth";
@@ -7,7 +7,9 @@ import { Eye, EyeOff } from "lucide-react";
 
 export default function Login() {
   const navigate = useNavigate();
-  const { setSession } = useAuthStore();
+  const { setSession, user, accessToken } = useAuthStore();
+
+  if (user && accessToken) return <Navigate to="/dashboard" replace />;
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);

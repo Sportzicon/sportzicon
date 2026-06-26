@@ -126,7 +126,7 @@ export async function getBlog(idOrSlug: string) {
   if (!blog) throw NotFound("Blog not found");
 
   // Atomic view count increment
-  prisma.$executeRaw`UPDATE "Blog" SET view_count = view_count + 1 WHERE id = ${blog.id}`.catch(() => undefined);
+  prisma.$executeRaw`UPDATE "Blog" SET view_count = view_count + 1 WHERE id = ${blog.id}::uuid`.catch(() => undefined);
 
   return { ...flattenBlog(blog), view_count: blog.view_count + 1 };
 }
@@ -142,8 +142,8 @@ export async function likeBlog(id: string, userId: string) {
   if (already) return { ok: true, liked: true };
 
   await prisma.$transaction([
-    prisma.$executeRaw`INSERT INTO "BlogLike" (blog_id, user_id) VALUES (${id}, ${userId}) ON CONFLICT DO NOTHING`,
-    prisma.$executeRaw`UPDATE "Blog" SET like_count = (SELECT COUNT(*) FROM "BlogLike" WHERE blog_id = ${id}) WHERE id = ${id}`,
+    prisma.$executeRaw`INSERT INTO "BlogLike" (blog_id, user_id) VALUES (${id}::uuid, ${userId}::uuid) ON CONFLICT DO NOTHING`,
+    prisma.$executeRaw`UPDATE "Blog" SET like_count = (SELECT COUNT(*) FROM "BlogLike" WHERE blog_id = ${id}::uuid) WHERE id = ${id}::uuid`,
   ]);
   return { ok: true, liked: true };
 }
@@ -156,8 +156,8 @@ export async function unlikeBlog(id: string, userId: string) {
   if (!already) return { ok: true, liked: false };
 
   await prisma.$transaction([
-    prisma.$executeRaw`DELETE FROM "BlogLike" WHERE blog_id = ${id} AND user_id = ${userId}`,
-    prisma.$executeRaw`UPDATE "Blog" SET like_count = (SELECT COUNT(*) FROM "BlogLike" WHERE blog_id = ${id}) WHERE id = ${id}`,
+    prisma.$executeRaw`DELETE FROM "BlogLike" WHERE blog_id = ${id}::uuid AND user_id = ${userId}::uuid`,
+    prisma.$executeRaw`UPDATE "Blog" SET like_count = (SELECT COUNT(*) FROM "BlogLike" WHERE blog_id = ${id}::uuid) WHERE id = ${id}::uuid`,
   ]);
   return { ok: true, liked: false };
 }
