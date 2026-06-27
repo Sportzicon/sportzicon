@@ -194,6 +194,29 @@ export async function searchPlayers(q: {
   };
 }
 
+export async function searchUsers(q: {
+  q: string;
+  limit: number;
+  excludeId?: string;
+}): Promise<{ data: { id: string; full_name: string; role: string; profile_photo_url: string | null }[] }> {
+  const term = `%${q.q.trim()}%`;
+  const limit = Math.min(q.limit, 50);
+
+  const rows = await prisma.$queryRaw<{ id: string; full_name: string; role: string; profile_photo_url: string | null }[]>(
+    Prisma.sql`
+      SELECT id, full_name, role, profile_photo_url
+      FROM "User"
+      WHERE lower(full_name) LIKE lower(${term})
+        AND is_banned IS NOT TRUE
+        ${q.excludeId ? Prisma.sql`AND id <> ${q.excludeId}::uuid` : Prisma.sql``}
+      ORDER BY full_name ASC
+      LIMIT ${limit}
+    `
+  );
+
+  return { data: rows };
+}
+
 export async function searchClubs(q: {
   q?: string;
   sport?: string;
@@ -288,7 +311,7 @@ export async function searchOpportunities(q: {
   const hasFTS = Boolean(q.q?.trim());
   const status = q.status ?? "open";
 
-  const conditions: Prisma.Sql[] = [Prisma.sql`opp.status = ${status}`];
+  const conditions: Prisma.Sql[] = [Prisma.sql`opp.status::text = ${status}`];
 
   if (hasFTS) {
     conditions.push(
@@ -299,7 +322,7 @@ export async function searchOpportunities(q: {
     conditions.push(Prisma.sql`lower(opp.sport) = lower(${q.sport})`);
   }
   if (q.type) {
-    conditions.push(Prisma.sql`opp.type = ${q.type}`);
+    conditions.push(Prisma.sql`opp.type::text = ${q.type}`);
   }
   if (q.city) {
     conditions.push(Prisma.sql`lower(opp.city) LIKE lower(${`%${q.city}%`})`);

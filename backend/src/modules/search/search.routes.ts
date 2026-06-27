@@ -51,6 +51,20 @@ const oppSearchQ = z.object({
 });
 
 router.get(
+  "/users",
+  requireAuth,
+  validate(z.object({ q: z.string().min(1).max(120), limit: z.coerce.number().int().min(1).max(50).default(20) }), "query"),
+  asyncHandler(async (req, res) => {
+    const result = await svc.searchUsers({
+      q: req.query.q as string,
+      limit: Number(req.query.limit) || 20,
+      excludeId: req.user!.sub,
+    });
+    res.json(result);
+  })
+);
+
+router.get(
   "/players",
   requireAuth,
   validate(playerSearchQ, "query"),

@@ -1,8 +1,3 @@
-data "google_secret_manager_secret" "gmail_app_password" {
-  secret_id = "sportivox-gmail-app-password-${var.env}"
-  project   = var.project_id
-}
-
 resource "google_cloud_run_v2_service" "api" {
   name     = "sportivox-api-${var.env}"
   location = var.region
@@ -96,20 +91,6 @@ resource "google_cloud_run_v2_service" "api" {
       env {
         name  = "EMAIL_FROM_NAME"
         value = var.email_from_name
-      }
-
-      env {
-        name  = "GMAIL_USER"
-        value = var.gmail_user
-      }
-      env {
-        name = "GMAIL_APP_PASSWORD"
-        value_source {
-          secret_key_ref {
-            secret  = data.google_secret_manager_secret.gmail_app_password.secret_id
-            version = "latest"
-          }
-        }
       }
 
       env {

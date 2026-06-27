@@ -33,13 +33,12 @@ auth_rate_limit_max     = 20
 # Logging level for staging
 log_level               = "info"
 
-# Email configuration — app password stored in Secret Manager
-gmail_user      = "admin@sportzicon.com"
-email_from      = "admin@sportzicon.com"
+# Email configuration — Resend API key stored in Secret Manager
+email_from      = "no-reply@sportzicon.com"
 email_from_name = "Sportzicon"
 
 # Optional secrets managed by Terraform (JWT keys are always created)
-optional_secrets         = []
+optional_secrets         = ["RESEND_API_KEY"]
 openai_api_key           = ""
 bootstrap_admin_email    = ""
 bootstrap_admin_password = ""

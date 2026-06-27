@@ -1,19 +1,10 @@
-import nodemailer from "nodemailer";
+import { Resend } from "resend";
 import { env, isTest } from "./env";
 import { logger } from "./logger";
 import { prisma } from "./prisma";
 import type { EmailType } from "@prisma/client";
 
-const transporter =
-  env.GMAIL_USER && env.GMAIL_APP_PASSWORD
-    ? nodemailer.createTransport({
-        service: "gmail",
-        auth: {
-          user: env.GMAIL_USER,
-          pass: env.GMAIL_APP_PASSWORD
-        }
-      })
-    : null;
+const resend = env.RESEND_API_KEY ? new Resend(env.RESEND_API_KEY) : null;
 
 export type SendMailInput = {
   to: string;
@@ -50,20 +41,21 @@ export async function sendMail(input: SendMailInput): Promise<void> {
     testMailbox.push(input);
     return;
   }
-  if (!transporter) {
+  if (!resend) {
     logger.info({ to: input.to, subject: input.subject }, "[email-stub] would send email");
     logger.debug({ html: input.html }, "[email-stub] body");
     await writeLog(input, "stub");
     return;
   }
   try {
-    await transporter.sendMail({
-      from: `"${env.EMAIL_FROM_NAME}" <${env.GMAIL_USER}>`,
+    const { error } = await resend.emails.send({
+      from: `${env.EMAIL_FROM_NAME} <${env.EMAIL_FROM}>`,
       to: input.to,
       subject: input.subject,
       html: input.html,
       text: input.text ?? input.html.replace(/<[^>]+>/g, "")
     });
+    if (error) throw new Error(error.message);
     await writeLog(input, "sent");
   } catch (err: any) {
     logger.error({ err, to: input.to, subject: input.subject }, "sendMail failed");
@@ -72,6 +64,5 @@ export async function sendMail(input: SendMailInput): Promise<void> {
   }
 }
 
-// In-memory mailbox used by tests so we can assert what got sent.
 export const testMailbox: SendMailInput[] = [];
 export function clearTestMailbox() { testMailbox.length = 0; }

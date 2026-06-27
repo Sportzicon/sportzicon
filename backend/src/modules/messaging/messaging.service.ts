@@ -2,19 +2,7 @@ import { prisma } from "../../config/prisma";
 import { BadRequest, Forbidden, NotFound } from "../../utils/errors";
 import { eventBus } from "../../lib/EventBus";
 import { MESSAGE_SENT, type MessageSentEvent } from "../../events/types";
-import type { Response } from "express";
-
-// Map of conversationId → Set of waiting long-poll responses
-const pollWaiters = new Map<string, Set<Response>>();
-
-function notifyPollers(conversationId: string) {
-  const waiters = pollWaiters.get(conversationId);
-  if (!waiters) return;
-  for (const res of waiters) {
-    if (!res.headersSent) res.json({ hasNew: true });
-  }
-  pollWaiters.delete(conversationId);
-}
+import { emitNewMessage } from "../../lib/socket";
 
 async function assertParticipant(userId: string, conversationId: string) {
   const conv = await prisma.conversation.findUnique({
@@ -101,7 +89,14 @@ export async function sendMessage(senderId: string, recipientId: string, body: s
     bodyPreview: body.length > 120 ? body.slice(0, 117) + "..." : body,
   });
 
-  notifyPollers(convId);
+  emitNewMessage(convId, {
+    id: message.id,
+    conversation_id: convId,
+    sender_id: senderId,
+    recipient_id: recipientId,
+    body,
+    created_at: message.created_at.toISOString(),
+  });
 
   return { conversation_id: convId, id: message.id };
 }
@@ -175,44 +170,3 @@ export async function markRead(userId: string, conversationId: string) {
   return { ok: true };
 }
 
-export async function pollForNewMessages(
-  userId: string,
-  conversationId: string,
-  afterMessageId: string | undefined,
-  res: Response
-) {
-  await assertParticipant(userId, conversationId);
-
-  // Check if there are already new messages
-  const where = afterMessageId
-    ? { conversation_id: conversationId, id: { gt: afterMessageId } }
-    : { conversation_id: conversationId };
-
-  const count = await prisma.message.count({ where });
-  if (count > 0) {
-    res.json({ hasNew: true });
-    return;
-  }
-
-  // Hold open for up to 25 seconds
-  if (!pollWaiters.has(conversationId)) pollWaiters.set(conversationId, new Set());
-  pollWaiters.get(conversationId)!.add(res);
-
-  const timer = setTimeout(() => {
-    const waiters = pollWaiters.get(conversationId);
-    if (waiters) {
-      waiters.delete(res);
-      if (waiters.size === 0) pollWaiters.delete(conversationId);
-    }
-    if (!res.headersSent) res.status(204).end();
-  }, 25_000);
-
-  res.on("close", () => {
-    clearTimeout(timer);
-    const waiters = pollWaiters.get(conversationId);
-    if (waiters) {
-      waiters.delete(res);
-      if (waiters.size === 0) pollWaiters.delete(conversationId);
-    }
-  });
-}

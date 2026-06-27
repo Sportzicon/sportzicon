@@ -1,3 +1,4 @@
+import http from "http";
 import { createApp } from "./app";
 import { env } from "./config/env";
 import { logger } from "./config/logger";
@@ -6,6 +7,7 @@ import { bootstrapAdminIfNeeded } from "./modules/auth/auth.service";
 import { checkAndCloseExpiredOpportunities } from "./modules/opportunities/opportunities.service";
 import { deleteOldNotifications } from "./modules/notifications/notifications.service";
 import { prisma } from "./config/prisma";
+import { initSocket } from "./lib/socket";
 
 async function main() {
   const app = createApp();
@@ -21,7 +23,9 @@ async function main() {
     logger.warn({ err }, "admin bootstrap skipped");
   }
 
-  const server = app.listen(env.PORT, () => {
+  const server = http.createServer(app);
+  initSocket(server);
+  server.listen(env.PORT, () => {
     logger.info({ port: env.PORT, env: env.NODE_ENV }, "Sportzicon API listening");
   });
 

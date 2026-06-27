@@ -70,4 +70,9 @@ export class SearchService {
     const res = await this.client.get<SearchPage<Record<string, unknown>>>("/search/opportunities", { params });
     return res.data;
   }
+
+  async searchUsers(params: { q: string; limit?: number }): Promise<{ data: { id: string; full_name: string; role: string; profile_photo_url: string | null }[] }> {
+    const res = await this.client.get<{ data: { id: string; full_name: string; role: string; profile_photo_url: string | null }[] }>("/search/users", { params });
+    return res.data;
+  }
 }

@@ -59,21 +59,6 @@ router.get(
   })
 );
 
-// Long-poll for new messages (holds open up to 25 seconds)
-router.get(
-  "/conversations/:id/poll",
-  requireAuth,
-  validate(z.object({ id: z.string().uuid() }), "params"),
-  asyncHandler(async (req, res) => {
-    await svc.pollForNewMessages(
-      req.user!.sub,
-      req.params.id,
-      req.query.after as string | undefined,
-      res
-    );
-  })
-);
-
 // Mark conversation as read
 router.post(
   "/conversations/:id/read",

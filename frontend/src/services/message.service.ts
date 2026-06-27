@@ -31,19 +31,4 @@ export class MessageService {
     await this.client.post(`/conversations/${conversationId}/read`);
   }
 
-  async poll(conversationId: string, afterMessageId?: string, signal?: AbortSignal): Promise<{ hasNew: boolean } | null> {
-    try {
-      const params = afterMessageId ? `?after=${afterMessageId}` : "";
-      const res = await this.client.get<{ hasNew: boolean }>(
-        `/conversations/${conversationId}/poll${params}`,
-        { signal, timeout: 30_000 }
-      );
-      return res.data;
-    } catch (err: unknown) {
-      const axiosErr = err as { response?: { status?: number }; code?: string };
-      if (axiosErr?.response?.status === 429) throw err; // caller handles backoff
-      if (axiosErr?.code === "ERR_CANCELED") throw err;  // abort — don't retry
-      return null; // network / timeout — caller retries with delay
-    }
-  }
 }

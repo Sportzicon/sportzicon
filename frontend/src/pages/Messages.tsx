@@ -9,6 +9,7 @@ import { ErrorBoundary } from "../components/ErrorBoundary";
 import { queryKeys } from "../hooks/queryKeys";
 import { Send, Plus, Search, ArrowLeft, X } from "lucide-react";
 import type { Conversation, Message } from "../models";
+import { connectSocket, disconnectSocket } from "../lib/socket";
 
 // ── helpers ────────────────────────────────────────────────────────────────────
 
@@ -111,12 +112,12 @@ function ContactPicker({ isOpen, onClose, onSelect }: ContactPickerProps) {
   }, [q]);
 
   const results = useQuery({
-    queryKey: queryKeys.search("players", { q }),
-    queryFn: () => searchService.searchPlayers({ q, limit: 20 }),
+    queryKey: queryKeys.search("users", { q }),
+    queryFn: () => searchService.searchUsers({ q, limit: 20 }),
     enabled: q.length >= 2,
   });
 
-  const players = (results.data?.data ?? []) as Array<{ id: string; full_name: string; profile_photo_url?: string; role?: string }>;
+  const players = (results.data?.data ?? []) as Array<{ id: string; full_name: string; profile_photo_url?: string | null; role?: string }>;
 
   return (
     <MobileDrawer isOpen={isOpen} onClose={onClose} title="New Message">
@@ -144,7 +145,7 @@ function ContactPicker({ isOpen, onClose, onSelect }: ContactPickerProps) {
                   onClick={() => { onSelect(p.id, p.full_name, p.profile_photo_url ?? null); onClose(); }}
                   className="w-full flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-fill transition min-h-[44px] text-left"
                 >
-                  <Avatar name={p.full_name} src={p.profile_photo_url} size={40} square={false} />
+                  <Avatar name={p.full_name} src={p.profile_photo_url ?? undefined} size={40} square={false} />
                   <div>
                     <div className="text-sm font-semibold text-ink">{p.full_name}</div>
                     {p.role && <div className="lab text-[10.5px] capitalize">{p.role}</div>}
@@ -178,8 +179,6 @@ export default function Messages() {
   const [pickerOpen, setPickerOpen] = useState(false);
   const qc = useQueryClient();
   const endRef = useRef<HTMLDivElement>(null);
-  const abortRef = useRef<AbortController | null>(null);
-  const pollingRef = useRef(false);
 
   // Handle ?to= URL param
   useEffect(() => {
@@ -224,55 +223,63 @@ export default function Messages() {
     select: (data) => data.items,
   });
 
-  // Long-poll for new messages
-  const startLongPoll = async (convId: string) => {
-    if (pollingRef.current) return;
-    pollingRef.current = true;
-    abortRef.current = new AbortController();
+  // WebSocket — connect once, join/leave conversation rooms
+  useEffect(() => {
+    const token = useAuthStore.getState().accessToken;
+    if (!token) return;
+    const socket = connectSocket(token);
 
-    try {
-      const items = qc.getQueryData<Message[]>(queryKeys.messages(convId));
-      const latestId = items?.[items.length - 1]?.id;
-      const result = await messageService.poll(convId, latestId, abortRef.current.signal);
-      if (result?.hasNew) {
-        qc.invalidateQueries({ queryKey: queryKeys.messages(convId) });
-        qc.invalidateQueries({ queryKey: queryKeys.conversations() });
-      } else {
-        await new Promise((r) => setTimeout(r, 1_000));
-      }
-    } finally {
-      pollingRef.current = false;
-    }
+    socket.on("new_message", (msg: Message) => {
+      const convId = msg.conversation_id;
+      // Append to message cache if this conversation is loaded
+      qc.setQueryData<{ items: Message[]; next_cursor: string | null }>(
+        queryKeys.messages(convId),
+        (old) => old ? { ...old, items: [...old.items, msg] } : old
+      );
+      // Refresh conversation list (last message preview + unread count)
+      qc.invalidateQueries({ queryKey: queryKeys.conversations() });
+      qc.invalidateQueries({ queryKey: queryKeys.notifCount() });
+    });
 
-    if (abortRef.current && !abortRef.current.signal.aborted) {
-      startLongPoll(convId);
-    }
-  };
+    return () => {
+      socket.off("new_message");
+      disconnectSocket();
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
+  // Join/leave conversation rooms as active conversation changes
   useEffect(() => {
     if (!activeId || activeId.startsWith("demo_")) return;
-    startLongPoll(activeId);
-    return () => {
-      abortRef.current?.abort();
-      abortRef.current = null;
-      pollingRef.current = false;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    const socket = connectSocket(useAuthStore.getState().accessToken ?? "");
+    socket.emit("join", [activeId]);
+    return () => { socket.emit("leave", activeId); };
   }, [activeId]);
+
+  // Also join all loaded conversation rooms for unread notifications
+  useEffect(() => {
+    if (!convs.data?.length) return;
+    const socket = connectSocket(useAuthStore.getState().accessToken ?? "");
+    const ids = convs.data.map((c: Conversation) => c.id);
+    socket.emit("join", ids);
+  }, [convs.data]);
 
   // Auto-scroll to bottom on new messages
   useEffect(() => {
     if (endRef.current) endRef.current.scrollTop = endRef.current.scrollHeight;
   }, [messages.data?.length, activeId]);
 
-  // Mark read when entering thread
+  // Mark read once when entering a conversation thread
   useEffect(() => {
     if (activeId && !activeId.startsWith("demo_")) {
       messageService.markRead(activeId)
-        .then(() => qc.invalidateQueries({ queryKey: queryKeys.conversations() }))
+        .then(() => {
+          qc.invalidateQueries({ queryKey: queryKeys.conversations() });
+          qc.invalidateQueries({ queryKey: queryKeys.notifCount() });
+        })
         .catch(() => undefined);
     }
-  }, [activeId, messages.data?.length, qc]);
+  }, [activeId, qc]);
 
   async function send(e?: React.FormEvent) {
     e?.preventDefault();
@@ -301,6 +308,14 @@ export default function Messages() {
     setRecipientAvatar(c._other_avatar ?? null);
     setParams({});
     setMobileView("thread");
+    // Optimistically zero the unread badge so it clears instantly
+    qc.setQueryData<Conversation[]>(queryKeys.conversations(), (old) =>
+      old?.map((conv) =>
+        conv.id === c.id
+          ? { ...conv, _unread_count: 0, unread_counts: conv.unread_counts ? { ...conv.unread_counts, [me.id]: 0 } : undefined }
+          : conv
+      )
+    );
   }
 
   function handleContactSelected(userId: string, name: string, avatar: string | null) {
@@ -340,15 +355,6 @@ export default function Messages() {
         title="Messages"
         subtitle="Inbox"
         sticky
-        action={
-          <button
-            onClick={() => setPickerOpen(true)}
-            className="btn-accent flex items-center gap-2 min-h-[44px]"
-          >
-            <Plus className="h-4 w-4" />
-            <span className="hidden sm:inline">New Message</span>
-          </button>
-        }
       />
 
       <ContactPicker

@@ -55,10 +55,11 @@ variable "openai_api_key" {
   description = "OpenAI API key. Stored in Secret Manager."
 }
 
-variable "gmail_user" {
+variable "resend_api_key" {
   type        = string
+  sensitive   = true
   default     = ""
-  description = "Gmail address used to send transactional emails."
+  description = "Resend API key for transactional emails."
 }
 
 variable "email_from" {

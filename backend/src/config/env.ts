@@ -35,9 +35,8 @@ const schema = z.object({
   OPENAI_API_KEY: z.string().optional(),
   OPENAI_MODEL: z.string().default("gpt-4o-mini"),
 
-  GMAIL_USER: z.string().email().optional(),
-  GMAIL_APP_PASSWORD: z.string().optional(),
-  EMAIL_FROM: z.string().email().default("no-reply@sportzicon.local"),
+  RESEND_API_KEY: z.string().optional(),
+  EMAIL_FROM: z.string().email().default("no-reply@sportzicon.com"),
   EMAIL_FROM_NAME: z.string().default("Sportzicon"),
 
   REDIS_URL: z.string().url().optional(),
