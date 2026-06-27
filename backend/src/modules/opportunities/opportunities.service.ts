@@ -113,31 +113,31 @@ export async function linkScoringTournament(id: string, actorId: string, actorRo
 }
 
 export async function getOpportunity(id: string) {
-  const opp = await prisma.opportunity.findUnique({
-    where: { id },
-    include: {
-      _count: { select: { applications: true } },
-      organization: { select: { org_name: true } }
-    }
-  });
+  const [opp, realFilled] = await Promise.all([
+    prisma.opportunity.findUnique({
+      where: { id },
+      include: {
+        _count: { select: { applications: true } },
+        organization: { select: { org_name: true } }
+      }
+    }),
+    prisma.application.count({ where: { opportunity_id: id, status: "selected" } })
+  ]);
   if (!opp) throw NotFound("Opportunity not found");
 
   const { _count, organization, ...rest } = opp;
-  const realAppCount = _count.applications;
-  const realFilled = await prisma.application.count({
-    where: { opportunity_id: id, status: "selected" }
-  });
-
   const base = {
     ...rest,
     org_name: organization?.org_name,
-    application_count: realAppCount,
+    application_count: _count.applications,
     vacancies_filled: realFilled
   };
 
   if (base.status === "open" && new Date(base.application_deadline) < new Date()) {
-    await prisma.opportunity.update({ where: { id }, data: { status: "closed" } });
-    return { ...base, status: "closed" };
+    // fire-and-forget — don't block the response for a status update
+    prisma.opportunity.update({ where: { id }, data: { status: "closed" } })
+      .catch(err => logger.error({ err }, "failed to auto-close expired opportunity"));
+    return { ...base, status: "closed" as const };
   }
   return base;
 }
@@ -188,14 +188,9 @@ export async function deleteOpportunity(id: string, actorId: string, actorRole: 
 }
 
 export async function listMyOpportunities(actorId: string) {
-  const orgs = await prisma.organization.findMany({
-    where: { owner_user_id: actorId },
-    select: { id: true },
-  });
-  const orgIds = orgs.map((o) => o.id);
-
+  // Single query — join through org relation instead of two round-trips
   const rows = await prisma.opportunity.findMany({
-    where: { org_id: { in: orgIds } },
+    where: { organization: { owner_user_id: actorId } },
     orderBy: { created_at: "desc" },
     include: {
       organization: { select: { org_name: true, city: true, state: true, country: true } },

@@ -4,8 +4,8 @@ import { VALID_SPORTS } from "../../utils/sportValidation";
 const dateIso = z.string().regex(/^\d{4}-\d{2}-\d{2}/, "Use ISO date YYYY-MM-DD");
 
 const futureDateIso = dateIso.refine(
-  (d) => new Date(d) > new Date(),
-  "Deadline must be in the future"
+  (d) => d >= new Date().toISOString().split("T")[0],
+  "Deadline must be today or in the future"
 );
 
 export const createOpportunitySchema = z

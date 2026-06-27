@@ -268,7 +268,7 @@ export function Layout() {
   const unreadCount = useNotificationStore((s) => s.unreadCount);
 
   const pendingVerifCount = useQuery({
-    queryKey: queryKeys.adminVerifications(),
+    queryKey: queryKeys.adminAnalytics(),
     queryFn: async () => {
       const r = await api.get("/admin/analytics");
       return (r.data.pending_verifications as number) ?? 0;

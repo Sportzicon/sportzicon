@@ -1,5 +1,5 @@
 import { Route, Routes, useLocation, useNavigate } from "react-router-dom";
-import { useEffect } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { queryClient } from "./main";
 
@@ -9,7 +9,6 @@ function ScrollToTop() {
   return null;
 }
 
-// Detects logout (or session clear) in another tab and clears this tab's session.
 function CrossTabSessionSync() {
   const navigate = useNavigate();
   useEffect(() => {
@@ -33,82 +32,94 @@ function CrossTabSessionSync() {
   }, [navigate]);
   return null;
 }
+
 import { Layout } from "./components/Layout";
 import PublicLayout from "./components/PublicLayout";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { useAuthStore } from "./store/auth";
 
-// Renders the authenticated Layout when logged in, PublicLayout otherwise.
-// Used for pages that are public but should keep session context (e.g. Live Scores).
 function AdaptiveLayout() {
   const user = useAuthStore(s => s.user);
   return user ? <Layout /> : <PublicLayout />;
 }
 
-import Landing from "./pages/Landing";
-import Login from "./pages/Login";
-import Signup from "./pages/Signup";
-import VerifyEmail from "./pages/VerifyEmail";
-import ForgotPassword from "./pages/ForgotPassword";
-import ResetPassword from "./pages/ResetPassword";
+// ── Lazy page imports — each route is a separate chunk ────────────────────────
+const Landing             = lazy(() => import("./pages/Landing"));
+const Login               = lazy(() => import("./pages/Login"));
+const Signup              = lazy(() => import("./pages/Signup"));
+const VerifyEmail         = lazy(() => import("./pages/VerifyEmail"));
+const ForgotPassword      = lazy(() => import("./pages/ForgotPassword"));
+const ResetPassword       = lazy(() => import("./pages/ResetPassword"));
 
-import Dashboard from "./pages/Dashboard";
-import Profile from "./pages/Profile";
-import EditProfile from "./pages/EditProfile";
-import Search from "./pages/Search";
-import Opportunities from "./pages/Opportunities";
-import Tournaments from "./pages/Tournaments";
-import OpportunityDetail from "./pages/OpportunityDetail";
-import NewOpportunity from "./pages/NewOpportunity";
-import NewTournament from "./pages/NewTournament";
-import Applicants from "./pages/Applicants";
-import MyApplications from "./pages/MyApplications";
-import Feed from "./pages/Feed";
-import Reels from "./pages/Reels";
-import Blogs from "./pages/Blogs";
-import BlogDetail from "./pages/BlogDetail";
-import NewBlog from "./pages/NewBlog";
-import Messages from "./pages/Messages";
-import Notifications from "./pages/Notifications";
-import MyOrganizations from "./pages/MyOrganizations";
-import NewOrganization from "./pages/NewOrganization";
-import OrganizationDetail from "./pages/OrganizationDetail";
-import Organizations from "./pages/Organizations";
-import AITips from "./pages/AITips";
-import Admin from "./pages/admin/Admin";
-import AdminUsers from "./pages/admin/AdminUsers";
-import AdminUserDetail from "./pages/admin/AdminUserDetail";
-import AdminReports from "./pages/admin/AdminReports";
-import AdminVerifications from "./pages/admin/AdminVerifications";
-import AdminAuditLog from "./pages/admin/AdminAuditLog";
-import AdminOpportunities from "./pages/admin/AdminOpportunities";
-import AdminOrganizations from "./pages/admin/AdminOrganizations";
-import AdminApplications from "./pages/admin/AdminApplications";
-import AdminCreateUser from "./pages/admin/AdminCreateUser";
-import AdminCreateOrganization from "./pages/admin/AdminCreateOrganization";
-import AdminCreateOpportunity from "./pages/admin/AdminCreateOpportunity";
-import AdminScoring from "./pages/admin/AdminScoring";
+const Dashboard           = lazy(() => import("./pages/Dashboard"));
+const Profile             = lazy(() => import("./pages/Profile"));
+const EditProfile         = lazy(() => import("./pages/EditProfile"));
+const Search              = lazy(() => import("./pages/Search"));
+const Opportunities       = lazy(() => import("./pages/Opportunities"));
+const OpportunityDetail   = lazy(() => import("./pages/OpportunityDetail"));
+const NewOpportunity      = lazy(() => import("./pages/NewOpportunity"));
+const Tournaments         = lazy(() => import("./pages/Tournaments"));
+const NewTournament       = lazy(() => import("./pages/NewTournament"));
+const Applicants          = lazy(() => import("./pages/Applicants"));
+const MyApplications      = lazy(() => import("./pages/MyApplications"));
+const Feed                = lazy(() => import("./pages/Feed"));
+const Reels               = lazy(() => import("./pages/Reels"));
+const Blogs               = lazy(() => import("./pages/Blogs"));
+const BlogDetail          = lazy(() => import("./pages/BlogDetail"));
+const NewBlog             = lazy(() => import("./pages/NewBlog"));
+const Messages            = lazy(() => import("./pages/Messages"));
+const Notifications       = lazy(() => import("./pages/Notifications"));
+const MyOrganizations     = lazy(() => import("./pages/MyOrganizations"));
+const NewOrganization     = lazy(() => import("./pages/NewOrganization"));
+const OrganizationDetail  = lazy(() => import("./pages/OrganizationDetail"));
+const Organizations       = lazy(() => import("./pages/Organizations"));
+const AITips              = lazy(() => import("./pages/AITips"));
 
-import LiveScores from "./pages/LiveScores";
-import LiveScoreDetail from "./pages/LiveScoreDetail";
-import ScoringHome from "./pages/scoring/ScoringHome";
-import ScoringTournaments from "./pages/scoring/ScoringTournaments";
-import ScoringNewTournament from "./pages/scoring/ScoringNewTournament";
-import ScoringTournamentDetail from "./pages/scoring/ScoringTournamentDetail";
-import ScoringMatchDetail from "./pages/scoring/ScoringMatchDetail";
-import ScoringLive from "./pages/scoring/ScoringLive";
-import ScoringInningsAnalytics from "./pages/scoring/ScoringInningsAnalytics";
-import ScoringAllMatches from "./pages/scoring/ScoringAllMatches";
-import ScoringPlayerStats from "./pages/scoring/ScoringPlayerStats";
-import ScoringMatchConfig from "./pages/scoring/ScoringMatchConfig";
+// Admin — separate chunk, only loaded when admin navigates here
+const Admin                     = lazy(() => import("./pages/admin/Admin"));
+const AdminUsers                = lazy(() => import("./pages/admin/AdminUsers"));
+const AdminUserDetail           = lazy(() => import("./pages/admin/AdminUserDetail"));
+const AdminReports              = lazy(() => import("./pages/admin/AdminReports"));
+const AdminVerifications        = lazy(() => import("./pages/admin/AdminVerifications"));
+const AdminAuditLog             = lazy(() => import("./pages/admin/AdminAuditLog"));
+const AdminOpportunities        = lazy(() => import("./pages/admin/AdminOpportunities"));
+const AdminOrganizations        = lazy(() => import("./pages/admin/AdminOrganizations"));
+const AdminApplications         = lazy(() => import("./pages/admin/AdminApplications"));
+const AdminCreateUser           = lazy(() => import("./pages/admin/AdminCreateUser"));
+const AdminCreateOrganization   = lazy(() => import("./pages/admin/AdminCreateOrganization"));
+const AdminCreateOpportunity    = lazy(() => import("./pages/admin/AdminCreateOpportunity"));
+const AdminScoring              = lazy(() => import("./pages/admin/AdminScoring"));
+
+// Live scores + scoring console — separate chunks
+const LiveScores            = lazy(() => import("./pages/LiveScores"));
+const LiveScoreDetail       = lazy(() => import("./pages/LiveScoreDetail"));
+const ScoringHome           = lazy(() => import("./pages/scoring/ScoringHome"));
+const ScoringTournaments    = lazy(() => import("./pages/scoring/ScoringTournaments"));
+const ScoringNewTournament  = lazy(() => import("./pages/scoring/ScoringNewTournament"));
+const ScoringTournamentDetail = lazy(() => import("./pages/scoring/ScoringTournamentDetail"));
+const ScoringMatchDetail    = lazy(() => import("./pages/scoring/ScoringMatchDetail"));
+const ScoringLive           = lazy(() => import("./pages/scoring/ScoringLive"));
+const ScoringInningsAnalytics = lazy(() => import("./pages/scoring/ScoringInningsAnalytics"));
+const ScoringAllMatches     = lazy(() => import("./pages/scoring/ScoringAllMatches"));
+const ScoringPlayerStats    = lazy(() => import("./pages/scoring/ScoringPlayerStats"));
+const ScoringMatchConfig    = lazy(() => import("./pages/scoring/ScoringMatchConfig"));
+
+// Minimal spinner shown while a page chunk is downloading
+function PageLoader() {
+  return (
+    <div className="flex items-center justify-center min-h-screen">
+      <div className="w-8 h-8 border-4 border-brand border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
+}
 
 export default function App() {
   return (
     <>
     <ScrollToTop />
     <CrossTabSessionSync />
+    <Suspense fallback={<PageLoader />}>
     <Routes>
-      {/* Public routes — all share the PublicLayout header */}
       <Route element={<PublicLayout />}>
         <Route path="/" element={<Landing key="home" />} />
         <Route path="/how-it-works" element={<Landing key="how-it-works" initialView="how-it-works" />} />
@@ -119,13 +130,11 @@ export default function App() {
         <Route path="/reset-password" element={<ResetPassword />} />
       </Route>
 
-      {/* Live Scores — public page but keeps session when logged in */}
       <Route element={<AdaptiveLayout />}>
         <Route path="/live-scores" element={<LiveScores />} />
         <Route path="/live-scores/:matchId" element={<LiveScoreDetail />} />
       </Route>
 
-      {/* Authenticated routes (with chrome) */}
       <Route element={<Layout />}>
         <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
         <Route path="/profile/:id" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
@@ -170,7 +179,6 @@ export default function App() {
         <Route path="/admin/audit" element={<ProtectedRoute roles={["admin"]}><AdminAuditLog /></ProtectedRoute>} />
         <Route path="/admin/scoring" element={<ProtectedRoute roles={["admin"]}><AdminScoring /></ProtectedRoute>} />
 
-        {/* Scoring console — integrated into main app */}
         <Route path="/scoring" element={<ProtectedRoute><ScoringHome /></ProtectedRoute>} />
         <Route path="/scoring/tournaments" element={<ProtectedRoute><ScoringTournaments /></ProtectedRoute>} />
         <Route path="/scoring/tournaments/new" element={<ProtectedRoute><ScoringNewTournament /></ProtectedRoute>} />
@@ -186,6 +194,7 @@ export default function App() {
 
       <Route path="*" element={<div className="p-10 text-center text-slate-600">404 — not found</div>} />
     </Routes>
+    </Suspense>
     </>
   );
 }

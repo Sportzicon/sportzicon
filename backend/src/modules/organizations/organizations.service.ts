@@ -14,6 +14,7 @@ export async function createOrganization(ownerId: string, ownerRole: Role, input
       org_name: input.org_name as string,
       org_name_lower: String(input.org_name).toLowerCase(),
       org_type: input.org_type as string,
+      verification_status: "pending",
       description: input.description as string | undefined,
       logo_url: input.logo_url as string | undefined,
       cover_url: input.cover_url as string | undefined,
@@ -35,7 +36,7 @@ export async function createOrganization(ownerId: string, ownerRole: Role, input
 }
 
 export async function updateOrganization(orgId: string, actorId: string, actorRole: Role, patch: Record<string, unknown>) {
-  const org = await prisma.organization.findUnique({ where: { id: orgId } });
+  const org = await prisma.organization.findUnique({ where: { id: orgId }, select: { owner_user_id: true } });
   if (!org) throw NotFound("Organization not found");
   if (org.owner_user_id !== actorId && actorRole !== "admin")
     throw Forbidden("Only the org owner or an admin can update this organization");
@@ -61,9 +62,21 @@ export async function getOrganization(orgId: string) {
   const cached = await cacheGet(key);
   if (cached !== null) return JSON.parse(cached);
 
-  const org = await prisma.organization.findUnique({ where: { id: orgId } });
+  const org = await prisma.organization.findUnique({
+    where: { id: orgId },
+    select: {
+      id: true, owner_user_id: true, org_name: true, org_name_lower: true,
+      org_type: true, description: true, logo_url: true, cover_url: true,
+      sport_categories: true, year_established: true,
+      country: true, state: true, city: true, address: true,
+      website: true, contact_name: true, contact_email: true, contact_phone: true,
+      social_links: true, registration_doc_url: true,
+      verification_status: true, verification_badges: true,
+      subscription_plan: true, created_at: true, updated_at: true
+    }
+  });
   if (!org) throw NotFound("Organization not found");
-  const result = formatOrg(org);
+  const result = formatOrg(org as any);
   await cacheSet(key, JSON.stringify(result), 300);
   return result;
 }

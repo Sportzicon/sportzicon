@@ -15,6 +15,10 @@ const TYPE_LABELS: Record<string, string> = {
   tournament: "Tournament", coaching_job: "Coaching Job"
 };
 
+function today() {
+  return new Date().toISOString().split("T")[0];
+}
+
 function tomorrow() {
   const d = new Date();
   d.setDate(d.getDate() + 1);
@@ -92,7 +96,7 @@ export default function NewOpportunity() {
     if (form.type !== "coaching_job" && !form.start_date) errors.start_date = "Start date is required";
     if (form.type !== "coaching_job" && !form.end_date) errors.end_date = "End date is required";
     if (!form.application_deadline) errors.application_deadline = "Application deadline is required";
-    if (form.application_deadline && form.application_deadline < tomorrow()) errors.application_deadline = "Deadline must be in the future";
+    if (form.application_deadline && form.application_deadline < today()) errors.application_deadline = "Deadline must be today or in the future";
     if (!form.state) errors.state = "State is required";
     if (!form.city) errors.city = "City is required";
     if (Number(form.age_max) < Number(form.age_min)) errors.age_max = "Max age must be ≥ min age";
@@ -264,7 +268,7 @@ export default function NewOpportunity() {
             <>
               <Field label="Start date *" error={fieldErrors.start_date}>
                 <input className="input font-mononum min-h-[44px]" type="date" value={form.start_date}
-                  min={tomorrow()}
+                  min={today()}
                   onChange={(e) => set("start_date", e.target.value)} />
               </Field>
               <Field label="End date *" error={fieldErrors.end_date}>
@@ -277,8 +281,7 @@ export default function NewOpportunity() {
           <Field label="Application deadline *" hint="Auto-closes on this date." error={fieldErrors.application_deadline}>
             <input className={`input font-mononum min-h-[44px] ${fieldErrors.application_deadline ? "border-red-400" : ""}`}
               type="date" value={form.application_deadline}
-              min={tomorrow()}
-              max={form.type !== "coaching_job" ? (form.start_date || undefined) : undefined}
+              min={today()}
               onChange={(e) => set("application_deadline", e.target.value)} />
           </Field>
         </div>

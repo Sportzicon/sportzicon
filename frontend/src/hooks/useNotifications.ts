@@ -11,11 +11,15 @@ export function useNotificationCount(enabled = true) {
   const query = useQuery({
     queryKey: queryKeys.notifCount(),
     queryFn: () => notificationService.getUnreadCount(),
-    refetchInterval: 30_000,
+    // 60s poll — notification count doesn't need real-time precision
+    refetchInterval: 60_000,
+    // pause polling while tab is hidden — saves API calls in background tabs
+    refetchIntervalInBackground: false,
+    staleTime: 30_000,
     enabled,
     retry: (failureCount, err: unknown) => {
       const axiosErr = err as { response?: { status?: number } };
-      if (axiosErr?.response?.status === 429) return false; // never retry on rate limit
+      if (axiosErr?.response?.status === 429) return false;
       return failureCount < 2;
     },
   });

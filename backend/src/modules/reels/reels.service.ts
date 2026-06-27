@@ -2,9 +2,6 @@ import { prisma } from "../../config/prisma";
 import { Forbidden, NotFound } from "../../utils/errors";
 
 export async function createReel(authorId: string, input: Record<string, unknown>) {
-  const author = await prisma.user.findUnique({ where: { id: authorId }, select: { id: true } });
-  if (!author) throw NotFound("Author not found");
-
   return prisma.reel.create({
     data: {
       author_id: authorId,
@@ -25,7 +22,9 @@ export async function getReel(reelId: string) {
   });
   if (!reel) throw NotFound("Reel not found");
 
-  await prisma.$executeRaw`UPDATE "Reel" SET view_count = view_count + 1 WHERE id = ${reelId}::uuid`;
+  // fire-and-forget — don't block response for a counter increment
+  prisma.$executeRaw`UPDATE "Reel" SET view_count = view_count + 1 WHERE id = ${reelId}::uuid`
+    .catch(() => undefined);
 
   return {
     ...reel,
@@ -78,27 +77,25 @@ export async function likeReel(reelId: string, userId: string) {
   const exists = await prisma.reel.findUnique({ where: { id: reelId }, select: { id: true } });
   if (!exists) throw NotFound("Reel not found");
 
-  await prisma.$transaction([
+  const [, countResult] = await prisma.$transaction([
     prisma.$executeRaw`INSERT INTO "ReelLike" (reel_id, user_id) VALUES (${reelId}::uuid, ${userId}::uuid) ON CONFLICT DO NOTHING`,
-    prisma.$executeRaw`UPDATE "Reel" SET like_count = (SELECT COUNT(*) FROM "ReelLike" WHERE reel_id = ${reelId}::uuid) WHERE id = ${reelId}::uuid`
+    prisma.$queryRaw<[{ like_count: bigint }]>`
+      UPDATE "Reel" SET like_count = (SELECT COUNT(*) FROM "ReelLike" WHERE reel_id = ${reelId}::uuid)
+      WHERE id = ${reelId}::uuid RETURNING like_count`
   ]);
 
-  const updated = await prisma.reel.findUnique({ where: { id: reelId }, select: { like_count: true } });
-  const liked = await prisma.reelLike.findUnique({
-    where: { reel_id_user_id: { reel_id: reelId, user_id: userId } },
-    select: { reel_id: true }
-  });
-  return { like_count: updated?.like_count ?? 0, liked: !!liked };
+  return { like_count: Number((countResult as any)[0]?.like_count ?? 0), liked: true };
 }
 
 export async function unlikeReel(reelId: string, userId: string) {
-  await prisma.$transaction([
-    prisma.reelLike.deleteMany({ where: { reel_id: reelId, user_id: userId } }),
-    prisma.$executeRaw`UPDATE "Reel" SET like_count = (SELECT COUNT(*) FROM "ReelLike" WHERE reel_id = ${reelId}::uuid) WHERE id = ${reelId}::uuid`
+  const [, countResult] = await prisma.$transaction([
+    prisma.$executeRaw`DELETE FROM "ReelLike" WHERE reel_id = ${reelId}::uuid AND user_id = ${userId}::uuid`,
+    prisma.$queryRaw<[{ like_count: bigint }]>`
+      UPDATE "Reel" SET like_count = (SELECT COUNT(*) FROM "ReelLike" WHERE reel_id = ${reelId}::uuid)
+      WHERE id = ${reelId}::uuid RETURNING like_count`
   ]);
 
-  const updated = await prisma.reel.findUnique({ where: { id: reelId }, select: { like_count: true } });
-  return { like_count: updated?.like_count ?? 0, liked: false };
+  return { like_count: Number((countResult as any)[0]?.like_count ?? 0), liked: false };
 }
 
 export async function updateReel(reelId: string, actorId: string, isAdmin: boolean, input: { title?: string; description?: string; sport?: string }) {

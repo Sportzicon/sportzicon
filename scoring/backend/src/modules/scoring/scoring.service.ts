@@ -788,7 +788,7 @@ export async function updateMatch(matchId: string, actorId: string, actorRole: s
   await assertManager(match.tournament_id, actorId, actorRole);
 
   const data: any = {};
-  for (const k of ["title", "venue", "status", "winner_team_id", "result_summary", "toss_winner_id", "toss_decision", "match_type", "umpire1", "umpire2", "tv_umpire", "match_referee"]) {
+  for (const k of ["title", "venue", "status", "winner_team_id", "result_summary", "toss_winner_id", "toss_decision", "match_type", "team1_playing_level", "team2_playing_level", "umpire1", "umpire2", "tv_umpire", "match_referee"]) {
     if (patch[k] !== undefined) data[k] = patch[k];
   }
   if (patch.scheduled_at) data.scheduled_at = new Date(patch.scheduled_at);
@@ -818,6 +818,10 @@ export async function createInnings(matchId: string, actorId: string, actorRole:
   await assertManager(match.tournament_id, actorId, actorRole);
 
   // Validate batting and bowling teams are match teams
+  if (!match.team1_playing_level || !match.team2_playing_level) {
+    throw BadRequest("Playing level must be set for both teams before starting an innings");
+  }
+
   if (input.batting_team_id !== match.team1_id && input.batting_team_id !== match.team2_id) {
     throw BadRequest("Batting team is not in this match");
   }

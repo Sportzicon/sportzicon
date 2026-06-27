@@ -16,6 +16,15 @@ const ov = (b: number) => `${Math.floor(b / 6)}.${b % 6}`;
 
 const MATCH_TYPES = ["league", "tournament", "friendly", "trial", "academy", "knockout"];
 
+const PLAYING_LEVELS = [
+  { value: "amateur",       label: "Amateur / Recreation" },
+  { value: "club",          label: "Club Level" },
+  { value: "district",      label: "District Level" },
+  { value: "state",         label: "State Level" },
+  { value: "national",      label: "National Level" },
+  { value: "international", label: "International" },
+];
+
 // ── Status pill ───────────────────────────────────────────────────────────────
 function StatusPill({ status }: { status: string }) {
   const map: Record<string, string> = {
@@ -455,6 +464,8 @@ function ScheduleMatchForm({ tournament, onDone }: { tournament: any; onDone: ()
     format: tournament.format ?? "T20",
     match_type: tournament.match_type ?? "league",
     scheduled_at: "",
+    team1_playing_level: "",
+    team2_playing_level: "",
     team1_players: [] as string[], team2_players: [] as string[]
   });
 
@@ -482,12 +493,13 @@ function ScheduleMatchForm({ tournament, onDone }: { tournament: any; onDone: ()
         scheduled_at: f.scheduled_at ? new Date(f.scheduled_at).toISOString() : undefined
       });
       const matchId = data.match?.id || data.id;
-      // Set toss if selected
-      if (f.toss_winner_id && matchId) {
+      // Set toss + playing levels
+      if (matchId) {
         await scoringApi.put(`/matches/${matchId}`, {
-          toss_winner_id: f.toss_winner_id,
-          toss_decision: f.toss_decision,
+          ...(f.toss_winner_id ? { toss_winner_id: f.toss_winner_id, toss_decision: f.toss_decision } : {}),
           match_type: f.match_type || undefined,
+          team1_playing_level: f.team1_playing_level || undefined,
+          team2_playing_level: f.team2_playing_level || undefined,
           status: "upcoming"
         });
       }
@@ -653,6 +665,30 @@ function ScheduleMatchForm({ tournament, onDone }: { tournament: any; onDone: ()
         </div>
       )}
 
+      {/* Playing Level */}
+      {f.team1_id && f.team2_id && (
+        <div className="panel p-4 space-y-3 bg-amber-50 border border-amber-200 rounded-lg">
+          <p className="lab text-amber-800 font-semibold">Playing Level <span className="text-red-500">*</span></p>
+          <p className="text-xs text-amber-700">Required before scoring can begin. Sets the competitive level for this match.</p>
+          <div className="grid sm:grid-cols-2 gap-3">
+            <div>
+              <label className="lab block mb-1">{t1?.name ?? "Team 1"} Level</label>
+              <select className="input w-full" value={f.team1_playing_level} onChange={e => s("team1_playing_level", e.target.value)} required>
+                <option value="">Select level…</option>
+                {PLAYING_LEVELS.map(l => <option key={l.value} value={l.value}>{l.label}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="lab block mb-1">{t2?.name ?? "Team 2"} Level</label>
+              <select className="input w-full" value={f.team2_playing_level} onChange={e => s("team2_playing_level", e.target.value)} required>
+                <option value="">Select level…</option>
+                {PLAYING_LEVELS.map(l => <option key={l.value} value={l.value}>{l.label}</option>)}
+              </select>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Toss */}
       {f.team1_id && f.team2_id && (
         <div className="panel p-4 space-y-3 bg-fill/50">
@@ -727,7 +763,7 @@ function ScheduleMatchForm({ tournament, onDone }: { tournament: any; onDone: ()
 
       <div className="flex gap-3">
         <button
-          disabled={!f.team1_id || !f.team2_id || mut.isPending}
+          disabled={!f.team1_id || !f.team2_id || (f.team1_id && f.team2_id && (!f.team1_playing_level || !f.team2_playing_level)) || mut.isPending}
           onClick={() => mut.mutate()}
           className="btn-primary text-sm"
         >

@@ -151,20 +151,23 @@ export async function resendVerification(email: string) {
 export async function login(email: string, password: string) {
   const emailLower = email.trim().toLowerCase();
 
-  // Brute-force protection: max 5 failed attempts per email in 15 minutes
   const windowStart = new Date(Date.now() - 15 * 60 * 1000);
-  const recentAttempts = await prisma.loginAttempt.count({
-    where: { email: emailLower, attempted_at: { gte: windowStart } }
-  });
+
+  // Fetch brute-force count and user in parallel
+  const [recentAttempts, user] = await Promise.all([
+    prisma.loginAttempt.count({ where: { email: emailLower, attempted_at: { gte: windowStart } } }),
+    prisma.user.findUnique({ where: { email_lower: emailLower } })
+  ]);
+
   if (recentAttempts >= 5) {
     throw TooManyRequests("Too many login attempts. Please try again in a few minutes.");
   }
 
-  const user = await prisma.user.findUnique({ where: { email_lower: emailLower } });
   if (!user) {
     await prisma.loginAttempt.create({ data: { email: emailLower } });
     throw Unauthorized("Invalid credentials");
   }
+
   const ok = await comparePassword(password, user.password_hash);
   if (!ok) {
     await prisma.loginAttempt.create({ data: { email: emailLower } });
@@ -173,16 +176,14 @@ export async function login(email: string, password: string) {
   if (user.status === "suspended") throw Unauthorized("Account is suspended");
   if (!user.email_verified) throw Unauthorized("Email not verified — please check your inbox");
 
-  // Clear failed attempts on successful login
-  await prisma.loginAttempt.deleteMany({ where: { email: emailLower } });
+  // Clear attempts + revoke old sessions in parallel, update last_active fire-and-forget
+  await Promise.all([
+    prisma.loginAttempt.deleteMany({ where: { email: emailLower } }),
+    revokeAllRefreshTokensForUser(user.id)
+  ]);
 
-  // Revoke all existing sessions before issuing a new one (single active session)
-  await revokeAllRefreshTokensForUser(user.id);
-
-  await prisma.user.update({
-    where: { id: user.id },
-    data: { last_active_at: new Date() }
-  });
+  prisma.user.update({ where: { id: user.id }, data: { last_active_at: new Date() } })
+    .catch(err => logger.error({ err }, "Failed to update last_active_at"));
 
   const access_token = signAccessToken(user);
   const refresh_token = await issueRefreshToken(user.id);

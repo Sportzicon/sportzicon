@@ -185,6 +185,10 @@ model Match {
   toss_winner_id String?     @db.Uuid
   toss_decision  String?     // "bat" or "bowl"
 
+  // Playing level for each team in this match
+  team1_playing_level  String?  // "amateur" | "club" | "district" | "state" | "national" | "international"
+  team2_playing_level  String?
+
   // Match context for analytics filtering
   match_type     String?     // "league" · "friendly" · "trial" · "academy" · "knockout"
 

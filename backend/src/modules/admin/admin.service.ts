@@ -247,7 +247,10 @@ export async function updateUserProfile(
   userId: string,
   patch: Record<string, unknown>
 ) {
-  const user = await prisma.user.findUnique({ where: { id: userId } });
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true, athlete_data: true, coach_data: true, full_name: true }
+  });
   if (!user) throw NotFound("User not found");
 
   const profileFields = ["full_name", "bio", "profile_photo_url", "cover_photo_url", "country", "state", "city", "dob", "gender", "preferred_language", "phone"];

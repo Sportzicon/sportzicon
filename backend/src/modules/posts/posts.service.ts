@@ -4,12 +4,6 @@ import { eventBus } from "../../lib/EventBus";
 import { POST_LIKED, type PostLikedEvent } from "../../events/types";
 
 export async function createPost(authorId: string, input: Record<string, unknown>) {
-  const author = await prisma.user.findUnique({
-    where: { id: authorId },
-    select: { id: true, full_name: true, role: true }
-  });
-  if (!author) throw NotFound("Author not found");
-
   return prisma.post.create({
     data: {
       author_id: authorId,
@@ -106,40 +100,41 @@ export async function likePost(postId: string, userId: string) {
   });
   if (!post) throw NotFound("Post not found");
 
-  await prisma.$transaction([
+  const [, countResult] = await prisma.$transaction([
     prisma.$executeRaw`INSERT INTO "PostLike" (post_id, user_id) VALUES (${postId}::uuid, ${userId}::uuid) ON CONFLICT DO NOTHING`,
-    prisma.$executeRaw`UPDATE "Post" SET like_count = (SELECT COUNT(*) FROM "PostLike" WHERE post_id = ${postId}::uuid) WHERE id = ${postId}::uuid`
+    prisma.$queryRaw<[{ like_count: bigint }]>`
+      UPDATE "Post" SET like_count = (SELECT COUNT(*) FROM "PostLike" WHERE post_id = ${postId}::uuid)
+      WHERE id = ${postId}::uuid RETURNING like_count`
   ]);
 
-  // Notify the author (skip if liking own post)
+  // Notification fire-and-forget — don't block response
   if (post.author_id !== userId) {
-    const actor = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { full_name: true },
-    });
-    eventBus.emit<PostLikedEvent>(POST_LIKED, {
-      postId,
-      actorId: userId,
-      actorName: actor?.full_name ?? "Someone",
-      authorId: post.author_id,
-    });
+    prisma.user.findUnique({ where: { id: userId }, select: { full_name: true } })
+      .then(actor => {
+        eventBus.emit<PostLikedEvent>(POST_LIKED, {
+          postId, actorId: userId,
+          actorName: actor?.full_name ?? "Someone",
+          authorId: post.author_id,
+        });
+      })
+      .catch(() => undefined);
   }
 
-  const updated = await prisma.post.findUnique({ where: { id: postId }, select: { like_count: true } });
-  return { like_count: updated?.like_count ?? 0, liked: true };
+  return { like_count: Number((countResult as any)[0]?.like_count ?? 0), liked: true };
 }
 
 export async function unlikePost(postId: string, userId: string) {
   const exists = await prisma.post.findUnique({ where: { id: postId }, select: { id: true } });
   if (!exists) throw NotFound("Post not found");
 
-  await prisma.$transaction([
+  const [, countResult] = await prisma.$transaction([
     prisma.$executeRaw`DELETE FROM "PostLike" WHERE post_id = ${postId}::uuid AND user_id = ${userId}::uuid`,
-    prisma.$executeRaw`UPDATE "Post" SET like_count = (SELECT COUNT(*) FROM "PostLike" WHERE post_id = ${postId}::uuid) WHERE id = ${postId}::uuid`
+    prisma.$queryRaw<[{ like_count: bigint }]>`
+      UPDATE "Post" SET like_count = (SELECT COUNT(*) FROM "PostLike" WHERE post_id = ${postId}::uuid)
+      WHERE id = ${postId}::uuid RETURNING like_count`
   ]);
 
-  const updated = await prisma.post.findUnique({ where: { id: postId }, select: { like_count: true } });
-  return { like_count: updated?.like_count ?? 0, liked: false };
+  return { like_count: Number((countResult as any)[0]?.like_count ?? 0), liked: false };
 }
 
 // ── Internal helper ───────────────────────────────────────────────────────────

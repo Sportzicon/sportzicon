@@ -91,6 +91,10 @@ model User {
   updated_at     DateTime @updatedAt
   last_active_at DateTime @default(now())
 
+  @@index([full_name_lower])
+  @@index([status, created_at(sort: Desc)])
+  @@index([role, status])
+
   organizations  Organization[]
   opportunities  Opportunity[]   @relation("PostedBy")
   applications   Application[]
@@ -158,6 +162,10 @@ model Organization {
   owner         User          @relation(fields: [owner_user_id], references: [id])
   opportunities Opportunity[]
   documents     OrgDocument[]
+
+  @@index([owner_user_id, created_at(sort: Desc)])
+  @@index([org_name_lower])
+  @@index([verification_status])
 }
 
 model OrgDocument {
@@ -287,6 +295,9 @@ model Reel {
   author   User       @relation(fields: [author_id], references: [id])
   comments Comment[]  @relation("ReelComments")
   likes    ReelLike[]
+
+  @@index([author_id, created_at(sort: Desc)])
+  @@index([created_at(sort: Desc)])
 }
 
 model Blog {
@@ -312,6 +323,8 @@ model Blog {
   likes    BlogLike[]
 
   @@index([status, published_at(sort: Desc)])
+  @@index([author_id, created_at(sort: Desc)])
+  @@index([slug])
 }
 
 model Comment {
@@ -425,6 +438,9 @@ model Report {
   created_at  DateTime  @default(now())
 
   reporter User @relation("Reporter", fields: [reporter_id], references: [id])
+
+  @@index([status, created_at(sort: Desc)])
+  @@index([reporter_id])
 }
 
 model Verification {
@@ -440,6 +456,10 @@ model Verification {
   reviewed_at       DateTime?
   rejection_reason  String?
   created_at        DateTime           @default(now())
+
+  @@index([status, created_at(sort: Desc)])
+  @@index([submitted_by])
+  @@index([entity_id])
 }
 
 enum EmailType {

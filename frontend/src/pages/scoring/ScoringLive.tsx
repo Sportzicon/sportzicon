@@ -182,6 +182,8 @@ function ScoringLiveInner() {
   const [niForm, setNiForm] = useState({ innings_number:"1", batting_team_id:"", bowling_team_id:"", target:"" });
   const [showResult, setShowResult] = useState(false);
   const [resultForm, setResultForm] = useState({ winner_team_id:"", result_summary:"" });
+  const [showOpenerSelect, setShowOpenerSelect] = useState(false);
+  const [openerForm, setOpenerForm] = useState({ striker_id:"", non_striker_id:"", bowler_id:"" });
 
   const { data: match, isLoading } = useQuery({
     queryKey: queryKeys.scoringMatchLive(matchId ?? ""),
@@ -340,7 +342,15 @@ function ScoringLiveInner() {
 
   const createInningsMutation = useMutation({
     mutationFn: (input: any) => scoringApi.post(`/matches/${matchId}/innings`, input),
-    onSuccess: (r) => { invalidate(); setActiveInningsId(r.data.innings.id); setBall({ ...DEFAULT_BALL }); initializedFromHistory.current = false; setShowNewInnings(false); },
+    onSuccess: (r) => {
+      invalidate();
+      setActiveInningsId(r.data.innings.id);
+      setBall({ ...DEFAULT_BALL });
+      initializedFromHistory.current = false;
+      setShowNewInnings(false);
+      setOpenerForm({ striker_id:"", non_striker_id:"", bowler_id:"" });
+      setShowOpenerSelect(true);
+    },
     onError: (err: any) => fb("error", err.response?.data?.error?.message || "Failed")
   });
 
@@ -928,7 +938,7 @@ function ScoringLiveInner() {
                   ball.is_four                                ? "bg-ink hover:bg-ink/80 text-paper" :
                                                                 "bg-ink hover:bg-ink/80 text-paper";
                 return (
-                  <button type="submit" disabled={addBallMutation.isPending}
+                  <button type="submit" disabled={addBallMutation.isPending || showOpenerSelect}
                     className={`w-full py-3 rounded font-black text-sm tracking-widest transition mt-auto ${btnCls}`}>
                     {addBallMutation.isPending ? "Recording…" : `RECORD ${label}`}
                   </button>
@@ -961,26 +971,36 @@ function ScoringLiveInner() {
                       }
                       setNiForm(f => ({ ...f, innings_number: String((match.innings?.length ?? 0) + 1), batting_team_id: defaultBattingId, bowling_team_id: defaultBowlingId, target:"" }));
                       setShowNewInnings(true);
-                    }} className="btn-primary">Start Next Innings</button>
+                    }} className="btn-primary" disabled={!match?.team1_playing_level || !match?.team2_playing_level}>Start Next Innings</button>
                   </>
                 ) : (
                   <>
                     <p className="font-semibold text-ink mb-4">No innings started</p>
-                    <button onClick={() => {
-                      let defaultBattingId = "";
-                      let defaultBowlingId = "";
-                      if (match.toss_winner_id && match.toss_decision) {
-                        if (match.toss_decision === "bat") {
-                          defaultBattingId = match.toss_winner_id;
-                          defaultBowlingId = match.toss_winner_id === match.team1?.id ? match.team2?.id : match.team1?.id;
-                        } else {
-                          defaultBowlingId = match.toss_winner_id;
-                          defaultBattingId = match.toss_winner_id === match.team1?.id ? match.team2?.id : match.team1?.id;
+                    {(!match?.team1_playing_level || !match?.team2_playing_level) && (
+                      <div className="mb-3 p-3 rounded-lg bg-amber-50 border border-amber-200 text-left">
+                        <p className="text-xs font-semibold text-amber-800 mb-0.5">Playing level required</p>
+                        <p className="text-xs text-amber-700">Set the playing level for both teams in match settings before starting.</p>
+                      </div>
+                    )}
+                    <button
+                      disabled={!match?.team1_playing_level || !match?.team2_playing_level}
+                      onClick={() => {
+                        let defaultBattingId = "";
+                        let defaultBowlingId = "";
+                        if (match.toss_winner_id && match.toss_decision) {
+                          if (match.toss_decision === "bat") {
+                            defaultBattingId = match.toss_winner_id;
+                            defaultBowlingId = match.toss_winner_id === match.team1?.id ? match.team2?.id : match.team1?.id;
+                          } else {
+                            defaultBowlingId = match.toss_winner_id;
+                            defaultBattingId = match.toss_winner_id === match.team1?.id ? match.team2?.id : match.team1?.id;
+                          }
                         }
-                      }
-                      setNiForm(f => ({ ...f, innings_number:"1", batting_team_id: defaultBattingId, bowling_team_id: defaultBowlingId }));
-                      setShowNewInnings(true);
-                    }} className="btn-primary">Start Innings</button>
+                        setNiForm(f => ({ ...f, innings_number:"1", batting_team_id: defaultBattingId, bowling_team_id: defaultBowlingId }));
+                        setShowNewInnings(true);
+                      }}
+                      className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                    >Start Innings</button>
                   </>
                 )}
               </div>
@@ -1031,6 +1051,68 @@ function ScoringLiveInner() {
               </button>
               <button onClick={() => setShowNewInnings(false)} className="btn-secondary">Cancel</button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── OPENER SELECTION MODAL ─────────────────────────────────────────── */}
+      {showOpenerSelect && (
+        <div className="absolute inset-0 bg-ink/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-paper rounded-xl p-5 w-full max-w-sm shadow-2xl space-y-4">
+            <div>
+              <p className="font-semibold text-ink">Select Opening Players</p>
+              <p className="text-xs text-ink-sub mt-0.5">Required before scoring can begin</p>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <label className="lab block mb-1">Striker (Opening Batsman) *</label>
+                <select
+                  className="input w-full text-sm"
+                  value={openerForm.striker_id}
+                  onChange={e => setOpenerForm(f => ({ ...f, striker_id: e.target.value, non_striker_id: f.non_striker_id === e.target.value ? "" : f.non_striker_id }))}
+                >
+                  <option value="">Select striker…</option>
+                  {battingPlayers.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="lab block mb-1">Non-Striker *</label>
+                <select
+                  className="input w-full text-sm"
+                  value={openerForm.non_striker_id}
+                  onChange={e => setOpenerForm(f => ({ ...f, non_striker_id: e.target.value }))}
+                >
+                  <option value="">Select non-striker…</option>
+                  {battingPlayers.filter((p: any) => p.id !== openerForm.striker_id).map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="lab block mb-1">Opening Bowler *</label>
+                <select
+                  className="input w-full text-sm"
+                  value={openerForm.bowler_id}
+                  onChange={e => setOpenerForm(f => ({ ...f, bowler_id: e.target.value }))}
+                >
+                  <option value="">Select bowler…</option>
+                  {bowlingPlayers.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+              </div>
+            </div>
+            <button
+              disabled={!openerForm.striker_id || !openerForm.non_striker_id || !openerForm.bowler_id}
+              onClick={() => {
+                setBall(prev => ({
+                  ...prev,
+                  batsman_id:     openerForm.striker_id,
+                  non_striker_id: openerForm.non_striker_id,
+                  bowler_id:      openerForm.bowler_id,
+                }));
+                setShowOpenerSelect(false);
+              }}
+              className="btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Start Scoring
+            </button>
           </div>
         </div>
       )}

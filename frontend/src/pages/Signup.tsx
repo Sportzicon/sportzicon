@@ -13,7 +13,11 @@ const ROLES = [
 ];
 
 const LEVELS = ["Beginner", "Amateur", "Academy", "Semi-professional", "State", "National", "Professional"];
-const ORG_TYPES = ["Club", "Academy", "Both"];
+const ORG_TYPES = [
+  { value: "club", label: "Club" },
+  { value: "association", label: "Association" },
+  { value: "academy", label: "Academy" },
+];
 const STORE_KEY = "sx_signup_draft";
 
 type Draft = {
@@ -250,7 +254,7 @@ export default function Signup() {
           looking_for_club: d.looking
         } : {
           org_name: d.org_name || undefined,
-          org_type: d.org_type?.toLowerCase() || undefined,
+          org_type: d.org_type || undefined,
           org_sport: d.org_sport || undefined
         })
       });
@@ -524,7 +528,7 @@ export default function Signup() {
                   <Field label="Type" req>
                     <select className="input" value={d.org_type} onChange={(e) => patch({ org_type: e.target.value })}>
                       <option value="">Select type</option>
-                      {ORG_TYPES.map((t) => <option key={t}>{t}</option>)}
+                      {ORG_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
                     </select>
                   </Field>
                 </div>

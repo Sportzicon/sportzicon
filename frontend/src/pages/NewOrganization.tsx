@@ -67,6 +67,12 @@ export default function NewOrganization() {
     enabled: !!id
   });
 
+  const existingDocsQ = useQuery({
+    queryKey: queryKeys.orgDocuments(id ?? ""),
+    queryFn: async () => (await api.get(`/organizations/${id}/documents`)).data.items as UploadedDoc[],
+    enabled: !!id
+  });
+
   const [form, setForm] = useState({
     org_name: "",
     org_type: "club" as string,
@@ -236,7 +242,7 @@ export default function NewOrganization() {
           errors[field] = (messages as string[])[0] || "Invalid value";
         }
         setFieldErrors(errors);
-        setErr("Please fix the errors below");
+        setErr(apiErr.message || "Please fix the errors below");
         const firstErrorField = Object.keys(errors)[0];
         setTimeout(() => {
           document.querySelector(`[name="${firstErrorField}"]`)?.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -447,6 +453,19 @@ export default function NewOrganization() {
         )}
         <input ref={docInputRef} type="file" accept="application/pdf" className="sr-only"
           onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadDocument(f); e.target.value = ""; }} />
+        {isEdit && existingDocsQ.data && existingDocsQ.data.length > 0 && (
+          <div>
+            <p className="text-xs text-ink-faint mb-2 font-mononum uppercase tracking-[0.06em]">Uploaded documents</p>
+            <ul className="space-y-2">
+              {existingDocsQ.data.map((d) => (
+                <li key={d.key} className="flex items-center gap-2 text-sm text-ink-70">
+                  <FileText className="h-4 w-4 flex-shrink-0 text-ink-faint" />
+                  <span className="flex-1 truncate">{d.name}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
         {uploadedDocs.length > 0 && (
           <ul className="space-y-2">
             {uploadedDocs.map((d, i) => (

@@ -30,7 +30,17 @@ export default defineConfig({
       output: {
         entryFileNames: "[name].[hash].js",
         chunkFileNames: "[name].[hash].js",
-        assetFileNames: "[name].[hash][extname]"
+        assetFileNames: "[name].[hash][extname]",
+        manualChunks: {
+          // React core — changes rarely, long-lived cache
+          "vendor-react": ["react", "react-dom", "react-router-dom"],
+          // Data fetching
+          "vendor-query": ["@tanstack/react-query"],
+          // HTTP client
+          "vendor-axios": ["axios"],
+          // Form validation
+          "vendor-forms": ["react-hook-form", "zod"],
+        }
       }
     }
   },
