@@ -67,9 +67,14 @@ jobs:
               echo "Baselining: $LATEST"
               npx prisma migrate resolve --applied "$LATEST"
               npx prisma migrate deploy
-            elif echo "$OUTPUT" | grep -q "P3018"; then
-              echo "⚠️  P3018: a previous migration failed — rolling it back and retrying..."
-              FAILED=$(echo "$OUTPUT" | grep -oP "Migration name: \K\S+")
+            elif echo "$OUTPUT" | grep -q "P3018\|P3009"; then
+              echo "⚠️  P3018/P3009: failed migration in DB — rolling it back and retrying..."
+              # P3018 format: "Migration name: 20260627000000_foo"
+              # P3009 format: "The `20260627000000_foo` migration ... failed"
+              FAILED=$(echo "$OUTPUT" | grep -oP "Migration name: \K\S+" | head -1)
+              if [ -z "$FAILED" ]; then
+                FAILED=$(echo "$OUTPUT" | grep -oP "The \`\K[^\`]+" | head -1)
+              fi
               echo "Rolling back: $FAILED"
               npx prisma migrate resolve --rolled-back "$FAILED"
               npx prisma migrate deploy
