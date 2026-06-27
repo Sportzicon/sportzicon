@@ -34,7 +34,7 @@ const listQuery = z.object({
 router.post(
   "/",
   requireAuth,
-  requireRole(...ROLES.ATHLETES_AND_ADMIN),
+  requireRole(...ROLES.ALL),
   validate(createSchema),
   asyncHandler(async (req, res) => {
     const r = await svc.createReel(req.user!.sub, req.body);

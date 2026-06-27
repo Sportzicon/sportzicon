@@ -16,8 +16,8 @@ function getGreeting(): string {
   const hour = new Date().getHours(); // uses browser's local time zone automatically
   if (hour >= 5 && hour < 12) return "Good morning";
   if (hour >= 12 && hour < 17) return "Good afternoon";
-  if (hour >= 17 && hour < 21) return "Good evening";
-  return "Good night";
+  if (hour >= 17 && hour < 24) return "Good evening";
+  return "Good morning"; // midnight–5am (late night users)
 }
 
 function StatCard({ label, value, accent }: { label: string; value: React.ReactNode; accent?: boolean }) {
@@ -280,7 +280,7 @@ function ClubDashboard() {
       <div>
         <div className="text-[11px] font-mononum uppercase tracking-[0.06em] text-brand-500 mb-1">Club dashboard</div>
         <h1 className="font-disp text-3xl sm:text-4xl text-ink">
-          Welcome, {user.full_name?.split(" ")[0] ?? "there"}
+          {getGreeting()}, {user.full_name?.split(" ")[0] ?? "there"}
         </h1>
       </div>
 
@@ -377,7 +377,7 @@ function ScoutDashboard() {
       <div>
         <div className="text-[11px] font-mononum uppercase tracking-[0.06em] text-brand-500 mb-1">Scout dashboard</div>
         <h1 className="font-disp text-3xl sm:text-4xl text-ink">
-          Good scouting, {user.full_name?.split(" ")[0] ?? "there"}
+          {getGreeting()}, {user.full_name?.split(" ")[0] ?? "there"}
         </h1>
       </div>
 
@@ -423,14 +423,6 @@ function ScoutDashboard() {
           <span className="text-sm font-semibold text-ink">Activity feed</span>
         </Link>
       </div>
-
-      {/* Discover CTA */}
-      <Link
-        to="/search"
-        className="btn-accent block w-full text-center min-h-[44px] flex items-center justify-center text-sm"
-      >
-        Discover Athletes →
-      </Link>
 
       <div className="panel p-4">
         <div className="text-[11px] font-mononum uppercase tracking-[0.06em] text-ink-faint mb-3">Your profile</div>

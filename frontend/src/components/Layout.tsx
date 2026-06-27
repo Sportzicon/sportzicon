@@ -124,6 +124,12 @@ function NotificationDropdown({
   const allItems: Notification[] = list.data?.pages.flatMap((p) => p.data) ?? [];
   const unread = allItems.filter((n) => !n.read).length;
 
+  // Auto-mark all read when dropdown opens
+  useEffect(() => {
+    if (unread > 0) markAllRead.mutate();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const handleItem = (n: Notification) => {
     if (!n.read) markOneRead.mutate(n.id);
     if (n.link) onNavigate(n.link);

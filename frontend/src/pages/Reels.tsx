@@ -7,10 +7,9 @@ import { MobileDrawer } from "../components/MobileDrawer";
 import { CommentSection } from "../components/CommentSection";
 import { ReelViewer } from "../components/ReelViewer";
 import { useAuthStore } from "../store/auth";
-import { useFavoritesStore } from "../store/favorites";
 import { useReels } from "../hooks/useReels";
 import { queryKeys } from "../hooks/queryKeys";
-import { Heart, Trash2, Pencil, MessageCircle, Eye, Bookmark, Plus, Upload, X, Share2, Play } from "lucide-react";
+import { Trash2, Pencil, MessageCircle, Plus, Upload, X, Share2, Play, Volume2, VolumeX } from "lucide-react";
 import type { Reel } from "../models";
 import type { CreateReelRequest } from "../services/reel.service";
 
@@ -22,10 +21,9 @@ interface UploadState {
 
 export default function Reels() {
   const user = useAuthStore((s) => s.user);
-  const { favoriteReels, toggleFavoriteReel } = useFavoritesStore();
   const qc = useQueryClient();
 
-  const { list, allReels, toggleLike, likedReels, remove, update } = useReels();
+  const { list, allReels, remove, update } = useReels();
 
   const [uploadOpen, setUploadOpen] = useState(false);
   const [form, setForm] = useState<CreateReelRequest>({ title: "", video_url: "" });
@@ -42,7 +40,7 @@ export default function Reels() {
   const videoInputRef = useRef<HTMLInputElement>(null);
   const thumbInputRef = useRef<HTMLInputElement>(null);
 
-  const canUpload = hasRole(user?.role ?? "", "athlete");
+  const canUpload = !!user;
   const isAdmin = checkAdmin(user?.role ?? "");
 
   const create = useMutation({
@@ -160,12 +158,8 @@ export default function Reels() {
                 key={r.id}
                 reel={r}
                 idx={idx}
-                isLiked={likedReels.has(r.id)}
-                isFavorite={favoriteReels.has(r.id)}
                 currentUserId={user?.id}
                 isAdmin={isAdmin}
-                onLike={() => toggleLike.mutate(r.id)}
-                onFavorite={() => toggleFavoriteReel(r.id)}
                 onComment={() => setCommentReelId(r.id)}
                 onEdit={() => openEditDrawer(r)}
                 onDelete={() => remove.mutate(r.id)}
@@ -222,14 +216,9 @@ export default function Reels() {
                 <DesktopReelCard
                   key={r.id}
                   reel={r}
-                  idx={idx}
-                  isLiked={likedReels.has(r.id)}
-                  isFavorite={favoriteReels.has(r.id)}
                   currentUserId={user?.id}
                   isAdmin={isAdmin}
                   onOpen={() => openViewer(idx)}
-                  onLike={() => toggleLike.mutate(r.id)}
-                  onFavorite={() => toggleFavoriteReel(r.id)}
                   onEdit={() => openEditDrawer(r)}
                   onDelete={() => remove.mutate(r.id)}
                 />
@@ -306,11 +295,7 @@ export default function Reels() {
           reels={allReels}
           initialIndex={viewerIndex}
           onClose={() => setViewerOpen(false)}
-          onLike={(id) => toggleLike.mutate(id)}
-          onAddToFavorites={(id) => toggleFavoriteReel(id)}
           onCommentClick={(id) => setCommentReelId(id)}
-          likedReels={likedReels}
-          favoriteReels={favoriteReels}
         />
       )}
 
@@ -366,12 +351,12 @@ export default function Reels() {
 /* ─────────────────────────── sub-components ─────────────────────────── */
 
 function MobileReelSlide({
-  reel, idx, isLiked, isFavorite, currentUserId, isAdmin,
-  onLike, onFavorite, onComment, onEdit, onDelete
+  reel, idx, currentUserId, isAdmin,
+  onComment, onEdit, onDelete
 }: {
-  reel: Reel; idx: number; isLiked: boolean; isFavorite: boolean;
+  reel: Reel; idx: number;
   currentUserId?: string; isAdmin: boolean;
-  onLike(): void; onFavorite(): void; onComment(): void; onEdit(): void; onDelete(): void;
+  onComment(): void; onEdit(): void; onDelete(): void;
 }) {
   const canManage = reel.author_id === currentUserId || isAdmin;
   const displayTitle = reel.title ?? reel.caption;
@@ -379,6 +364,12 @@ function MobileReelSlide({
   const containerRef = useRef<HTMLDivElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [shareToast, setShareToast] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (video) video.muted = isMuted;
+  }, [isMuted]);
 
   // Play when scrolled into view, pause when scrolled away
   useEffect(() => {
@@ -448,7 +439,6 @@ function MobileReelSlide({
         src={reel.video_url}
         poster={reel.thumbnail_url ?? undefined}
         className="h-full w-full object-cover"
-        muted
         playsInline
         loop
         preload="metadata"
@@ -469,11 +459,11 @@ function MobileReelSlide({
       {/* Right action bar */}
       <div className="absolute right-3 bottom-32 flex flex-col gap-4 items-center">
         <button
-          onClick={(e) => { e.stopPropagation(); onLike(); }}
+          onClick={(e) => { e.stopPropagation(); setIsMuted((m) => !m); }}
           className="flex flex-col items-center gap-1 min-h-[56px] min-w-[56px] justify-center"
+          aria-label={isMuted ? "Unmute" : "Mute"}
         >
-          <Heart className="h-7 w-7 text-white drop-shadow" fill={isLiked ? "#ef4444" : "none"} stroke={isLiked ? "#ef4444" : "white"} />
-          <span className="text-white text-xs font-medium drop-shadow">{reel.like_count}</span>
+          {isMuted ? <VolumeX className="h-7 w-7 text-white drop-shadow" /> : <Volume2 className="h-7 w-7 text-white drop-shadow" />}
         </button>
         <button
           onClick={(e) => { e.stopPropagation(); onComment(); }}
@@ -483,12 +473,6 @@ function MobileReelSlide({
           <span className="text-white text-xs font-medium drop-shadow">{reel.comment_count}</span>
         </button>
         <button
-          onClick={(e) => { e.stopPropagation(); onFavorite(); }}
-          className="flex flex-col items-center gap-1 min-h-[56px] min-w-[56px] justify-center"
-        >
-          <Bookmark className="h-7 w-7 text-white drop-shadow" fill={isFavorite ? "#eab308" : "none"} stroke={isFavorite ? "#eab308" : "white"} />
-        </button>
-        <button
           onClick={handleShare}
           className="flex flex-col items-center gap-1 min-h-[56px] min-w-[56px] justify-center"
           aria-label="Share reel"
@@ -496,10 +480,6 @@ function MobileReelSlide({
           <Share2 className="h-7 w-7 text-white drop-shadow" />
           <span className="text-white text-xs font-medium drop-shadow">Share</span>
         </button>
-        <div className="flex flex-col items-center gap-1 min-h-[44px] min-w-[44px] justify-center">
-          <Eye className="h-6 w-6 text-white/70 drop-shadow" />
-          <span className="text-white/70 text-xs font-medium drop-shadow">{reel.view_count}</span>
-        </div>
         {canManage && (
           <>
             <button onClick={(e) => { e.stopPropagation(); onEdit(); }} className="min-h-[44px] min-w-[44px] flex items-center justify-center">
@@ -540,12 +520,12 @@ function MobileReelSlide({
 }
 
 function DesktopReelCard({
-  reel, isLiked, isFavorite, currentUserId, isAdmin,
-  onOpen, onLike, onFavorite, onEdit, onDelete
+  reel, currentUserId, isAdmin,
+  onOpen, onEdit, onDelete
 }: {
-  reel: Reel; idx: number; isLiked: boolean; isFavorite: boolean;
+  reel: Reel;
   currentUserId?: string; isAdmin: boolean;
-  onOpen(): void; onLike(): void; onFavorite(): void; onEdit(): void; onDelete(): void;
+  onOpen(): void; onEdit(): void; onDelete(): void;
 }) {
   const canManage = reel.author_id === currentUserId || isAdmin;
   const displayTitle = reel.title ?? reel.caption;
@@ -596,9 +576,7 @@ function DesktopReelCard({
         )}
         <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-2 opacity-0 group-hover:opacity-100 transition-opacity">
           <div className="flex items-center gap-3 text-white text-xs">
-            <span className="flex items-center gap-1"><Heart className="h-3 w-3" /> {reel.like_count}</span>
             <span className="flex items-center gap-1"><MessageCircle className="h-3 w-3" /> {reel.comment_count}</span>
-            <span className="flex items-center gap-1 ml-auto"><Eye className="h-3 w-3" /> {reel.view_count}</span>
           </div>
         </div>
       </div>
@@ -610,27 +588,15 @@ function DesktopReelCard({
         {displayTitle && <p className="text-ink-70 text-xs line-clamp-2">{displayTitle}</p>}
         <div className="flex items-center gap-2 pt-1 border-t border-hairsoft">
           <button
-            onClick={onLike}
-            className={`flex items-center gap-1 text-xs min-h-[44px] transition ${isLiked ? "text-red-500" : "text-ink-sub hover:text-red-500"}`}
-          >
-            <Heart className="h-4 w-4" fill={isLiked ? "currentColor" : "none"} /> {reel.like_count}
-          </button>
-          <button
-            onClick={onFavorite}
-            className={`flex items-center gap-1 text-xs min-h-[44px] transition ${isFavorite ? "text-yellow-500" : "text-ink-sub hover:text-yellow-500"}`}
-          >
-            <Bookmark className="h-4 w-4" fill={isFavorite ? "currentColor" : "none"} />
-          </button>
-          <button
             onClick={handleShare}
-            className="flex items-center gap-1 text-xs min-h-[44px] text-ink-sub hover:text-brand-500 transition ml-auto"
+            className="flex items-center gap-1 text-xs min-h-[44px] text-ink-sub hover:text-brand-500 transition"
             title="Share reel"
           >
             <Share2 className="h-4 w-4" />
           </button>
           {canManage && (
             <>
-              <button onClick={onEdit} className="p-1 min-h-[44px] min-w-[44px] flex items-center justify-center text-ink-sub hover:text-ink transition">
+              <button onClick={onEdit} className="p-1 min-h-[44px] min-w-[44px] flex items-center justify-center text-ink-sub hover:text-ink transition ml-auto">
                 <Pencil className="h-4 w-4" />
               </button>
               <button onClick={onDelete} className="p-1 min-h-[44px] min-w-[44px] flex items-center justify-center text-ink-sub hover:text-red-600 transition">

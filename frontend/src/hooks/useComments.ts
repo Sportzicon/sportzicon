@@ -15,7 +15,10 @@ export function useComments(parentType: CommentParentType, parentId: string) {
 
   const add = useMutation({
     mutationFn: (text: string) => commentService.add(parentType, parentId, { text }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: key }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: key });
+      if (parentType === "reel") qc.invalidateQueries({ queryKey: queryKeys.reels() });
+    },
   });
 
   const update = useMutation({
@@ -26,7 +29,10 @@ export function useComments(parentType: CommentParentType, parentId: string) {
 
   const remove = useMutation({
     mutationFn: (id: string) => commentService.delete(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: key }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: key });
+      if (parentType === "reel") qc.invalidateQueries({ queryKey: queryKeys.reels() });
+    },
   });
 
   return { list, add, update, remove };

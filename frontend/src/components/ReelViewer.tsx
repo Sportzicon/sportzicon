@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Heart, MessageCircle, Bookmark, Eye, ChevronUp, ChevronDown, Volume2, VolumeX, Play, Pause, X, Share2 } from "lucide-react";
+import { MessageCircle, ChevronUp, ChevronDown, Volume2, VolumeX, Play, Pause, X, Share2 } from "lucide-react";
 import { MobileDrawer } from "./MobileDrawer";
 import { CommentSection } from "./CommentSection";
 import type { Reel } from "../types";
@@ -8,26 +8,18 @@ interface ReelViewerProps {
   reels: Reel[];
   initialIndex: number;
   onClose: () => void;
-  onLike: (id: string) => void;
-  onAddToFavorites: (id: string) => void;
   onCommentClick: (id: string) => void;
-  likedReels: Set<string>;
-  favoriteReels: Set<string>;
 }
 
 export function ReelViewer({
   reels,
   initialIndex,
   onClose,
-  onLike,
-  onAddToFavorites,
   onCommentClick,
-  likedReels,
-  favoriteReels
 }: ReelViewerProps) {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [isPlaying, setIsPlaying] = useState(true);
-  const [isMuted, setIsMuted] = useState(true);
+  const [isMuted, setIsMuted] = useState(false);
   const [progress, setProgress] = useState(0);
   const [commentOpen, setCommentOpen] = useState(false);
   const [shareToast, setShareToast] = useState(false);
@@ -169,19 +161,6 @@ export function ReelViewer({
 
         {/* Right action bar */}
         <div className="absolute right-3 bottom-28 flex flex-col gap-5 items-center">
-          {/* Like — 56px */}
-          <button
-            onClick={() => onLike(currentReel.id)}
-            className="flex flex-col items-center gap-1 h-14 w-14 justify-center min-h-[56px]"
-          >
-            <Heart
-              className="h-7 w-7 drop-shadow"
-              fill={likedReels.has(currentReel.id) ? "#ef4444" : "none"}
-              stroke={likedReels.has(currentReel.id) ? "#ef4444" : "white"}
-            />
-            <span className="text-white text-xs font-medium drop-shadow">{currentReel.like_count}</span>
-          </button>
-
           {/* Comment */}
           <button
             onClick={handleCommentClick}
@@ -189,19 +168,6 @@ export function ReelViewer({
           >
             <MessageCircle className="h-7 w-7 text-white drop-shadow" />
             <span className="text-white text-xs font-medium drop-shadow">{currentReel.comment_count}</span>
-          </button>
-
-          {/* Favorites */}
-          <button
-            onClick={() => onAddToFavorites(currentReel.id)}
-            className="flex flex-col items-center gap-1 h-14 w-14 justify-center min-h-[56px]"
-          >
-            <Bookmark
-              className="h-7 w-7 drop-shadow"
-              fill={favoriteReels.has(currentReel.id) ? "#eab308" : "none"}
-              stroke={favoriteReels.has(currentReel.id) ? "#eab308" : "white"}
-            />
-            <span className="text-white text-xs drop-shadow">Save</span>
           </button>
 
           {/* Share */}
@@ -213,12 +179,6 @@ export function ReelViewer({
             <Share2 className="h-7 w-7 text-white drop-shadow" />
             <span className="text-white text-xs drop-shadow">Share</span>
           </button>
-
-          {/* Views */}
-          <div className="flex flex-col items-center gap-1 h-14 w-14 justify-center">
-            <Eye className="h-6 w-6 text-white/70 drop-shadow" />
-            <span className="text-white/70 text-xs font-medium drop-shadow">{currentReel.view_count}</span>
-          </div>
         </div>
 
         {/* Navigation arrows */}
