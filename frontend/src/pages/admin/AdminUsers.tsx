@@ -13,8 +13,8 @@ type UserItem = {
   email: string;
   role: string;
   status: string;
-  is_banned: boolean;
-  banned_reason?: string;
+  is_suspended: boolean;
+  suspension_reason?: string;
 };
 
 export default function AdminUsers() {
@@ -25,9 +25,9 @@ export default function AdminUsers() {
   const [search, setSearch] = useState("");
   const [searchInput, setSearchInput] = useState("");
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
-  const [banTargetId, setBanTargetId] = useState<string | null>(null);
-  const [banReason, setBanReason] = useState("");
-  const [banErr, setBanErr] = useState<string | null>(null);
+  const [suspendTargetId, setSuspendTargetId] = useState<string | null>(null);
+  const [suspendReason, setSuspendReason] = useState("");
+  const [suspendErr, setSuspendErr] = useState<string | null>(null);
   const [actionErr, setActionErr] = useState<string | null>(null);
   // Inline role edit state
   const [roleEditId, setRoleEditId] = useState<string | null>(null);
@@ -51,21 +51,21 @@ export default function AdminUsers() {
     onError: (e) => setActionErr(humanizeError(e))
   });
 
-  const banUser = useMutation({
+  const suspendUser = useMutation({
     mutationFn: async (vars: { id: string; reason: string }) =>
-      api.patch(`/admin/users/${vars.id}/ban`, { reason: vars.reason }),
+      api.patch(`/admin/users/${vars.id}/suspend`, { reason: vars.reason }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.adminUsers() });
-      setBanTargetId(null);
-      setBanReason("");
-      setBanErr(null);
+      setSuspendTargetId(null);
+      setSuspendReason("");
+      setSuspendErr(null);
       setActionErr(null);
     },
-    onError: (e) => setBanErr(humanizeError(e))
+    onError: (e) => setSuspendErr(humanizeError(e))
   });
 
-  const unbanUser = useMutation({
-    mutationFn: async (id: string) => api.patch(`/admin/users/${id}/unban`),
+  const unsuspendUser = useMutation({
+    mutationFn: async (id: string) => api.patch(`/admin/users/${id}/unsuspend`),
     onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.adminUsers() }); setActionErr(null); },
     onError: (e) => setActionErr(humanizeError(e))
   });
@@ -102,7 +102,7 @@ export default function AdminUsers() {
   }
 
   const users = q.data ?? [];
-  const isActing = setStatus.isPending || banUser.isPending || unbanUser.isPending || deleteUser.isPending || changeRole.isPending;
+  const isActing = setStatus.isPending || suspendUser.isPending || unsuspendUser.isPending || deleteUser.isPending || changeRole.isPending;
 
   return (
     <div className="space-y-4">
@@ -148,30 +148,30 @@ export default function AdminUsers() {
         </div>
       </div>
 
-      {/* Ban reason dialog */}
-      {banTargetId && (
+      {/* Suspend reason dialog */}
+      {suspendTargetId && (
         <div className="card card-body space-y-3 border-red-200 bg-red-50">
-          <div className="font-semibold text-red-900 text-sm">Ban user — provide reason</div>
+          <div className="font-semibold text-red-900 text-sm">Suspend user — provide reason</div>
           <textarea
             className="input w-full"
             rows={3}
-            placeholder="Reason for ban (required)…"
-            value={banReason}
-            onChange={(e) => { setBanReason(e.target.value); setBanErr(null); }}
+            placeholder="Reason for suspension (required)…"
+            value={suspendReason}
+            onChange={(e) => { setSuspendReason(e.target.value); setSuspendErr(null); }}
           />
-          {banErr && <div className="text-red-600 text-xs">{banErr}</div>}
+          {suspendErr && <div className="text-red-600 text-xs">{suspendErr}</div>}
           <div className="flex gap-2">
             <button
               onClick={() => {
-                if (!banReason.trim()) { setBanErr("Reason is required."); return; }
-                banUser.mutate({ id: banTargetId, reason: banReason.trim() });
+                if (!suspendReason.trim()) { setSuspendErr("Reason is required."); return; }
+                suspendUser.mutate({ id: suspendTargetId, reason: suspendReason.trim() });
               }}
               disabled={isActing}
               className="btn-danger min-h-[44px] flex-1"
             >
-              Confirm Ban
+              Confirm Suspend
             </button>
-            <button onClick={() => { setBanTargetId(null); setBanReason(""); setBanErr(null); }} className="btn-secondary min-h-[44px] flex-1">
+            <button onClick={() => { setSuspendTargetId(null); setSuspendReason(""); setSuspendErr(null); }} className="btn-secondary min-h-[44px] flex-1">
               Cancel
             </button>
           </div>
@@ -195,16 +195,16 @@ export default function AdminUsers() {
                     <div className="flex flex-wrap gap-1.5 mt-1.5">
                       <Badge color="blue">{u.role}</Badge>
                       <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-                        u.is_banned ? "bg-red-100 text-red-700" :
+                        u.is_suspended ? "bg-red-100 text-red-700" :
                         u.status === "active" ? "bg-green-100 text-green-700" :
                         u.status === "suspended" ? "bg-orange-100 text-orange-700" :
                         "bg-slate-100 text-slate-700"
                       }`}>
-                        {u.is_banned ? "banned" : u.status}
+                        {u.is_suspended ? "suspended" : u.status}
                       </span>
                     </div>
-                    {u.is_banned && u.banned_reason && (
-                      <div className="text-xs text-red-600 mt-1">Reason: {u.banned_reason}</div>
+                    {u.is_suspended && u.suspension_reason && (
+                      <div className="text-xs text-red-600 mt-1">Reason: {u.suspension_reason}</div>
                     )}
                   </div>
                 </div>
@@ -242,16 +242,16 @@ export default function AdminUsers() {
                   >
                     <ShieldCheck className="h-3.5 w-3.5" /> Role
                   </button>
-                  {u.is_banned ? (
-                    <button onClick={() => unbanUser.mutate(u.id)} disabled={isActing} className="btn-primary btn-sm flex items-center gap-1 min-h-[44px]">
-                      <UserCheck className="h-3.5 w-3.5" /> Unban
+                  {u.is_suspended ? (
+                    <button onClick={() => unsuspendUser.mutate(u.id)} disabled={isActing} className="btn-primary btn-sm flex items-center gap-1 min-h-[44px]">
+                      <UserCheck className="h-3.5 w-3.5" /> Unsuspend
                     </button>
                   ) : (
-                    <button onClick={() => { setBanTargetId(u.id); setBanReason(""); setBanErr(null); }} disabled={isActing} className="btn-danger btn-sm flex items-center gap-1 min-h-[44px]">
-                      <Ban className="h-3.5 w-3.5" /> Ban
+                    <button onClick={() => { setSuspendTargetId(u.id); setSuspendReason(""); setSuspendErr(null); }} disabled={isActing} className="btn-danger btn-sm flex items-center gap-1 min-h-[44px]">
+                      <Ban className="h-3.5 w-3.5" /> Suspend
                     </button>
                   )}
-                  {u.status === "suspended" && !u.is_banned && (
+                  {u.status === "suspended" && !u.is_suspended && (
                     <button onClick={() => setStatus.mutate({ id: u.id, status: "active" })} disabled={isActing} className="btn-primary btn-sm min-h-[44px]">Activate</button>
                   )}
                   {pendingDeleteId === u.id ? (
@@ -318,15 +318,15 @@ export default function AdminUsers() {
                     </td>
                     <td className="p-3">
                       <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-                        u.is_banned ? "bg-red-100 text-red-700" :
+                        u.is_suspended ? "bg-red-100 text-red-700" :
                         u.status === "active" ? "bg-green-100 text-green-700" :
                         u.status === "suspended" ? "bg-orange-100 text-orange-700" :
                         "bg-slate-100 text-slate-700"
                       }`}>
-                        {u.is_banned ? "banned" : u.status}
+                        {u.is_suspended ? "suspended" : u.status}
                       </span>
-                      {u.is_banned && u.banned_reason && (
-                        <div className="text-xs text-slate-400 mt-0.5 max-w-[160px] truncate" title={u.banned_reason}>{u.banned_reason}</div>
+                      {u.is_suspended && u.suspension_reason && (
+                        <div className="text-xs text-slate-400 mt-0.5 max-w-[160px] truncate" title={u.suspension_reason}>{u.suspension_reason}</div>
                       )}
                     </td>
                     <td className="p-3">
@@ -341,16 +341,16 @@ export default function AdminUsers() {
                           <button onClick={() => navigate(`/admin/users/${u.id}`)} className="btn-secondary btn-sm min-h-[44px]" title="Edit profile">
                             <Pencil className="h-3.5 w-3.5" />
                           </button>
-                          {u.is_banned ? (
-                            <button onClick={() => unbanUser.mutate(u.id)} disabled={isActing} className="btn-primary btn-sm min-h-[44px] flex items-center gap-1">
-                              <UserCheck className="h-3.5 w-3.5" /> Unban
+                          {u.is_suspended ? (
+                            <button onClick={() => unsuspendUser.mutate(u.id)} disabled={isActing} className="btn-primary btn-sm min-h-[44px] flex items-center gap-1">
+                              <UserCheck className="h-3.5 w-3.5" /> Unsuspend
                             </button>
                           ) : (
-                            <button onClick={() => { setBanTargetId(u.id); setBanReason(""); setBanErr(null); }} disabled={isActing} className="btn-danger btn-sm min-h-[44px] flex items-center gap-1">
-                              <Ban className="h-3.5 w-3.5" /> Ban
+                            <button onClick={() => { setSuspendTargetId(u.id); setSuspendReason(""); setSuspendErr(null); }} disabled={isActing} className="btn-danger btn-sm min-h-[44px] flex items-center gap-1">
+                              <Ban className="h-3.5 w-3.5" /> Suspend
                             </button>
                           )}
-                          {u.status === "suspended" && !u.is_banned && (
+                          {u.status === "suspended" && !u.is_suspended && (
                             <button onClick={() => setStatus.mutate({ id: u.id, status: "active" })} disabled={isActing} className="btn-primary btn-sm min-h-[44px]">Activate</button>
                           )}
                           <button onClick={() => setPendingDeleteId(u.id)} className="btn-danger btn-sm min-h-[44px]" title="Delete">

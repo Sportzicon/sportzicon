@@ -207,7 +207,7 @@ export async function searchUsers(q: {
       SELECT id, full_name, role, profile_photo_url
       FROM "User"
       WHERE lower(full_name) LIKE lower(${term})
-        AND is_banned IS NOT TRUE
+        AND is_suspended IS NOT TRUE
         ${q.excludeId ? Prisma.sql`AND id <> ${q.excludeId}::uuid` : Prisma.sql``}
       ORDER BY full_name ASC
       LIMIT ${limit}

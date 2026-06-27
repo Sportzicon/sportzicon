@@ -80,9 +80,9 @@ model User {
   athlete_data Json?
   coach_data   Json?
 
-  is_banned      Boolean  @default(false)
-  banned_reason  String?
-  banned_at      DateTime?
+  is_suspended      Boolean  @default(false)
+  suspension_reason String?
+  suspended_at      DateTime?
 
   follower_count  Int @default(0)
   following_count Int @default(0)

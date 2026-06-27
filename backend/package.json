@@ -12,7 +12,7 @@
     "test": "cross-env NODE_ENV=test jest --runInBand --forceExit",
     "test:watch": "cross-env NODE_ENV=test jest --watch",
     "typecheck": "tsc --noEmit",
-    "db:generate": "prisma generate",
+    "db:generate": "node -e \"require('fs').copyFileSync('../database/prisma/schema.prisma','./prisma/schema.prisma')\" && prisma generate",
     "db:migrate": "prisma migrate deploy --schema=../database/prisma/schema.prisma"
   },
   "engines": {

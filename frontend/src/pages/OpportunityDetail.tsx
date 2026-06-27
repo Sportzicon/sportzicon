@@ -118,11 +118,11 @@ function ApplyModal({ opp, onClose, onSuccess }: { opp: Opportunity; onClose: ()
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 pb-[calc(56px+env(safe-area-inset-bottom))] sm:pb-4"
       style={{ background: "rgba(20,17,13,0.55)" }}
       onClick={onBackdrop}
     >
-      <div className="panel w-full sm:max-w-[600px] max-h-[92vh] overflow-auto animate-popin rounded-b-none sm:rounded-b-lg">
+      <div className="panel w-full sm:max-w-[600px] max-h-[85vh] sm:max-h-[92vh] overflow-auto animate-popin rounded-b-none sm:rounded-b-lg">
         {/* modal header */}
         <div className="px-5 py-4 border-b border-hair flex items-start justify-between gap-4">
           <div>

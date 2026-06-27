@@ -405,11 +405,11 @@ export default function Applicants() {
       {/* Confirmation dialog (desktop modal) */}
       {pendingAction && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-4 pb-[calc(56px+env(safe-area-inset-bottom)+16px)] sm:pb-4"
           style={{ background: "rgba(20,17,13,0.55)" }}
           onClick={(e) => e.target === e.currentTarget && setPendingAction(null)}
         >
-          <div className="panel w-full max-w-sm p-6 animate-popin">
+          <div className="panel w-full max-w-sm p-6 animate-popin rounded-b-none sm:rounded-b-lg">
             <h3 className="font-disp text-lg mb-4">
               {pendingAction.status === "rejected" ? "Reject applicant" : "Select applicant"}
             </h3>

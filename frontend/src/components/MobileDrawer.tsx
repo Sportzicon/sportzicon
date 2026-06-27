@@ -31,7 +31,7 @@ export function MobileDrawer({ isOpen, onClose, title, children, footer }: Mobil
         {/* Backdrop */}
         <div
           className={clsx(
-            "fixed inset-0 z-40 bg-black/40 transition-opacity duration-300",
+            "fixed inset-0 z-[55] bg-black/40 transition-opacity duration-300",
             isOpen ? "opacity-100" : "pointer-events-none opacity-0",
           )}
           onClick={onClose}
@@ -42,7 +42,7 @@ export function MobileDrawer({ isOpen, onClose, title, children, footer }: Mobil
           aria-modal="true"
           aria-label={title}
           className={clsx(
-            "fixed inset-x-0 bottom-0 z-50 flex max-h-[85vh] flex-col rounded-t-2xl bg-panel shadow-card transition-transform duration-300 ease-out",
+            "fixed inset-x-0 bottom-0 z-[60] flex max-h-[85vh] flex-col rounded-t-2xl bg-panel shadow-card transition-transform duration-300 ease-out",
             "pb-[env(safe-area-inset-bottom)]",
             isOpen ? "translate-y-0" : "translate-y-full",
           )}

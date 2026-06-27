@@ -84,7 +84,7 @@ export default function AdminAuditLog() {
             <label className="block text-xs text-slate-500 mb-1">Action contains</label>
             <input
               className="input w-full"
-              placeholder="e.g. user.banned"
+              placeholder="e.g. user.suspended"
               value={action}
               onChange={(e) => setAction(e.target.value)}
             />

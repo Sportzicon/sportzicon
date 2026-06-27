@@ -398,11 +398,15 @@ export default function Profile() {
             <div className="flex flex-col items-center lg:flex-row lg:items-end gap-4">
               {/* Avatar — 96px mobile, 128px desktop */}
               <div className="relative group/avatar flex-shrink-0">
-                <div className="h-24 w-24 lg:h-32 lg:w-32 overflow-hidden rounded border-4 border-panel bg-fill">
+                <div className="h-24 w-24 lg:h-32 lg:w-32 overflow-hidden rounded border-4 border-panel bg-fill flex items-center justify-center">
                   {u.profile_photo_url ? (
                     <img src={u.profile_photo_url} alt={u.full_name} className="h-full w-full object-cover" />
                   ) : (
-                    <Avatar name={u.full_name} size={88} className="!rounded-none border-0" />
+                    <div className="h-full w-full flex items-center justify-center bg-fill">
+                      <span className="font-disp text-3xl lg:text-4xl text-ink-sub select-none">
+                        {u.full_name?.[0]?.toUpperCase() ?? "?"}
+                      </span>
+                    </div>
                   )}
                   {photoUploading === "profile" && (
                     <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded">

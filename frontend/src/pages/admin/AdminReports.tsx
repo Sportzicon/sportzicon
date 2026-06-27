@@ -21,7 +21,7 @@ export default function AdminReports() {
   const [status, setStatus] = useState("open");
   const [type, setType] = useState("");
   const [resolveId, setResolveId] = useState<string | null>(null);
-  const [resolveAction, setResolveAction] = useState<"warned" | "banned" | "dismissed">("warned");
+  const [resolveAction, setResolveAction] = useState<"warned" | "suspended" | "dismissed">("warned");
   const [resolveNotes, setResolveNotes] = useState("");
   const [actionErr, setActionErr] = useState<string | null>(null);
 
@@ -35,7 +35,7 @@ export default function AdminReports() {
   });
 
   const resolve = useMutation({
-    mutationFn: async (vars: { id: string; action: "warned" | "banned" | "dismissed"; notes?: string }) =>
+    mutationFn: async (vars: { id: string; action: "warned" | "suspended" | "dismissed"; notes?: string }) =>
       api.patch(`/admin/reports/${vars.id}/resolve`, { action: vars.action, notes: vars.notes }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.adminReports() });
@@ -112,19 +112,19 @@ export default function AdminReports() {
                     <div className="space-y-3 rounded bg-slate-50 p-3">
                       <div className="text-sm font-medium">Resolve report</div>
                       <div className="flex flex-wrap gap-2">
-                        {(["warned", "banned", "dismissed"] as const).map((a) => (
+                        {(["warned", "suspended", "dismissed"] as const).map((a) => (
                           <button
                             key={a}
                             onClick={() => setResolveAction(a)}
                             className={`text-xs px-3 py-2 rounded-full border font-medium transition min-h-[44px] ${
                               resolveAction === a
-                                ? a === "banned" ? "bg-red-600 border-red-600 text-white"
+                                ? a === "suspended" ? "bg-red-600 border-red-600 text-white"
                                   : a === "warned" ? "bg-orange-500 border-orange-500 text-white"
                                   : "bg-slate-600 border-slate-600 text-white"
                                 : "bg-white border-slate-300 text-slate-700 hover:border-slate-500"
                             }`}
                           >
-                            {a === "warned" ? "Warn user" : a === "banned" ? "Ban user" : "Dismiss"}
+                            {a === "warned" ? "Warn user" : a === "suspended" ? "Suspend user" : "Dismiss"}
                           </button>
                         ))}
                       </div>

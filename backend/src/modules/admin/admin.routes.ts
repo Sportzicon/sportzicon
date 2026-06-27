@@ -61,11 +61,11 @@ router.patch(
 );
 
 router.patch(
-  "/users/:id/ban",
+  "/users/:id/suspend",
   validate(z.object({ id: z.string().min(8) }), "params"),
   validate(z.object({ reason: z.string().min(1).max(500) })),
   asyncHandler(async (req, res) => {
-    const r = await svc.banUser(
+    const r = await svc.suspendUser(
       { id: req.user!.sub, role: req.user!.role },
       req.params.id,
       req.body.reason
@@ -75,10 +75,10 @@ router.patch(
 );
 
 router.patch(
-  "/users/:id/unban",
+  "/users/:id/unsuspend",
   validate(z.object({ id: z.string().min(8) }), "params"),
   asyncHandler(async (req, res) => {
-    const r = await svc.unbanUser({ id: req.user!.sub, role: req.user!.role }, req.params.id);
+    const r = await svc.unsuspendUser({ id: req.user!.sub, role: req.user!.role }, req.params.id);
     res.json(r);
   })
 );
@@ -140,7 +140,7 @@ router.get(
 router.patch(
   "/reports/:id/resolve",
   validate(z.object({ id: z.string().min(8) }), "params"),
-  validate(z.object({ action: z.enum(["warned", "banned", "dismissed"]), notes: z.string().max(2000).optional() })),
+  validate(z.object({ action: z.enum(["warned", "suspended", "dismissed"]), notes: z.string().max(2000).optional() })),
   asyncHandler(async (req, res) => {
     const r = await svc.resolveReport(
       { id: req.user!.sub, role: req.user!.role },

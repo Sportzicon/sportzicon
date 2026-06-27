@@ -67,20 +67,20 @@ export async function setUserStatus(actor: { id: string; role: Role }, userId: s
   return { ok: true };
 }
 
-export async function banUser(actor: { id: string; role: Role }, userId: string, reason: string) {
+export async function suspendUser(actor: { id: string; role: Role }, userId: string, reason: string) {
   const user = await prisma.user.findUnique({ where: { id: userId }, select: { id: true, role: true } });
   if (!user) throw NotFound("User not found");
-  if (userId === actor.id) throw BadRequest("Cannot ban yourself");
-  if (user.role === "admin") throw BadRequest("Cannot ban another admin");
+  if (userId === actor.id) throw BadRequest("Cannot suspend yourself");
+  if (user.role === "admin") throw BadRequest("Cannot suspend another admin");
 
   await prisma.$transaction([
     prisma.user.update({
       where: { id: userId },
       data: {
         status: "suspended" as any,
-        is_banned: true,
-        banned_reason: reason,
-        banned_at: new Date()
+        is_suspended: true,
+        suspension_reason: reason,
+        suspended_at: new Date()
       }
     }),
     prisma.refreshToken.deleteMany({ where: { user_id: userId } })
@@ -88,7 +88,7 @@ export async function banUser(actor: { id: string; role: Role }, userId: string,
 
   await audit({
     actor,
-    action: "user.banned",
+    action: "user.suspended",
     target_type: "user",
     target_id: userId,
     details: { reason }
@@ -96,21 +96,21 @@ export async function banUser(actor: { id: string; role: Role }, userId: string,
   return { ok: true };
 }
 
-export async function unbanUser(actor: { id: string; role: Role }, userId: string) {
-  const user = await prisma.user.findUnique({ where: { id: userId }, select: { id: true, is_banned: true } });
+export async function unsuspendUser(actor: { id: string; role: Role }, userId: string) {
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { id: true, is_suspended: true } });
   if (!user) throw NotFound("User not found");
 
   await prisma.user.update({
     where: { id: userId },
     data: {
       status: "active" as any,
-      is_banned: false,
-      banned_reason: null,
-      banned_at: null
+      is_suspended: false,
+      suspension_reason: null,
+      suspended_at: null
     }
   });
 
-  await audit({ actor, action: "user.unbanned", target_type: "user", target_id: userId });
+  await audit({ actor, action: "user.unsuspended", target_type: "user", target_id: userId });
   return { ok: true };
 }
 
@@ -157,7 +157,7 @@ export async function listReports(filter: {
 export async function resolveReport(
   actor: { id: string; role: Role },
   reportId: string,
-  action: "warned" | "banned" | "dismissed",
+  action: "warned" | "suspended" | "dismissed",
   notes?: string
 ) {
   const exists = await prisma.report.findUnique({ where: { id: reportId }, select: { id: true } });

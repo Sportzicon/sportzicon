@@ -1,3 +1,6 @@
+// AUTO-SYNCED from database/prisma/schema.prisma — do not edit directly.
+// Run `npm run db:generate` in backend/ to sync and regenerate the client.
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -15,19 +18,6 @@ enum Role {
   organizer
   admin
   scorer
-}
-
-enum EmailType {
-  email_verification
-  password_reset
-  notification
-  other
-}
-
-enum EmailStatus {
-  sent
-  failed
-  stub
 }
 
 enum AccountStatus {
@@ -93,9 +83,9 @@ model User {
   athlete_data Json?
   coach_data   Json?
 
-  is_banned      Boolean  @default(false)
-  banned_reason  String?
-  banned_at      DateTime?
+  is_suspended      Boolean  @default(false)
+  suspension_reason String?
+  suspended_at      DateTime?
 
   follower_count  Int @default(0)
   following_count Int @default(0)
@@ -127,15 +117,15 @@ model User {
 }
 
 model UserDocument {
-  id         String   @id @default(uuid()) @db.Uuid
-  user_id    String   @db.Uuid
-  type       String
-  file_name  String
-  url        String
-  size_bytes Int
-  created_at DateTime @default(now())
+  id          String   @id @default(uuid()) @db.Uuid
+  user_id     String   @db.Uuid
+  type        String
+  file_name   String
+  url         String
+  size_bytes  Int
+  created_at  DateTime @default(now())
 
-  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   @@index([user_id])
 }
@@ -213,6 +203,8 @@ model Opportunity {
   contact_phone             String?
   status                    OpportunityStatus @default(open)
   application_count         Int               @default(0)
+
+  // Link to scoring console Tournament — cross-DB reference, no FK
   scoring_tournament_id     String?
 
   created_at DateTime @default(now())
@@ -353,7 +345,7 @@ model Conversation {
   created_at      DateTime @default(now())
   updated_at      DateTime @updatedAt
 
-  messages            Message[]
+  messages      Message[]
   unread_counts_table UnreadCount[]
 
   @@index([participant_ids])
@@ -453,6 +445,37 @@ model Verification {
   created_at        DateTime           @default(now())
 }
 
+enum EmailType {
+  email_verification
+  password_reset
+  notification
+  other
+}
+
+enum EmailStatus {
+  sent
+  failed
+  stub
+}
+
+model EmailLog {
+  id         String      @id @default(uuid()) @db.Uuid
+  user_id    String?     @db.Uuid
+  to_email   String
+  subject    String
+  email_type EmailType   @default(other)
+  status     EmailStatus @default(sent)
+  error      String?
+  created_at DateTime    @default(now())
+
+  user User? @relation(fields: [user_id], references: [id], onDelete: SetNull)
+
+  @@index([user_id, created_at(sort: Desc)])
+  @@index([created_at(sort: Desc)])
+  @@index([email_type])
+  @@index([status])
+}
+
 model EmailVerification {
   id         String   @id @default(uuid()) @db.Uuid
   user_id    String   @db.Uuid
@@ -483,6 +506,14 @@ model RefreshToken {
   created_at DateTime @default(now())
 
   @@index([user_id])
+}
+
+model LoginAttempt {
+  id           String   @id @default(uuid()) @db.Uuid
+  email        String
+  attempted_at DateTime @default(now())
+
+  @@index([email, attempted_at])
 }
 
 model PostLike {
@@ -516,30 +547,4 @@ model BlogLike {
   user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   @@id([blog_id, user_id])
-}
-
-model EmailLog {
-  id         String      @id @default(uuid()) @db.Uuid
-  user_id    String?     @db.Uuid
-  to_email   String
-  subject    String
-  email_type EmailType   @default(other)
-  status     EmailStatus @default(sent)
-  error      String?
-  created_at DateTime    @default(now())
-
-  user User? @relation(fields: [user_id], references: [id], onDelete: SetNull)
-
-  @@index([user_id, created_at(sort: Desc)])
-  @@index([created_at(sort: Desc)])
-  @@index([email_type])
-  @@index([status])
-}
-
-model LoginAttempt {
-  id           String   @id @default(uuid()) @db.Uuid
-  email        String
-  attempted_at DateTime @default(now())
-
-  @@index([email, attempted_at])
 }
