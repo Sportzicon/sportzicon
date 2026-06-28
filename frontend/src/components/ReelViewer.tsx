@@ -106,7 +106,7 @@ export function ReelViewer({
           ref={videoRef}
           src={currentReel.video_url}
           poster={currentReel.thumbnail_url ?? undefined}
-          className="h-full w-full object-cover cursor-pointer"
+          className="h-full w-full object-contain cursor-pointer"
           muted={isMuted}
           loop
           playsInline

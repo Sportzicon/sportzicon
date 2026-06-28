@@ -35,10 +35,10 @@ function BlogCard({ b, layout }: { b: Blog; layout: "grid" | "list" }) {
           <img
             src={b.cover_image_url}
             alt=""
-            className="w-48 object-cover shrink-0"
+            className="w-24 sm:w-48 object-cover shrink-0"
           />
         ) : (
-          <div className="w-48 shrink-0 bg-fill flex items-center justify-center">
+          <div className="w-24 sm:w-48 shrink-0 bg-fill flex items-center justify-center">
             <span className="font-disp text-4xl text-ink-faint">✍</span>
           </div>
         )}

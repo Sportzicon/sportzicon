@@ -593,7 +593,7 @@ function LiveTab({ match, balls }: { match: any; balls: any[] }) {
       <div className="grid grid-cols-1 sm:grid-cols-5 border-b border-hair">
 
         {/* Left — batsmen + bowlers */}
-        <div className="sm:col-span-3 bg-panel border-r border-hair">
+        <div className="sm:col-span-3 bg-panel border-r border-hair overflow-x-auto">
           {/* Batsmen */}
           <table className="w-full text-sm">
             <thead>
@@ -1020,7 +1020,7 @@ function ScorecardTab({ match, balls }: { match: any; balls: any[] }) {
       </div>
 
       {/* Batting */}
-      <div className="bg-panel">
+      <div className="bg-panel overflow-x-auto">
         <div className="flex items-center gap-2 px-4 py-2 bg-fill border-b border-hair">
           <TrendingUp className="w-3.5 h-3.5 text-ink-sub" />
           <p className="lab text-ink-sub">Batting</p>
@@ -1109,7 +1109,7 @@ function ScorecardTab({ match, balls }: { match: any; balls: any[] }) {
 
       {/* Bowling */}
       {bowled.length > 0 && (
-        <div className="bg-panel mt-px">
+        <div className="bg-panel mt-px overflow-x-auto">
           <div className="flex items-center gap-2 px-4 py-2 bg-fill border-y border-hair">
             <Zap className="w-3.5 h-3.5 text-ink-sub" />
             <p className="lab text-ink-sub">Bowling</p>

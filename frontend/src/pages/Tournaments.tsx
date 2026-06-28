@@ -65,9 +65,9 @@ export default function Tournaments() {
         }
       />
 
-      <div className="panel p-4 flex flex-wrap gap-3">
-        <input className="input w-44" placeholder="Sport" value={sport} onChange={(e) => setSport(e.target.value)} />
-        <select className="input w-36" value={status} onChange={(e) => setStatus(e.target.value)}>
+      <div className="panel p-4 flex flex-col sm:flex-row sm:flex-wrap gap-3">
+        <input className="input w-full sm:w-44" placeholder="Sport" value={sport} onChange={(e) => setSport(e.target.value)} />
+        <select className="input w-full sm:w-36" value={status} onChange={(e) => setStatus(e.target.value)}>
           <option value="open">Open</option>
           <option value="closed">Closed</option>
           <option value="filled">Filled</option>

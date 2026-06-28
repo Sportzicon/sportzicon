@@ -141,7 +141,7 @@ export default function Reels() {
       {/* ── Mobile: full-screen snap-scroll feed ── */}
       <div className="lg:hidden">
         {list.isLoading ? (
-          <div className="flex justify-center items-center h-[80vh]">
+          <div className="flex justify-center items-center h-[calc(100svh-56px)]">
             <Spinner className="text-brand-500" />
           </div>
         ) : allReels.length === 0 ? (
@@ -166,7 +166,7 @@ export default function Reels() {
               />
             ))}
             {list.hasNextPage && (
-              <div className="h-screen snap-start flex items-center justify-center bg-black">
+              <div className="h-[calc(100svh-56px)] snap-start flex items-center justify-center bg-black">
                 <button
                   onClick={() => list.fetchNextPage()}
                   disabled={list.isFetchingNextPage}
@@ -431,14 +431,14 @@ function MobileReelSlide({
   return (
     <div
       ref={containerRef}
-      className="relative h-screen snap-start overflow-hidden bg-black flex items-center justify-center"
+      className="relative h-[calc(100svh-56px)] snap-start overflow-hidden bg-black flex items-center justify-center"
       onClick={togglePlay}
     >
       <video
         ref={videoRef}
         src={reel.video_url}
         poster={reel.thumbnail_url ?? undefined}
-        className="h-full w-full object-cover"
+        className="h-full w-full object-contain"
         playsInline
         loop
         preload="metadata"
