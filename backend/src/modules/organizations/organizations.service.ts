@@ -32,6 +32,19 @@ export async function createOrganization(ownerId: string, ownerRole: Role, input
       registration_doc_url: input.registration_doc_url as string | undefined
     }
   });
+
+  // Create Verification record so org appears in admin queue immediately
+  await prisma.verification.create({
+    data: {
+      entity_type: "organization",
+      entity_id: org.id,
+      verification_type: "org_registration",
+      documents: [],
+      submitted_by: ownerId,
+      notes: "Auto-submitted on organization creation"
+    }
+  });
+
   return formatOrg(org);
 }
 

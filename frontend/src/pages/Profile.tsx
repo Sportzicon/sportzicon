@@ -334,7 +334,11 @@ export default function Profile() {
   const isAthlete = u.role === "athlete";
   const sport = ath?.primary_sport;
   const userStats: [string, string | number][] = ath?.stats ? Object.entries(ath.stats) : [];
-  const achievements: { title: string; year: number; verified?: boolean; description?: string }[] = ath?.achievements ?? [];
+  const achievements = (ath?.achievements ?? []).map((a: unknown) =>
+    typeof a === "string"
+      ? { title: a, year: undefined as number | undefined, verified: false, description: undefined as string | undefined }
+      : a as { title: string; year?: number; verified?: boolean; description?: string }
+  );
   const careerHistory: { club: string; from?: string; to?: string | null; current?: boolean; years?: string }[] =
     ath?.career_history?.length
       ? ath.career_history
@@ -559,8 +563,8 @@ export default function Profile() {
           />
           {achievements.length > 0 ? (
             <div className="card card-body">
-              {achievements.map((ac) => (
-                <div key={ac.title} className="flex items-start gap-3 py-3 border-b border-hairsoft last:border-0">
+              {achievements.map((ac: { title?: string; year?: number; verified?: boolean; description?: string }, idx: number) => (
+                <div key={ac.title ?? idx} className="flex items-start gap-3 py-3 border-b border-hairsoft last:border-0">
                   <span className={`text-lg ${ac.verified ? "text-brand-500" : "text-ink-faint"}`}>♛</span>
                   <div className="flex-1">
                     <div className="flex items-center gap-2 flex-wrap">

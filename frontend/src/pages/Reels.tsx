@@ -73,6 +73,7 @@ export default function Reels() {
 
       const publicUrl: string = urlData.public_url;
       const uploadUrl: string = urlData.upload_url;
+      const objectName: string = urlData.object_name;
       const headers: Record<string, string> = urlData.headers ?? {};
 
       await new Promise<void>((resolve, reject) => {
@@ -89,6 +90,8 @@ export default function Reels() {
         Object.entries(headers).forEach(([k, v]) => xhr.setRequestHeader(k, v));
         xhr.send(file);
       });
+
+      await api.post("/media/confirm", { key: objectName, context });
 
       return publicUrl;
     } catch (e) {

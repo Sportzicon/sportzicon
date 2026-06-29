@@ -114,6 +114,19 @@ export async function unsuspendUser(actor: { id: string; role: Role }, userId: s
   return { ok: true };
 }
 
+export async function activateUser(actor: { id: string; role: Role }, userId: string) {
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { id: true, email_verified: true, status: true } });
+  if (!user) throw NotFound("User not found");
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: { email_verified: true, status: "active" as any }
+  });
+
+  await audit({ actor, action: "user.activated", target_type: "user", target_id: userId });
+  return { ok: true };
+}
+
 export async function setUserBadges(actor: { id: string; role: Role }, userId: string, badges: string[]) {
   const exists = await prisma.user.findUnique({ where: { id: userId }, select: { id: true } });
   if (!exists) throw NotFound("User not found");

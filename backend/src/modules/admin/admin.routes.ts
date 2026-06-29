@@ -84,6 +84,15 @@ router.patch(
 );
 
 router.patch(
+  "/users/:id/activate",
+  validate(z.object({ id: z.string().min(8) }), "params"),
+  asyncHandler(async (req, res) => {
+    const r = await svc.activateUser({ id: req.user!.sub, role: req.user!.role }, req.params.id);
+    res.json(r);
+  })
+);
+
+router.patch(
   "/users/:id/badges",
   validate(z.object({ id: z.string().min(8) }), "params"),
   validate(z.object({ badges: z.array(z.string()).max(20) })),

@@ -4,7 +4,7 @@ import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { opportunityService } from "../services";
 import { humanizeError } from "../api/client";
 import { useAuthStore } from "../store/auth";
-import { hasRole } from "../utils/roles";
+import { hasRole, isAdmin } from "../utils/roles";
 import { useOpportunityApplication } from "../hooks/useApplications";
 import { Spinner, StatusPill, SectionHead, Kicker } from "../components/UI";
 import { BackButton } from "../components/BackButton";
@@ -330,7 +330,7 @@ export default function OpportunityDetail() {
 
   const alreadyApplied = justApplied || (existingApp != null && existingApp.status !== "withdrawn");
   const currentAppStatus = existingApp?.status;
-  const canApply = hasRole(user?.role ?? "", "athlete") && o.status === "open" && !alreadyApplied;
+  const canApply = !isAdmin(user?.role ?? "") && hasRole(user?.role ?? "", "athlete") && o.status === "open" && !alreadyApplied;
 
   function ApplyButton({ className = "" }: { className?: string }) {
     if (isPoster) return (
