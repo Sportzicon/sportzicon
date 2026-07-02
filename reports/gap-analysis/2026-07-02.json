@@ -1,0 +1,94 @@
+{
+  "date": "2026-07-02",
+  "counts": {
+    "P1": 4,
+    "P2": 5,
+    "P3": 3
+  },
+  "findings": [
+    {
+      "sev": "P1",
+      "area": "feature",
+      "title": "Live scoring UI missing PPTX Level 1 dropdowns",
+      "evidence": "scoring/frontend/src/pages/LiveScoring.tsx",
+      "suggestion": "Wire ball length / ball line / bowler type / shot type into the ball-entry form."
+    },
+    {
+      "sev": "P1",
+      "area": "feature",
+      "title": "Analytics view missing",
+      "evidence": "scoring/frontend/src/pages/InningsAnalytics.tsx",
+      "suggestion": "PPTX § Scorecard & Analytics view — dismissal patterns + pitch map."
+    },
+    {
+      "sev": "P1",
+      "area": "production",
+      "title": "Scoring backend lacks structured logging",
+      "evidence": "scoring/backend/src/app.ts",
+      "suggestion": "Add pino-http (matches main backend) so Cloud Logging can parse fields."
+    },
+    {
+      "sev": "P1",
+      "area": "production",
+      "title": "Scoring backend has no rate limiting",
+      "evidence": "scoring/backend/src/app.ts",
+      "suggestion": "Add express-rate-limit (matches main backend's apiLimiter)."
+    },
+    {
+      "sev": "P2",
+      "area": "feature",
+      "title": "Undo last ball not exposed in scoring UI",
+      "evidence": "scoring/frontend/src/pages/LiveScoring.tsx",
+      "suggestion": "Add an undo button (PPTX § Team — Edit score / Undo last ball)."
+    },
+    {
+      "sev": "P2",
+      "area": "production",
+      "title": "No graceful shutdown handler",
+      "evidence": "scoring/backend/src/server.ts",
+      "suggestion": "Listen for SIGTERM and close the HTTP server + DB pool to drain in-flight requests cleanly."
+    },
+    {
+      "sev": "P2",
+      "area": "production",
+      "title": "CI does not exercise the scoring subproject",
+      "evidence": ".github/workflows/ci.yml",
+      "suggestion": "Add a job that runs `cd scoring && npm ci && npm run build` so PRs catch scoring regressions."
+    },
+    {
+      "sev": "P2",
+      "area": "architecture",
+      "title": "Two prisma schemas in the same repo",
+      "evidence": "backend/prisma/schema.prisma + scoring/backend/prisma/schema.prisma",
+      "suggestion": "Document the boundary (which schema owns which models) or merge — duplicate User models risk drift."
+    },
+    {
+      "sev": "P2",
+      "area": "architecture",
+      "title": "ARCHITECTURE.md has no diagrams",
+      "evidence": "docs/ARCHITECTURE.md",
+      "suggestion": "Add at least one Mermaid C4 / context diagram so new engineers can orient."
+    },
+    {
+      "sev": "P3",
+      "area": "security",
+      "title": "npm audit failed for backend",
+      "evidence": "Command failed: npm audit --json --omit=dev",
+      "suggestion": "Run npm install first, then re-run audit."
+    },
+    {
+      "sev": "P3",
+      "area": "security",
+      "title": "npm audit failed for frontend",
+      "evidence": "Command failed: npm audit --json --omit=dev",
+      "suggestion": "Run npm install first, then re-run audit."
+    },
+    {
+      "sev": "P3",
+      "area": "architecture",
+      "title": "No Storybook / component catalogue",
+      "evidence": "(repo-wide)",
+      "suggestion": "Consider Storybook so the design system is discoverable. Optional for v1."
+    }
+  ]
+}
