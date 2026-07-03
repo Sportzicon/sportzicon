@@ -122,7 +122,8 @@ export default function AdminOpportunities() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.adminOpportunities() });
       setDeletePendingId(null);
-    }
+    },
+    onError: (e: unknown) => setFormError(humanizeError(e))
   });
 
   const allItems = q.data ?? [];

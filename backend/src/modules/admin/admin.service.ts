@@ -382,7 +382,10 @@ export async function adminUpdateOpportunity(
 export async function adminDeleteOpportunity(actor: { id: string; role: Role }, oppId: string) {
   const opp = await prisma.opportunity.findUnique({ where: { id: oppId }, select: { id: true } });
   if (!opp) throw NotFound("Opportunity not found");
-  await prisma.opportunity.delete({ where: { id: oppId } });
+  await prisma.$transaction([
+    prisma.application.deleteMany({ where: { opportunity_id: oppId } }),
+    prisma.opportunity.delete({ where: { id: oppId } })
+  ]);
   await audit({ actor, action: "opportunity.deleted", target_type: "opportunity", target_id: oppId });
   return { ok: true };
 }

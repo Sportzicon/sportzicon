@@ -5,6 +5,7 @@ import { api, humanizeError } from "../api/client";
 import { queryKeys } from "../hooks/queryKeys";
 import { useAuthStore } from "../store/auth";
 import { PageHeader, Spinner, SectionHead } from "../components/UI";
+import { SPORTS_LIST } from "../data/sportPositions";
 
 function Field({ label, children, hint }: { label: string; children: React.ReactNode; hint?: string }) {
   return (
@@ -161,7 +162,10 @@ export default function NewTournament() {
         </Field>
         <div className="grid sm:grid-cols-2 gap-4">
           <Field label="Sport *">
-            <input className="input" value={form.sport} onChange={(e) => set("sport", e.target.value)} required />
+            <select className="input min-h-[44px]" value={form.sport} onChange={(e) => set("sport", e.target.value)} required>
+              <option value="">Select sport…</option>
+              {SPORTS_LIST.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+            </select>
           </Field>
           <Field label="Format" hint="League, Knockout, Round-robin">
             <input className="input" placeholder="E.g. League" value={form.eligibility} onChange={(e) => set("eligibility", e.target.value)} />

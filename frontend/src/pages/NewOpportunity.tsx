@@ -97,6 +97,7 @@ export default function NewOpportunity() {
     if (form.type !== "coaching_job" && !form.end_date) errors.end_date = "End date is required";
     if (!form.application_deadline) errors.application_deadline = "Application deadline is required";
     if (form.application_deadline && form.application_deadline < today()) errors.application_deadline = "Deadline must be today or in the future";
+    if (form.type !== "coaching_job" && form.application_deadline && form.start_date && form.application_deadline > form.start_date) errors.application_deadline = "Deadline must be on or before start date";
     if (!form.state) errors.state = "State is required";
     if (!form.city) errors.city = "City is required";
     if (Number(form.age_max) < Number(form.age_min)) errors.age_max = "Max age must be ≥ min age";
@@ -274,6 +275,7 @@ export default function NewOpportunity() {
             <input className={`input font-mononum min-h-[44px] ${fieldErrors.application_deadline ? "border-red-400" : ""}`}
               type="date" value={form.application_deadline}
               min={today()}
+              max={form.type !== "coaching_job" ? (form.start_date || undefined) : undefined}
               onChange={(e) => set("application_deadline", e.target.value)} />
           </Field>
         </div>

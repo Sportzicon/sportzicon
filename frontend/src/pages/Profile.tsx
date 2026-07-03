@@ -510,6 +510,11 @@ export default function Profile() {
       {isAthlete && (
         <div>
           <SectionHead n="01" title="Career summary" sub={sport ? `${sport} statistics` : "Headline numbers"} />
+          {ath?.career_summary && (
+            <div className="card card-body mb-3">
+              <p className="text-[15px] leading-relaxed text-ink-70 whitespace-pre-wrap">{ath.career_summary}</p>
+            </div>
+          )}
           {userStats.length > 0 ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
               {userStats.map(([k, v], i) => (
