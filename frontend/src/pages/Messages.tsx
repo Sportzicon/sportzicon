@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { messageService, userService, searchService } from "../services";
 import { useAuthStore } from "../store/auth";
-import { PageHeader, Spinner, Avatar } from "../components/UI";
+import { PageHeader, Spinner, Avatar, EmptyState } from "../components/UI";
 import { MobileDrawer } from "../components/MobileDrawer";
 import { ErrorBoundary } from "../components/ErrorBoundary";
 import { queryKeys } from "../hooks/queryKeys";
@@ -42,56 +42,6 @@ function groupByDate(messages: Message[]): Array<{ date: string; messages: Messa
     }
   }
   return groups;
-}
-
-// ── Demo data ──────────────────────────────────────────────────────────────────
-
-function makeDemoData(meId: string) {
-  const T = Date.now();
-  const ids = { a: "demo_priya_001", b: "demo_cfc_001", c: "demo_rahul_001" };
-
-  const convs: Conversation[] = [
-    {
-      id: "demo_conv_a", participant_ids: [meId, ids.a],
-      _other_name: "Priya Verma", _other_sub: "Scout · Mumbai", _other_avatar: null, _other_id: ids.a,
-      last_message: { body: "Looking forward to seeing you at the trials!", created_at: new Date(T - 90 * 60_000).toISOString() },
-      _unread_count: 2,
-    },
-    {
-      id: "demo_conv_b", participant_ids: [meId, ids.b],
-      _other_name: "Chennai FC Academy", _other_sub: "Club · Chennai", _other_avatar: null, _other_id: ids.b,
-      last_message: { body: "Are you currently open to new opportunities?", created_at: new Date(T - 5 * 3600_000).toISOString() },
-      _unread_count: 0,
-    },
-    {
-      id: "demo_conv_c", participant_ids: [meId, ids.c],
-      _other_name: "Rahul Mehta", _other_sub: "Athlete · Delhi", _other_avatar: null, _other_id: ids.c,
-      last_message: { body: "Sure, Shivaji Park at 6am works! See you tomorrow.", created_at: new Date(T - 20 * 3600_000).toISOString() },
-      _unread_count: 0,
-    }
-  ];
-
-  const msgs: Record<string, Message[]> = {
-    demo_conv_a: [
-      { id: "da1", conversation_id: "demo_conv_a", sender_id: ids.a, recipient_id: meId, body: "Hi! I came across your Sportzicon profile — really impressive stats.", created_at: new Date(T - 3 * 3600_000).toISOString() },
-      { id: "da2", conversation_id: "demo_conv_a", sender_id: ids.a, recipient_id: meId, body: "We're holding state-level cricket trials next month. Based on your numbers, you'd be a strong candidate.", created_at: new Date(T - 3 * 3600_000 + 30_000).toISOString() },
-      { id: "da3", conversation_id: "demo_conv_a", sender_id: meId, recipient_id: ids.a, body: "Thanks for reaching out! I'd be very interested. Can you share more details about the format and location?", created_at: new Date(T - 2 * 3600_000).toISOString() },
-      { id: "da4", conversation_id: "demo_conv_a", sender_id: ids.a, recipient_id: meId, body: "It's a 2-day selection camp at the Wankhede Academy — 15–16 July. U-23 category.", created_at: new Date(T - 100 * 60_000).toISOString() },
-      { id: "da5", conversation_id: "demo_conv_a", sender_id: meId, recipient_id: ids.a, body: "Perfect, I'll clear my schedule. Please send the registration form when it's ready.", created_at: new Date(T - 95 * 60_000).toISOString() },
-      { id: "da6", conversation_id: "demo_conv_a", sender_id: ids.a, recipient_id: meId, body: "Looking forward to seeing you at the trials!", created_at: new Date(T - 90 * 60_000).toISOString() }
-    ],
-    demo_conv_b: [
-      { id: "db1", conversation_id: "demo_conv_b", sender_id: ids.b, recipient_id: meId, body: "Hello! We noticed your profile and think you'd be a great fit for our Academy development program.", created_at: new Date(T - 6 * 3600_000).toISOString() },
-      { id: "db2", conversation_id: "demo_conv_b", sender_id: ids.b, recipient_id: meId, body: "Are you currently open to new opportunities?", created_at: new Date(T - 5 * 3600_000).toISOString() }
-    ],
-    demo_conv_c: [
-      { id: "dc1", conversation_id: "demo_conv_c", sender_id: meId, recipient_id: ids.c, body: "Hey Rahul, saw you're also preparing for the state trials. Want to do a joint training session sometime?", created_at: new Date(T - 25 * 3600_000).toISOString() },
-      { id: "dc2", conversation_id: "demo_conv_c", sender_id: ids.c, recipient_id: meId, body: "Absolutely! I train at Shivaji Park every morning. You're welcome to join.", created_at: new Date(T - 22 * 3600_000).toISOString() },
-      { id: "dc3", conversation_id: "demo_conv_c", sender_id: meId, recipient_id: ids.c, body: "That sounds great. Tomorrow morning?", created_at: new Date(T - 21 * 3600_000).toISOString() },
-      { id: "dc4", conversation_id: "demo_conv_c", sender_id: ids.c, recipient_id: meId, body: "Sure, Shivaji Park at 6am works! See you tomorrow.", created_at: new Date(T - 20 * 3600_000).toISOString() }
-    ]
-  };
-  return { convs, msgs };
 }
 
 // ── New conversation contact picker ───────────────────────────────────────────
@@ -198,8 +148,6 @@ export default function Messages() {
     refetchInterval: 30_000,
   });
 
-  const isDemo = !convs.isLoading && !convs.data?.length;
-
   // Match recipient to existing conversation
   useEffect(() => {
     if (!convs.data || !recipientId) return;
@@ -212,7 +160,7 @@ export default function Messages() {
   const recipientProfile = useQuery({
     queryKey: queryKeys.user(recipientId ?? ""),
     queryFn: () => userService.get(recipientId!),
-    enabled: !!recipientId && !activeId && !isDemo,
+    enabled: !!recipientId && !activeId,
   });
 
   // Fetch messages for active conversation
@@ -250,7 +198,7 @@ export default function Messages() {
 
   // Join/leave conversation rooms as active conversation changes
   useEffect(() => {
-    if (!activeId || activeId.startsWith("demo_")) return;
+    if (!activeId) return;
     const socket = connectSocket(useAuthStore.getState().accessToken ?? "");
     socket.emit("join", [activeId]);
     return () => { socket.emit("leave", activeId); };
@@ -271,7 +219,7 @@ export default function Messages() {
 
   // Mark read once when entering a conversation thread
   useEffect(() => {
-    if (activeId && !activeId.startsWith("demo_")) {
+    if (activeId) {
       messageService.markRead(activeId)
         .then(() => {
           qc.invalidateQueries({ queryKey: queryKeys.conversations() });
@@ -326,11 +274,8 @@ export default function Messages() {
     setMobileView("thread");
   }
 
-  const demo = useMemo(() => makeDemoData(me.id), [me.id]);
-  const isDemoConv = activeId?.startsWith("demo_conv_");
-
-  const displayConvs: Conversation[] = isDemo ? demo.convs : (convs.data ?? []);
-  const displayMessages: Message[] = isDemoConv ? (demo.msgs[activeId ?? ""] ?? []) : (messages.data ?? []);
+  const displayConvs: Conversation[] = convs.data ?? [];
+  const displayMessages: Message[] = messages.data ?? [];
 
   const activeConv = displayConvs.find((c) => c.id === activeId);
   const activeOtherId = activeConv?.participant_ids?.find((p) => p !== me.id);
@@ -386,13 +331,16 @@ export default function Messages() {
             <div className="overflow-y-auto flex-1 flex flex-col">
               {convs.isLoading ? (
                 <div className="p-6 flex justify-center"><Spinner className="text-brand-500" /></div>
+              ) : displayConvs.length === 0 ? (
+                <div className="p-6">
+                  <EmptyState
+                    title="No conversations yet"
+                    hint="Start a conversation with an athlete, club or scout."
+                    action={<Link to="/search" className="btn-primary text-[13px]">Find a user →</Link>}
+                  />
+                </div>
               ) : (
                 <>
-                  {isDemo && (
-                    <div className="px-4 py-2 bg-fill border-b border-hairsoft">
-                      <span className="font-mononum text-[10px] uppercase tracking-[0.06em] text-ink-faint">Demo preview</span>
-                    </div>
-                  )}
                   <ul className="flex-1">
                     {displayConvs.map((c) => {
                       const unread = c._unread_count ?? (c.unread_counts?.[me.id] ?? 0);
@@ -438,14 +386,6 @@ export default function Messages() {
                       );
                     })}
                   </ul>
-                  {isDemo && (
-                    <div className="px-4 py-3 border-t border-hairsoft">
-                      <p className="lab text-ink-faint text-[10.5px] text-center leading-relaxed">
-                        Sample data ·{" "}
-                        <Link to="/search" className="text-brand-500 hover:underline">Find a user</Link> to start a real conversation
-                      </p>
-                    </div>
-                  )}
                 </>
               )}
             </div>
@@ -475,11 +415,11 @@ export default function Messages() {
                   {(activeConv as Conversation)?._other_sub && (
                     <div className="lab text-[10.5px] mt-0.5 capitalize">{(activeConv as Conversation)._other_sub}</div>
                   )}
-                  {!activeConv && recipientId && !isDemoConv && (
+                  {!activeConv && recipientId && (
                     <div className="lab text-[10.5px] mt-0.5">New conversation</div>
                   )}
                 </div>
-                {!isDemoConv && (recipientId || activeOtherId) && (
+                {(recipientId || activeOtherId) && (
                   <Link to={`/profile/${recipientId ?? activeOtherId}`} className="btn-ghost text-[12px] flex-shrink-0">
                     View profile →
                   </Link>
@@ -493,7 +433,7 @@ export default function Messages() {
 
             {/* Messages area */}
             <div ref={endRef} className="flex-1 overflow-y-auto px-3 sm:px-[22px] py-6 flex flex-col gap-1 bg-fill/30">
-              {!isDemoConv && messages.isLoading ? (
+              {messages.isLoading ? (
                 <div className="flex justify-center pt-8"><Spinner className="text-brand-500" /></div>
               ) : messageGroups.length ? (
                 messageGroups.map((group) => (
@@ -562,19 +502,17 @@ export default function Messages() {
                 onChange={(e) => setText(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder={
-                  isDemoConv
-                    ? "Demo conversation — find a real user to message"
-                    : recipientId
+                  recipientId
                     ? "Write a message… (Enter to send)"
                     : "Select a conversation first"
                 }
-                disabled={!recipientId || isDemoConv}
+                disabled={!recipientId}
                 style={{ fontFamily: "'Public Sans', sans-serif", maxHeight: 120 }}
               />
               <button
                 type="submit"
                 className="btn-accent px-3 flex-shrink-0 min-h-[44px]"
-                disabled={!recipientId || !text.trim() || isDemoConv || sending}
+                disabled={!recipientId || !text.trim() || sending}
                 title="Send"
               >
                 {sending

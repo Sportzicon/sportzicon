@@ -76,6 +76,9 @@ export const queryKeys = {
   // Org sub-resources
   orgOpportunities: (orgId: string) => ["org-opps", orgId] as const,
 
+  // Public
+  publicStats:        () => ["public-stats"] as const,
+
   // Live scores (public, no auth)
   liveMatches:        () => ["live-matches-public"] as const,
   upcomingMatches:    () => ["upcoming-matches-public"] as const,

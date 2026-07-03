@@ -19,7 +19,7 @@ export default function Admin() {
     { to: "/admin/verifications", icon: <ShieldCheck className="h-5 w-5" />, title: "Verifications", desc: "Approve KYC and badges", color: "text-brand-600", badge: q.data?.pending_verifications },
     { to: "/admin/reports", icon: <AlertTriangle className="h-5 w-5" />, title: "Reports", desc: "Abuse and dispute reports", color: "text-red-600", badge: q.data?.open_reports },
     { to: "/admin/audit", icon: <FileText className="h-5 w-5" />, title: "Audit log", desc: "Every moderation action with timestamp", color: "text-slate-600" },
-    { to: "/admin/scoring", icon: <Activity className="h-5 w-5" />, title: "Live Scoring", desc: "All matches — live, upcoming, results. View scorecards and manage via scoring console.", color: "text-red-600", badge: q.data?.live_match_count }
+    { to: "/admin/scoring", icon: <Activity className="h-5 w-5" />, title: "Live Scoring", desc: "All matches — live, upcoming, results. View scorecards and manage via scoring console.", color: "text-red-600" }
   ];
 
   return (

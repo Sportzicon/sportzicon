@@ -1,6 +1,12 @@
 import { useState, useEffect, useLayoutEffect, useRef } from "react";
 import { Link, useLocation } from "react-router-dom";
 import HowItWorksContent from "./HowItWorks";
+import { usePublicStats } from "../hooks/usePublicStats";
+
+function formatCount(n: number | undefined): string {
+  if (n == null) return "—";
+  return n.toLocaleString("en-IN");
+}
 
 // ============================================================================
 // Landing — public marketing home. "Editorial Workstation" treatment.
@@ -39,11 +45,12 @@ export default function Landing({ initialView = "home" }: { initialView?: View }
     }
   }, [view]);
 
+  const { data: publicStats } = usePublicStats();
   const stats: [string, string][] = [
-    ["48,200", "Athletes"],
-    ["1,940", "Clubs & academies"],
-    ["320", "Trials live now"],
-    ["6,100", "Players selected"],
+    [formatCount(publicStats?.athletes), "Athletes"],
+    [formatCount(publicStats?.clubs), "Clubs & academies"],
+    [formatCount(publicStats?.open_opportunities), "Trials live now"],
+    [formatCount(publicStats?.players_selected), "Players selected"],
   ];
 
   const props: [string, string, string][] = [
@@ -70,10 +77,10 @@ export default function Landing({ initialView = "home" }: { initialView?: View }
 
   const clubBenefits: [string, string, string][] = [
     ["01", "Post trials instantly", "Go live with a trial listing in minutes — sport, location, date, requirements and application window, all in one form."],
-    ["02", "Search verified talent", "Filter 48,000+ athletes by sport, role, position, age, experience and live availability. Every result is verified."],
+    ["02", "Search verified talent", "Filter athletes by sport, role, position, age, experience and live availability. Every result is verified."],
     ["03", "Manage applications", "A structured Pending → Shortlisted → Selected pipeline keeps your recruitment process organised and transparent."],
     ["04", "Team collaboration", "Invite scouts and coaches to your club workspace. Share shortlists, leave notes, make decisions together."],
-    ["05", "Analytics dashboard", "Track trial views, application volume, shortlist conversion and time-to-selection across every campaign."],
+    ["05", "Application tracking", "See every applicant's status at a glance — pending, shortlisted, selected — updated in real time."],
   ];
 
   return (
@@ -110,7 +117,7 @@ export default function Landing({ initialView = "home" }: { initialView?: View }
             <div className="flex flex-col justify-center bg-fill px-4 sm:px-6 lg:px-9 py-6 lg:py-8">
               <div className="flex items-center justify-between">
                 <span className="lab">Built for recruiters</span>
-                <span className="kicker">320 open</span>
+                <span className="kicker">{formatCount(publicStats?.open_opportunities)} open</span>
               </div>
               <div className="ph mt-4" style={{ height: 280 }}>
                 <span className="absolute left-2 top-2 h-1.5 w-1.5 bg-brand-500" />
@@ -189,7 +196,7 @@ export default function Landing({ initialView = "home" }: { initialView?: View }
               ))}
             </div>
             <div className="border-t border-hair bg-fill px-11 py-5 flex flex-wrap gap-3 items-center">
-              {["Post trials", "Verified athletes", "Application pipeline", "Team workspace", "Analytics"].map((tag) => (
+              {["Post trials", "Verified athletes", "Application pipeline", "Team workspace"].map((tag) => (
                 <span key={tag} className="badge">{tag}</span>
               ))}
             </div>

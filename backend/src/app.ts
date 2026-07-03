@@ -29,6 +29,7 @@ import verificationRoutes from "./modules/verification/verification.routes";
 import adminRoutes from "./modules/admin/admin.routes";
 import reportsRoutes from "./modules/admin/reports.routes";
 import emailLogsRoutes from "./modules/email-logs/email-logs.routes";
+import statsRoutes from "./modules/stats/stats.routes";
 
 export function createApp(): Express {
   bootstrapEventHandlers();
@@ -96,6 +97,7 @@ export function createApp(): Express {
   app.use("/api/v1/reports", reportsRoutes);
   app.use("/api/v1/admin", adminRoutes);
   app.use("/api/v1", emailLogsRoutes);
+  app.use("/api/v1/stats", statsRoutes);
 
   app.use(notFound);
   app.use(errorHandler);
