@@ -55,10 +55,6 @@ export class ReelService {
     return res.data;
   }
 
-  async view(id: string): Promise<void> {
-    await this.client.post(`/reels/${id}/view`);
-  }
-
   async getUploadUrl(params: {
     context: "reel" | "post" | "avatar" | "org-logo" | "blog-cover" | "org-doc";
     fileName: string;

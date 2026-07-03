@@ -84,16 +84,6 @@ router.delete(
 );
 
 router.post(
-  "/:id/view",
-  requireAuth,
-  validate(z.object({ id: z.string().min(8) }), "params"),
-  asyncHandler(async (req, res) => {
-    const r = await svc.viewReel(req.params.id);
-    res.json(r);
-  })
-);
-
-router.post(
   "/:id/like",
   requireAuth,
   validate(z.object({ id: z.string().min(8) }), "params"),

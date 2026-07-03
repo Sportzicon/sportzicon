@@ -13,7 +13,7 @@ export function PageHeader({ title, subtitle, action, sticky, className }: { tit
   return (
     <div className={clsx(
       "mb-6 flex flex-wrap items-end justify-between gap-3 border-b-[1.5px] border-ink pb-3",
-      sticky && "sticky top-0 z-30 bg-paper pt-1",
+      sticky && "sticky -top-4 sm:-top-7 z-30 bg-panel -mx-3 sm:-mx-6 px-3 sm:px-6 pt-3 sm:pt-4",
       className
     )}>
       <div>

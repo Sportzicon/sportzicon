@@ -2,22 +2,18 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, humanizeError } from "../api/client";
 import { hasRole, isAdmin as checkAdmin } from "../utils/roles";
-import { Spinner, EmptyState } from "../components/UI";
+import { Spinner, EmptyState, PageHeader } from "../components/UI";
 import { MobileDrawer } from "../components/MobileDrawer";
 import { CommentSection } from "../components/CommentSection";
 import { ReelViewer } from "../components/ReelViewer";
+import { VideoUpload } from "../components/VideoUpload";
+import { ImageUpload } from "../components/ImageUpload";
 import { useAuthStore } from "../store/auth";
 import { useReels } from "../hooks/useReels";
 import { queryKeys } from "../hooks/queryKeys";
-import { Trash2, Pencil, MessageCircle, Plus, Upload, X, Share2, Play, Volume2, VolumeX } from "lucide-react";
+import { Trash2, Pencil, MessageCircle, Plus, X, Share2, Play, Volume2, VolumeX } from "lucide-react";
 import type { Reel } from "../models";
 import type { CreateReelRequest } from "../services/reel.service";
-
-interface UploadState {
-  progress: number;
-  fileSize: number;
-  phase: "video" | "thumbnail" | null;
-}
 
 export default function Reels() {
   const user = useAuthStore((s) => s.user);
@@ -28,7 +24,6 @@ export default function Reels() {
   const [uploadOpen, setUploadOpen] = useState(false);
   const [form, setForm] = useState<CreateReelRequest>({ title: "", video_url: "" });
   const [formErr, setFormErr] = useState<string | null>(null);
-  const [upload, setUpload] = useState<UploadState>({ progress: 0, fileSize: 0, phase: null });
 
   const [viewerOpen, setViewerOpen] = useState(false);
   const [viewerIndex, setViewerIndex] = useState(0);
@@ -36,9 +31,6 @@ export default function Reels() {
   const [editingReel, setEditingReel] = useState<Reel | null>(null);
   const [editForm, setEditForm] = useState({ title: "", description: "", sport: "" });
   const [commentReelId, setCommentReelId] = useState<string | null>(null);
-
-  const videoInputRef = useRef<HTMLInputElement>(null);
-  const thumbInputRef = useRef<HTMLInputElement>(null);
 
   const canUpload = !!user;
   const isAdmin = checkAdmin(user?.role ?? "");
@@ -58,67 +50,6 @@ export default function Reels() {
     setViewerIndex(idx);
     setViewerOpen(true);
   }, []);
-
-  async function uploadMedia(file: File, category: "video" | "image"): Promise<string | null> {
-    setUpload({ progress: 0, fileSize: file.size, phase: category === "video" ? "video" : "thumbnail" });
-    setFormErr(null);
-
-    try {
-      const context = category === "video" ? "reel" : "post";
-      const { data: urlData } = await api.post("/media/upload-url", {
-        context,
-        fileName: file.name,
-        contentType: file.type,
-      });
-
-      const publicUrl: string = urlData.public_url;
-      const uploadUrl: string = urlData.upload_url;
-      const objectName: string = urlData.object_name;
-      const headers: Record<string, string> = urlData.headers ?? {};
-
-      await new Promise<void>((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-        xhr.upload.addEventListener("progress", (e) => {
-          if (e.lengthComputable) setUpload((u) => ({ ...u, progress: Math.round((e.loaded / e.total) * 100) }));
-        });
-        xhr.addEventListener("load", () => {
-          if (xhr.status >= 200 && xhr.status < 300) resolve();
-          else reject(new Error(`Upload failed: ${xhr.status}`));
-        });
-        xhr.addEventListener("error", () => reject(new Error("Upload failed")));
-        xhr.open("PUT", uploadUrl);
-        Object.entries(headers).forEach(([k, v]) => xhr.setRequestHeader(k, v));
-        xhr.send(file);
-      });
-
-      await api.post("/media/confirm", { key: objectName, context });
-
-      return publicUrl;
-    } catch (e) {
-      setFormErr(humanizeError(e));
-      return null;
-    } finally {
-      setUpload({ progress: 0, fileSize: 0, phase: null });
-    }
-  }
-
-  async function handleVideoFile(file: File) {
-    if (file.size > 200 * 1024 * 1024) {
-      setFormErr(`Video must be under 200MB. Your file is ${(file.size / 1024 / 1024).toFixed(1)}MB.`);
-      return;
-    }
-    const url = await uploadMedia(file, "video");
-    if (url) setForm((f) => ({ ...f, video_url: url }));
-  }
-
-  async function handleThumbFile(file: File) {
-    if (file.size > 10 * 1024 * 1024) {
-      setFormErr(`Thumbnail must be under 10MB.`);
-      return;
-    }
-    const url = await uploadMedia(file, "image");
-    if (url) setForm((f) => ({ ...f, thumbnail_url: url }));
-  }
 
   function openEditDrawer(r: Reel) {
     setEditingReel(r);
@@ -194,19 +125,20 @@ export default function Reels() {
         )}
       </div>
 
-      {/* ── Desktop: 3-column grid ── */}
-      <div className="hidden lg:block space-y-8 p-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="font-disp text-2xl text-ink">Reels</h1>
-            <p className="text-sm text-ink-sub mt-1">Highlights · drills · technique</p>
-          </div>
-          {canUpload && (
-            <button className="btn-accent min-h-[44px]" onClick={() => setUploadOpen(true)}>
-              <Plus className="h-4 w-4 mr-1" /> Post a reel
-            </button>
-          )}
-        </div>
+      {/* ── Desktop: grid ── */}
+      <div className="hidden lg:block space-y-6 p-6">
+        <PageHeader
+          title="Reels"
+          subtitle="Highlights · drills · technique"
+          sticky
+          action={
+            canUpload ? (
+              <button className="btn-accent min-h-[44px]" onClick={() => setUploadOpen(true)}>
+                <Plus className="h-4 w-4 mr-1" /> Post a reel
+              </button>
+            ) : undefined
+          }
+        />
 
         {list.isLoading ? (
           <div className="panel p-8 flex justify-center"><Spinner className="text-brand-500" /></div>
@@ -214,7 +146,7 @@ export default function Reels() {
           <EmptyState title="No reels yet" hint="Post match highlights, training clips or technique breakdowns." />
         ) : (
           <>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
               {allReels.map((r, idx) => (
                 <DesktopReelCard
                   key={r.id}
@@ -242,48 +174,38 @@ export default function Reels() {
         )}
       </div>
 
-      {/* ── Upload drawer / modal ── */}
-      <MobileDrawer
-        isOpen={uploadOpen}
-        onClose={() => { if (upload.phase === null) setUploadOpen(false); }}
-        title="Post a Reel"
-      >
-        <UploadForm
-          form={form}
-          setForm={setForm}
-          upload={upload}
-          formErr={formErr}
-          setFormErr={setFormErr}
-          videoInputRef={videoInputRef}
-          thumbInputRef={thumbInputRef}
-          onVideoFile={handleVideoFile}
-          onThumbFile={handleThumbFile}
-          onSubmit={() => create.mutate()}
-          onCancel={() => setUploadOpen(false)}
-          isPending={create.isPending}
-        />
-      </MobileDrawer>
+      {/* ── Upload drawer (mobile only — desktop uses the modal below) ── */}
+      <div className="lg:hidden">
+        <MobileDrawer
+          isOpen={uploadOpen}
+          onClose={() => setUploadOpen(false)}
+          title="Post a Reel"
+        >
+          <UploadForm
+            form={form}
+            setForm={setForm}
+            formErr={formErr}
+            onSubmit={() => create.mutate()}
+            onCancel={() => setUploadOpen(false)}
+            isPending={create.isPending}
+          />
+        </MobileDrawer>
+      </div>
 
       {/* ── Desktop upload modal ── */}
       {uploadOpen && (
-        <div className="hidden lg:flex fixed inset-0 z-50 items-center justify-center bg-black/60" onClick={() => { if (upload.phase === null) setUploadOpen(false); }}>
+        <div className="hidden lg:flex fixed inset-0 z-50 items-center justify-center bg-black/60" onClick={() => setUploadOpen(false)}>
           <div className="bg-panel rounded-2xl shadow-card w-full max-w-lg p-6 space-y-4" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between">
               <h2 className="font-disp text-xl text-ink">Post a Reel</h2>
-              <button onClick={() => { if (upload.phase === null) setUploadOpen(false); }} className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center text-ink-sub hover:text-ink">
+              <button onClick={() => setUploadOpen(false)} className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center text-ink-sub hover:text-ink">
                 <X className="h-5 w-5" />
               </button>
             </div>
             <UploadForm
               form={form}
               setForm={setForm}
-              upload={upload}
               formErr={formErr}
-              setFormErr={setFormErr}
-              videoInputRef={videoInputRef}
-              thumbInputRef={thumbInputRef}
-              onVideoFile={handleVideoFile}
-              onThumbFile={handleThumbFile}
               onSubmit={() => create.mutate()}
               onCancel={() => setUploadOpen(false)}
               isPending={create.isPending}
@@ -298,55 +220,90 @@ export default function Reels() {
           reels={allReels}
           initialIndex={viewerIndex}
           onClose={() => setViewerOpen(false)}
-          onCommentClick={(id) => setCommentReelId(id)}
         />
       )}
 
-      {/* ── Edit drawer ── */}
-      <MobileDrawer
-        isOpen={!!editingReel}
-        onClose={() => setEditingReel(null)}
-        title="Edit Reel"
-        footer={
-          <div className="flex gap-2 p-3">
-            <button onClick={() => setEditingReel(null)} className="btn-secondary flex-1 min-h-[44px]">Cancel</button>
-            <button onClick={handleEditSave} disabled={update.isPending || !editForm.title.trim()} className="btn-primary flex-1 min-h-[44px]">
-              {update.isPending ? "Saving…" : "Save"}
-            </button>
-          </div>
-        }
-      >
-        <div className="space-y-4">
-          <label className="block">
-            <span className="label">Title *</span>
-            <input className="input min-h-[44px]" maxLength={100} value={editForm.title} onChange={(e) => setEditForm((f) => ({ ...f, title: e.target.value }))} />
-          </label>
-          <label className="block">
-            <span className="label">Description</span>
-            <textarea className="input min-h-[80px] resize-none" maxLength={500} value={editForm.description} onChange={(e) => setEditForm((f) => ({ ...f, description: e.target.value }))} />
-          </label>
-          <label className="block">
-            <span className="label">Sport</span>
-            <input className="input min-h-[44px]" value={editForm.sport} onChange={(e) => setEditForm((f) => ({ ...f, sport: e.target.value }))} />
-          </label>
-        </div>
-      </MobileDrawer>
+      {/* ── Edit drawer (mobile only — desktop uses the modal below) ── */}
+      <div className="lg:hidden">
+        <MobileDrawer
+          isOpen={!!editingReel}
+          onClose={() => setEditingReel(null)}
+          title="Edit Reel"
+          footer={
+            <div className="flex gap-2 p-3">
+              <button onClick={() => setEditingReel(null)} className="btn-secondary flex-1 min-h-[44px]">Cancel</button>
+              <button onClick={handleEditSave} disabled={update.isPending || !editForm.title.trim()} className="btn-primary flex-1 min-h-[44px]">
+                {update.isPending ? "Saving…" : "Save"}
+              </button>
+            </div>
+          }
+        >
+          <EditReelFields editForm={editForm} setEditForm={setEditForm} />
+        </MobileDrawer>
+      </div>
 
-      {/* ── Comments drawer ── */}
-      <MobileDrawer
-        isOpen={!!commentReelId}
-        onClose={() => setCommentReelId(null)}
-        title={commentReel ? `Comments on "${commentReel.title ?? commentReel.caption ?? "Reel"}"` : "Comments"}
-      >
-        {commentReelId && (
-          <CommentSection
-            parentType="reel"
-            parentId={commentReelId}
-            commentCount={commentReel?.comment_count ?? 0}
-            inDrawer
-          />
-        )}
-      </MobileDrawer>
+      {/* ── Desktop edit modal ── */}
+      {editingReel && (
+        <div className="hidden lg:flex fixed inset-0 z-50 items-center justify-center bg-black/60" onClick={() => setEditingReel(null)}>
+          <div className="bg-panel rounded-2xl shadow-card w-full max-w-lg p-6 space-y-4" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <h2 className="font-disp text-xl text-ink">Edit Reel</h2>
+              <button onClick={() => setEditingReel(null)} className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center text-ink-sub hover:text-ink">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <EditReelFields editForm={editForm} setEditForm={setEditForm} />
+            <div className="flex gap-2 pt-1">
+              <button onClick={() => setEditingReel(null)} className="btn-secondary flex-1 min-h-[44px]">Cancel</button>
+              <button onClick={handleEditSave} disabled={update.isPending || !editForm.title.trim()} className="btn-primary flex-1 min-h-[44px]">
+                {update.isPending ? "Saving…" : "Save"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Comments drawer (mobile only — desktop comments live inside ReelViewer) ── */}
+      <div className="lg:hidden">
+        <MobileDrawer
+          isOpen={!!commentReelId}
+          onClose={() => setCommentReelId(null)}
+          title={commentReel ? `Comments on "${commentReel.title ?? commentReel.caption ?? "Reel"}"` : "Comments"}
+        >
+          {commentReelId && (
+            <CommentSection
+              parentType="reel"
+              parentId={commentReelId}
+              commentCount={commentReel?.comment_count ?? 0}
+              inDrawer
+            />
+          )}
+        </MobileDrawer>
+      </div>
+    </div>
+  );
+}
+
+function EditReelFields({
+  editForm, setEditForm
+}: {
+  editForm: { title: string; description: string; sport: string };
+  setEditForm: React.Dispatch<React.SetStateAction<{ title: string; description: string; sport: string }>>;
+}) {
+  return (
+    <div className="space-y-4">
+      <label className="block">
+        <span className="label">Title *</span>
+        <input className="input min-h-[44px]" maxLength={100} value={editForm.title} onChange={(e) => setEditForm((f) => ({ ...f, title: e.target.value }))} />
+      </label>
+      <label className="block">
+        <span className="label">Description</span>
+        <textarea className="input min-h-[80px] resize-none" maxLength={500} value={editForm.description} onChange={(e) => setEditForm((f) => ({ ...f, description: e.target.value }))} />
+      </label>
+      <label className="block">
+        <span className="label">Sport</span>
+        <input className="input min-h-[44px]" value={editForm.sport} onChange={(e) => setEditForm((f) => ({ ...f, sport: e.target.value }))} />
+      </label>
     </div>
   );
 }
@@ -620,69 +577,24 @@ function DesktopReelCard({
 }
 
 function UploadForm({
-  form, setForm, upload, formErr, setFormErr,
-  videoInputRef, thumbInputRef,
-  onVideoFile, onThumbFile,
+  form, setForm, formErr,
   onSubmit, onCancel, isPending
 }: {
   form: CreateReelRequest;
   setForm: React.Dispatch<React.SetStateAction<CreateReelRequest>>;
-  upload: UploadState;
   formErr: string | null;
-  setFormErr: (e: string | null) => void;
-  videoInputRef: React.RefObject<HTMLInputElement>;
-  thumbInputRef: React.RefObject<HTMLInputElement>;
-  onVideoFile(f: File): void;
-  onThumbFile(f: File): void;
   onSubmit(): void;
   onCancel(): void;
   isPending: boolean;
 }) {
-  const isUploading = upload.phase !== null;
-
   return (
     <div className="space-y-4">
       {/* Video upload */}
       <div className="space-y-2">
         <span className="label">Video *</span>
-        {form.video_url ? (
-          <div className="border border-green-300 rounded-lg bg-green-50 p-3 flex items-center justify-between">
-            <span className="text-sm text-green-900 font-medium">✓ Video uploaded</span>
-            <button
-              type="button"
-              onClick={() => setForm((f) => ({ ...f, video_url: "" }))}
-              className="text-xs px-2 py-1 rounded bg-red-100 text-red-700 min-h-[44px] hover:bg-red-200 transition"
-            >
-              Remove
-            </button>
-          </div>
-        ) : upload.phase === "video" ? (
-          <div className="border-2 border-dashed border-brand-300 rounded-lg p-6 bg-brand-50 space-y-3 text-center">
-            <Upload className="h-8 w-8 text-brand-500 mx-auto" />
-            <p className="text-sm font-medium text-brand-900">Uploading…</p>
-            <div className="w-full bg-brand-200 rounded h-2 overflow-hidden">
-              <div className="bg-brand-500 h-full transition-all" style={{ width: `${upload.progress}%` }} />
-            </div>
-            <p className="text-xs text-brand-700">{upload.progress}% · {(upload.fileSize / 1024 / 1024).toFixed(1)} MB</p>
-          </div>
-        ) : (
-          <button
-            type="button"
-            onClick={() => videoInputRef.current?.click()}
-            disabled={isUploading}
-            className="w-full border-2 border-dashed border-hair rounded-lg p-6 text-center text-ink-sub hover:border-brand-400 hover:text-brand-500 transition min-h-[80px] flex flex-col items-center justify-center gap-2"
-          >
-            <Upload className="h-6 w-6" />
-            <span className="text-sm font-medium">Tap to select video</span>
-            <span className="text-xs">MP4, WebM, MOV · max 200MB</span>
-          </button>
-        )}
-        <input
-          ref={videoInputRef}
-          type="file"
-          accept="video/mp4,video/webm,video/quicktime"
-          className="sr-only"
-          onChange={(e) => { const f = e.target.files?.[0]; if (f) onVideoFile(f); e.target.value = ""; }}
+        <VideoUpload
+          value={form.video_url}
+          onChange={(url) => setForm((f) => ({ ...f, video_url: url }))}
         />
       </div>
 
@@ -724,45 +636,13 @@ function UploadForm({
       </label>
 
       {/* Thumbnail */}
-      <div className="space-y-2">
-        <span className="label">Thumbnail (optional)</span>
-        {form.thumbnail_url ? (
-          <div className="border border-green-300 rounded-lg bg-green-50 p-3 flex items-center gap-3">
-            <img src={form.thumbnail_url} alt="Thumbnail" className="h-14 w-14 object-cover rounded" />
-            <button
-              type="button"
-              onClick={() => setForm((f) => ({ ...f, thumbnail_url: undefined }))}
-              className="text-xs px-2 py-1 rounded bg-red-100 text-red-700 min-h-[44px] hover:bg-red-200 transition ml-auto"
-            >
-              Remove
-            </button>
-          </div>
-        ) : upload.phase === "thumbnail" ? (
-          <div className="space-y-2 p-3 border rounded-lg">
-            <div className="w-full bg-fill rounded h-2 overflow-hidden">
-              <div className="bg-brand-500 h-full transition-all" style={{ width: `${upload.progress}%` }} />
-            </div>
-            <p className="text-xs text-ink-faint">{upload.progress}%</p>
-          </div>
-        ) : (
-          <button
-            type="button"
-            onClick={() => thumbInputRef.current?.click()}
-            disabled={isUploading}
-            className="btn-secondary w-full min-h-[44px]"
-          >
-            Upload thumbnail
-          </button>
-        )}
-        <input
-          ref={thumbInputRef}
-          type="file"
-          accept="image/jpeg,image/png,image/webp"
-          capture="environment"
-          className="sr-only"
-          onChange={(e) => { const f = e.target.files?.[0]; if (f) onThumbFile(f); e.target.value = ""; }}
-        />
-      </div>
+      <ImageUpload
+        label="Thumbnail (optional)"
+        context="post"
+        aspectRatio="16/9"
+        value={form.thumbnail_url}
+        onChange={(url) => setForm((f) => ({ ...f, thumbnail_url: url }))}
+      />
 
       {formErr && <div className="text-sm text-red-700 rounded-lg bg-red-50 p-3">{formErr}</div>}
 
@@ -771,17 +651,16 @@ function UploadForm({
           type="button"
           className="btn-secondary flex-1 min-h-[44px]"
           onClick={onCancel}
-          disabled={isUploading}
         >
           Cancel
         </button>
         <button
           type="button"
           className="btn-primary flex-1 min-h-[44px]"
-          disabled={isPending || !form.video_url || !form.title.trim() || isUploading}
+          disabled={isPending || !form.video_url || !form.title.trim()}
           onClick={onSubmit}
         >
-          {isPending ? "Posting…" : isUploading ? "Uploading…" : "Post reel →"}
+          {isPending ? "Posting…" : "Post reel →"}
         </button>
       </div>
     </div>

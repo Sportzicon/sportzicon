@@ -5,6 +5,7 @@ import { logger } from "../../config/logger";
 import { BadRequest, Conflict, NotFound, Unauthorized, TooManyRequests } from "../../utils/errors";
 import { omitSensitive } from "../../utils/user";
 import { validateAthleteSportProfile } from "../users/sportProfile";
+import { createOrganization } from "../organizations/organizations.service";
 import {
   comparePassword,
   generateToken,
@@ -384,17 +385,28 @@ export async function registerProfile(input: {
     if (violations.length) throw BadRequest(violations.join(" "));
   }
 
-  await prisma.user.update({
-    where: { id: input.user_id },
-    data: {
-      ...(athleteData ? { athlete_data: athleteData as object } : {}),
-      ...(input.org_name
-        ? { org_name: input.org_name, org_name_lower: input.org_name.toLowerCase() }
-        : {}),
-      ...(input.org_type ? { org_type: input.org_type } : {}),
-      ...(input.org_sport ? { org_sport: input.org_sport } : {})
+  if (athleteData) {
+    await prisma.user.update({
+      where: { id: input.user_id },
+      data: { athlete_data: athleteData as object }
+    });
+  }
+
+  // Org details from signup live on Organization, not User. Skip creation if the
+  // user resumed a pending signup and already has one.
+  if (input.org_name && (user.role === "club" || user.role === "organizer")) {
+    const existingOrg = await prisma.organization.findFirst({
+      where: { owner_user_id: user.id },
+      select: { id: true }
+    });
+    if (!existingOrg) {
+      await createOrganization(user.id, user.role, {
+        org_name: input.org_name,
+        org_type: input.org_type ?? "club",
+        sport_categories: input.org_sport ? [input.org_sport] : []
+      });
     }
-  });
+  }
 
   await issueAndSendVerificationEmail(user.id, user.email, user.full_name);
   return { ok: true, email: user.email };

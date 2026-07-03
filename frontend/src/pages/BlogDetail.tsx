@@ -129,7 +129,6 @@ export default function BlogDetail() {
                     <div className="text-[13px] font-semibold text-ink">{b.author_name}</div>
                     <div className="text-[11px] text-ink-faint">{publishedDate} · {readTimeStr}</div>
                   </div>
-                  <div className="ml-auto lab">◎ {b.view_count} views</div>
                 </div>
               </div>
               {canEdit && (

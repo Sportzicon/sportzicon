@@ -125,10 +125,7 @@ export async function getBlog(idOrSlug: string) {
   });
   if (!blog) throw NotFound("Blog not found");
 
-  // Atomic view count increment
-  prisma.$executeRaw`UPDATE "Blog" SET view_count = view_count + 1 WHERE id = ${blog.id}::uuid`.catch(() => undefined);
-
-  return { ...flattenBlog(blog), view_count: blog.view_count + 1 };
+  return flattenBlog(blog);
 }
 
 export async function likeBlog(id: string, userId: string) {

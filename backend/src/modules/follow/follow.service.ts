@@ -23,11 +23,7 @@ export async function follow(followerId: string, followeeId: string) {
   if (existing) return { ok: true };
 
   try {
-    await prisma.$transaction([
-      prisma.follow.create({ data: { follower_id: followerId, followee_id: followeeId } }),
-      prisma.$executeRaw`UPDATE "User" SET follower_count = follower_count + 1 WHERE id = ${followeeId}::uuid`,
-      prisma.$executeRaw`UPDATE "User" SET following_count = following_count + 1 WHERE id = ${followerId}::uuid`,
-    ]);
+    await prisma.follow.create({ data: { follower_id: followerId, followee_id: followeeId } });
   } catch (err) {
     // Unique constraint: concurrent follow request already created the row — treat as idempotent.
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
@@ -58,11 +54,7 @@ export async function unfollow(followerId: string, followeeId: string) {
   if (!existing) return { ok: true };
 
   try {
-    await prisma.$transaction([
-      prisma.follow.delete({ where: { follower_id_followee_id: { follower_id: followerId, followee_id: followeeId } } }),
-      prisma.$executeRaw`UPDATE "User" SET follower_count = GREATEST(0, follower_count - 1) WHERE id = ${followeeId}::uuid`,
-      prisma.$executeRaw`UPDATE "User" SET following_count = GREATEST(0, following_count - 1) WHERE id = ${followerId}::uuid`,
-    ]);
+    await prisma.follow.delete({ where: { follower_id_followee_id: { follower_id: followerId, followee_id: followeeId } } });
   } catch (err) {
     // Record was deleted by a concurrent unfollow — treat as idempotent.
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2025") {

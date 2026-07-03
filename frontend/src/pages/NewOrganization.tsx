@@ -7,6 +7,7 @@ import { COUNTRIES, statesForCountry } from "../data/geo";
 import { SPORTS_LIST } from "../data/sportPositions";
 import { Camera, Upload, X, FileText } from "lucide-react";
 import { queryKeys } from "../hooks/queryKeys";
+import { uploadToGCS } from "../hooks/useUpload";
 
 const ORG_TYPES = [
   { value: "club", label: "Club" },
@@ -124,23 +125,17 @@ export default function NewOrganization() {
     setUploading(field);
     setErr(null);
     try {
-      const urlRes = await api.post("/media/upload-url", {
-        context: "org-logo",
-        fileName: file.name,
-        contentType: file.type,
-      });
-      const { upload_url, headers, public_url } = urlRes.data;
-      await fetch(upload_url, { method: "PUT", headers, body: file });
+      const { url } = await uploadToGCS(file, "org-logo");
       if (field === "logo") {
-        setLogoUrl(public_url);
+        setLogoUrl(url ?? undefined);
         if (isEdit) {
-          await api.put(`/organizations/${id}`, { logo_url: public_url });
+          await api.put(`/organizations/${id}`, { logo_url: url });
           qc.invalidateQueries({ queryKey: queryKeys.organization(id!) });
         }
       } else {
-        setCoverUrl(public_url);
+        setCoverUrl(url ?? undefined);
         if (isEdit) {
-          await api.put(`/organizations/${id}`, { cover_url: public_url });
+          await api.put(`/organizations/${id}`, { cover_url: url });
           qc.invalidateQueries({ queryKey: queryKeys.organization(id!) });
         }
       }
@@ -156,33 +151,14 @@ export default function NewOrganization() {
     setDocProgress(0);
     setErr(null);
     try {
-      // Step 1: get signed URL for private doc
-      const urlRes = await api.post("/media/upload-url", {
-        context: "org-doc",
-        fileName: file.name,
-        contentType: file.type,
-      });
-      const { upload_url, headers, object_name } = urlRes.data;
+      const { key } = await uploadToGCS(file, "org-doc", setDocProgress);
 
-      // Step 2: upload with progress tracking
-      await new Promise<void>((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-        xhr.upload.addEventListener("progress", (e) => {
-          if (e.lengthComputable) setDocProgress(Math.round((e.loaded / e.total) * 100));
-        });
-        xhr.onload = () => (xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(new Error("Upload failed")));
-        xhr.onerror = () => reject(new Error("Upload failed"));
-        xhr.open("PUT", upload_url);
-        Object.entries(headers ?? {}).forEach(([k, v]) => xhr.setRequestHeader(k, v as string));
-        xhr.send(file);
-      });
-
-      // Step 3: if editing, record immediately; otherwise queue for after save
+      // If editing, record immediately; otherwise queue for after save
       if (isEdit) {
-        await api.post(`/organizations/${id}/documents`, { key: object_name, name: file.name });
+        await api.post(`/organizations/${id}/documents`, { key, name: file.name });
         qc.invalidateQueries({ queryKey: queryKeys.orgDocuments(id!) });
       } else {
-        setUploadedDocs((prev) => [...prev, { key: object_name, name: file.name }]);
+        setUploadedDocs((prev) => [...prev, { key, name: file.name }]);
       }
     } catch (e) {
       setErr(humanizeError(e));

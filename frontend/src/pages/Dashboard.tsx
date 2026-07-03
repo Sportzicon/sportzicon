@@ -3,6 +3,7 @@ import { Link, Navigate, useNavigate } from "react-router-dom";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { userService } from "../services";
 import { useFeed, useOpportunities, useMyApplications, useMyOpportunities } from "../hooks";
+import { queryKeys } from "../hooks/queryKeys";
 import { useAuthStore } from "../store/auth";
 import { hasRole, isAdmin } from "../utils/roles";
 import { StatusPill, Spinner, EmptyState, Avatar } from "../components/UI";
@@ -105,10 +106,17 @@ function AITipsPanel() {
 
 function AthleteDashboard() {
   const { user, setUser } = useAuthStore();
+  const liveUserQ = useQuery({
+    queryKey: queryKeys.user(user?.id ?? ""),
+    queryFn: () => userService.get(user!.id),
+    enabled: !!user,
+  });
   if (!user) return null;
 
   const sport = user.athlete?.primary_sport;
   const avail = user.athlete?.availability ?? "available";
+  const followerCount = liveUserQ.data?.follower_count ?? 0;
+  const followingCount = liveUserQ.data?.following_count ?? 0;
 
   const { list: myApps } = useMyApplications();
   const { list: matchedOpps } = useOpportunities(
@@ -163,13 +171,13 @@ function AthleteDashboard() {
         <SectionTitle>Your stats</SectionTitle>
         <div className="flex gap-3 overflow-x-auto pb-1 -mx-3 px-3 sm:mx-0 sm:px-0 sm:grid sm:grid-cols-3">
           <div className="flex-shrink-0 w-36 sm:w-auto">
-            <StatCard label="Followers" value={user.follower_count ?? 0} />
+            <StatCard label="Followers" value={followerCount} />
           </div>
           <div className="flex-shrink-0 w-36 sm:w-auto">
             <StatCard label="Active apps" value={activeApps.length} accent />
           </div>
           <div className="flex-shrink-0 w-36 sm:w-auto">
-            <StatCard label="Following" value={user.following_count ?? 0} />
+            <StatCard label="Following" value={followingCount} />
           </div>
         </div>
       </div>

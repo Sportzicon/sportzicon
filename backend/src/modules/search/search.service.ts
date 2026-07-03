@@ -154,7 +154,8 @@ export async function searchPlayers(q: {
                u.profile_photo_url, u.cover_photo_url,
                u.country, u.state, u.city, u.bio,
                u.verification_status, u.verification_badges,
-               u.athlete_data, u.follower_count, u.updated_at
+               u.athlete_data, u.updated_at,
+               (SELECT COUNT(*) FROM "Follow" f WHERE f.followee_id = u.id) AS follower_count
         FROM "User" u
         WHERE ${where}
         ORDER BY ${orderBy}

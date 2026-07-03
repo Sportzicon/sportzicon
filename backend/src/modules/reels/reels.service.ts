@@ -22,10 +22,6 @@ export async function getReel(reelId: string) {
   });
   if (!reel) throw NotFound("Reel not found");
 
-  // fire-and-forget — don't block response for a counter increment
-  prisma.$executeRaw`UPDATE "Reel" SET view_count = view_count + 1 WHERE id = ${reelId}::uuid`
-    .catch(() => undefined);
-
   return {
     ...reel,
     author_name: reel.author?.full_name ?? "Unknown",
@@ -66,11 +62,6 @@ export async function listReels(q: { author_id?: string; sport?: string; limit: 
     created_at: created_at instanceof Date ? created_at.getTime() : created_at
   }));
   return { items, next_cursor: hasMore ? items[items.length - 1].id : null };
-}
-
-export async function viewReel(reelId: string) {
-  await prisma.$executeRaw`UPDATE "Reel" SET view_count = view_count + 1 WHERE id = ${reelId}::uuid`.catch(() => undefined);
-  return { ok: true };
 }
 
 export async function likeReel(reelId: string, userId: string) {

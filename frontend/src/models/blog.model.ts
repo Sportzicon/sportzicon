@@ -19,7 +19,6 @@ export interface Blog {
   status: "draft" | "published";
   like_count: number;
   comment_count: number;
-  view_count: number;
   liked?: boolean;
   published_at?: number;
   created_at: number;

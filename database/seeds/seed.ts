@@ -74,9 +74,7 @@ async function makeUser(input: UserInput) {
       gender: input.gender,
       verification_status: input.verification_status ?? "unverified",
       verification_badges: input.verification_badges ?? [],
-      athlete_data: input.athlete_data as object ?? undefined,
-      follower_count: Math.floor(Math.random() * 180),
-      following_count: Math.floor(Math.random() * 90)
+      athlete_data: input.athlete_data as object ?? undefined
     }
   });
 }

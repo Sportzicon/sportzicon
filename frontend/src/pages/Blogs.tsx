@@ -73,9 +73,13 @@ function BlogCard({ b, layout }: { b: Blog; layout: "grid" | "list" }) {
       to={`/blogs/${b.id}`}
       className="panel overflow-hidden hover:shadow-card transition group flex flex-col"
     >
-      {b.cover_image_url && (
+      {b.cover_image_url ? (
         <div className="aspect-video overflow-hidden">
           <img src={b.cover_image_url} alt="" className="w-full h-full object-cover" />
+        </div>
+      ) : (
+        <div className="aspect-video bg-fill flex items-center justify-center">
+          <span className="font-disp text-4xl text-ink-faint">✍</span>
         </div>
       )}
       <div className="p-4 flex flex-col flex-1">
@@ -93,6 +97,7 @@ function BlogCard({ b, layout }: { b: Blog; layout: "grid" | "list" }) {
         <div className="mt-3 pt-3 border-t border-hairsoft flex items-center gap-2">
           <Avatar name={b.author?.full_name ?? b.author_name} src={b.author?.profile_photo_url} size={20} />
           <span className="text-[11px] text-ink-70 flex-1 truncate">{b.author_name}</span>
+          <span className="text-[11px] text-ink-faint">{date}</span>
           <span className="text-[11px] text-ink-faint">{readTime(b.body_markdown ?? "")}</span>
         </div>
       </div>

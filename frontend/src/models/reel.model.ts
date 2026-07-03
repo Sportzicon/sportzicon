@@ -16,7 +16,6 @@ export interface Reel {
   thumbnail_url?: string;
   duration_seconds?: number;
   sport?: string;
-  view_count: number;
   like_count: number;
   comment_count: number;
   created_at: string | number;

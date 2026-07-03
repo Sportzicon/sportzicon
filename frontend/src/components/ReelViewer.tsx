@@ -8,14 +8,12 @@ interface ReelViewerProps {
   reels: Reel[];
   initialIndex: number;
   onClose: () => void;
-  onCommentClick: (id: string) => void;
 }
 
 export function ReelViewer({
   reels,
   initialIndex,
   onClose,
-  onCommentClick,
 }: ReelViewerProps) {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [isPlaying, setIsPlaying] = useState(true);
@@ -69,8 +67,7 @@ export function ReelViewer({
 
   const handleCommentClick = useCallback(() => {
     setCommentOpen(true);
-    onCommentClick(currentReel.id);
-  }, [currentReel.id, onCommentClick]);
+  }, []);
 
   const handleShare = useCallback(async () => {
     const url = `${window.location.origin}/reels`;

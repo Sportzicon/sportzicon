@@ -20,8 +20,6 @@ export const safeUserSelect = {
   verification_badges: true,
   athlete_data: true,
   coach_data: true,
-  follower_count: true,
-  following_count: true,
   created_at: true,
   updated_at: true,
   last_active_at: true,

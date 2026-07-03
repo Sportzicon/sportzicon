@@ -3,6 +3,7 @@ import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { useState, useRef } from "react";
 import { api, humanizeError } from "../api/client";
 import { queryKeys } from "../hooks/queryKeys";
+import { uploadToGCS } from "../hooks/useUpload";
 import { scoringApi } from "../api/scoringClient";
 import { useAuthStore } from "../store/auth";
 import { isAdmin } from "../utils/roles";
@@ -205,15 +206,9 @@ export default function Profile() {
     setPhotoUploading(field);
     setPhotoError(null);
     try {
-      const urlRes = await api.post("/media/upload-url", {
-        context: "avatar",
-        fileName: file.name,
-        contentType: file.type,
-      });
-      const { upload_url, headers, public_url } = urlRes.data;
-      await fetch(upload_url, { method: "PUT", headers, body: file });
+      const { url } = await uploadToGCS(file, "avatar");
       const key = field === "profile" ? "profile_photo_url" : "cover_photo_url";
-      const r = await api.put("/users/me", { [key]: public_url });
+      const r = await api.put("/users/me", { [key]: url });
       const updated: User = r.data.user;
       setUser(updated);
       qc.setQueryData(["user", id], updated);
@@ -606,9 +601,8 @@ export default function Profile() {
                     }
                     <span className="absolute inset-0 flex items-center justify-center text-white/60 text-xl group-hover:text-white transition">▶</span>
                   </div>
-                  <div className="px-3 py-2 flex items-center justify-between">
+                  <div className="px-3 py-2">
                     <p className="text-[12px] font-medium text-ink truncate">{r.caption || "Reel"}</p>
-                    <span className="lab text-[10px] flex-shrink-0">▶ {r.view_count}</span>
                   </div>
                 </div>
               ))}

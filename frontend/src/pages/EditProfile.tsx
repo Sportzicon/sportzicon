@@ -4,6 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { api, getApiError, humanizeError } from "../api/client";
 import { useAuthStore } from "../store/auth";
 import { queryKeys } from "../hooks/queryKeys";
+import { uploadToGCS } from "../hooks/useUpload";
 import { PageHeader, SectionHead } from "../components/UI";
 import { BackButton } from "../components/BackButton";
 import { SportPositionSelect } from "../components/SportPositionSelect";
@@ -77,20 +78,14 @@ export default function EditProfile() {
     setUploading(field);
     setErr(null);
     try {
-      const urlRes = await api.post("/media/upload-url", {
-        context: "avatar",
-        fileName: file.name,
-        contentType: file.type,
-      });
-      const { upload_url, headers, public_url } = urlRes.data;
-      await fetch(upload_url, { method: "PUT", headers, body: file });
+      const { url } = await uploadToGCS(file, "avatar");
       const key = field === "profile" ? "profile_photo_url" : "cover_photo_url";
-      const r = await api.put("/users/me", { [key]: public_url });
+      const r = await api.put("/users/me", { [key]: url });
       const updated = r.data.user;
       setUser(updated);
       qc.invalidateQueries({ queryKey: queryKeys.user(user!.id) });
-      if (field === "profile") setProfilePhoto(public_url);
-      else setCoverPhoto(public_url);
+      if (field === "profile") setProfilePhoto(url ?? undefined);
+      else setCoverPhoto(url ?? undefined);
     } catch (e) {
       setErr(humanizeError(e));
     } finally {

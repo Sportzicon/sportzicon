@@ -7,7 +7,7 @@ import { Eye, EyeOff } from "lucide-react";
 
 const ROLES = [
   { value: "athlete", label: "Athlete / Player", hint: "Build a profile, upload stats, get discovered and apply to trials." },
-  { value: "club", label: "Club / Academy", hint: "Post trials, search talent, manage applications." },
+  { value: "club", label: "Club / Academy / Association", hint: "Post trials, search talent, manage applications." },
   { value: "scout", label: "Scout / Promoter", hint: "Search and shortlist players, view verified stats." },
   { value: "organizer", label: "Organizer", hint: "Create events, accept registrations, manage participants." }
 ];

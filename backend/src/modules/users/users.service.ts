@@ -17,11 +17,11 @@ export async function getUserById(id: string) {
   });
   if (!user) throw NotFound("User not found");
   const { _count, ...rest } = user;
-  const result = omitSensitive({
-    ...rest,
+  const result = {
+    ...omitSensitive(rest),
     follower_count: _count.followers,
     following_count: _count.following
-  });
+  };
   await cacheSet(key, JSON.stringify(result), 300);
   return result;
 }

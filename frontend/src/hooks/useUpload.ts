@@ -21,6 +21,46 @@ export const ACCEPT_BY_CONTEXT: Record<UploadContext, string> = {
   "org-doc": "application/pdf",
 };
 
+/** Shared low-level GCS upload mechanics: get signed URL, PUT file, confirm landed. */
+export async function uploadToGCS(
+  file: File,
+  context: UploadContext,
+  onProgress?: (pct: number) => void,
+): Promise<{ key: string; url: string | null }> {
+  const urlRes = await api.post<{
+    upload_url: string;
+    headers: Record<string, string>;
+    object_name: string;
+  }>("/media/upload-url", {
+    fileName: file.name,
+    contentType: file.type,
+    context,
+  });
+  const { upload_url, headers, object_name } = urlRes.data;
+
+  await new Promise<void>((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.upload.addEventListener("progress", (e) => {
+      if (e.lengthComputable) onProgress?.(Math.round((e.loaded / e.total) * 100));
+    });
+    xhr.addEventListener("load", () => {
+      if (xhr.status >= 200 && xhr.status < 300) resolve();
+      else reject(new Error(`Upload failed with status ${xhr.status}`));
+    });
+    xhr.addEventListener("error", () => reject(new Error("Network error during upload")));
+    xhr.open("PUT", upload_url);
+    Object.entries(headers ?? {}).forEach(([k, v]) => xhr.setRequestHeader(k, v));
+    xhr.send(file);
+  });
+
+  const confirmRes = await api.post<{ url: string | null }>("/media/confirm", {
+    key: object_name,
+    context,
+  });
+
+  return { key: object_name, url: confirmRes.data.url };
+}
+
 interface UseUploadOptions {
   context: UploadContext;
   /** Override the default max size for this context */
@@ -73,46 +113,8 @@ export function useUpload({ context, maxSizeMB, onSuccess }: UseUploadOptions): 
       setProgress(0);
 
       try {
-        // b. Get signed upload URL
-        const urlRes = await api.post<{
-          upload_url: string;
-          headers: Record<string, string>;
-          object_name: string;
-          public_url?: string;
-        }>("/media/upload-url", {
-          fileName: file.name,
-          contentType: file.type,
-          context,
-        });
-        const { upload_url, headers, object_name } = urlRes.data;
-
-        // c. PUT directly to GCS with XHR for progress tracking
-        await new Promise<void>((resolve, reject) => {
-          const xhr = new XMLHttpRequest();
-          xhr.upload.addEventListener("progress", (e) => {
-            if (e.lengthComputable) {
-              setProgress(Math.round((e.loaded / e.total) * 100));
-            }
-          });
-          xhr.addEventListener("load", () => {
-            if (xhr.status >= 200 && xhr.status < 300) resolve();
-            else reject(new Error(`Upload failed with status ${xhr.status}`));
-          });
-          xhr.addEventListener("error", () => reject(new Error("Network error during upload")));
-          xhr.open("PUT", upload_url);
-          Object.entries(headers ?? {}).forEach(([k, v]) => xhr.setRequestHeader(k, v));
-          xhr.send(file);
-        });
-
-        // d. Confirm file landed in GCS
-        const confirmRes = await api.post<{ url: string | null }>("/media/confirm", {
-          key: object_name,
-          context,
-        });
-
-        // e. Call onSuccess with the public URL (or the key for private contexts)
-        const mediaUrl = confirmRes.data.url ?? object_name;
-        onSuccess?.(mediaUrl);
+        const { key, url } = await uploadToGCS(file, context, setProgress);
+        onSuccess?.(url ?? key);
         setProgress(100);
       } catch (e) {
         setError(humanizeError(e));
