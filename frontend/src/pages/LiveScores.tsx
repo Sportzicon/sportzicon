@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { scoringApi } from "../api/scoringClient";
 import { queryKeys } from "../hooks/queryKeys";
@@ -256,14 +256,25 @@ export default function LiveScores() {
     queryFn: () => scoringApi.get("/matches", { params: { status: "upcoming", limit: 20 } }).then(r => r.data.matches as any[])
   });
 
-  const { data: recentData, isLoading: loadingRecent } = useQuery({
+  const {
+    data: recentPages,
+    isLoading: loadingRecent,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage
+  } = useInfiniteQuery({
     queryKey: queryKeys.recentMatches(),
-    queryFn: () => scoringApi.get("/matches", { params: { status: "completed", limit: 20 } }).then(r => r.data.matches as any[])
+    queryFn: ({ pageParam }) =>
+      scoringApi
+        .get("/matches", { params: { status: "completed", limit: 20, cursor: pageParam } })
+        .then(r => r.data as { matches: any[]; nextCursor: string | null }),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: last => last.nextCursor ?? undefined
   });
 
   const liveMatches    = liveData     ?? [];
   const upcomingMatches = upcomingData ?? [];
-  const recentMatches  = recentData   ?? [];
+  const recentMatches  = recentPages?.pages.flatMap(p => p.matches) ?? [];
 
   const isLoading = loadingLive && loadingUpcoming && loadingRecent;
 
@@ -392,6 +403,15 @@ export default function LiveScores() {
             defaultOpen
           >
             {recentMatches.map((m: any) => <ResultCard key={m.id} match={m} />)}
+            {hasNextPage && (
+              <button
+                onClick={() => fetchNextPage()}
+                disabled={isFetchingNextPage}
+                className="btn-secondary w-full min-h-[44px] text-sm"
+              >
+                {isFetchingNextPage ? "Loading…" : "Load more"}
+              </button>
+            )}
           </Section>
         )}
 
