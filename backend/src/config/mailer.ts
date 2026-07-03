@@ -6,6 +6,13 @@ import type { EmailType } from "@prisma/client";
 
 const resend = env.RESEND_API_KEY ? new Resend(env.RESEND_API_KEY) : null;
 
+if (!resend && !isTest) {
+  logger.warn(
+    "RESEND_API_KEY is not set — running in email stub mode. Verification, password-reset, " +
+      "and notification emails will be logged but NOT delivered to real inboxes."
+  );
+}
+
 export type SendMailInput = {
   to: string;
   subject: string;
@@ -47,21 +54,31 @@ export async function sendMail(input: SendMailInput): Promise<void> {
     await writeLog(input, "stub");
     return;
   }
-  try {
-    const { error } = await resend.emails.send({
-      from: `${env.EMAIL_FROM_NAME} <${env.EMAIL_FROM}>`,
-      to: input.to,
-      subject: input.subject,
-      html: input.html,
-      text: input.text ?? input.html.replace(/<[^>]+>/g, "")
-    });
-    if (error) throw new Error(error.message);
-    await writeLog(input, "sent");
-  } catch (err: any) {
-    logger.error({ err, to: input.to, subject: input.subject }, "sendMail failed");
-    await writeLog(input, "failed", String(err?.message ?? err));
-    throw err;
+  const attempts = 2; // one retry on transient failure (network blip, provider hiccup)
+  let lastErr: any;
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+    try {
+      const { error } = await resend.emails.send({
+        from: `${env.EMAIL_FROM_NAME} <${env.EMAIL_FROM}>`,
+        to: input.to,
+        subject: input.subject,
+        html: input.html,
+        text: input.text ?? input.html.replace(/<[^>]+>/g, "")
+      });
+      if (error) throw new Error(`${error.name ?? "ResendError"}: ${error.message}`);
+      await writeLog(input, "sent");
+      return;
+    } catch (err: any) {
+      lastErr = err;
+      if (attempt < attempts) {
+        logger.warn({ err, to: input.to, subject: input.subject, attempt }, "sendMail attempt failed, retrying");
+        await new Promise((r) => setTimeout(r, 500));
+      }
+    }
   }
+  logger.error({ err: lastErr, to: input.to, subject: input.subject }, "sendMail failed");
+  await writeLog(input, "failed", String(lastErr?.message ?? lastErr));
+  throw lastErr;
 }
 
 export const testMailbox: SendMailInput[] = [];
