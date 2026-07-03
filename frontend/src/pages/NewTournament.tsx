@@ -137,14 +137,6 @@ export default function NewTournament() {
         title={isEdit ? "Edit tournament" : "Post a tournament"}
         subtitle="Competitive events"
         sticky
-        action={
-          <div className="flex gap-2">
-            <button type="button" className="btn-ghost" onClick={() => navigate(-1)}>Cancel</button>
-            <button type="submit" className="btn-accent" disabled={busy}>
-              {busy ? (isEdit ? "Saving…" : "Posting…") : isEdit ? "Save changes" : "Post tournament →"}
-            </button>
-          </div>
-        }
       />
 
       <div className="panel p-6 space-y-4">

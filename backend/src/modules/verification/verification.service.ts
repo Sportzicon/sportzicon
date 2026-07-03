@@ -165,6 +165,10 @@ export async function approveOrg(orgId: string, adminId: string) {
       where: { id: orgId },
       data: { verification_status: "approved", verification_badges: badges }
     }),
+    prisma.verification.updateMany({
+      where: { entity_type: "organization", entity_id: orgId, status: "pending" },
+      data: { status: "approved", reviewed_by: adminId, reviewed_at: new Date() }
+    }),
     prisma.auditLog.create({
       data: {
         actor_id: adminId,
@@ -202,6 +206,10 @@ export async function rejectOrg(orgId: string, adminId: string, reason: string) 
     prisma.organization.update({
       where: { id: orgId },
       data: { verification_status: "rejected" }
+    }),
+    prisma.verification.updateMany({
+      where: { entity_type: "organization", entity_id: orgId, status: "pending" },
+      data: { status: "rejected", reviewed_by: adminId, reviewed_at: new Date(), rejection_reason: reason }
     }),
     prisma.auditLog.create({
       data: {

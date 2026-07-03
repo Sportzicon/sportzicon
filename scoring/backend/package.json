@@ -11,7 +11,8 @@
     "db:generate": "prisma generate",
     "db:studio": "prisma studio",
     "db:seed": "ts-node prisma/seed.ts",
-    "db:seed:ipl2026": "ts-node prisma/seed-ipl2026-final.ts"
+    "db:seed:ipl2026": "ts-node prisma/seed-ipl2026-final.ts",
+    "backfill:completed-matches": "ts-node scripts/backfill-completed-matches.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",

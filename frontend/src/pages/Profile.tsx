@@ -346,7 +346,7 @@ export default function Profile() {
     { id: "posts", label: "Posts" },
     { id: "followers", label: `Followers (${u.follower_count})` },
     { id: "following", label: `Following (${u.following_count})` },
-    ...(isMe ? [{ id: "saved" as Tab, label: `Saved (${savedOpps.length})` }] : []),
+    ...(isMe && !isAdmin(u.role ?? "") ? [{ id: "saved" as Tab, label: `Saved (${savedOpps.length})` }] : []),
     ...(isMe || isAdmin(me?.role ?? "") ? [{ id: "emails" as Tab, label: "Email History" }] : [])
   ];
 

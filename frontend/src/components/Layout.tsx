@@ -102,8 +102,9 @@ function NavItem({ to, icon, label, onClick, isCollapsed, badge }: { to: string;
   );
 }
 
-function relativeTime(ts: number): string {
-  const diff = Date.now() - ts;
+function relativeTime(ts: number | string): string {
+  const time = typeof ts === "number" ? ts : new Date(ts).getTime();
+  const diff = Date.now() - time;
   const mins = Math.floor(diff / 60_000);
   if (mins < 1) return "just now";
   if (mins < 60) return `${mins}m ago`;
@@ -123,12 +124,6 @@ function NotificationDropdown({
   const { list, markAllRead, markOneRead } = useNotifications();
   const allItems: Notification[] = list.data?.pages.flatMap((p) => p.data) ?? [];
   const unread = allItems.filter((n) => !n.read).length;
-
-  // Auto-mark all read when dropdown opens
-  useEffect(() => {
-    if (unread > 0) markAllRead.mutate();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   const handleItem = (n: Notification) => {
     if (!n.read) markOneRead.mutate(n.id);

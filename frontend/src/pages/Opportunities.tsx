@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useInfiniteOpportunities } from "../hooks";
-import { hasRole } from "../utils/roles";
+import { hasRole, isAdmin } from "../utils/roles";
 import { useAuthStore } from "../store/auth";
 import { PageHeader, Spinner, EmptyState, StatusPill, SectionHead } from "../components/UI";
 import { MobileDrawer } from "../components/MobileDrawer";
@@ -283,7 +283,7 @@ export default function Opportunities() {
 
                         <div className="flex items-center gap-1">
                           {/* Apply link (disabled if closed or no spots) */}
-                          {hasRole(user?.role ?? "", "athlete") && !deadline.closed && spotsLeft !== 0 && (
+                          {!isAdmin(user?.role ?? "") && hasRole(user?.role ?? "", "athlete") && !deadline.closed && spotsLeft !== 0 && (
                             <Link
                               to={`/opportunities/${o.id}`}
                               className="btn-accent text-[11px] px-3 min-h-[44px] flex items-center"
@@ -291,7 +291,7 @@ export default function Opportunities() {
                               Apply
                             </Link>
                           )}
-                          {hasRole(user?.role ?? "", "athlete") && (deadline.closed || spotsLeft === 0) && (
+                          {!isAdmin(user?.role ?? "") && hasRole(user?.role ?? "", "athlete") && (deadline.closed || spotsLeft === 0) && (
                             <span className="font-mononum text-[10px] text-ink-faint px-2">
                               {deadline.closed ? "Closed" : "Full"}
                             </span>

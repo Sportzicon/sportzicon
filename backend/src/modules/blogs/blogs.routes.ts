@@ -93,7 +93,7 @@ router.get(
   asyncHandler(async (req, res) => {
     const limit = Math.min(Number(req.query.limit) || 20, 50);
     const cursor = req.query.cursor as string | undefined;
-    const r = await listComments("blog", req.params.id, { cursor, limit });
+    const r = await listComments("blog", req.params.id, { cursor, limit, userId: req.user?.sub });
     res.json(r);
   })
 );

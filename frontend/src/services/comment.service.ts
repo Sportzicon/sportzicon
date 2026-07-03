@@ -28,4 +28,14 @@ export class CommentService {
   async delete(id: string): Promise<void> {
     await this.client.delete(`/comments/${id}`);
   }
+
+  async like(id: string): Promise<{ like_count: number; liked: boolean }> {
+    const res = await this.client.post(`/comments/${id}/like`);
+    return res.data;
+  }
+
+  async unlike(id: string): Promise<{ like_count: number; liked: boolean }> {
+    const res = await this.client.delete(`/comments/${id}/like`);
+    return res.data;
+  }
 }

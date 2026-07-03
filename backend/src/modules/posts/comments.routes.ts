@@ -31,4 +31,24 @@ router.delete(
   })
 );
 
+router.post(
+  "/:id/like",
+  requireAuth,
+  validate(idParam, "params"),
+  asyncHandler(async (req, res) => {
+    const r = await svc.likeComment(req.params.id, req.user!.sub);
+    res.json(r);
+  })
+);
+
+router.delete(
+  "/:id/like",
+  requireAuth,
+  validate(idParam, "params"),
+  asyncHandler(async (req, res) => {
+    const r = await svc.unlikeComment(req.params.id, req.user!.sub);
+    res.json(r);
+  })
+);
+
 export default router;

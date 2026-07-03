@@ -244,14 +244,6 @@ export default function NewOrganization() {
         title={isEdit ? "Edit organization" : "Create an organization"}
         subtitle={isEdit ? `Editing ${orgQ.data?.org_name ?? "…"}` : "Build your presence"}
         sticky
-        action={
-          <div className="hidden sm:flex gap-2">
-            <button type="button" className="btn-ghost" onClick={() => navigate(-1)}>Cancel</button>
-            <button type="submit" className="btn-accent" disabled={busy || !!uploading}>
-              {busy ? (isEdit ? "Saving…" : "Creating…") : isEdit ? "Save changes" : "Create →"}
-            </button>
-          </div>
-        }
       />
 
       {/* Photos */}

@@ -171,16 +171,6 @@ export default function EditProfile() {
         title="Edit profile"
         subtitle="Update your public profile"
         sticky
-        action={
-          <div className="hidden lg:flex flex-wrap gap-2.5">
-            <button type="button" className="btn-secondary" onClick={() => navigate(`/profile/${user.id}`)}>
-              Cancel
-            </button>
-            <button className="btn-accent" disabled={busy}>
-              {busy ? "Saving…" : "✓ Save changes"}
-            </button>
-          </div>
-        }
       />
 
       {/* Success banner */}

@@ -4,7 +4,7 @@ import { useComments } from "../hooks";
 import { useAuthStore } from "../store/auth";
 import { Avatar } from "./UI";
 import { MobileDrawer } from "./MobileDrawer";
-import { Trash2, Pencil, MessageCircle } from "lucide-react";
+import { Trash2, Pencil, MessageCircle, Heart } from "lucide-react";
 import { isAdmin } from "../utils/roles";
 import type { CommentDoc, CommentParentType } from "../models";
 
@@ -23,12 +23,14 @@ function CommentItem({
   currentUserRole,
   onEdit,
   onDelete,
+  onToggleLike,
 }: {
   c: CommentDoc;
   currentUserId?: string;
   currentUserRole?: string;
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
+  onToggleLike: (c: CommentDoc) => void;
 }) {
   const canManage = c.author_id === currentUserId || isAdmin(currentUserRole ?? "");
 
@@ -61,6 +63,15 @@ function CommentItem({
           )}
         </div>
         <p className="mt-1 text-[13.5px] text-ink-70 leading-snug">{c.text}</p>
+        <button
+          onClick={() => currentUserId && onToggleLike(c)}
+          disabled={!currentUserId}
+          className={`mt-1.5 flex items-center gap-1 text-xs min-h-[44px] ${c.liked ? "text-red-600" : "text-ink-faint hover:text-ink"}`}
+          aria-label={c.liked ? "Unlike comment" : "Like comment"}
+        >
+          <Heart className="h-3.5 w-3.5" fill={c.liked ? "currentColor" : "none"} />
+          {c.like_count > 0 && c.like_count}
+        </button>
       </div>
     </div>
   );
@@ -193,7 +204,7 @@ export function CommentSection({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const { list, add, update, remove } = useComments(parentType, parentId);
+  const { list, add, update, remove, toggleLike } = useComments(parentType, parentId);
 
   const comments = list.data ?? [];
   const count = comments.length || initialCount;
@@ -217,6 +228,10 @@ export function CommentSection({
 
   const handleAddComment = async (text: string) => {
     await add.mutateAsync(text);
+  };
+
+  const handleToggleLike = (c: CommentDoc) => {
+    toggleLike.mutate(c);
   };
 
   const editDeleteProps = {
@@ -253,6 +268,7 @@ export function CommentSection({
               currentUserRole={user?.role}
               onEdit={handleEdit}
               onDelete={handleDelete}
+              onToggleLike={handleToggleLike}
             />
             <InlineEditOrDelete c={c} key={`eod-${c.id}`} {...editDeleteProps} />
           </div>
@@ -300,6 +316,7 @@ export function CommentSection({
                   currentUserRole={user?.role}
                   onEdit={handleEdit}
                   onDelete={handleDelete}
+              onToggleLike={handleToggleLike}
                 />
                 <InlineEditOrDelete c={c} key={`eod-${c.id}`} {...editDeleteProps} />
               </div>
@@ -350,6 +367,7 @@ export function CommentSection({
                     currentUserRole={user?.role}
                     onEdit={handleEdit}
                     onDelete={handleDelete}
+              onToggleLike={handleToggleLike}
                   />
                   <InlineEditOrDelete c={c} key={`eod-${c.id}`} {...editDeleteProps} />
                 </div>

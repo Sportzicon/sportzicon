@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, humanizeError } from "../../api/client";
 import { PageHeader, Spinner } from "../../components/UI";
-import { FileText, ExternalLink, Check, X, ChevronDown, ChevronUp } from "lucide-react";
+import { FileText, ExternalLink, Check, X, ChevronRight } from "lucide-react";
 import { queryKeys } from "../../hooks/queryKeys";
 
 interface VerificationItem {
@@ -17,19 +17,64 @@ interface VerificationItem {
   created_at: number | string;
 }
 
+interface EntityDetail {
+  name: string;
+  subtitle?: string;
+  description?: string;
+  location?: string;
+  fields: { label: string; value: string }[];
+}
+
 function formatDate(val: number | string) {
   const d = typeof val === "number" ? new Date(val) : new Date(val);
   return d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
 }
 
+function toEntityDetail(entityType: string, data: any): EntityDetail {
+  if (entityType === "user") {
+    const u = data.user ?? data;
+    const location = [u.city, u.state, u.country].filter(Boolean).join(", ");
+    return {
+      name: u.full_name,
+      subtitle: u.role,
+      description: u.bio,
+      location,
+      fields: [
+        { label: "Email", value: u.email },
+        ...(u.phone ? [{ label: "Phone", value: u.phone }] : []),
+        ...(u.athlete?.primary_sport ? [{ label: "Sport", value: u.athlete.primary_sport }] : [])
+      ]
+    };
+  }
+  const o = data.organization ?? data;
+  const location = [o.city, o.state, o.country].filter(Boolean).join(", ");
+  return {
+    name: o.org_name,
+    subtitle: o.org_type,
+    description: o.description,
+    location,
+    fields: [
+      { label: "Sports", value: (o.sport_categories ?? []).join(", ") || "—" },
+      ...(o.website ? [{ label: "Website", value: o.website }] : []),
+      ...(o.contact_email ? [{ label: "Contact email", value: o.contact_email }] : []),
+      ...(o.contact_phone ? [{ label: "Contact phone", value: o.contact_phone }] : [])
+    ]
+  };
+}
+
 export default function AdminVerifications() {
   const qc = useQueryClient();
-  const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [rejectTargetId, setRejectTargetId] = useState<string | null>(null);
+  const [selected, setSelected] = useState<VerificationItem | null>(null);
+  const [isRejecting, setIsRejecting] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
   const [rejectErr, setRejectErr] = useState<string | null>(null);
-  const [approveConfirmId, setApproveConfirmId] = useState<string | null>(null);
   const [actionErr, setActionErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!selected) return;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = ""; };
+  }, [selected]);
 
   const q = useQuery({
     queryKey: queryKeys.adminVerifications(),
@@ -40,15 +85,32 @@ export default function AdminVerifications() {
     }
   });
 
+  const entityQ = useQuery({
+    queryKey: ["admin", "verification-entity", selected?.entity_type, selected?.entity_id],
+    queryFn: async () => {
+      const path = selected!.entity_type === "user"
+        ? `/users/${selected!.entity_id}`
+        : `/organizations/${selected!.entity_id}`;
+      const res = await api.get(path);
+      return toEntityDetail(selected!.entity_type, res.data);
+    },
+    enabled: !!selected
+  });
+
+  const closeModal = () => {
+    setSelected(null);
+    setIsRejecting(false);
+    setRejectReason("");
+    setRejectErr(null);
+    setActionErr(null);
+  };
+
   const review = useMutation({
     mutationFn: async (vars: { id: string; decision: "approve" | "reject"; reason?: string }) =>
       api.post(`/verifications/${vars.id}/review`, { decision: vars.decision, reason: vars.reason }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.adminVerifications() });
-      setRejectTargetId(null);
-      setRejectReason("");
-      setApproveConfirmId(null);
-      setActionErr(null);
+      closeModal();
     },
     onError: (e) => setActionErr(humanizeError(e))
   });
@@ -57,8 +119,7 @@ export default function AdminVerifications() {
     mutationFn: async (orgId: string) => api.patch(`/verifications/${orgId}/approve`),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.adminVerifications() });
-      setApproveConfirmId(null);
-      setActionErr(null);
+      closeModal();
     },
     onError: (e) => setActionErr(humanizeError(e))
   });
@@ -68,37 +129,30 @@ export default function AdminVerifications() {
       api.patch(`/verifications/${vars.orgId}/reject`, { reason: vars.reason }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.adminVerifications() });
-      setRejectTargetId(null);
-      setRejectReason("");
-      setActionErr(null);
+      closeModal();
     },
     onError: (e) => setActionErr(humanizeError(e))
   });
 
-  function handleApprove(v: VerificationItem) {
-    if (v.entity_type === "organization") {
-      setApproveConfirmId(v.entity_id);
+  function handleApprove() {
+    if (!selected) return;
+    if (selected.entity_type === "organization") {
+      approveOrg.mutate(selected.entity_id);
     } else {
-      review.mutate({ id: v.id, decision: "approve" });
+      review.mutate({ id: selected.id, decision: "approve" });
     }
   }
 
-  function handleRejectOpen(v: VerificationItem) {
-    setRejectTargetId(v.entity_type === "organization" ? `org:${v.entity_id}` : `verif:${v.id}`);
-    setRejectReason("");
-    setRejectErr(null);
-  }
-
   function handleRejectConfirm() {
-    if (!rejectTargetId) return;
+    if (!selected) return;
     if (rejectReason.trim().length < 10) {
       setRejectErr("Reason must be at least 10 characters.");
       return;
     }
-    if (rejectTargetId.startsWith("org:")) {
-      rejectOrg.mutate({ orgId: rejectTargetId.slice(4), reason: rejectReason });
+    if (selected.entity_type === "organization") {
+      rejectOrg.mutate({ orgId: selected.entity_id, reason: rejectReason });
     } else {
-      review.mutate({ id: rejectTargetId.slice(6), decision: "reject", reason: rejectReason });
+      review.mutate({ id: selected.id, decision: "reject", reason: rejectReason });
     }
   }
 
@@ -112,10 +166,6 @@ export default function AdminVerifications() {
         subtitle={`${items.length} item${items.length !== 1 ? "s" : ""} to review`}
       />
 
-      {actionErr && (
-        <div className="rounded bg-red-50 border border-red-200 p-3 text-sm text-red-800">{actionErr}</div>
-      )}
-
       {q.isLoading ? (
         <div className="flex justify-center p-12"><Spinner className="text-brand-500" /></div>
       ) : items.length === 0 ? (
@@ -125,186 +175,145 @@ export default function AdminVerifications() {
           <div className="text-sm text-ink-sub mt-1">No pending verifications.</div>
         </div>
       ) : (
-        <>
-          {/* Desktop table */}
-          <div className="hidden md:block card overflow-hidden">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-hairsoft bg-fill text-left">
-                  <th className="px-4 py-3 font-medium text-ink-sub text-xs uppercase tracking-wide">Entity</th>
-                  <th className="px-4 py-3 font-medium text-ink-sub text-xs uppercase tracking-wide">Type</th>
-                  <th className="px-4 py-3 font-medium text-ink-sub text-xs uppercase tracking-wide">Submitted</th>
-                  <th className="px-4 py-3 font-medium text-ink-sub text-xs uppercase tracking-wide">Docs</th>
-                  <th className="px-4 py-3 font-medium text-ink-sub text-xs uppercase tracking-wide">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-hairsoft">
-                {items.map((v) => (
-                  <tr key={v.id}>
-                    <td className="px-4 py-3">
-                      <div className="font-medium text-ink capitalize">{v.entity_type}</div>
-                      <div className="text-xs text-ink-faint font-mono">{v.entity_id.slice(0, 12)}…</div>
-                      {v.notes && <div className="text-xs text-ink-sub mt-0.5 italic">{v.notes}</div>}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className="badge capitalize">{v.verification_type.replace(/_/g, " ")}</span>
-                    </td>
-                    <td className="px-4 py-3 text-ink-sub text-xs">{formatDate(v.created_at)}</td>
-                    <td className="px-4 py-3">
-                      <div className="flex flex-col gap-1">
-                        {(Array.isArray(v.documents) ? v.documents : []).map((d, i) => (
-                          <a key={i} href={d} target="_blank" rel="noreferrer"
-                            className="flex items-center gap-1 text-brand-500 hover:underline text-xs min-h-[44px]">
-                            <FileText className="h-3.5 w-3.5 flex-shrink-0" />
-                            Document {i + 1}
-                            <ExternalLink className="h-3 w-3" />
-                          </a>
-                        ))}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      {approveConfirmId === v.entity_id ? (
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-ink-sub">Confirm approve?</span>
-                          <button
-                            onClick={() => approveOrg.mutate(v.entity_id)}
-                            disabled={isActing}
-                            className="btn-primary text-xs min-h-[44px] flex items-center gap-1"
-                          >
-                            <Check className="h-3.5 w-3.5" /> Yes
-                          </button>
-                          <button onClick={() => setApproveConfirmId(null)}
-                            className="btn-secondary text-xs min-h-[44px]">No</button>
-                        </div>
-                      ) : rejectTargetId && (rejectTargetId === `org:${v.entity_id}` || rejectTargetId === `verif:${v.id}`) ? (
-                        <div className="space-y-2">
-                          <textarea
-                            className="input text-xs w-full"
-                            rows={2}
-                            placeholder="Rejection reason (min 10 chars)…"
-                            value={rejectReason}
-                            onChange={(e) => { setRejectReason(e.target.value); setRejectErr(null); }}
-                          />
-                          {rejectErr && <div className="text-red-600 text-xs">{rejectErr}</div>}
-                          <div className="flex gap-2">
-                            <button onClick={handleRejectConfirm} disabled={isActing}
-                              className="btn-danger text-xs min-h-[44px]">
-                              Confirm reject
-                            </button>
-                            <button onClick={() => { setRejectTargetId(null); setRejectReason(""); }}
-                              className="btn-secondary text-xs min-h-[44px]">
-                              Cancel
-                            </button>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="flex gap-2">
-                          <button onClick={() => handleApprove(v)} disabled={isActing}
-                            className="btn-primary text-xs min-h-[44px] flex items-center gap-1">
-                            <Check className="h-3.5 w-3.5" /> Approve
-                          </button>
-                          <button onClick={() => handleRejectOpen(v)} disabled={isActing}
-                            className="btn-danger text-xs min-h-[44px] flex items-center gap-1">
-                            <X className="h-3.5 w-3.5" /> Reject
-                          </button>
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+        <div className="card divide-y divide-hairsoft overflow-hidden">
+          {items.map((v) => (
+            <button
+              key={v.id}
+              onClick={() => setSelected(v)}
+              className="w-full flex items-center gap-3 p-4 text-left hover:bg-fill min-h-[64px]"
+            >
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-ink capitalize">{v.entity_type} verification</span>
+                  <span className="badge text-[10px] capitalize">{v.verification_type.replace(/_/g, " ")}</span>
+                </div>
+                {v.notes && <div className="text-xs text-ink-sub mt-0.5 italic truncate">{v.notes}</div>}
+                <div className="text-xs text-ink-faint mt-1 flex items-center gap-3">
+                  <span>{formatDate(v.created_at)}</span>
+                  <span>{(Array.isArray(v.documents) ? v.documents.length : 0)} document{v.documents?.length !== 1 ? "s" : ""}</span>
+                </div>
+              </div>
+              <ChevronRight className="h-5 w-5 text-ink-faint flex-shrink-0" />
+            </button>
+          ))}
+        </div>
+      )}
 
-          {/* Mobile list */}
-          <div className="md:hidden card divide-y divide-hairsoft">
-            {items.map((v) => {
-              const isExpanded = expandedId === v.id;
-              const isRejectTarget = rejectTargetId === `org:${v.entity_id}` || rejectTargetId === `verif:${v.id}`;
-              const isApproveTarget = approveConfirmId === v.entity_id;
+      {selected && (
+        <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center">
+          <div className="absolute inset-0 bg-black/40" onClick={closeModal} />
+          <div
+            role="dialog"
+            aria-modal="true"
+            className="relative w-full sm:max-w-lg bg-panel rounded-t-2xl sm:rounded-xl shadow-card max-h-[85vh] flex flex-col pb-[env(safe-area-inset-bottom)] sm:pb-0"
+          >
+            <div className="flex shrink-0 items-center justify-between border-b border-hair px-4 py-3">
+              <h2 className="font-disp text-lg text-ink capitalize">{selected.entity_type} verification</h2>
+              <button
+                type="button"
+                onClick={closeModal}
+                aria-label="Close"
+                className="flex h-11 min-h-[44px] w-11 items-center justify-center text-ink-sub hover:text-ink"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
 
-              return (
-                <div key={v.id} className="p-4 space-y-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1 min-w-0">
-                      <div className="font-semibold text-ink capitalize">{v.entity_type} verification</div>
-                      <span className="badge text-[10px] capitalize mt-1">{v.verification_type.replace(/_/g, " ")}</span>
-                      <div className="text-xs text-ink-sub mt-1">{formatDate(v.created_at)}</div>
-                    </div>
-                    <button
-                      onClick={() => setExpandedId(isExpanded ? null : v.id)}
-                      className="min-h-[44px] min-w-[44px] flex items-center justify-center text-ink-faint"
-                    >
-                      {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                    </button>
+            <div className="overflow-y-auto p-4 flex-1 space-y-4">
+              {entityQ.isLoading ? (
+                <div className="flex justify-center py-8"><Spinner className="text-brand-500" /></div>
+              ) : entityQ.isError ? (
+                <div className="text-sm text-red-600">Could not load entity details.</div>
+              ) : entityQ.data ? (
+                <div className="space-y-3">
+                  <div>
+                    <div className="font-semibold text-ink text-base">{entityQ.data.name}</div>
+                    {entityQ.data.subtitle && (
+                      <span className="badge capitalize text-xs mt-1">{entityQ.data.subtitle}</span>
+                    )}
                   </div>
-
-                  {isExpanded && (
-                    <>
-                      {v.notes && <p className="text-sm text-ink-sub italic">{v.notes}</p>}
-                      <div className="space-y-1">
-                        {(Array.isArray(v.documents) ? v.documents : []).map((d, i) => (
-                          <a key={i} href={d} target="_blank" rel="noreferrer"
-                            className="flex items-center gap-2 text-sm text-brand-500 min-h-[44px]">
-                            <FileText className="h-4 w-4 flex-shrink-0" />
-                            Document {i + 1}
-                            <ExternalLink className="h-3.5 w-3.5" />
-                          </a>
-                        ))}
-                      </div>
-                    </>
+                  {entityQ.data.location && (
+                    <div className="text-sm text-ink-sub">{entityQ.data.location}</div>
                   )}
-
-                  {isApproveTarget ? (
-                    <div className="rounded bg-green-50 border border-green-200 p-3 space-y-2">
-                      <div className="text-sm text-green-900 font-medium">Approve this verification?</div>
-                      <div className="flex gap-2">
-                        <button onClick={() => approveOrg.mutate(v.entity_id)} disabled={isActing}
-                          className="btn-primary min-h-[44px] flex-1 flex items-center justify-center gap-1">
-                          <Check className="h-4 w-4" /> Confirm
-                        </button>
-                        <button onClick={() => setApproveConfirmId(null)}
-                          className="btn-secondary min-h-[44px] flex-1">Cancel</button>
-                      </div>
-                    </div>
-                  ) : isRejectTarget ? (
-                    <div className="space-y-2">
-                      <textarea
-                        className="input w-full"
-                        rows={3}
-                        placeholder="Rejection reason (min 10 characters)…"
-                        value={rejectReason}
-                        onChange={(e) => { setRejectReason(e.target.value); setRejectErr(null); }}
-                      />
-                      {rejectErr && <div className="text-red-600 text-xs">{rejectErr}</div>}
-                      <div className="flex gap-2">
-                        <button onClick={handleRejectConfirm} disabled={isActing}
-                          className="btn-danger min-h-[44px] flex-1">
-                          Confirm reject
-                        </button>
-                        <button onClick={() => { setRejectTargetId(null); setRejectReason(""); }}
-                          className="btn-secondary min-h-[44px] flex-1">
-                          Cancel
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="flex gap-2">
-                      <button onClick={() => handleApprove(v)} disabled={isActing}
-                        className="btn-primary min-h-[44px] flex-1 flex items-center justify-center gap-1.5">
-                        <Check className="h-4 w-4" /> Approve
-                      </button>
-                      <button onClick={() => handleRejectOpen(v)} disabled={isActing}
-                        className="btn-danger min-h-[44px] flex-1 flex items-center justify-center gap-1.5">
-                        <X className="h-4 w-4" /> Reject
-                      </button>
-                    </div>
+                  {entityQ.data.description && (
+                    <p className="text-sm text-ink-sub">{entityQ.data.description}</p>
+                  )}
+                  {entityQ.data.fields.length > 0 && (
+                    <dl className="grid grid-cols-1 gap-2 text-sm">
+                      {entityQ.data.fields.map((f) => (
+                        <div key={f.label} className="flex justify-between gap-3 border-b border-hairsoft pb-1">
+                          <dt className="text-ink-faint">{f.label}</dt>
+                          <dd className="text-ink text-right break-all">{f.value}</dd>
+                        </div>
+                      ))}
+                    </dl>
                   )}
                 </div>
-              );
-            })}
+              ) : null}
+
+              <div className="border-t border-hairsoft pt-3 space-y-2">
+                <div className="text-xs font-medium text-ink-sub uppercase tracking-wide">
+                  Submitted {formatDate(selected.created_at)}
+                </div>
+                {selected.notes && <p className="text-sm text-ink-sub italic">{selected.notes}</p>}
+                <div className="space-y-1">
+                  {(Array.isArray(selected.documents) ? selected.documents : []).map((d, i) => (
+                    <a key={i} href={d} target="_blank" rel="noreferrer"
+                      className="flex items-center gap-2 text-sm text-brand-500 min-h-[44px]">
+                      <FileText className="h-4 w-4 flex-shrink-0" />
+                      Document {i + 1}
+                      <ExternalLink className="h-3.5 w-3.5" />
+                    </a>
+                  ))}
+                  {selected.documents?.length === 0 && (
+                    <div className="text-sm text-ink-faint">No documents submitted.</div>
+                  )}
+                </div>
+              </div>
+
+              {actionErr && (
+                <div className="rounded bg-red-50 border border-red-200 p-3 text-sm text-red-800">{actionErr}</div>
+              )}
+            </div>
+
+            <div className="shrink-0 border-t border-hair bg-panel p-4">
+              {isRejecting ? (
+                <div className="space-y-2">
+                  <textarea
+                    className="input w-full"
+                    rows={3}
+                    placeholder="Rejection reason (min 10 characters)…"
+                    value={rejectReason}
+                    onChange={(e) => { setRejectReason(e.target.value); setRejectErr(null); }}
+                    autoFocus
+                  />
+                  {rejectErr && <div className="text-red-600 text-xs">{rejectErr}</div>}
+                  <div className="flex gap-2">
+                    <button onClick={handleRejectConfirm} disabled={isActing}
+                      className="btn-danger min-h-[44px] flex-1">
+                      Confirm reject
+                    </button>
+                    <button onClick={() => { setIsRejecting(false); setRejectReason(""); setRejectErr(null); }}
+                      className="btn-secondary min-h-[44px] flex-1">
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <button onClick={handleApprove} disabled={isActing}
+                    className="btn-primary min-h-[44px] flex-1 flex items-center justify-center gap-1.5">
+                    <Check className="h-4 w-4" /> Approve
+                  </button>
+                  <button onClick={() => setIsRejecting(true)} disabled={isActing}
+                    className="btn-danger min-h-[44px] flex-1 flex items-center justify-center gap-1.5">
+                    <X className="h-4 w-4" /> Reject
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
-        </>
+        </div>
       )}
     </div>
   );

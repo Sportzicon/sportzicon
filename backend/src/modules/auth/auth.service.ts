@@ -2,7 +2,7 @@ import { prisma } from "../../config/prisma";
 import { env } from "../../config/env";
 import { sendMail } from "../../config/mailer";
 import { logger } from "../../config/logger";
-import { BadRequest, Conflict, NotFound, Unauthorized, TooManyRequests } from "../../utils/errors";
+import { BadRequest, Conflict, Forbidden, NotFound, Unauthorized, TooManyRequests } from "../../utils/errors";
 import { omitSensitive } from "../../utils/user";
 import { validateAthleteSportProfile } from "../users/sportProfile";
 import { createOrganization } from "../organizations/organizations.service";
@@ -176,6 +176,19 @@ export async function login(email: string, password: string) {
   }
   if (user.status === "suspended") throw Unauthorized("Account is suspended");
   if (!user.email_verified) throw Unauthorized("Email not verified — please check your inbox");
+
+  if (user.verification_status === "pending") {
+    throw Forbidden("Your verification is pending admin review. We'll notify you once it's approved.");
+  }
+  if (user.role === "club" || user.role === "organizer") {
+    const pendingOrg = await prisma.organization.findFirst({
+      where: { owner_user_id: user.id, verification_status: "pending" },
+      select: { id: true }
+    });
+    if (pendingOrg) {
+      throw Forbidden("Your organization verification is pending admin review. We'll notify you once it's approved.");
+    }
+  }
 
   // Clear attempts + revoke old sessions in parallel, update last_active fire-and-forget
   await Promise.all([

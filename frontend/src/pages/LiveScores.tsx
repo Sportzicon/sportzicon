@@ -245,7 +245,7 @@ type Filter = "all" | "live" | "upcoming" | "results";
 export default function LiveScores() {
   const [filter, setFilter] = useState<Filter>("all");
 
-  const { data: liveData, isLoading: loadingLive, dataUpdatedAt, isFetching, refetch } = useQuery({
+  const { data: liveData, isLoading: loadingLive, isFetching, refetch } = useQuery({
     queryKey: queryKeys.liveMatches(),
     queryFn: () => scoringApi.get("/matches/live").then(r => r.data.matches as any[]),
     refetchInterval: 5_000
@@ -264,10 +264,6 @@ export default function LiveScores() {
   const liveMatches    = liveData     ?? [];
   const upcomingMatches = upcomingData ?? [];
   const recentMatches  = recentData   ?? [];
-
-  const lastUpdated = dataUpdatedAt
-    ? new Date(dataUpdatedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })
-    : null;
 
   const isLoading = loadingLive && loadingUpcoming && loadingRecent;
 
@@ -288,11 +284,6 @@ export default function LiveScores() {
             <h1 className="font-disp text-4xl text-ink">Scores</h1>
           </div>
           <div className="flex items-center gap-3">
-            {lastUpdated && (
-              <p className="lab text-ink-faint text-[10px] sm:text-xs">
-                Updated <span className="font-mononum">{lastUpdated}</span>
-              </p>
-            )}
             <button
               onClick={() => refetch()}
               disabled={isFetching}

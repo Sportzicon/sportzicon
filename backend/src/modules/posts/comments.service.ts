@@ -57,6 +57,8 @@ export async function addComment(
   return {
     ...comment,
     author_name: author.full_name,
+    like_count: 0,
+    liked: false,
     created_at: comment.created_at.getTime()
   };
 }
@@ -64,9 +66,9 @@ export async function addComment(
 export async function listComments(
   parentType: ParentType,
   parentId: string,
-  opts: { cursor?: string; limit?: number } = {}
+  opts: { cursor?: string; limit?: number; userId?: string } = {}
 ) {
-  const { cursor, limit = 20 } = opts;
+  const { cursor, limit = 20, userId } = opts;
   const where: Record<string, unknown> = {
     parent_type: parentType,
     ...parentIdField(parentType, parentId)
@@ -77,18 +79,50 @@ export async function listComments(
     orderBy: { created_at: "asc" },
     take: limit + 1,
     ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
-    include: { author: { select: { id: true, full_name: true, profile_photo_url: true } } }
+    include: {
+      author: { select: { id: true, full_name: true, profile_photo_url: true } },
+      ...(userId ? { likes: { where: { user_id: userId }, select: { user_id: true } } } : {})
+    }
   });
 
   const hasMore = rows.length > limit;
   const page = hasMore ? rows.slice(0, limit) : rows;
-  const data = page.map(({ author, ...c }) => ({
+  const data = page.map(({ author, likes, ...c }: any) => ({
     ...c,
     author,
     author_name: author?.full_name ?? "Unknown",
+    liked: Array.isArray(likes) && likes.length > 0,
     created_at: c.created_at.getTime()
   }));
   return { data, nextCursor: hasMore ? data[data.length - 1].id : null };
+}
+
+export async function likeComment(commentId: string, userId: string) {
+  const exists = await prisma.comment.findUnique({ where: { id: commentId }, select: { id: true } });
+  if (!exists) throw NotFound("Comment not found");
+
+  const [, countResult] = await prisma.$transaction([
+    prisma.$executeRaw`INSERT INTO "CommentLike" (comment_id, user_id) VALUES (${commentId}::uuid, ${userId}::uuid) ON CONFLICT DO NOTHING`,
+    prisma.$queryRaw<[{ like_count: bigint }]>`
+      UPDATE "Comment" SET like_count = (SELECT COUNT(*) FROM "CommentLike" WHERE comment_id = ${commentId}::uuid)
+      WHERE id = ${commentId}::uuid RETURNING like_count`
+  ]);
+
+  return { like_count: Number((countResult as any)[0]?.like_count ?? 0), liked: true };
+}
+
+export async function unlikeComment(commentId: string, userId: string) {
+  const exists = await prisma.comment.findUnique({ where: { id: commentId }, select: { id: true } });
+  if (!exists) throw NotFound("Comment not found");
+
+  const [, countResult] = await prisma.$transaction([
+    prisma.$executeRaw`DELETE FROM "CommentLike" WHERE comment_id = ${commentId}::uuid AND user_id = ${userId}::uuid`,
+    prisma.$queryRaw<[{ like_count: bigint }]>`
+      UPDATE "Comment" SET like_count = (SELECT COUNT(*) FROM "CommentLike" WHERE comment_id = ${commentId}::uuid)
+      WHERE id = ${commentId}::uuid RETURNING like_count`
+  ]);
+
+  return { like_count: Number((countResult as any)[0]?.like_count ?? 0), liked: false };
 }
 
 export async function updateComment(commentId: string, actorId: string, isAdmin: boolean, text: string) {

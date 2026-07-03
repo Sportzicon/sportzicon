@@ -715,6 +715,39 @@ export async function syncCareerStats(matchId: string) {
   }
 }
 
+// Auto-finishes a match once its last innings ends, so it stops sitting stuck
+// as "live" when nobody remembers to press End Match.
+async function maybeAutoCompleteMatch(matchId: string, finishedInningsNumber: number, totalInnings: number, maxWickets: number) {
+  if (finishedInningsNumber < totalInnings) return;
+
+  const match = await prisma.match.findUnique({ where: { id: matchId } });
+  if (!match || match.status === "completed") return;
+
+  const data: any = { status: "completed" };
+
+  if (totalInnings === 2) {
+    const innings = await prisma.innings.findMany({ where: { match_id: matchId } });
+    const inn1 = innings.find(i => i.innings_number === 1);
+    const inn2 = innings.find(i => i.innings_number === 2);
+    if (inn1 && inn2) {
+      if (inn2.total_runs > inn1.total_runs) {
+        const team = await prisma.team.findUnique({ where: { id: inn2.batting_team_id }, select: { name: true } });
+        data.winner_team_id = inn2.batting_team_id;
+        data.result_summary = `${team?.name ?? "Team"} won by ${maxWickets - inn2.total_wickets} wicket(s)`;
+      } else if (inn1.total_runs > inn2.total_runs) {
+        const team = await prisma.team.findUnique({ where: { id: inn1.batting_team_id }, select: { name: true } });
+        data.winner_team_id = inn1.batting_team_id;
+        data.result_summary = `${team?.name ?? "Team"} won by ${inn1.total_runs - inn2.total_runs} run(s)`;
+      } else {
+        data.result_summary = "Match tied";
+      }
+    }
+  }
+
+  await prisma.match.update({ where: { id: matchId }, data });
+  await syncCareerStats(matchId);
+}
+
 // ── Playing XI ────────────────────────────────────────────────────────────────
 
 export async function getPlayingXI(matchId: string) {
@@ -1295,10 +1328,23 @@ export async function addBall(inningsId: string, actorId: string, actorRole: str
     const proj = projectedScore(fresh.total_runs, fresh.total_balls, oversTotal ?? 0);
     const wp = winProbability(fresh.total_runs, fresh.total_balls, fresh.total_wickets, fresh.target, oversTotal);
     const mom = momentumIndex(recent);
+
+    const allOut     = fresh.total_wickets >= maxWickets;
+    const oversDone   = oversTotal != null && fresh.total_balls >= oversTotal * 6;
+    const chaseDone   = fresh.target != null && fresh.total_runs >= fresh.target;
+    const inningsDone = !fresh.is_completed && (allOut || oversDone || chaseDone);
+
     await prisma.innings.update({
       where: { id: inningsId },
-      data: { projected_score: proj, win_probability: wp, momentum_index: mom }
+      data: {
+        projected_score: proj, win_probability: wp, momentum_index: mom,
+        is_completed: inningsDone ? true : undefined
+      }
     });
+
+    if (inningsDone) {
+      await maybeAutoCompleteMatch(match.id, innings.innings_number, tournament?.number_of_innings ?? 2, maxWickets);
+    }
   }
 
   return { ball, innings_id: inningsId };

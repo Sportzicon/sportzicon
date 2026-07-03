@@ -5,8 +5,9 @@ import { PageHeader, Spinner } from "../components/UI";
 import { BackButton } from "../components/BackButton";
 import type { Notification } from "../models";
 
-function relativeTime(ts: number): string {
-  const diff = Date.now() - ts;
+function relativeTime(ts: number | string): string {
+  const time = typeof ts === "number" ? ts : new Date(ts).getTime();
+  const diff = Date.now() - time;
   const mins = Math.floor(diff / 60_000);
   if (mins < 1) return "just now";
   if (mins < 60) return `${mins}m ago`;
@@ -14,10 +15,10 @@ function relativeTime(ts: number): string {
   if (hrs < 24) return `${hrs}h ago`;
   const days = Math.floor(hrs / 24);
   if (days < 7) return `${days}d ago`;
-  return new Date(ts).toLocaleDateString();
+  return new Date(time).toLocaleDateString();
 }
 
-function getDateGroup(ts: number): string {
+function getDateGroup(ts: number | string): string {
   const now = new Date();
   const d = new Date(ts);
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());

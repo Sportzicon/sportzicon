@@ -7,6 +7,8 @@ export interface CommentDoc {
   author_id: string;
   author_name: string;
   text: string;
+  like_count: number;
+  liked: boolean;
   created_at: number;
 }
 

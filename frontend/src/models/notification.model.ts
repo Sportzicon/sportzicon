@@ -13,7 +13,7 @@ export interface Notification {
   body: string;
   link?: string | null;
   read: boolean;
-  created_at: number;
+  created_at: string | number;
   actor?: NotificationActor | null;
 }
 

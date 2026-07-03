@@ -155,14 +155,6 @@ export default function NewOpportunity() {
           title={isEdit ? "Edit opportunity" : "Post an opportunity"}
           subtitle="New listing"
           sticky
-          action={
-            <div className="flex gap-2">
-              <button type="button" className="btn-ghost min-h-[44px]" onClick={() => navigate(-1)}>Cancel</button>
-              <button type="submit" className="btn-accent min-h-[44px]" disabled={busy}>
-                {busy ? (isEdit ? "Saving…" : "Publishing…") : isEdit ? "Save changes" : "Publish listing →"}
-              </button>
-            </div>
-          }
         />
       </div>
       <div className="lg:hidden mb-2">
