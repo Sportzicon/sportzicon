@@ -197,7 +197,7 @@ model Opportunity {
   city                      String
   start_date                String
   end_date                  String
-  application_deadline      String
+  application_deadline      DateTime          @db.Date
   entry_fee                 Float?
   documents_required        String[]          @default([])
   vacancies                 Int?

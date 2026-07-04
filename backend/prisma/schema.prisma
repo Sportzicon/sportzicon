@@ -110,6 +110,7 @@ model User {
   post_likes     PostLike[]
   reel_likes     ReelLike[]
   blog_likes     BlogLike[]
+  comment_likes  CommentLike[]
   documents      UserDocument[]
   email_logs     EmailLog[]
 }
@@ -196,7 +197,7 @@ model Opportunity {
   city                      String
   start_date                String
   end_date                  String
-  application_deadline      String
+  application_deadline      DateTime          @db.Date
   entry_fee                 Float?
   documents_required        String[]          @default([])
   vacancies                 Int?
@@ -330,16 +331,29 @@ model Comment {
   blog_id     String?  @db.Uuid
   author_id   String   @db.Uuid
   text        String   @db.Text
+  like_count  Int      @default(0)
   created_at  DateTime @default(now())
 
-  author User  @relation(fields: [author_id], references: [id])
-  post   Post? @relation("PostComments", fields: [post_id], references: [id])
-  reel   Reel? @relation("ReelComments", fields: [reel_id], references: [id])
-  blog   Blog? @relation("BlogComments", fields: [blog_id], references: [id])
+  author User          @relation(fields: [author_id], references: [id])
+  post   Post?          @relation("PostComments", fields: [post_id], references: [id])
+  reel   Reel?          @relation("ReelComments", fields: [reel_id], references: [id])
+  blog   Blog?          @relation("BlogComments", fields: [blog_id], references: [id])
+  likes  CommentLike[]
 
   @@index([post_id, created_at(sort: Desc)])
   @@index([reel_id, created_at(sort: Desc)])
   @@index([blog_id, created_at(sort: Desc)])
+}
+
+model CommentLike {
+  comment_id String   @db.Uuid
+  user_id    String   @db.Uuid
+  created_at DateTime @default(now())
+
+  comment Comment @relation(fields: [comment_id], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@id([comment_id, user_id])
 }
 
 model Conversation {

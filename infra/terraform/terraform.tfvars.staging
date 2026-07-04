@@ -42,6 +42,7 @@ optional_secrets         = ["RESEND_API_KEY"]
 openai_api_key           = ""
 bootstrap_admin_email    = ""
 bootstrap_admin_password = ""
+redis_url                = "" # e.g. Upstash "rediss://default:PASSWORD@HOST:PORT" — add "REDIS_URL" to optional_secrets to enable
 
 # Scoring API — built and deployed on every push to main
 scoring_api_image          = "asia-south1-docker.pkg.dev/sportzicon-app/sportivox/scoring-api:latest"

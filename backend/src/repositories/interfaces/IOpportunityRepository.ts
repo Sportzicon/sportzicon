@@ -18,7 +18,7 @@ export interface OpportunityRecord {
   city: string;
   start_date: string;
   end_date: string;
-  application_deadline: string;
+  application_deadline: Date;
   vacancies?: number | null;
   vacancies_filled: number;
   status: OpportunityStatus;
@@ -56,7 +56,7 @@ export interface CreateOpportunityData {
   city: string;
   start_date: string;
   end_date: string;
-  application_deadline: string;
+  application_deadline: Date;
   vacancies?: number;
   contact_email?: string;
 }

@@ -58,7 +58,7 @@ export async function apply(
       vacancies: number | null;
       vacancies_filled: number;
       status: string;
-      application_deadline: string;
+      application_deadline: Date;
     }>>`
       SELECT vacancies, vacancies_filled, status, application_deadline
       FROM "Opportunity"

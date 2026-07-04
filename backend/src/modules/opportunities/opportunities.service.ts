@@ -7,6 +7,14 @@ import type { Role } from "../../types/domain";
 
 const OPP_VERSION_KEY = "opps:version";
 
+// application_deadline is stored as a SQL DATE; serialize it back to a plain
+// YYYY-MM-DD string so the API contract (and frontend <input type="date">
+// bindings) never see a full ISO timestamp.
+export function dateOnly(d: Date | string | null | undefined): string | null {
+  if (!d) return null;
+  return (d instanceof Date ? d : new Date(d)).toISOString().slice(0, 10);
+}
+
 async function getOppVersion(): Promise<string> {
   const v = await cacheGet(OPP_VERSION_KEY);
   return v ?? "0";
@@ -51,7 +59,7 @@ export async function createOpportunity(actorId: string, actorRole: Role, input:
       city: (input.city as string) ?? org.city ?? "",
       start_date: (input.start_date as string) || (input.application_deadline as string),
       end_date: (input.end_date as string) || (input.application_deadline as string),
-      application_deadline: input.application_deadline as string,
+      application_deadline: new Date(input.application_deadline as string),
       entry_fee: input.entry_fee as number | undefined,
       documents_required: (input.documents_required as string[]) ?? [],
       vacancies: input.vacancies as number | undefined,
@@ -60,7 +68,7 @@ export async function createOpportunity(actorId: string, actorRole: Role, input:
     }
   });
   await invalidateOppListCache();
-  return created;
+  return { ...created, application_deadline: dateOnly(created.application_deadline) };
 }
 
 export async function updateOpportunity(id: string, actorId: string, actorRole: Role, patch: Record<string, unknown>) {
@@ -89,10 +97,13 @@ export async function updateOpportunity(id: string, actorId: string, actorRole: 
     if (patch[key] !== undefined) data[key] = patch[key];
   }
   if (patch.title) data.title_lower = String(patch.title).toLowerCase();
+  if (data.application_deadline !== undefined) {
+    data.application_deadline = new Date(data.application_deadline as string);
+  }
 
   const updated = await prisma.opportunity.update({ where: { id }, data });
   await invalidateOppListCache();
-  return updated;
+  return { ...updated, application_deadline: dateOnly(updated.application_deadline) };
 }
 
 export async function linkScoringTournament(id: string, actorId: string, actorRole: Role, scoringTournamentId: string | null) {
@@ -130,10 +141,11 @@ export async function getOpportunity(id: string) {
     ...rest,
     org_name: organization?.org_name,
     application_count: _count.applications,
-    vacancies_filled: realFilled
+    vacancies_filled: realFilled,
+    application_deadline: dateOnly(rest.application_deadline)
   };
 
-  if (base.status === "open" && new Date(base.application_deadline) < new Date()) {
+  if (base.status === "open" && base.application_deadline && new Date(base.application_deadline) < new Date()) {
     // fire-and-forget — don't block the response for a status update
     prisma.opportunity.update({ where: { id }, data: { status: "closed" } })
       .catch(err => logger.error({ err }, "failed to auto-close expired opportunity"));
@@ -207,9 +219,7 @@ export async function listMyOpportunities(actorId: string) {
     application_count: r._count.applications,
     created_at: (r.created_at as unknown as Date).getTime(),
     updated_at: (r.updated_at as unknown as Date).getTime(),
-    application_deadline: r.application_deadline
-      ? (r.application_deadline as unknown as Date).toISOString()
-      : null,
+    application_deadline: dateOnly(r.application_deadline),
   }));
 }
 
@@ -266,7 +276,8 @@ export async function listOpportunities(q: {
   const data = page.map(({ _count, organization, ...opp }) => ({
     ...opp,
     org_name: organization?.org_name,
-    application_count: _count.applications
+    application_count: _count.applications,
+    application_deadline: dateOnly(opp.application_deadline)
   }));
   const result = { data, nextCursor: hasMore ? data[data.length - 1].id : null, total };
   await cacheSet(cacheKey, JSON.stringify(result), 60);

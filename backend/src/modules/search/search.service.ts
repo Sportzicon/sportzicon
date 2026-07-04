@@ -1,5 +1,6 @@
 import { prisma } from "../../config/prisma";
 import { Prisma } from "@prisma/client";
+import { dateOnly } from "../opportunities/opportunities.service";
 
 type PaginatedResult<T> = {
   data: T[];
@@ -45,7 +46,7 @@ type OppRow = {
   status: string;
   city: string;
   country: string;
-  application_deadline: string;
+  application_deadline: Date;
   vacancies: number | null;
   application_count: number;
   org_name: string;
@@ -297,6 +298,8 @@ export async function searchClubs(q: {
   };
 }
 
+type OppRowOut = Omit<OppRow, "application_deadline"> & { application_deadline: string | null };
+
 export async function searchOpportunities(q: {
   q?: string;
   sport?: string;
@@ -307,7 +310,7 @@ export async function searchOpportunities(q: {
   city?: string;
   type?: string;
   status?: string;
-}): Promise<PaginatedResult<OppRow>> {
+}): Promise<PaginatedResult<OppRowOut>> {
   const limit = Math.min(q.limit, 50);
   const hasFTS = Boolean(q.q?.trim());
   const status = q.status ?? "open";
@@ -390,7 +393,7 @@ export async function searchOpportunities(q: {
     : null;
 
   return {
-    data: page,
+    data: page.map((r) => ({ ...r, application_deadline: dateOnly(r.application_deadline) })),
     nextCursor: nextCursorVal,
     total: Number(countRows[0]?.count ?? 0),
   };

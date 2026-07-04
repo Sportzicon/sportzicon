@@ -3,6 +3,7 @@ import { BadRequest, Conflict, NotFound } from "../../utils/errors";
 import { omitSensitive } from "../../utils/user";
 import { hashPassword } from "../auth/tokens";
 import { validateAthleteSportProfile } from "../users/sportProfile";
+import { dateOnly } from "../opportunities/opportunities.service";
 import type { AccountStatus, Role, ReportStatus } from "../../types/domain";
 
 export async function audit(input: {
@@ -349,7 +350,8 @@ export async function listAdminOpportunities(filter: {
   const items = page.map(({ _count, organization, ...opp }) => ({
     ...opp,
     application_count: _count.applications,
-    org_name: organization?.org_name ?? null
+    org_name: organization?.org_name ?? null,
+    application_deadline: dateOnly(opp.application_deadline)
   }));
   return { items, next_cursor: hasMore ? items[items.length - 1].id : null };
 }
@@ -373,10 +375,13 @@ export async function adminUpdateOpportunity(
     if (patch[key] !== undefined) data[key] = patch[key];
   }
   if (patch.title) data.title_lower = String(patch.title).toLowerCase();
+  if (data.application_deadline !== undefined) {
+    data.application_deadline = new Date(data.application_deadline as string);
+  }
 
   const updated = await prisma.opportunity.update({ where: { id: oppId }, data });
   await audit({ actor, action: "opportunity.edited", target_type: "opportunity", target_id: oppId, details: { fields: Object.keys(data) } });
-  return updated;
+  return { ...updated, application_deadline: dateOnly(updated.application_deadline) };
 }
 
 export async function adminDeleteOpportunity(actor: { id: string; role: Role }, oppId: string) {
@@ -591,7 +596,7 @@ export async function adminCreateOpportunity(
       city: input.city,
       start_date: input.start_date,
       end_date: input.end_date,
-      application_deadline: input.application_deadline,
+      application_deadline: new Date(input.application_deadline),
       age_min: input.age_min ?? 0,
       age_max: input.age_max ?? 99,
       gender_eligibility: input.gender_eligibility ?? "all",
@@ -605,7 +610,7 @@ export async function adminCreateOpportunity(
     }
   });
   await audit({ actor, action: "opportunity.created_by_admin", target_type: "opportunity", target_id: opp.id, details: { title: opp.title, type: opp.type } });
-  return opp;
+  return { ...opp, application_deadline: dateOnly(opp.application_deadline) };
 }
 
 export async function adminTransitionApplication(

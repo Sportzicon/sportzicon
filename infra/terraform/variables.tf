@@ -62,6 +62,13 @@ variable "resend_api_key" {
   description = "Resend API key for transactional emails."
 }
 
+variable "redis_url" {
+  type        = string
+  sensitive   = true
+  default     = ""
+  description = "Upstash Redis connection URL (rediss://...), used for caching. Add \"REDIS_URL\" to optional_secrets to wire it in."
+}
+
 variable "email_from" {
   type        = string
   default     = "no-reply@sportivox.app"

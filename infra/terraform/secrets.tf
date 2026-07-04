@@ -58,6 +58,7 @@ resource "google_secret_manager_secret_version" "this" {
     each.value == "JWT_SECRET"               ? random_password.scoring_jwt.result :
     each.value == "OPENAI_API_KEY"           ? var.openai_api_key :
     each.value == "RESEND_API_KEY"           ? var.resend_api_key :
+    each.value == "REDIS_URL"                ? var.redis_url :
     each.value == "BOOTSTRAP_ADMIN_EMAIL"    ? var.bootstrap_admin_email :
     each.value == "BOOTSTRAP_ADMIN_PASSWORD" ? var.bootstrap_admin_password :
     ""
