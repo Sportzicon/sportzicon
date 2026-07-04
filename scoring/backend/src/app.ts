@@ -26,9 +26,10 @@ export function createApp() {
   app.use(express.urlencoded({ extended: true }));
 
   app.get("/healthz", (_req, res) => res.json({ ok: true, service: "scoring-api" }));
-  // Cloud Run reserves whatever path liveness_probe.http_get.path points to —
-  // external requests to that path never reach the container. Give the probe
-  // its own path so /healthz stays reachable for CI/monitoring.
+  app.get("/readyz", (_req, res) => res.json({ ok: true }));
+  // Cloud Run reserves whatever path liveness_probe/startup_probe http_get.path
+  // points to — external requests to that path never reach the container. Give
+  // the probes their own paths so /healthz stays reachable for CI/monitoring.
   app.get("/internal/livez", (_req, res) => res.json({ ok: true }));
 
   app.use("/api/auth", authRoutes);

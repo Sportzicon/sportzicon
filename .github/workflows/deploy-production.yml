@@ -214,9 +214,9 @@ jobs:
       - name: Health check API
         run: |
           API_URL="${{ steps.outputs.outputs.api_url }}"
-          echo "Checking: ${API_URL}/healthz"
+          echo "Checking: ${API_URL}/internal/livez"
           for i in {1..15}; do
-            RESPONSE=$(curl -sf --max-time 10 "${API_URL}/healthz" 2>/dev/null || echo "")
+            RESPONSE=$(curl -sf --max-time 10 "${API_URL}/internal/livez" 2>/dev/null || echo "")
             if echo "$RESPONSE" | grep -q "ok"; then
               echo "✅ API is healthy: $RESPONSE"
               exit 0
@@ -230,9 +230,9 @@ jobs:
       - name: Health check Scoring API
         run: |
           SCORING_API_URL="${{ steps.outputs.outputs.scoring_api_url }}"
-          echo "Checking: ${SCORING_API_URL}/healthz"
+          echo "Checking: ${SCORING_API_URL}/internal/livez"
           for i in {1..15}; do
-            RESPONSE=$(curl -sf --max-time 10 "${SCORING_API_URL}/healthz" 2>/dev/null || echo "")
+            RESPONSE=$(curl -sf --max-time 10 "${SCORING_API_URL}/internal/livez" 2>/dev/null || echo "")
             if echo "$RESPONSE" | grep -q "ok"; then
               echo "✅ Scoring API is healthy: $RESPONSE"
               exit 0

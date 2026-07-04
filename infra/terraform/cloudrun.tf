@@ -223,7 +223,7 @@ resource "google_cloud_run_v2_service" "scoring_api" {
 
       startup_probe {
         http_get {
-          path = "/healthz"
+          path = "/readyz"
         }
         initial_delay_seconds = 2
         period_seconds        = 5
