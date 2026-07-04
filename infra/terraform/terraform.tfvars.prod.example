@@ -20,9 +20,10 @@ max_instances_web = 3
 
 # API Configuration
 api_port       = 8080
-api_public_url = "https://api.sportzicon.com"
-web_app_url    = "https://sportzicon.com"
-cors_origins   = "https://sportzicon.com,https://www.sportzicon.com"
+api_public_url        = "https://api.sportzicon.com"
+web_app_url           = "https://sportzicon.com"
+web_app_extra_origins = ["https://www.sportzicon.com"]
+cors_origins          = "https://sportzicon.com,https://www.sportzicon.com"
 
 # Rate limiting (production — strict)
 rate_limit_window_ms = 900000
@@ -38,7 +39,7 @@ email_from      = "admin@sportzicon.com"
 email_from_name = "Sportzicon"
 
 # Which optional secrets to create in Secret Manager
-optional_secrets = []
+optional_secrets = ["RESEND_API_KEY"]
 
 # Secret values — only used when name is in optional_secrets above
 openai_api_key           = ""
