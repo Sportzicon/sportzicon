@@ -44,65 +44,65 @@ function AdaptiveLayout() {
 }
 
 // ── Lazy page imports — each route is a separate chunk ────────────────────────
-const Landing             = lazy(() => import("./pages/Landing"));
-const Login               = lazy(() => import("./pages/Login"));
-const Signup              = lazy(() => import("./pages/Signup"));
-const VerifyEmail         = lazy(() => import("./pages/VerifyEmail"));
-const ForgotPassword      = lazy(() => import("./pages/ForgotPassword"));
-const ResetPassword       = lazy(() => import("./pages/ResetPassword"));
+const Landing             = lazy(() => import("./modules/landing/pages/Landing"));
+const Login               = lazy(() => import("./modules/auth/pages/Login"));
+const Signup              = lazy(() => import("./modules/auth/pages/Signup"));
+const VerifyEmail         = lazy(() => import("./modules/auth/pages/VerifyEmail"));
+const ForgotPassword      = lazy(() => import("./modules/auth/pages/ForgotPassword"));
+const ResetPassword       = lazy(() => import("./modules/auth/pages/ResetPassword"));
 
-const Dashboard           = lazy(() => import("./pages/Dashboard"));
-const Profile             = lazy(() => import("./pages/Profile"));
-const EditProfile         = lazy(() => import("./pages/EditProfile"));
-const Search              = lazy(() => import("./pages/Search"));
-const Opportunities       = lazy(() => import("./pages/Opportunities"));
-const OpportunityDetail   = lazy(() => import("./pages/OpportunityDetail"));
-const NewOpportunity      = lazy(() => import("./pages/NewOpportunity"));
-const Tournaments         = lazy(() => import("./pages/Tournaments"));
-const NewTournament       = lazy(() => import("./pages/NewTournament"));
-const Applicants          = lazy(() => import("./pages/Applicants"));
-const MyApplications      = lazy(() => import("./pages/MyApplications"));
-const Feed                = lazy(() => import("./pages/Feed"));
-const Reels               = lazy(() => import("./pages/Reels"));
-const Blogs               = lazy(() => import("./pages/Blogs"));
-const BlogDetail          = lazy(() => import("./pages/BlogDetail"));
-const NewBlog             = lazy(() => import("./pages/NewBlog"));
-const Messages            = lazy(() => import("./pages/Messages"));
-const Notifications       = lazy(() => import("./pages/Notifications"));
-const MyOrganizations     = lazy(() => import("./pages/MyOrganizations"));
-const NewOrganization     = lazy(() => import("./pages/NewOrganization"));
-const OrganizationDetail  = lazy(() => import("./pages/OrganizationDetail"));
-const Organizations       = lazy(() => import("./pages/Organizations"));
-const AITips              = lazy(() => import("./pages/AITips"));
+const Dashboard           = lazy(() => import("./modules/dashboard/pages/Dashboard"));
+const Profile             = lazy(() => import("./modules/profile/pages/Profile"));
+const EditProfile         = lazy(() => import("./modules/profile/pages/EditProfile"));
+const Search              = lazy(() => import("./modules/search/pages/Search"));
+const Opportunities       = lazy(() => import("./modules/opportunities/pages/Opportunities"));
+const OpportunityDetail   = lazy(() => import("./modules/opportunities/pages/OpportunityDetail"));
+const NewOpportunity      = lazy(() => import("./modules/opportunities/pages/NewOpportunity"));
+const Tournaments         = lazy(() => import("./modules/tournaments/pages/Tournaments"));
+const NewTournament       = lazy(() => import("./modules/tournaments/pages/NewTournament"));
+const Applicants          = lazy(() => import("./modules/applications/pages/Applicants"));
+const MyApplications      = lazy(() => import("./modules/applications/pages/MyApplications"));
+const Feed                = lazy(() => import("./modules/feed/pages/Feed"));
+const Reels               = lazy(() => import("./modules/reels/pages/Reels"));
+const Blogs               = lazy(() => import("./modules/blogs/pages/Blogs"));
+const BlogDetail          = lazy(() => import("./modules/blogs/pages/BlogDetail"));
+const NewBlog             = lazy(() => import("./modules/blogs/pages/NewBlog"));
+const Messages            = lazy(() => import("./modules/messaging/pages/Messages"));
+const Notifications       = lazy(() => import("./modules/notifications/pages/Notifications"));
+const MyOrganizations     = lazy(() => import("./modules/organizations/pages/MyOrganizations"));
+const NewOrganization     = lazy(() => import("./modules/organizations/pages/NewOrganization"));
+const OrganizationDetail  = lazy(() => import("./modules/organizations/pages/OrganizationDetail"));
+const Organizations       = lazy(() => import("./modules/organizations/pages/Organizations"));
+const AITips              = lazy(() => import("./modules/dashboard/pages/AITips"));
 
 // Admin — separate chunk, only loaded when admin navigates here
-const Admin                     = lazy(() => import("./pages/admin/Admin"));
-const AdminUsers                = lazy(() => import("./pages/admin/AdminUsers"));
-const AdminUserDetail           = lazy(() => import("./pages/admin/AdminUserDetail"));
-const AdminReports              = lazy(() => import("./pages/admin/AdminReports"));
-const AdminVerifications        = lazy(() => import("./pages/admin/AdminVerifications"));
-const AdminAuditLog             = lazy(() => import("./pages/admin/AdminAuditLog"));
-const AdminOpportunities        = lazy(() => import("./pages/admin/AdminOpportunities"));
-const AdminOrganizations        = lazy(() => import("./pages/admin/AdminOrganizations"));
-const AdminApplications         = lazy(() => import("./pages/admin/AdminApplications"));
-const AdminCreateUser           = lazy(() => import("./pages/admin/AdminCreateUser"));
-const AdminCreateOrganization   = lazy(() => import("./pages/admin/AdminCreateOrganization"));
-const AdminCreateOpportunity    = lazy(() => import("./pages/admin/AdminCreateOpportunity"));
-const AdminScoring              = lazy(() => import("./pages/admin/AdminScoring"));
+const Admin                     = lazy(() => import("./modules/admin/pages/Admin"));
+const AdminUsers                = lazy(() => import("./modules/admin/pages/AdminUsers"));
+const AdminUserDetail           = lazy(() => import("./modules/admin/pages/AdminUserDetail"));
+const AdminReports              = lazy(() => import("./modules/admin/pages/AdminReports"));
+const AdminVerifications        = lazy(() => import("./modules/admin/pages/AdminVerifications"));
+const AdminAuditLog             = lazy(() => import("./modules/admin/pages/AdminAuditLog"));
+const AdminOpportunities        = lazy(() => import("./modules/admin/pages/AdminOpportunities"));
+const AdminOrganizations        = lazy(() => import("./modules/admin/pages/AdminOrganizations"));
+const AdminApplications         = lazy(() => import("./modules/admin/pages/AdminApplications"));
+const AdminCreateUser           = lazy(() => import("./modules/admin/pages/AdminCreateUser"));
+const AdminCreateOrganization   = lazy(() => import("./modules/admin/pages/AdminCreateOrganization"));
+const AdminCreateOpportunity    = lazy(() => import("./modules/admin/pages/AdminCreateOpportunity"));
+const AdminScoring              = lazy(() => import("./modules/admin/pages/AdminScoring"));
 
 // Live scores + scoring console — separate chunks
-const LiveScores            = lazy(() => import("./pages/LiveScores"));
-const LiveScoreDetail       = lazy(() => import("./pages/LiveScoreDetail"));
-const ScoringHome           = lazy(() => import("./pages/scoring/ScoringHome"));
-const ScoringTournaments    = lazy(() => import("./pages/scoring/ScoringTournaments"));
-const ScoringNewTournament  = lazy(() => import("./pages/scoring/ScoringNewTournament"));
-const ScoringTournamentDetail = lazy(() => import("./pages/scoring/ScoringTournamentDetail"));
-const ScoringMatchDetail    = lazy(() => import("./pages/scoring/ScoringMatchDetail"));
-const ScoringLive           = lazy(() => import("./pages/scoring/ScoringLive"));
-const ScoringInningsAnalytics = lazy(() => import("./pages/scoring/ScoringInningsAnalytics"));
-const ScoringAllMatches     = lazy(() => import("./pages/scoring/ScoringAllMatches"));
-const ScoringPlayerStats    = lazy(() => import("./pages/scoring/ScoringPlayerStats"));
-const ScoringMatchConfig    = lazy(() => import("./pages/scoring/ScoringMatchConfig"));
+const LiveScores            = lazy(() => import("./modules/live-scoring/pages/LiveScores"));
+const LiveScoreDetail       = lazy(() => import("./modules/live-scoring/pages/LiveScoreDetail"));
+const ScoringHome           = lazy(() => import("./modules/live-scoring/pages/ScoringHome"));
+const ScoringTournaments    = lazy(() => import("./modules/live-scoring/pages/ScoringTournaments"));
+const ScoringNewTournament  = lazy(() => import("./modules/live-scoring/pages/ScoringNewTournament"));
+const ScoringTournamentDetail = lazy(() => import("./modules/live-scoring/pages/ScoringTournamentDetail"));
+const ScoringMatchDetail    = lazy(() => import("./modules/live-scoring/pages/ScoringMatchDetail"));
+const ScoringLive           = lazy(() => import("./modules/live-scoring/pages/ScoringLive"));
+const ScoringInningsAnalytics = lazy(() => import("./modules/live-scoring/pages/ScoringInningsAnalytics"));
+const ScoringAllMatches     = lazy(() => import("./modules/live-scoring/pages/ScoringAllMatches"));
+const ScoringPlayerStats    = lazy(() => import("./modules/live-scoring/pages/ScoringPlayerStats"));
+const ScoringMatchConfig    = lazy(() => import("./modules/live-scoring/pages/ScoringMatchConfig"));
 
 // Minimal spinner shown while a page chunk is downloading
 function PageLoader() {

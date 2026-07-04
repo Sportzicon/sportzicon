@@ -4,37 +4,22 @@ on:
   push:
     branches: [main]
 
+concurrency:
+  group: deploy-staging
+  cancel-in-progress: false
+
 env:
   GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
   GCP_REGION: asia-south1
   AR_IMAGE: asia-south1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/sportivox
 
 jobs:
-  build-and-deploy:
-    name: Build & Deploy to Staging
+  migrate-main-db:
+    name: Migrate Main DB
     runs-on: ubuntu-latest
     environment: staging
-    permissions:
-      contents: read
-      id-token: write
-
     steps:
       - uses: actions/checkout@v4
-
-      - name: Authenticate to Google Cloud
-        uses: google-github-actions/auth@v1
-        with:
-          workload_identity_provider: ${{ secrets.GOOGLE_PROVIDER_NAME }}
-          service_account: ${{ secrets.GOOGLE_SERVICE_ACCOUNT }}
-
-      - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@v1
-
-      - name: Configure Docker for Artifact Registry
-        run: gcloud auth configure-docker asia-south1-docker.pkg.dev --quiet
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -69,8 +54,6 @@ jobs:
               npx prisma migrate deploy
             elif echo "$OUTPUT" | grep -q "P3018\|P3009"; then
               echo "⚠️  P3018/P3009: failed migration in DB — rolling it back and retrying..."
-              # P3018 format: "Migration name: 20260627000000_foo"
-              # P3009 format: "The `20260627000000_foo` migration ... failed"
               FAILED=$(echo "$OUTPUT" | grep -oP "Migration name: \K\S+" | head -1)
               if [ -z "$FAILED" ]; then
                 FAILED=$(echo "$OUTPUT" | grep -oP "The \`\K[^\`]+" | head -1)
@@ -83,6 +66,20 @@ jobs:
             fi
           fi
           echo "✅ Main DB migrations complete"
+
+  migrate-scoring-db:
+    name: Migrate Scoring DB
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: scoring/backend/package-lock.json
 
       - name: Run scoring database migrations
         working-directory: scoring/backend
@@ -114,6 +111,31 @@ jobs:
           fi
           echo "✅ Scoring DB migrations complete"
 
+  build-api:
+    name: Build & Push API Image
+    runs-on: ubuntu-latest
+    environment: staging
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v1
+        with:
+          workload_identity_provider: ${{ secrets.GOOGLE_PROVIDER_NAME }}
+          service_account: ${{ secrets.GOOGLE_SERVICE_ACCOUNT }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker asia-south1-docker.pkg.dev --quiet
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: Build and push API image
         uses: docker/build-push-action@v5
         with:
@@ -121,9 +143,36 @@ jobs:
           file: ./backend/Dockerfile
           target: runtime
           push: true
+          cache-from: type=gha,scope=api
+          cache-to: type=gha,mode=max,scope=api
           tags: |
             ${{ env.AR_IMAGE }}/api:latest
             ${{ env.AR_IMAGE }}/api:main-${{ github.sha }}
+
+  build-web:
+    name: Build & Push Web Image
+    runs-on: ubuntu-latest
+    environment: staging
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v1
+        with:
+          workload_identity_provider: ${{ secrets.GOOGLE_PROVIDER_NAME }}
+          service_account: ${{ secrets.GOOGLE_SERVICE_ACCOUNT }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker asia-south1-docker.pkg.dev --quiet
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
       - name: Build and push Web image
         uses: docker/build-push-action@v5
@@ -132,12 +181,39 @@ jobs:
           file: ./frontend/Dockerfile
           target: runtime
           push: true
+          cache-from: type=gha,scope=web
+          cache-to: type=gha,mode=max,scope=web
           build-args: |
             VITE_API_BASE_URL=https://api.sportzicon.com
             VITE_SCORING_API_URL=https://scoring-api.sportzicon.com/api
           tags: |
             ${{ env.AR_IMAGE }}/web:latest
             ${{ env.AR_IMAGE }}/web:main-${{ github.sha }}
+
+  build-scoring-api:
+    name: Build & Push Scoring API Image
+    runs-on: ubuntu-latest
+    environment: staging
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v1
+        with:
+          workload_identity_provider: ${{ secrets.GOOGLE_PROVIDER_NAME }}
+          service_account: ${{ secrets.GOOGLE_SERVICE_ACCOUNT }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker asia-south1-docker.pkg.dev --quiet
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
       - name: Build and push Scoring API image
         uses: docker/build-push-action@v5
@@ -146,9 +222,37 @@ jobs:
           file: ./scoring/backend/Dockerfile
           target: runtime
           push: true
+          cache-from: type=gha,scope=scoring-api
+          cache-to: type=gha,mode=max,scope=scoring-api
           tags: |
             ${{ env.AR_IMAGE }}/scoring-api:latest
             ${{ env.AR_IMAGE }}/scoring-api:main-${{ github.sha }}
+
+  deploy:
+    name: Terraform Deploy
+    runs-on: ubuntu-latest
+    environment: staging
+    needs:
+      - migrate-main-db
+      - migrate-scoring-db
+      - build-api
+      - build-web
+      - build-scoring-api
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v1
+        with:
+          workload_identity_provider: ${{ secrets.GOOGLE_PROVIDER_NAME }}
+          service_account: ${{ secrets.GOOGLE_SERVICE_ACCOUNT }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
 
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v2
@@ -175,7 +279,9 @@ jobs:
         run: |
           # Scoring API was manually deployed before Terraform managed it.
           # Import it so Terraform updates rather than tries to re-create (409).
-          # || true — no-op if already in state or doesn't exist yet.
+          # Exit code 1 with "already managed"/"Resource already managed" means
+          # it's already in state — that's fine. Any other failure is real and
+          # will surface (and fail the job) on the Plan/Apply steps that follow.
           terraform import \
             -var-file=terraform.tfvars.staging \
             -var="database_url=${{ secrets.DATABASE_URL }}" \
@@ -185,7 +291,7 @@ jobs:
             -var="resend_api_key=${{ secrets.RESEND_API_KEY }}" \
             'google_cloud_run_v2_service.scoring_api[0]' \
             "projects/${{ secrets.GCP_PROJECT_ID }}/locations/asia-south1/services/sportivox-scoring-api-staging" \
-            2>&1 || true
+            2>&1 | tee import-scoring.log || (grep -qi "already managed\|Resource already managed\|no resource found" import-scoring.log)
 
       - name: Import existing DIRECT_URL secret into Terraform state
         working-directory: infra/terraform
@@ -193,7 +299,6 @@ jobs:
           # The sportivox-direct-url-staging secret was created outside this
           # Terraform workspace's state (different GCS prefix). Import it so
           # Terraform manages it without a 409 re-creation error.
-          # || true — no-op if already in state or secret doesn't exist yet.
           terraform import \
             -var-file=terraform.tfvars.staging \
             -var="database_url=${{ secrets.DATABASE_URL }}" \
@@ -203,12 +308,12 @@ jobs:
             -var="resend_api_key=${{ secrets.RESEND_API_KEY }}" \
             'google_secret_manager_secret.direct_url' \
             "projects/${{ secrets.GCP_PROJECT_ID }}/secrets/sportivox-direct-url-staging" \
-            2>&1 || true
+            2>&1 | tee import-secret.log || (grep -qi "already managed\|Resource already managed\|no resource found" import-secret.log)
 
       - name: Terraform Plan
         working-directory: infra/terraform
         run: |
-          terraform plan -lock=false \
+          terraform plan \
             -var-file=terraform.tfvars.staging \
             -var="database_url=${{ secrets.DATABASE_URL }}" \
             -var="direct_url=${{ secrets.DIRECT_URL }}" \
@@ -219,7 +324,7 @@ jobs:
 
       - name: Terraform Apply
         working-directory: infra/terraform
-        run: terraform apply -lock=false -auto-approve tfplan
+        run: terraform apply -auto-approve tfplan
 
       - name: Get deployment URLs
         working-directory: infra/terraform
@@ -242,8 +347,8 @@ jobs:
             echo "⏳ Attempt $i/15 — waiting 5s..."
             sleep 5
           done
-          echo "⚠️ Health check did not confirm healthy within 75s — check Cloud Run logs"
-          exit 0
+          echo "❌ Health check did not confirm healthy within 75s — check Cloud Run logs"
+          exit 1
 
       - name: Health check Scoring API
         run: |
@@ -258,5 +363,5 @@ jobs:
             echo "⏳ Attempt $i/15 — waiting 5s..."
             sleep 5
           done
-          echo "⚠️ Scoring API health check did not confirm healthy — check Cloud Run logs"
-          exit 0
+          echo "❌ Scoring API health check did not confirm healthy — check Cloud Run logs"
+          exit 1

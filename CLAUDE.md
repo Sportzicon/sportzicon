@@ -1649,7 +1649,6 @@ scoring/      Standalone cricket scoring service
   frontend/     React app (port 5174), auth via SSO with main app
 database/     Single Prisma schema for the main backend
 e2e/          Playwright suite covering both SPAs
-designs/      Architecture docs — read these before large changes
 infra/        Terraform for GCP Cloud Run deployment
 ```
 
@@ -1689,12 +1688,46 @@ services/ → typed axios methods
 models/   → TypeScript interfaces only
 ```
 
+This call direction is a contract, not a folder name — see the module layout
+below for where these files physically live.
+
 **`hooks/queryKeys.ts`** — ONLY allowed source of cache keys.
 
 **`services/index.ts`** — DI wiring. Only file that imports `api`/`scoringApi`.
 
 **`frontend/src/types.ts`** — Backward-compat shim only. New code imports
 from `../models`.
+
+### Frontend module layout
+
+`frontend/src/` is organized feature-sliced: anything used by a single
+feature lives in `frontend/src/modules/<feature>/{pages,hooks,services,components}/`,
+mirroring the backend's `modules/<name>/` grouping. Anything used by 2+
+features stays in the root dirs as a shared kernel — do not move it into a
+module.
+
+**Shared kernel (root dirs — stays here):**
+- `components/{UI,BackButton,MobileDrawer,ErrorBoundary,Layout,PublicLayout,
+  ProtectedRoute,SportPositionSelect}.tsx`
+- `hooks/{index.ts,queryKeys.ts,useDebounce,usePublicStats,useUpload}.ts`
+  (`hooks/index.ts` is a barrel re-exporting from each module's hooks)
+- `services/index.ts` (barrel/DI wiring, re-exports from each module's services)
+- `models/*` — kept centralized (pure types; not worth fragmenting)
+- `store/*`, `api/*`, `data/*`, `utils/*`, `types.ts`
+
+**Modules (`frontend/src/modules/<name>/`):** auth, landing, dashboard,
+profile, opportunities, applications, tournaments, organizations, feed,
+reels, blogs, comments, messaging, notifications, search, admin,
+live-scoring (the last one covers both the spectator live-scores pages and
+the scorer console pages — all views onto the `scoring/` subsystem's API).
+
+New feature = new folder under `modules/`. Cross-module imports (e.g. the
+`applications` module's hook importing the `opportunities` module's service)
+are expected — the resource-owning module exposes its service, other modules
+call it, same shape as backend modules calling each other's repositories.
+Only route through the shared-kernel barrels (`hooks/index.ts`,
+`services/index.ts`) for singletons that already have decorators applied;
+import a sibling file within your own module directly.
 
 ### Zustand stores
 - `store/auth.ts` — main session

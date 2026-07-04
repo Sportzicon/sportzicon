@@ -76,16 +76,6 @@ Browser ──► React SPA (Vite)
                                             └── Scoring PostgreSQL (Docker)
 ```
 
-**Full architectural documentation is in [`designs/`](designs/):**
-
-| Document | Contents |
-|----------|----------|
-| [`designs/high-level-design.md`](designs/high-level-design.md) | System context, component overview, tech decisions, security, deployment, C4 diagrams |
-| [`designs/low-level-design.md`](designs/low-level-design.md) | API surface, auth flows, state machines, sequence diagrams, DB ERD, component hierarchy |
-| [`designs/architecture-diagrams.md`](designs/architecture-diagrams.md) | Full topology, data flow, event bus, CI/CD pipeline, scoring integration diagrams |
-| [`designs/architectural-flaws.md`](designs/architectural-flaws.md) | 10 confirmed flaws with severity, root cause, and remediation roadmap |
-| [`designs/design-patterns.md`](designs/design-patterns.md) | All 19 design patterns implemented — descriptions, code examples, file locations |
-
 ---
 
 ## Technology Stack
@@ -192,14 +182,6 @@ sportivox-main/
 │   └── prisma/
 │       └── schema.prisma       Single source of truth for main DB schema
 │
-├── designs/                    Architecture documentation (NEW)
-│   ├── high-level-design.md
-│   ├── low-level-design.md
-│   ├── architecture-diagrams.md
-│   ├── architectural-flaws.md
-│   └── design-patterns.md
-│
-├── docs/                       Original deployment, security, API docs
 ├── infra/                      Terraform IaC + Cloud Build config
 ├── e2e/                        End-to-end tests
 ├── scripts/                    Utility scripts
@@ -340,7 +322,7 @@ cd scoring/backend && npx prisma migrate deploy   # production
 
 ## Design Patterns
 
-The codebase implements 19 named design patterns across both layers. See [`designs/design-patterns.md`](designs/design-patterns.md) for full descriptions, code examples, and file locations.
+The codebase implements 19 named design patterns across both layers.
 
 **Backend patterns:**
 
@@ -435,13 +417,11 @@ This creates:
 git push → GitHub Actions (typecheck + test) → Cloud Build → Cloud Run
 ```
 
-For full deployment instructions including custom domains, monitoring, rollback procedures, and cost estimates, see [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
-
 ---
 
 ## Security
 
-Full security controls documentation is in [`docs/SECURITY.md`](docs/SECURITY.md). Key controls:
+Key controls:
 
 | Control | Implementation |
 |---------|---------------|

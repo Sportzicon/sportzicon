@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, test, expect } from "vitest";
-import Landing from "../pages/Landing";
+import Landing from "../modules/landing/pages/Landing";
 
 describe("Landing", () => {
   test("renders hero copy and CTA", () => {
