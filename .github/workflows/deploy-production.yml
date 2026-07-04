@@ -198,6 +198,7 @@ jobs:
             -var="direct_url=${{ secrets.DIRECT_URL }}" \
             -var="scoring_database_url=${{ secrets.SCORING_DATABASE_URL }}" \
             -var="scoring_direct_url=${{ secrets.SCORING_DIRECT_URL }}" \
+            -var="resend_api_key=${{ secrets.RESEND_API_KEY }}" \
             -out=tfplan
 
       - name: Terraform Apply
