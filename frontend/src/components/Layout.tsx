@@ -13,9 +13,17 @@ import {
   User as UserIcon, Menu, X, Trophy, ChevronDown, Building2, Target, Activity,
   Video, Plus, Flag, Users,
 } from "lucide-react";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import type { Notification } from "../models";
 import type { User } from "../types";
+
+function ContentLoader() {
+  return (
+    <div className="flex items-center justify-center min-h-[50vh]">
+      <div className="w-8 h-8 border-4 border-brand border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
+}
 
 function GlobalSearch({ user, inputRef, mobileOpen, onMobileClose }: {
   user: User;
@@ -496,7 +504,9 @@ export function Layout() {
           }`}
         >
           <ErrorBoundary>
-            <Outlet />
+            <Suspense fallback={<ContentLoader />}>
+              <Outlet />
+            </Suspense>
           </ErrorBoundary>
         </main>
       </div>

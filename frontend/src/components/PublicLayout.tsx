@@ -1,6 +1,15 @@
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { Suspense } from "react";
 import { Activity } from "lucide-react";
 import { ErrorBoundary } from "./ErrorBoundary";
+
+function ContentLoader() {
+  return (
+    <div className="flex items-center justify-center min-h-[50vh]">
+      <div className="w-8 h-8 border-4 border-brand border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
+}
 
 // ============================================================================
 // Shared shell for public marketing pages (Landing + HowItWorks).
@@ -83,7 +92,9 @@ export default function PublicLayout() {
 
       {/* ── Page content ──────────────────────────────────────────────────── */}
       <ErrorBoundary>
-        <Outlet />
+        <Suspense fallback={<ContentLoader />}>
+          <Outlet />
+        </Suspense>
       </ErrorBoundary>
 
       {/* ── Footer ────────────────────────────────────────────────────────── */}
