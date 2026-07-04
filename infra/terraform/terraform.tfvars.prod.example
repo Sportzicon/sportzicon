@@ -50,7 +50,7 @@ redis_url                = "" # e.g. Upstash "rediss://default:PASSWORD@HOST:POR
 gcs_bucket_terraform_state = "sportivox-terraform-state-sportzicon-app"
 
 # Scoring API Configuration
-scoring_cors_origin        = "*"
+scoring_cors_origin        = "https://sportzicon.com,https://www.sportzicon.com"
 optional_scoring_secrets   = []
 scoring_api_custom_domain  = "scoring-api.sportzicon.com"
 # scoring_database_url and scoring_direct_url are passed as CI secrets (not committed)

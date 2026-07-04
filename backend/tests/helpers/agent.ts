@@ -5,6 +5,11 @@ import { prisma } from "../../src/config/prisma";
 export const app = createApp();
 export const api = () => request(app);
 
+export function extractCookie(res: request.Response, name: string): string | undefined {
+  const raw = res.headers["set-cookie"] as unknown as string[] | undefined;
+  return raw?.find((c) => c.startsWith(`${name}=`))?.split(";")[0];
+}
+
 export async function signupAndLogin(opts: {
   email: string;
   password?: string;
@@ -32,7 +37,7 @@ export async function signupAndLogin(opts: {
   return {
     user: login.body.user,
     access_token: login.body.access_token as string,
-    refresh_token: login.body.refresh_token as string,
+    refresh_cookie: extractCookie(login, "refresh_token") as string,
     auth: { Authorization: `Bearer ${login.body.access_token}` }
   };
 }

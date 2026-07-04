@@ -1,13 +1,15 @@
-import { Router } from "express";
+import { Router, type Response } from "express";
 import { asyncHandler } from "../../utils/async";
 import { validate } from "../../middleware/validate";
 import { authLimiter } from "../../middleware/rateLimit";
 import { requireAuth } from "../../middleware/auth";
+import { Unauthorized } from "../../utils/errors";
+import { env, isProd } from "../../config/env";
+import { parseTtlMs } from "./tokens";
 import * as svc from "./auth.service";
 import { getUserById } from "../users/users.service";
 import {
   loginSchema,
-  refreshSchema,
   verifyEmailSchema,
   forgotPasswordSchema,
   resetPasswordSchema,
@@ -18,6 +20,30 @@ import {
 } from "./auth.schemas";
 
 const router = Router();
+
+const REFRESH_COOKIE = "refresh_token";
+const REFRESH_COOKIE_PATH = "/api/v1/auth";
+
+function setRefreshCookie(res: Response, token: string) {
+  res.cookie(REFRESH_COOKIE, token, {
+    httpOnly: true,
+    secure: isProd,
+    sameSite: isProd ? "none" : "lax",
+    path: REFRESH_COOKIE_PATH,
+    domain: env.COOKIE_DOMAIN,
+    maxAge: parseTtlMs(env.JWT_REFRESH_TTL)
+  });
+}
+
+function clearRefreshCookie(res: Response) {
+  res.clearCookie(REFRESH_COOKIE, {
+    httpOnly: true,
+    secure: isProd,
+    sameSite: isProd ? "none" : "lax",
+    path: REFRESH_COOKIE_PATH,
+    domain: env.COOKIE_DOMAIN
+  });
+}
 
 router.post(
   "/check-availability",
@@ -57,23 +83,27 @@ router.post(
   validate(loginSchema),
   asyncHandler(async (req, res) => {
     const r = await svc.login(req.body.email, req.body.password);
-    res.json(r);
+    setRefreshCookie(res, r.refresh_token);
+    res.json({ access_token: r.access_token, user: r.user });
   })
 );
 
 router.post(
   "/refresh",
-  validate(refreshSchema),
   asyncHandler(async (req, res) => {
-    const r = await svc.refresh(req.body.refresh_token);
-    res.json(r);
+    const token = req.cookies?.[REFRESH_COOKIE];
+    if (!token) throw Unauthorized("Session expired, please log in again");
+    const r = await svc.refresh(token);
+    setRefreshCookie(res, r.refresh_token);
+    res.json({ access_token: r.access_token, user: r.user });
   })
 );
 
 router.post(
   "/logout",
   asyncHandler(async (req, res) => {
-    await svc.logout(req.body?.refresh_token);
+    await svc.logout(req.cookies?.[REFRESH_COOKIE]);
+    clearRefreshCookie(res);
     res.json({ ok: true });
   })
 );

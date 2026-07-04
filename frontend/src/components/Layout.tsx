@@ -306,7 +306,7 @@ export function Layout() {
   if (!user) return <Outlet />;
 
   const logout = async () => {
-    try { await authService.logout(useAuthStore.getState().refreshToken ?? ""); } catch { /* ignore */ }
+    try { await authService.logout(); } catch { /* ignore */ }
     clear(); qc.clear(); navigate("/login", { replace: true });
   };
 

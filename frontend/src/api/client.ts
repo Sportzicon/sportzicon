@@ -4,7 +4,7 @@ import { queryClient } from "../main";
 
 const baseURL = (import.meta.env.VITE_API_BASE_URL || "http://localhost:8080") + "/api/v1";
 
-export const api: AxiosInstance = axios.create({ baseURL, timeout: 30_000 });
+export const api: AxiosInstance = axios.create({ baseURL, timeout: 30_000, withCredentials: true });
 
 api.interceptors.request.use((cfg) => {
   const token = useAuthStore.getState().accessToken;
@@ -16,21 +16,19 @@ api.interceptors.request.use((cfg) => {
 let refreshing: Promise<string | null> | null = null;
 
 async function doRefresh(): Promise<string | null> {
-  const s = useAuthStore.getState();
-  const tokenAtStart = s.refreshToken;
-  if (!tokenAtStart) return null;
+  // Refresh token lives in an httpOnly cookie now — invisible to JS, sent automatically.
+  const userAtStart = useAuthStore.getState().user;
   try {
-    const r = await axios.post(`${baseURL}/auth/refresh`, { refresh_token: tokenAtStart });
+    const r = await axios.post(`${baseURL}/auth/refresh`, {}, { withCredentials: true });
     useAuthStore.getState().setSession({
       user: r.data.user,
-      accessToken: r.data.access_token,
-      refreshToken: r.data.refresh_token
+      accessToken: r.data.access_token
     });
     return r.data.access_token as string;
   } catch {
     // Only clear if the user hasn't logged in fresh since this refresh started.
     // Guards against: stale refresh races a successful login and wipes the new session.
-    if (useAuthStore.getState().refreshToken === tokenAtStart) {
+    if (useAuthStore.getState().user === userAtStart) {
       useAuthStore.getState().clear();
       queryClient.clear();
     }

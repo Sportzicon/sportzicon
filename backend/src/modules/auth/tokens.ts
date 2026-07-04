@@ -101,7 +101,7 @@ export function comparePassword(plain: string, hash: string): Promise<boolean> {
   return bcrypt.compare(plain, hash);
 }
 
-function parseTtlMs(ttl: string): number {
+export function parseTtlMs(ttl: string): number {
   const match = ttl.match(/^(\d+)([smhd])$/);
   if (!match) return 30 * 24 * 3600 * 1000;
   const n = parseInt(match[1]);

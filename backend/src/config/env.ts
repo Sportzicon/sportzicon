@@ -16,6 +16,7 @@ const schema = z.object({
   BCRYPT_ROUNDS: z.coerce.number().int().min(10).max(15).default(10),
 
   CORS_ORIGINS: z.string().default("http://localhost:5173"),
+  COOKIE_DOMAIN: z.string().optional(),
   RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(15 * 60 * 1000),
   RATE_LIMIT_MAX: z.coerce.number().int().positive().default(300),
   AUTH_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(20),

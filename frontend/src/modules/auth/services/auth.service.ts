@@ -9,7 +9,6 @@ export interface LoginRequest {
 export interface LoginResponse {
   user: User;
   access_token: string;
-  refresh_token: string;
 }
 
 export class AuthService {
@@ -20,8 +19,8 @@ export class AuthService {
     return res.data;
   }
 
-  async logout(refreshToken: string): Promise<void> {
-    await this.client.post("/auth/logout", { refresh_token: refreshToken });
+  async logout(): Promise<void> {
+    await this.client.post("/auth/logout");
   }
 
   async resendVerification(email: string): Promise<void> {

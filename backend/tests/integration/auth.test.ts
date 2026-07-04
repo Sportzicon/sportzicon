@@ -1,4 +1,4 @@
-import { api, signupAndLogin } from "../helpers/agent";
+import { api, signupAndLogin, extractCookie } from "../helpers/agent";
 import { resetDatabase } from "../helpers/setup";
 
 describe("auth", () => {
@@ -49,10 +49,11 @@ describe("auth", () => {
 
   test("refresh rotates the token", async () => {
     const a = await signupAndLogin({ email: "rotator@test.dev" });
-    const r = await api().post("/api/v1/auth/refresh").send({ refresh_token: a.refresh_token }).expect(200);
-    expect(r.body.refresh_token).not.toBe(a.refresh_token);
+    const r = await api().post("/api/v1/auth/refresh").set("Cookie", a.refresh_cookie).expect(200);
+    const rotated = extractCookie(r, "refresh_token");
+    expect(rotated).not.toBe(a.refresh_cookie);
     // Old refresh token should now be rejected
-    const r2 = await api().post("/api/v1/auth/refresh").send({ refresh_token: a.refresh_token });
+    const r2 = await api().post("/api/v1/auth/refresh").set("Cookie", a.refresh_cookie);
     expect(r2.status).toBe(401);
   });
 

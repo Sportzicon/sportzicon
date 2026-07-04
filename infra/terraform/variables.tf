@@ -234,8 +234,8 @@ variable "scoring_api_image" {
 
 variable "scoring_cors_origin" {
   type        = string
-  description = "CORS origin URL for the scoring API."
-  default     = "*"
+  description = "Comma-separated CORS origin allowlist for the scoring API. No wildcard support — list explicit origins."
+  default     = ""
 }
 
 variable "optional_scoring_secrets" {

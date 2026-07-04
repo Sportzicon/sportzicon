@@ -9,12 +9,15 @@ export function createApp() {
   const app = express();
 
   app.use(helmet({ contentSecurityPolicy: false }));
-  const rawOrigin = process.env.CORS_ORIGIN || "*";
-  const corsOrigin = rawOrigin === "*"
-    ? "*"
-    : rawOrigin.split(",").map(o => o.trim());
+  // No wildcard: explicit allowlist only, even though this API is header-auth
+  // (not cookie-based) — "*" still lets any origin script read responses.
+  const corsOrigins = (process.env.CORS_ORIGIN || "").split(",").map(o => o.trim()).filter(Boolean);
   app.use(cors({
-    origin: corsOrigin,
+    origin(origin, cb) {
+      if (!origin) return cb(null, true);
+      if (corsOrigins.includes(origin)) return cb(null, true);
+      cb(new Error(`CORS: origin ${origin} not allowed`));
+    },
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Authorization", "Content-Type"]
   }));
@@ -23,6 +26,10 @@ export function createApp() {
   app.use(express.urlencoded({ extended: true }));
 
   app.get("/healthz", (_req, res) => res.json({ ok: true, service: "scoring-api" }));
+  // Cloud Run reserves whatever path liveness_probe.http_get.path points to —
+  // external requests to that path never reach the container. Give the probe
+  // its own path so /healthz stays reachable for CI/monitoring.
+  app.get("/internal/livez", (_req, res) => res.json({ ok: true }));
 
   app.use("/api/auth", authRoutes);
   app.use("/api", scoringRoutes);

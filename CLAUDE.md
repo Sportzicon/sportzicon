@@ -119,6 +119,18 @@ export function isAdmin(userRole: string): boolean {
 - If sport is set, position is required — enforce in both Zod schema and UI
 - Use `SportPositionSelect` component for all sport+position field pairs
 
+### 11. Security-First Checklist — Read Before Writing Any Code
+
+Full checklist lives in `SECURITY_RULES.md` at repo root. Before writing or
+editing a single line of code, run it against that checklist — secrets,
+rate limiting, input validation, auth/authz, SQL safety, CORS, security
+headers, file upload safety, error handling, dependency security, XSS,
+AI/LLM safety. That file also lists known unresolved gaps in this app
+(refresh token in localStorage, scoring API CORS wildcard, disabled CSP,
+in-process AI rate limiter, legacy upload endpoint) — do not reintroduce
+these patterns elsewhere, and fix them opportunistically when touching
+nearby code.
+
 ### 10. Demo Accounts for Testing
 
 ```

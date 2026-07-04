@@ -26,7 +26,7 @@ export default function Login() {
     setResendSent(false);
     try {
       const r = await authService.login({ email, password });
-      setSession({ user: r.user, accessToken: r.access_token, refreshToken: r.refresh_token });
+      setSession({ user: r.user, accessToken: r.access_token });
       navigate("/dashboard", { replace: true });
     } catch (e) {
       const apiErr = getApiError(e);

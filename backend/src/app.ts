@@ -1,5 +1,6 @@
 import express, { type Express } from "express";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 import helmet from "helmet";
 import pinoHttp from "pino-http";
 import { logger } from "./config/logger";
@@ -50,11 +51,12 @@ export function createApp(): Express {
     cors({
       origin(origin, cb) {
         // Allow same-origin/no-origin (curl, health probes) plus the configured allowlist.
+        // No wildcard bypass: cookies (credentials: true) can never be paired with "*".
         if (!origin) return cb(null, true);
-        if (corsOrigins.includes(origin) || corsOrigins.includes("*")) return cb(null, true);
+        if (corsOrigins.includes(origin)) return cb(null, true);
         cb(new Error(`CORS: origin ${origin} not allowed`));
       },
-      credentials: false,
+      credentials: true,
       methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
       allowedHeaders: ["Authorization", "Content-Type", "X-Request-Id"]
     })
@@ -65,6 +67,7 @@ export function createApp(): Express {
 
   app.use(express.json({ limit: "1mb" }));
   app.use(express.urlencoded({ extended: true, limit: "1mb" }));
+  app.use(cookieParser());
   app.use(requestId);
   app.use(
     pinoHttp({
@@ -77,6 +80,10 @@ export function createApp(): Express {
   // Liveness / readiness probes for Cloud Run + load balancers.
   app.get("/healthz", (_req, res) => res.json({ ok: true, service: "sportzicon-api", env: env.NODE_ENV }));
   app.get("/readyz", (_req, res) => res.json({ ok: true }));
+  // Cloud Run reserves whatever path liveness_probe.http_get.path points to —
+  // external requests to that path never reach the container. Give the probe
+  // its own path so /healthz stays reachable for CI/monitoring.
+  app.get("/internal/livez", (_req, res) => res.json({ ok: true }));
 
   app.use("/api/v1/auth", authRoutes);
   app.use("/api/v1/users", usersRoutes);
