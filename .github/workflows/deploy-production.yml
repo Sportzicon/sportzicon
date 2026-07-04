@@ -5,36 +5,22 @@ on:
     tags:
       - "v*"
 
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
 env:
+  GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
   GCP_REGION: asia-south1
   AR_IMAGE: asia-south1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/sportivox
 
 jobs:
-  build-and-deploy:
-    name: Build & Deploy to Production
+  migrate-main-db:
+    name: Migrate Main DB
     runs-on: ubuntu-latest
     environment: production
-    permissions:
-      contents: read
-      id-token: write
-
     steps:
       - uses: actions/checkout@v4
-
-      - name: Authenticate to Google Cloud
-        uses: google-github-actions/auth@v1
-        with:
-          workload_identity_provider: ${{ secrets.GOOGLE_PROVIDER_NAME }}
-          service_account: ${{ secrets.GOOGLE_SERVICE_ACCOUNT }}
-
-      - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@v1
-
-      - name: Configure Docker for Artifact Registry
-        run: gcloud auth configure-docker asia-south1-docker.pkg.dev --quiet
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -70,8 +56,6 @@ jobs:
               npx prisma migrate deploy
             elif echo "$OUTPUT" | grep -q "P3018\|P3009"; then
               echo "⚠️  P3018/P3009: failed migration in DB — rolling it back and retrying..."
-              # P3018 format: "Migration name: 20260627000000_foo"
-              # P3009 format: "The `20260627000000_foo` migration ... failed"
               FAILED=$(echo "$OUTPUT" | grep -oP "Migration name: \K\S+" | head -1)
               if [ -z "$FAILED" ]; then
                 FAILED=$(echo "$OUTPUT" | grep -oP "The \`\K[^\`]+" | head -1)
@@ -84,6 +68,20 @@ jobs:
             fi
           fi
           echo "✅ Main DB migrations complete"
+
+  migrate-scoring-db:
+    name: Migrate Scoring DB
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: scoring/backend/package-lock.json
 
       - name: Run scoring database migrations
         working-directory: scoring/backend
@@ -116,6 +114,31 @@ jobs:
           fi
           echo "✅ Scoring DB migrations complete"
 
+  build-api:
+    name: Build & Push API Image
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v1
+        with:
+          workload_identity_provider: ${{ secrets.GOOGLE_PROVIDER_NAME }}
+          service_account: ${{ secrets.GOOGLE_SERVICE_ACCOUNT }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker asia-south1-docker.pkg.dev --quiet
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: Build and push API image
         uses: docker/build-push-action@v5
         with:
@@ -123,9 +146,36 @@ jobs:
           file: ./backend/Dockerfile
           target: runtime
           push: true
+          cache-from: type=gha,scope=api-prod
+          cache-to: type=gha,mode=max,scope=api-prod
           tags: |
             ${{ env.AR_IMAGE }}/api:${{ github.ref_name }}
             ${{ env.AR_IMAGE }}/api:latest
+
+  build-web:
+    name: Build & Push Web Image
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v1
+        with:
+          workload_identity_provider: ${{ secrets.GOOGLE_PROVIDER_NAME }}
+          service_account: ${{ secrets.GOOGLE_SERVICE_ACCOUNT }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker asia-south1-docker.pkg.dev --quiet
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
       - name: Build and push Web image
         uses: docker/build-push-action@v5
@@ -134,12 +184,39 @@ jobs:
           file: ./frontend/Dockerfile
           target: runtime
           push: true
+          cache-from: type=gha,scope=web-prod
+          cache-to: type=gha,mode=max,scope=web-prod
           build-args: |
             VITE_API_BASE_URL=https://api.sportzicon.com
             VITE_SCORING_API_URL=https://scoring-api.sportzicon.com/api
           tags: |
             ${{ env.AR_IMAGE }}/web:${{ github.ref_name }}
             ${{ env.AR_IMAGE }}/web:latest
+
+  build-scoring-api:
+    name: Build & Push Scoring API Image
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v1
+        with:
+          workload_identity_provider: ${{ secrets.GOOGLE_PROVIDER_NAME }}
+          service_account: ${{ secrets.GOOGLE_SERVICE_ACCOUNT }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker asia-south1-docker.pkg.dev --quiet
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
       - name: Build and push Scoring API image
         uses: docker/build-push-action@v5
@@ -148,9 +225,37 @@ jobs:
           file: ./scoring/backend/Dockerfile
           target: runtime
           push: true
+          cache-from: type=gha,scope=scoring-api-prod
+          cache-to: type=gha,mode=max,scope=scoring-api-prod
           tags: |
             ${{ env.AR_IMAGE }}/scoring-api:${{ github.ref_name }}
             ${{ env.AR_IMAGE }}/scoring-api:latest
+
+  deploy:
+    name: Terraform Deploy
+    runs-on: ubuntu-latest
+    environment: production
+    needs:
+      - migrate-main-db
+      - migrate-scoring-db
+      - build-api
+      - build-web
+      - build-scoring-api
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v1
+        with:
+          workload_identity_provider: ${{ secrets.GOOGLE_PROVIDER_NAME }}
+          service_account: ${{ secrets.GOOGLE_SERVICE_ACCOUNT }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
 
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v2
@@ -185,6 +290,7 @@ jobs:
             -var="direct_url=${{ secrets.DIRECT_URL }}" \
             -var="scoring_database_url=${{ secrets.SCORING_DATABASE_URL }}" \
             -var="scoring_direct_url=${{ secrets.SCORING_DIRECT_URL }}" \
+            -var="resend_api_key=${{ secrets.RESEND_API_KEY }}" \
             'google_cloud_run_v2_service.scoring_api[0]' \
             "projects/${{ secrets.GCP_PROJECT_ID }}/locations/asia-south1/services/sportivox-scoring-api-prod" \
             2>&1 || true
@@ -211,6 +317,7 @@ jobs:
         run: |
           echo "api_url=$(terraform output -raw api_url 2>/dev/null || echo 'pending')" >> $GITHUB_OUTPUT
           echo "web_url=$(terraform output -raw web_url 2>/dev/null || echo 'pending')" >> $GITHUB_OUTPUT
+          echo "scoring_api_url=$(terraform output -raw scoring_api_url 2>/dev/null || echo 'pending')" >> $GITHUB_OUTPUT
 
       - name: Health check API
         run: |
