@@ -133,9 +133,6 @@ export default function App() {
       <Route element={<AdaptiveLayout />}>
         <Route path="/live-scores" element={<LiveScores />} />
         <Route path="/live-scores/:matchId" element={<LiveScoreDetail />} />
-      </Route>
-
-      <Route element={<Layout />}>
         <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
         <Route path="/profile/:id" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
         <Route path="/profile/edit" element={<ProtectedRoute><EditProfile /></ProtectedRoute>} />
