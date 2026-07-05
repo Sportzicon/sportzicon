@@ -20,10 +20,10 @@ max_instances_web = 2
 
 # API Configuration
 api_port                = 8080
-api_public_url          = "https://api.sportzicon.com"
-web_app_url             = "https://sportzicon.com"
-web_app_extra_origins   = ["https://www.sportzicon.com"]
-cors_origins            = "https://sportzicon.com,https://www.sportzicon.com"
+api_public_url          = "https://staging-api.sportzicon.com"
+web_app_url             = "https://staging.sportzicon.com"
+web_app_extra_origins   = ["https://www.staging.sportzicon.com"]
+cors_origins            = "https://staging.sportzicon.com,https://www.staging.sportzicon.com"
 
 # Rate limiting (staging - more relaxed)
 rate_limit_window_ms    = 900000
@@ -46,8 +46,8 @@ redis_url                = "" # e.g. Upstash "rediss://default:PASSWORD@HOST:POR
 
 # Scoring API — built and deployed on every push to main
 scoring_api_image          = "asia-south1-docker.pkg.dev/sportzicon-app/sportivox/scoring-api:latest"
-scoring_api_custom_domain  = "scoring-api.sportzicon.com"
-scoring_cors_origin        = "https://sportzicon.com,https://www.sportzicon.com"
+scoring_api_custom_domain  = "staging-scoring-api.sportzicon.com"
+scoring_cors_origin        = "https://staging.sportzicon.com,https://www.staging.sportzicon.com"
 optional_scoring_secrets   = []
 
 # GCP Terraform state bucket
