@@ -1,116 +1,24 @@
-import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { prisma } from "../../config/prisma";
-import { BadRequest, NotFound, Unauthorized } from "../../utils/errors";
+import { Unauthorized } from "../../utils/errors";
 
-const JWT_SECRET = process.env.JWT_SECRET || "";
+const JWT_SECRET      = process.env.JWT_SECRET || "";
 const MAIN_JWT_SECRET = process.env.MAIN_JWT_SECRET || "";
 const ACCESS_TTL = "15m";
-const REFRESH_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
 if (!JWT_SECRET) throw new Error("JWT_SECRET environment variable is required");
 
-function signAccess(user: { id: string; role: string; email: string }) {
-  return jwt.sign({ sub: user.id, role: user.role, email: user.email }, JWT_SECRET, { expiresIn: ACCESS_TTL });
+function signAccess(user: { id: string; role: string; email: string; name: string }) {
+  return jwt.sign(
+    { sub: user.id, role: user.role, email: user.email, name: user.name },
+    JWT_SECRET,
+    { expiresIn: ACCESS_TTL }
+  );
 }
 
-function signRefresh(userId: string): string {
-  return jwt.sign({ sub: userId, type: "refresh" }, JWT_SECRET, { expiresIn: "30d" });
-}
-
-export async function signup(input: { email: string; password: string; full_name: string; role?: string }) {
-  const existing = await prisma.user.findUnique({ where: { email: input.email.toLowerCase() } });
-  if (existing) throw BadRequest("Email already in use");
-
-  const hash = await bcrypt.hash(input.password, 12);
-  const user = await prisma.user.create({
-    data: {
-      email: input.email.toLowerCase(),
-      password_hash: hash,
-      full_name: input.full_name,
-      role: (input.role as any) ?? "viewer"
-    }
-  });
-
-  const access_token = signAccess(user);
-  const refresh_raw = signRefresh(user.id);
-  await prisma.refreshToken.create({
-    data: {
-      user_id: user.id,
-      token: refresh_raw,
-      expires_at: new Date(Date.now() + REFRESH_TTL_MS)
-    }
-  });
-
-  return {
-    user: { id: user.id, email: user.email, full_name: user.full_name, role: user.role },
-    access_token,
-    refresh_token: refresh_raw
-  };
-}
-
-export async function login(email: string, password: string) {
-  const user = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
-  if (!user || !user.password_hash) throw Unauthorized("Invalid credentials");
-
-  const ok = await bcrypt.compare(password, user.password_hash);
-  if (!ok) throw Unauthorized("Invalid credentials");
-
-  const access_token = signAccess(user);
-  const refresh_raw = signRefresh(user.id);
-  await prisma.refreshToken.create({
-    data: {
-      user_id: user.id,
-      token: refresh_raw,
-      expires_at: new Date(Date.now() + REFRESH_TTL_MS)
-    }
-  });
-
-  return {
-    user: { id: user.id, email: user.email, full_name: user.full_name, role: user.role, avatar_url: user.avatar_url },
-    access_token,
-    refresh_token: refresh_raw
-  };
-}
-
-export async function refresh(token: string) {
-  const stored = await prisma.refreshToken.findUnique({ where: { token } });
-  if (!stored || stored.revoked || stored.expires_at < new Date()) throw Unauthorized("Invalid refresh token");
-
-  const user = await prisma.user.findUnique({ where: { id: stored.user_id } });
-  if (!user) throw Unauthorized("User not found");
-
-  const access_token = signAccess(user);
-  const refresh_raw = signRefresh(user.id);
-
-  await prisma.$transaction([
-    prisma.refreshToken.update({ where: { id: stored.id }, data: { revoked: true } }),
-    prisma.refreshToken.create({
-      data: {
-        user_id: user.id,
-        token: refresh_raw,
-        expires_at: new Date(Date.now() + REFRESH_TTL_MS)
-      }
-    })
-  ]);
-
-  return { access_token, refresh_token: refresh_raw };
-}
-
-export async function logout(token: string) {
-  await prisma.refreshToken.updateMany({ where: { token }, data: { revoked: true } });
-  return { ok: true };
-}
-
-// Maps Sportivox main-app roles to scoring module roles
-function mapRole(mainRole: string): "admin" | "organizer" | "scorer" | "viewer" {
-  if (mainRole === "admin") return "admin";
-  if (mainRole === "organizer") return "organizer";
-  if (mainRole === "scorer") return "scorer";
-  return "viewer";
-}
-
-export async function ssoFromMainToken(mainToken: string) {
+// Exchanges a valid main Sportivox access token for a scoring-scoped JWT.
+// Stateless: no DB row is created or read. `sub` on the returned token is
+// the same main User.id — every scoring table FKs straight to it.
+export function ssoFromMainToken(mainToken: string) {
   if (!MAIN_JWT_SECRET) throw Unauthorized("SSO not configured");
 
   let claims: any;
@@ -121,44 +29,16 @@ export async function ssoFromMainToken(mainToken: string) {
   }
 
   if (claims.type !== "access") throw Unauthorized("Invalid token type");
-  if (!claims.email) throw Unauthorized("Token missing email claim");
+  if (!claims.email || !claims.sub) throw Unauthorized("Token missing required claims");
 
-  const email = claims.email.toLowerCase();
-  const fullName = claims.name ?? email;
-  const role = mapRole(claims.role ?? "");
-
-  // Find or create a scoring user for this email
-  let user = await prisma.user.findUnique({ where: { email } });
-  if (user) {
-    // Sync role if it changed in the main app
-    if (user.role !== role) {
-      user = await prisma.user.update({ where: { id: user.id }, data: { role } });
-    }
-  } else {
-    // Create a scoring user — no password needed (SSO only)
-    user = await prisma.user.create({
-      data: {
-        email,
-        password_hash: "",
-        full_name: fullName,
-        role
-      }
-    });
-  }
-
-  const access_token = signAccess(user);
-  const refresh_raw = signRefresh(user.id);
-  await prisma.refreshToken.create({
-    data: {
-      user_id: user.id,
-      token: refresh_raw,
-      expires_at: new Date(Date.now() + REFRESH_TTL_MS)
-    }
-  });
-
-  return {
-    user: { id: user.id, email: user.email, full_name: user.full_name, role: user.role },
-    access_token,
-    refresh_token: refresh_raw
+  const user = {
+    id: claims.sub as string,
+    email: (claims.email as string).toLowerCase(),
+    full_name: (claims.name as string) ?? claims.email,
+    role: (claims.role as string) ?? "athlete",
   };
+
+  const access_token = signAccess({ id: user.id, role: user.role, email: user.email, name: user.full_name });
+
+  return { user, access_token };
 }
