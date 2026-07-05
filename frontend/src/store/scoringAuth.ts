@@ -13,9 +13,7 @@ import type { User } from "../models";
 interface ScoringAuthState {
   scoringUser:  User | null;
   accessToken:  string | null;
-  refreshToken: string | null;
-  setSession:   (user: User, accessToken: string, refreshToken: string) => void;
-  setTokens:    (accessToken: string, refreshToken: string) => void;
+  setSession:   (user: User, accessToken: string) => void;
   clear:        () => void;
 }
 
@@ -24,13 +22,10 @@ export const useScoringAuthStore = create<ScoringAuthState>()(
     (set) => ({
       scoringUser:  null,
       accessToken:  null,
-      refreshToken: null,
-      setSession:   (scoringUser, accessToken, refreshToken) =>
-        set({ scoringUser, accessToken, refreshToken }),
-      setTokens:    (accessToken, refreshToken) =>
-        set({ accessToken, refreshToken }),
+      setSession:   (scoringUser, accessToken) =>
+        set({ scoringUser, accessToken }),
       clear: () =>
-        set({ scoringUser: null, accessToken: null, refreshToken: null }),
+        set({ scoringUser: null, accessToken: null }),
     }),
     { name: "scoring-auth" }
   )
