@@ -2,8 +2,7 @@ name: Deploy to Production
 
 on:
   push:
-    tags:
-      - "v*"
+    branches: [master]
 
 concurrency:
   group: deploy-production
@@ -15,6 +14,28 @@ env:
   AR_IMAGE: asia-south1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/sportivox
 
 jobs:
+  version:
+    name: Compute Version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.bump.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Compute next patch version
+        id: bump
+        run: |
+          LATEST=$(git tag -l "v*" --sort=-v:refname | head -1)
+          if [ -z "$LATEST" ]; then
+            NEXT="v0.1.0"
+          else
+            NEXT=$(echo "$LATEST" | awk -F. '{OFS="."; $NF+=1; print}')
+          fi
+          echo "version=$NEXT" >> "$GITHUB_OUTPUT"
+          echo "Next version: $NEXT"
+
   migrate-main-db:
     name: Migrate Main DB
     runs-on: ubuntu-latest
@@ -118,6 +139,7 @@ jobs:
     name: Build & Push API Image
     runs-on: ubuntu-latest
     environment: production
+    needs: version
     permissions:
       contents: read
       id-token: write
@@ -149,13 +171,14 @@ jobs:
           cache-from: type=gha,scope=api-prod
           cache-to: type=gha,mode=max,scope=api-prod
           tags: |
-            ${{ env.AR_IMAGE }}/api:${{ github.ref_name }}
+            ${{ env.AR_IMAGE }}/api:${{ needs.version.outputs.version }}
             ${{ env.AR_IMAGE }}/api:latest
 
   build-web:
     name: Build & Push Web Image
     runs-on: ubuntu-latest
     environment: production
+    needs: version
     permissions:
       contents: read
       id-token: write
@@ -190,13 +213,14 @@ jobs:
             VITE_API_BASE_URL=https://api.sportzicon.com
             VITE_SCORING_API_URL=https://scoring-api.sportzicon.com/api
           tags: |
-            ${{ env.AR_IMAGE }}/web:${{ github.ref_name }}
+            ${{ env.AR_IMAGE }}/web:${{ needs.version.outputs.version }}
             ${{ env.AR_IMAGE }}/web:latest
 
   build-scoring-api:
     name: Build & Push Scoring API Image
     runs-on: ubuntu-latest
     environment: production
+    needs: version
     permissions:
       contents: read
       id-token: write
@@ -228,19 +252,31 @@ jobs:
           cache-from: type=gha,scope=scoring-api-prod
           cache-to: type=gha,mode=max,scope=scoring-api-prod
           tags: |
-            ${{ env.AR_IMAGE }}/scoring-api:${{ github.ref_name }}
+            ${{ env.AR_IMAGE }}/scoring-api:${{ needs.version.outputs.version }}
             ${{ env.AR_IMAGE }}/scoring-api:latest
+
+  approve-deploy:
+    name: Approve Production Deploy
+    runs-on: ubuntu-latest
+    environment: production-approval
+    needs:
+      - version
+      - migrate-main-db
+      - migrate-scoring-db
+      - build-api
+      - build-web
+      - build-scoring-api
+    steps:
+      - name: Awaiting manual approval
+        run: echo "Approved — deploying ${{ needs.version.outputs.version }} to production"
 
   deploy:
     name: Terraform Deploy
     runs-on: ubuntu-latest
     environment: production
     needs:
-      - migrate-main-db
-      - migrate-scoring-db
-      - build-api
-      - build-web
-      - build-scoring-api
+      - version
+      - approve-deploy
     permissions:
       contents: write
       id-token: write
@@ -273,9 +309,9 @@ jobs:
       - name: Update Terraform image variables
         working-directory: infra/terraform
         run: |
-          sed -i "s|api_image = .*|api_image = \"${{ env.AR_IMAGE }}/api:${{ github.ref_name }}\"|g" terraform.tfvars.prod.example
-          sed -i "s|web_image = .*|web_image = \"${{ env.AR_IMAGE }}/web:${{ github.ref_name }}\"|g" terraform.tfvars.prod.example
-          sed -i "s|scoring_api_image = .*|scoring_api_image = \"${{ env.AR_IMAGE }}/scoring-api:${{ github.ref_name }}\"|g" terraform.tfvars.prod.example
+          sed -i "s|api_image = .*|api_image = \"${{ env.AR_IMAGE }}/api:${{ needs.version.outputs.version }}\"|g" terraform.tfvars.prod.example
+          sed -i "s|web_image = .*|web_image = \"${{ env.AR_IMAGE }}/web:${{ needs.version.outputs.version }}\"|g" terraform.tfvars.prod.example
+          sed -i "s|scoring_api_image = .*|scoring_api_image = \"${{ env.AR_IMAGE }}/scoring-api:${{ needs.version.outputs.version }}\"|g" terraform.tfvars.prod.example
           cp terraform.tfvars.prod.example terraform.tfvars.prod
 
       - name: Import existing scoring Cloud Run service into Terraform state
@@ -356,17 +392,17 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ github.ref_name }}
-          release_name: Release ${{ github.ref_name }}
+          tag_name: ${{ needs.version.outputs.version }}
+          release_name: Release ${{ needs.version.outputs.version }}
           body: |
             ## Production Deployment
 
-            **Version:** ${{ github.ref_name }}
+            **Version:** ${{ needs.version.outputs.version }}
             **Commit:** ${{ github.sha }}
 
             **Images:**
-            - API: `${{ env.AR_IMAGE }}/api:${{ github.ref_name }}`
-            - Web: `${{ env.AR_IMAGE }}/web:${{ github.ref_name }}`
+            - API: `${{ env.AR_IMAGE }}/api:${{ needs.version.outputs.version }}`
+            - Web: `${{ env.AR_IMAGE }}/web:${{ needs.version.outputs.version }}`
 
             **Deployment:**
             - API URL: ${{ steps.outputs.outputs.api_url }}
