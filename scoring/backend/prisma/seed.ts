@@ -25,12 +25,15 @@ async function main() {
   const adminEmail = "admin@sportzicon.local";
   let admin = await prisma.user.findUnique({ where: { email: adminEmail } });
   if (!admin) {
+    const hash = await bcrypt.hash("Admin@1234", 12);
     admin = await prisma.user.create({
       data: {
         email: adminEmail,
-        password_hash: await bcrypt.hash("Admin@1234", 10),
+        email_lower: adminEmail,
+        password_hash: hash,
         full_name: "Scoring Admin",
-        role: "admin"
+        full_name_lower: "scoring admin",
+        role: "scorer"
       }
     });
     console.log("  ✔ Admin user created:", adminEmail, "/ Admin@1234");
