@@ -8,7 +8,7 @@ import { uploadToGCS } from "../../../hooks/useUpload";
 import { PageHeader, SectionHead } from "../../../components/UI";
 import { BackButton } from "../../../components/BackButton";
 import { SportPositionSelect } from "../../../components/SportPositionSelect";
-import { Camera, Plus, X } from "lucide-react";
+import { Camera, Plus, X, ChevronUp, ChevronDown } from "lucide-react";
 import { COUNTRIES, statesForCountry } from "../../../data/geo";
 
 export default function EditProfile() {
@@ -53,6 +53,33 @@ export default function EditProfile() {
     ).filter(Boolean);
   });
   const [newAchievement, setNewAchievement] = useState("");
+
+  // Career history — the field the Career timeline on the profile page actually reads
+  const [careerHistory, setCareerHistory] = useState<
+    { club: string; from: string; to: string; current: boolean }[]
+  >(() =>
+    (user?.athlete?.career_history ?? []).map((h: any) => ({
+      club: h.club ?? "",
+      from: h.from ?? "",
+      to: h.to ?? "",
+      current: !!h.current,
+    }))
+  );
+
+  function moveCareerEntry(idx: number, dir: -1 | 1) {
+    const j = idx + dir;
+    if (j < 0 || j >= careerHistory.length) return;
+    const next = [...careerHistory];
+    [next[idx], next[j]] = [next[j], next[idx]];
+    setCareerHistory(next);
+  }
+
+  const duplicateClubIdx = new Set(
+    careerHistory
+      .map((h, i) => ({ i, club: h.club.trim().toLowerCase() }))
+      .filter(({ i, club }) => club && careerHistory.some((h2, j) => j !== i && h2.club.trim().toLowerCase() === club))
+      .map(({ i }) => i)
+  );
 
   const [profilePhoto, setProfilePhoto] = useState<string | undefined>(user?.profile_photo_url);
   const [coverPhoto, setCoverPhoto] = useState<string | undefined>(user?.cover_photo_url);
@@ -125,6 +152,14 @@ export default function EditProfile() {
         if (sport) athPayload.primary_sport = sport;
         if (position) athPayload.position = position;
         athPayload.achievements = achievements;
+        athPayload.career_history = careerHistory
+          .filter((h) => h.club.trim())
+          .map((h) => ({
+            club: h.club.trim(),
+            from: h.from || undefined,
+            to: h.current ? null : h.to || undefined,
+            current: h.current,
+          }));
         // Remove empty/falsy optional fields
         Object.keys(athPayload).forEach((k) => {
           const v = athPayload[k];
@@ -144,7 +179,6 @@ export default function EditProfile() {
       // Invalidate cache — do NOT reset form (show saved values)
       qc.invalidateQueries({ queryKey: queryKeys.user(user!.id) });
       setSaved(true);
-      window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (e) {
       const apiErr = getApiError(e);
       if (apiErr.details?.fieldErrors) {
@@ -165,14 +199,6 @@ export default function EditProfile() {
         subtitle="Update your public profile"
         sticky
       />
-
-      {/* Success banner */}
-      {saved && (
-        <div className="mb-4 flex items-center gap-2 rounded border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-          <span>✓</span>
-          <span>Profile saved successfully.</span>
-        </div>
-      )}
 
       {/* ── Section 01: Photos ── */}
       <section className="mb-8">
@@ -504,10 +530,114 @@ export default function EditProfile() {
         </section>
       )}
 
+      {/* ── Section 03b: Career timeline (previous clubs/teams) ── */}
+      {isAthlete && (
+        <section className="mb-8">
+          <SectionHead n="04" title="Career timeline" sub="Past clubs & teams, most recent first (max 20)" />
+          <div className="card card-body space-y-3">
+            {careerHistory.map((h, idx) => (
+              <div key={idx} className="rounded border border-hairsoft p-3 space-y-2">
+                <div className="flex gap-2 items-center">
+                  <div className="flex flex-col flex-shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => moveCareerEntry(idx, -1)}
+                      disabled={idx === 0}
+                      className="rounded-t border border-hairsoft bg-paper text-ink-sub hover:text-brand-600 hover:border-brand-300 transition h-[22px] min-w-[36px] flex items-center justify-center disabled:opacity-30 disabled:hover:text-ink-sub disabled:hover:border-hairsoft"
+                      title="Move up"
+                    >
+                      <ChevronUp className="h-4 w-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => moveCareerEntry(idx, 1)}
+                      disabled={idx === careerHistory.length - 1}
+                      className="rounded-b border border-t-0 border-hairsoft bg-paper text-ink-sub hover:text-brand-600 hover:border-brand-300 transition h-[22px] min-w-[36px] flex items-center justify-center disabled:opacity-30 disabled:hover:text-ink-sub disabled:hover:border-hairsoft"
+                      title="Move down"
+                    >
+                      <ChevronDown className="h-4 w-4" />
+                    </button>
+                  </div>
+                  <input
+                    className={`input flex-1 min-h-[44px] ${duplicateClubIdx.has(idx) ? "border-red-400" : ""}`}
+                    value={h.club}
+                    maxLength={120}
+                    placeholder="Club / team"
+                    onChange={(e) => {
+                      const next = [...careerHistory];
+                      next[idx] = { ...next[idx], club: e.target.value };
+                      setCareerHistory(next);
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setCareerHistory(careerHistory.filter((_, i) => i !== idx))}
+                    className="flex-shrink-0 rounded border border-hairsoft bg-paper p-2 text-ink-sub hover:text-red-500 hover:border-red-300 transition min-h-[44px] min-w-[44px] flex items-center justify-center"
+                    title="Remove"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+                {duplicateClubIdx.has(idx) && (
+                  <p className="text-xs text-red-500">Already added below — merge or rename to avoid a duplicate entry.</p>
+                )}
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    type="month"
+                    className="input min-h-[44px]"
+                    value={h.from}
+                    onChange={(e) => {
+                      const next = [...careerHistory];
+                      next[idx] = { ...next[idx], from: e.target.value };
+                      setCareerHistory(next);
+                    }}
+                  />
+                  <input
+                    type="month"
+                    className="input min-h-[44px]"
+                    value={h.to}
+                    disabled={h.current}
+                    placeholder="Present"
+                    onChange={(e) => {
+                      const next = [...careerHistory];
+                      next[idx] = { ...next[idx], to: e.target.value };
+                      setCareerHistory(next);
+                    }}
+                  />
+                </div>
+                <label className="flex items-center gap-2 text-sm text-ink-70 cursor-pointer min-h-[44px]">
+                  <input
+                    type="checkbox"
+                    className="accent-brand-500 h-4 w-4"
+                    checked={h.current}
+                    onChange={(e) => {
+                      const next = [...careerHistory];
+                      next[idx] = { ...next[idx], current: e.target.checked, to: e.target.checked ? "" : next[idx].to };
+                      setCareerHistory(next);
+                    }}
+                  />
+                  Currently playing here
+                </label>
+              </div>
+            ))}
+            {careerHistory.length < 20 && (
+              <button
+                type="button"
+                onClick={() => setCareerHistory([...careerHistory, { club: "", from: "", to: "", current: false }])}
+                className="w-full flex items-center justify-center gap-2 rounded border border-dashed border-hairsoft p-2 text-sm text-ink-sub hover:border-brand-500 hover:text-brand-600 transition min-h-[44px]"
+              >
+                <Plus className="h-4 w-4" /> Add a club / team
+              </button>
+            )}
+            <p className="text-xs text-ink-faint">{careerHistory.length}/20 items.</p>
+          </div>
+        </section>
+      )}
+
       {/* ── Section 04: Career Summary ── */}
       {isAthlete && (
         <section className="mb-8">
-          <SectionHead n="04" title="Career Summary" sub="Overview of your career" />
+          <SectionHead n="05" title="Career Summary" sub="Overview of your career" />
           <div className="card card-body">
             <textarea
               className="input w-full"
@@ -525,7 +655,7 @@ export default function EditProfile() {
       {/* ── Section 05: Achievements ── */}
       {isAthlete && (
         <section className="mb-8">
-          <SectionHead n="05" title="Achievements" sub="Awards, titles & records (max 20)" />
+          <SectionHead n="06" title="Achievements" sub="Awards, titles & records (max 20)" />
           <div className="card card-body space-y-3">
             {achievements.map((ach, idx) => (
               <div key={idx} className="flex gap-2 items-center">
@@ -603,6 +733,14 @@ export default function EditProfile() {
         </div>
       )}
 
+      {/* Success banner — anchored next to the save action, not the page top */}
+      {saved && (
+        <div className="mb-4 flex items-center gap-2 rounded border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+          <span>✓</span>
+          <span>Profile saved successfully.</span>
+        </div>
+      )}
+
       {/* Desktop save row */}
       <div className="hidden lg:flex justify-end gap-2.5 border-t border-hair pt-5">
         <button type="button" className="btn-secondary" onClick={() => navigate(`/profile/${user.id}`)}>
@@ -614,17 +752,25 @@ export default function EditProfile() {
       </div>
 
       {/* Mobile sticky bottom save bar */}
-      <div className="fixed bottom-[calc(56px+env(safe-area-inset-bottom))] left-0 right-0 z-40 lg:hidden bg-paper border-t border-hair px-4 py-3 flex gap-2">
-        <button
-          type="button"
-          className="btn-secondary flex-1 min-h-[44px]"
-          onClick={() => navigate(`/profile/${user.id}`)}
-        >
-          Cancel
-        </button>
-        <button className="btn-accent flex-1 min-h-[44px]" disabled={busy}>
-          {busy ? "Saving…" : "✓ Save"}
-        </button>
+      <div className="fixed bottom-[calc(56px+env(safe-area-inset-bottom))] left-0 right-0 z-40 lg:hidden bg-paper border-t border-hair px-4 py-3 flex flex-col gap-2">
+        {saved && (
+          <div className="flex items-center gap-2 rounded border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
+            <span>✓</span>
+            <span>Profile saved successfully.</span>
+          </div>
+        )}
+        <div className="flex gap-2">
+          <button
+            type="button"
+            className="btn-secondary flex-1 min-h-[44px]"
+            onClick={() => navigate(`/profile/${user.id}`)}
+          >
+            Cancel
+          </button>
+          <button className="btn-accent flex-1 min-h-[44px]" disabled={busy}>
+            {busy ? "Saving…" : "✓ Save"}
+          </button>
+        </div>
       </div>
     </form>
   );

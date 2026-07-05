@@ -85,6 +85,17 @@ export const athleteFieldsSchema = z
       .array(z.object({ team: z.string().max(120), years: z.string().max(20) }))
       .max(20)
       .optional(),
+    career_history: z
+      .array(
+        z.object({
+          club: z.string().max(120),
+          from: z.string().max(20).optional(),
+          to: z.string().max(20).nullable().optional(),
+          current: z.boolean().optional(),
+        })
+      )
+      .max(20)
+      .optional(),
     achievements: z.array(z.string().max(200)).max(20).optional(),
     stats: z.record(z.string(), z.union([z.string(), z.number()])).optional(),
     cv_url: z.string().url().optional(),
