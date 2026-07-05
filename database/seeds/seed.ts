@@ -157,7 +157,7 @@ async function makeOpportunity(
       city: org.city ?? "",
       start_date: input.start_date,
       end_date: input.end_date,
-      application_deadline: input.application_deadline,
+      application_deadline: new Date(input.application_deadline),
       vacancies: input.vacancies,
       vacancies_filled: input.vacancies_filled ?? 0,
       contact_email: org.contact_email,
@@ -225,7 +225,6 @@ async function makeReel(author: { id: string }, caption: string, sport: string, 
       video_url: SAMPLE,
       sport,
       duration_seconds: Math.floor(Math.random() * 40) + 10,
-      view_count: Math.floor(Math.random() * 900) + 80,
       like_count: likeCount,
       comment_count: Math.floor(Math.random() * 18)
     }
@@ -246,7 +245,6 @@ async function makeBlog(author: { id: string }, title: string, sport: string, ta
       status: "published",
       like_count: Math.floor(Math.random() * 80) + 10,
       comment_count: Math.floor(Math.random() * 14),
-      view_count: Math.floor(Math.random() * 600) + 60,
       published_at: new Date()
     }
   });
@@ -301,8 +299,8 @@ async function main() {
     verification_status: "approved",
     verification_badges: ["verified_player", "verified_stats", "coach_endorsed"],
     athlete_data: {
-      primary_sport: "Cricket",
-      position: "All-rounder",
+      primary_sport: "cricket",
+      position: "Batting All-rounder",
       batting_style: "Right-hand bat",
       bowling_style: "Right-arm off-break",
       experience_level: "semi_pro",
@@ -339,7 +337,7 @@ async function main() {
     verification_status: "approved",
     verification_badges: ["verified_player"],
     athlete_data: {
-      primary_sport: "Cricket", position: "Fast Bowler", bowling_style: "Right-arm fast",
+      primary_sport: "cricket", position: "Right-arm Fast Bowler", bowling_style: "Right-arm fast",
       experience_level: "semi_pro", height_cm: 186, weight_kg: 80,
       availability: "open_to_offers", looking_for_club: true,
       stats: { matches: 98, wickets: 204, economy: 4.9, bowl_avg: 19.2, best_figures: "6/18" }
@@ -354,7 +352,7 @@ async function main() {
     country: "India", state: "Delhi", city: "Delhi",
     dob: "2005-09-01", gender: "male",
     athlete_data: {
-      primary_sport: "Cricket", position: "Opener", batting_style: "Right-hand bat",
+      primary_sport: "cricket", position: "Right-hand Batsman", batting_style: "Right-hand bat",
       experience_level: "amateur", height_cm: 174, weight_kg: 68,
       availability: "available", looking_for_club: true,
       stats: { matches: 45, runs: 1820, bat_avg: 32.4, strike_rate: 142.0, highest_score: 167 }
@@ -371,7 +369,7 @@ async function main() {
     verification_status: "approved",
     verification_badges: ["verified_player", "verified_stats"],
     athlete_data: {
-      primary_sport: "Cricket", position: "Wicket-keeper", batting_style: "Right-hand bat",
+      primary_sport: "cricket", position: "Wicket-keeper Batsman", batting_style: "Right-hand bat",
       experience_level: "professional", height_cm: 172, weight_kg: 70,
       availability: "available", looking_for_club: false,
       stats: { matches: 124, dismissals: 188, runs: 2840, bat_avg: 29.1 }
@@ -388,7 +386,7 @@ async function main() {
     verification_status: "approved",
     verification_badges: ["verified_player"],
     athlete_data: {
-      primary_sport: "Cricket", position: "Middle order", batting_style: "Right-hand bat",
+      primary_sport: "cricket", position: "Right-hand Batsman", batting_style: "Right-hand bat",
       experience_level: "semi_pro", height_cm: 178, weight_kg: 74,
       availability: "open_to_offers", looking_for_club: true,
       stats: { matches: 139, runs: 5620, bat_avg: 44.1, hundreds: 18, fifties: 31 }
@@ -405,7 +403,7 @@ async function main() {
     verification_status: "approved",
     verification_badges: ["verified_player"],
     athlete_data: {
-      primary_sport: "Football", position: "Winger",
+      primary_sport: "football", position: "Right Winger",
       experience_level: "semi_pro", height_cm: 170, weight_kg: 65,
       availability: "open_to_offers", looking_for_club: true,
       stats: { matches: 68, goals: 34, assists: 22 }
@@ -422,7 +420,7 @@ async function main() {
     verification_status: "approved",
     verification_badges: ["verified_player"],
     athlete_data: {
-      primary_sport: "Football", position: "Goalkeeper",
+      primary_sport: "football", position: "Goalkeeper",
       experience_level: "semi_pro", height_cm: 175, weight_kg: 67,
       availability: "available", looking_for_club: false,
       stats: { matches: 82, clean_sheets: 41, saves: 234 }
@@ -439,7 +437,7 @@ async function main() {
     verification_status: "approved",
     verification_badges: ["verified_player", "verified_stats"],
     athlete_data: {
-      primary_sport: "Athletics", position: "100m / 200m Sprinter",
+      primary_sport: "athletics", position: "100m",
       experience_level: "professional", height_cm: 166, weight_kg: 55,
       availability: "open_to_offers", looking_for_club: false,
       stats: { "100m_pb": "11.42", "200m_pb": "23.18", competitions: 38, medals: 11 },
@@ -669,7 +667,7 @@ async function main() {
     country: "India", state: "Maharashtra", city: "Nagpur",
     dob: "1993-08-14", gender: "male",
     athlete_data: {
-      primary_sport: "Cricket", position: "All-rounder",
+      primary_sport: "cricket", position: "Batting All-rounder",
       experience_level: "amateur", availability: "open_to_offers", looking_for_club: true,
       stats: { matches: 62, runs: 1480, bat_avg: 26.0, wickets: 60 }
     }

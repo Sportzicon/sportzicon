@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { api } from "../../../api/client";
-import { PageHeader, Spinner } from "../../../components/UI";
+import { api, humanizeError } from "../../../api/client";
+import { PageHeader, Spinner, EmptyState } from "../../../components/UI";
 import { queryKeys } from "../../../hooks/queryKeys";
 import { Users, Building2, Briefcase, FileText, AlertTriangle, ShieldCheck, ClipboardList, Activity } from "lucide-react";
 
@@ -28,6 +28,12 @@ export default function Admin() {
 
       {q.isLoading ? (
         <div className="flex justify-center py-8"><Spinner /></div>
+      ) : q.isError ? (
+        <EmptyState
+          title="Couldn't load stats"
+          hint={humanizeError(q.error)}
+          action={<button className="btn btn-sm" onClick={() => q.refetch()}>Retry</button>}
+        />
       ) : (
         <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
           <StatCard label="Users" value={q.data?.users} />

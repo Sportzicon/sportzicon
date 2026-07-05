@@ -3,6 +3,7 @@ import { BadRequest, Conflict, Forbidden, NotFound } from "../../utils/errors";
 import { omitSensitive } from "../../utils/user";
 import { validateAthleteSportProfile } from "./sportProfile";
 import { cacheGet, cacheSet, cacheDel } from "../../config/redis";
+import { fetchScorecardPreview } from "./scorecardLinkPreview";
 
 export async function getUserById(id: string) {
   const key = `user:profile:${id}`;
@@ -60,7 +61,8 @@ export async function updateProfile(userId: string, patch: Record<string, unknow
 export async function updateAthleteFields(userId: string, fields: Record<string, unknown>) {
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) throw NotFound("User not found");
-  if (user.role !== "athlete") throw Forbidden("Only athletes can update athlete fields");
+  if (user.role !== "athlete" && user.role !== "admin")
+    throw Forbidden("Only athletes can update athlete fields");
 
   const existing = (user.athlete_data as Record<string, unknown>) ?? {};
   const merged = { ...existing, ...fields };
@@ -77,7 +79,7 @@ export async function updateAthleteFields(userId: string, fields: Record<string,
 export async function updateCoachFields(userId: string, fields: Record<string, unknown>) {
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) throw NotFound("User not found");
-  if (user.role !== "scout" && user.role !== "organizer")
+  if (user.role !== "scout" && user.role !== "organizer" && user.role !== "admin")
     throw Forbidden("Only scouts/organizers can update coach fields");
 
   const existing = (user.coach_data as Record<string, unknown>) ?? {};
@@ -87,4 +89,8 @@ export async function updateCoachFields(userId: string, fields: Record<string, u
   });
   await cacheDel(`user:profile:${userId}`);
   return omitSensitive(updated);
+}
+
+export async function getScorecardLinkPreview(url: string) {
+  return fetchScorecardPreview(url);
 }

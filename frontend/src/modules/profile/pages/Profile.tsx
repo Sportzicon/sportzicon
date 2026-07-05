@@ -7,11 +7,18 @@ import { uploadToGCS } from "../../../hooks/useUpload";
 import { scoringApi } from "../../../api/scoringClient";
 import { useAuthStore } from "../../../store/auth";
 import { isAdmin } from "../../../utils/roles";
-import { Spinner, VerifiedBadge, Avatar, SectionHead, Kicker, StatCard, Placeholder, Badge, StatusPill } from "../../../components/UI";
+import { Spinner, VerifiedBadge, Avatar, SectionHead, Kicker, Badge, StatusPill } from "../../../components/UI";
 import { BackButton } from "../../../components/BackButton";
-import type { Post, User } from "../../../types";
+import type { User } from "../../../types";
+import type { ScorecardLink, Tournament } from "../../../models";
 import { useSavedOpportunities } from "../../../store/savedOpportunities";
-import { Bookmark, Camera, FileText, Trash2, Upload, X } from "lucide-react";
+import { Bookmark, Camera, FileText, Trash2, Trophy, Upload, X } from "lucide-react";
+import { TileGrid } from "../components/TileGrid";
+import { AddTournamentDrawer } from "../components/AddTournamentDrawer";
+import { AddScorecardLinkDrawer } from "../components/AddScorecardLinkDrawer";
+import { useTournaments } from "../hooks/useTournaments";
+import { useScorecardLinkPreview, useUpdateScorecardLinks } from "../hooks/useScorecardLinks";
+import { ProfileFeedTab } from "../components/ProfileFeedTab";
 
 // ── Cricbuzz-style cricket stats table ───────────────────────────────────────
 function CricketStatRow({ label, values }: { label: string; values: (string | number)[] }) {
@@ -144,7 +151,8 @@ function CricketStatsSection({ userId, sport }: { userId: string; sport?: string
   );
 }
 
-type Tab = "posts" | "followers" | "following" | "saved" | "emails";
+type Tab = "followers" | "following" | "saved" | "emails";
+type ProfileView = "overview" | "feed";
 
 const PROFILE_DOC_TYPES = [
   "Sports CV",
@@ -160,16 +168,6 @@ const PROFILE_DOC_TYPES = [
   "Passport Copy",
   "Other",
 ];
-
-function SpecRow({ label, value }: { label: string; value?: string | number }) {
-  if (!value) return null;
-  return (
-    <div className="flex justify-between items-baseline gap-4 py-2.5 border-b border-hairsoft last:border-0">
-      <span className="lab">{label}</span>
-      <span className="font-mononum text-[12.5px] text-right text-ink capitalize">{value}</span>
-    </div>
-  );
-}
 
 function PersonCard({ u }: { u: User }) {
   return (
@@ -189,7 +187,8 @@ export default function Profile() {
   const { user: me, setUser } = useAuthStore();
   const qc = useQueryClient();
   const isMe = me?.id === id;
-  const [tab, setTab] = useState<Tab>("posts");
+  const [tab, setTab] = useState<Tab>("followers");
+  const [view, setView] = useState<ProfileView>("overview");
   const [docType, setDocType] = useState("");
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [uploadingName, setUploadingName] = useState<string>("");
@@ -239,10 +238,6 @@ export default function Profile() {
     queryKey: queryKeys.user(id),
     queryFn: async () => (await api.get<{ user: User }>(`/users/${id}`)).data.user
   });
-  const postsQ = useQuery({
-    queryKey: queryKeys.userPosts(id),
-    queryFn: async () => (await api.get<{ items: Post[] }>("/posts", { params: { author_id: id, limit: 10 } })).data.items
-  });
   const followStatus = useQuery({
     queryKey: queryKeys.followStatus(id),
     queryFn: async () => (await api.get<{ following: boolean }>(`/follow/status/${id}`)).data.following,
@@ -258,15 +253,20 @@ export default function Profile() {
     queryFn: async () => (await api.get<{ items: User[] }>(`/follow/${id}/following`)).data.items,
     enabled: tab === "following"
   });
-  const reelsQ = useQuery({
-    queryKey: queryKeys.userReels(id),
-    queryFn: async () => (await api.get<{ items: any[] }>("/reels", { params: { author_id: id, limit: 3 } })).data.items
-  });
 
   const docsQ = useQuery({
     queryKey: queryKeys.userDocs(id),
     queryFn: async () => (await api.get<{ items: any[] }>(`/users/${id}/documents`)).data.items,
   });
+
+  const tournaments = useTournaments(id);
+  const [addingTournament, setAddingTournament] = useState(false);
+  const [editingTournament, setEditingTournament] = useState<Tournament | null>(null);
+
+  const scorecardPreview = useScorecardLinkPreview();
+  const updateScorecardLinks = useUpdateScorecardLinks(id);
+  const [addingLink, setAddingLink] = useState(false);
+  const [editingLink, setEditingLink] = useState<{ index: number; link: ScorecardLink } | null>(null);
 
   const emailLogsQ = useQuery({
     queryKey: queryKeys.emailLogs(id),
@@ -328,7 +328,7 @@ export default function Profile() {
   const ath = u.athlete;
   const isAthlete = u.role === "athlete";
   const sport = ath?.primary_sport;
-  const userStats: [string, string | number][] = ath?.stats ? Object.entries(ath.stats) : [];
+  const scorecardLinks: ScorecardLink[] = ath?.scorecard_links ?? [];
   const achievements = (ath?.achievements ?? []).map((a: unknown) =>
     typeof a === "string"
       ? { title: a, year: undefined as number | undefined, verified: false, description: undefined as string | undefined }
@@ -343,7 +343,6 @@ export default function Profile() {
         ];
 
   const tabs: { id: Tab; label: string }[] = [
-    { id: "posts", label: "Posts" },
     { id: "followers", label: `Followers (${u.follower_count})` },
     { id: "following", label: `Following (${u.following_count})` },
     ...(isMe && !isAdmin(u.role ?? "") ? [{ id: "saved" as Tab, label: `Saved (${savedOpps.length})` }] : []),
@@ -449,7 +448,6 @@ export default function Profile() {
                   {u.city && <span className="lab whitespace-nowrap">{u.city}{u.country ? `, ${u.country}` : ""}</span>}
                   <span className="lab whitespace-nowrap"><strong className="font-mononum text-ink">{u.follower_count}</strong> followers</span>
                   <span className="lab whitespace-nowrap"><strong className="font-mononum text-ink">{u.following_count}</strong> following</span>
-                  {sport && <span className="lab whitespace-nowrap">{sport}</span>}
                 </div>
               </div>
             </div>
@@ -506,44 +504,152 @@ export default function Profile() {
         </div>
       </div>
 
-      {/* ── ZONE 01 — Career summary ──────────────────────────── */}
+      {/* ── Top-level profile view switch ──────────────────────── */}
+      <div className="sticky -top-4 sm:-top-7 z-30 bg-paper -mx-3 sm:-mx-6 px-3 sm:px-6 pt-3 sm:pt-4 flex gap-1 border-b-2 border-ink">
+        <button
+          onClick={() => setView("overview")}
+          className={`font-disp text-sm px-5 py-3 border-b-2 -mb-0.5 transition ${
+            view === "overview" ? "border-brand-500 text-ink" : "border-transparent text-ink-sub hover:text-ink"
+          }`}
+        >
+          Overview
+        </button>
+        <button
+          onClick={() => setView("feed")}
+          className={`font-disp text-sm px-5 py-3 border-b-2 -mb-0.5 transition ${
+            view === "feed" ? "border-brand-500 text-ink" : "border-transparent text-ink-sub hover:text-ink"
+          }`}
+        >
+          Feed
+        </button>
+      </div>
+
+      {view === "feed" && <ProfileFeedTab userId={id} />}
+
+      {view === "overview" && (
+      <>
+      {/* ── ZONE 01 — Career summary (summary + timeline, side by side) ── */}
       {isAthlete && (
         <div>
-          <SectionHead n="01" title="Career summary" sub={sport ? `${sport} statistics` : "Headline numbers"} />
-          {ath?.career_summary && (
-            <div className="card card-body mb-3">
-              <p className="text-[15px] leading-relaxed text-ink-70 whitespace-pre-wrap">{ath.career_summary}</p>
-            </div>
-          )}
-          {userStats.length > 0 ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-              {userStats.map(([k, v], i) => (
-                <StatCard key={k} k={k} v={v} big={i < 2} />
-              ))}
-            </div>
-          ) : ath ? (
-            <div className="card card-body text-center">
-              <div className="lab text-ink-faint">Performance stats not yet added</div>
-              {isMe && (
-                <button onClick={() => navigate("/profile/edit")} className="btn-secondary mt-3 mx-auto">+ Add stats</button>
-              )}
-            </div>
-          ) : null}
+          <SectionHead n="01" title="Career summary"
+            right={isMe ? (
+              <button onClick={() => navigate("/profile/edit")} className="btn-ghost text-[12px]">
+                {careerHistory.length === 0 ? "+ Add clubs" : "Edit"}
+              </button>
+            ) : undefined}
+          />
+          <div className="grid grid-cols-1 md:grid-cols-[7fr_3fr] gap-4">
+            {ath?.career_summary ? (
+              <div className="card card-body">
+                <Kicker>Career summary</Kicker>
+                <p className="mt-4 text-[15px] leading-relaxed text-ink-70 whitespace-pre-wrap">{ath.career_summary}</p>
+              </div>
+            ) : (
+              <div className="card card-body text-center border-dashed">
+                <div className="lab text-ink-faint">No career summary added yet</div>
+                {isMe && (
+                  <button onClick={() => navigate("/profile/edit")} className="btn-secondary mt-3 mx-auto">+ Add summary</button>
+                )}
+              </div>
+            )}
+
+            {careerHistory.length > 0 ? (
+              <div className="card card-body">
+                <Kicker>Career timeline</Kicker>
+                <div className="mt-4">
+                  {careerHistory.map((h, i, arr) => {
+                    const label = h.current
+                      ? "Present"
+                      : h.years ?? (h.from ? `${h.from.slice(0, 7)}${h.to ? ` → ${h.to.slice(0, 7)}` : " → present"}` : "");
+                    return (
+                      <div key={h.club + i} className="flex gap-4 pb-4 last:pb-0">
+                        <div className="flex flex-col items-center flex-shrink-0">
+                          <span className="w-2.5 h-2.5 rounded-full"
+                            style={{ background: h.current ? "#FA4D14" : "rgba(20,17,13,0.2)" }} />
+                          {i < arr.length - 1 && (
+                            <span className="w-px flex-1 bg-hair mt-1" style={{ minHeight: 24 }} />
+                          )}
+                        </div>
+                        <div>
+                          <div className="text-[13.5px] font-semibold text-ink">{h.club}</div>
+                          <div className="lab mt-0.5">{label}</div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : (
+              <div className="card card-body text-center border-dashed">
+                <div className="lab text-ink-faint">No career history added yet</div>
+                {isMe && <p className="text-[12.5px] text-ink-sub mt-1">Add clubs, teams and career milestones.</p>}
+              </div>
+            )}
+          </div>
         </div>
       )}
 
-      {/* ── ZONE 02 — Cricket match statistics (live from scoring module) ── */}
+      {/* ── ZONE 02 — Tournaments ──────────────────────────────── */}
+      {isAthlete && (
+        <div>
+          <SectionHead n="02" title="Tournaments" sub="Competitions this athlete has played" />
+          <TileGrid
+            items={tournaments.list.data ?? []}
+            maxItems={30}
+            emptyIcon="🏆"
+            emptyLabel="No tournaments added yet"
+            emptyHint="Add tournaments you've played — name, year, team, format and result."
+            onAdd={isMe ? () => setAddingTournament(true) : undefined}
+            onEdit={isMe ? (t) => setEditingTournament(t) : undefined}
+            onDelete={isMe ? (i) => tournaments.remove.mutate(tournaments.list.data![i].id) : undefined}
+            renderTile={(t) => (
+              <div className="flex gap-2.5">
+                <Trophy className="h-4 w-4 text-brand-500 flex-shrink-0 mt-0.5" />
+                <div className="min-w-0">
+                  <div className="text-[13.5px] font-medium text-ink pr-14">{t.name}</div>
+                  <div className="lab mt-1">{t.year}{t.team ? ` · ${t.team}` : ""}</div>
+                  {t.format && <div className="text-[12px] text-ink-sub mt-1">{t.format}</div>}
+                  {t.result && <div className="text-[12px] text-ink-sub mt-0.5">{t.result}</div>}
+                </div>
+              </div>
+            )}
+          />
+          {isMe && (
+            <AddTournamentDrawer
+              isOpen={addingTournament || !!editingTournament}
+              editing={editingTournament}
+              onClose={() => { setAddingTournament(false); setEditingTournament(null); }}
+              isSubmitting={tournaments.add.isPending || tournaments.update.isPending}
+              error={
+                tournaments.add.isError ? humanizeError(tournaments.add.error)
+                : tournaments.update.isError ? humanizeError(tournaments.update.error)
+                : null
+              }
+              onSubmit={(data) => {
+                if (editingTournament) {
+                  tournaments.update.mutate(
+                    { tournamentId: editingTournament.id, data },
+                    { onSuccess: () => setEditingTournament(null) }
+                  );
+                } else {
+                  tournaments.add.mutate(data, { onSuccess: () => setAddingTournament(false) });
+                }
+              }}
+            />
+          )}
+        </div>
+      )}
+
+      {/* ── ZONE 03 — Statistics (cricket live, or format placeholder) ── */}
       {isAthlete && sport?.toLowerCase() === "cricket" && (
         <div>
-          <SectionHead n="02" title="Match Statistics" sub="From recorded matches on Sportzicon" />
+          <SectionHead n="03" title="Statistics" sub="From recorded matches on Sportzicon" />
           <CricketStatsSection userId={id} sport={sport} />
         </div>
       )}
-
-      {/* ── ZONE 02b — Detailed statistics (non-cricket) ──────── */}
       {isAthlete && sport?.toLowerCase() !== "cricket" && (
         <div>
-          <SectionHead n="02" title="Detailed statistics" sub="By format" />
+          <SectionHead n="03" title="Statistics" sub="By format" />
           <div className="card card-body text-center border-dashed">
             <div className="lab text-ink-faint">Format-by-format statistics not yet added</div>
             {isMe && (
@@ -553,10 +659,57 @@ export default function Profile() {
         </div>
       )}
 
-      {/* ── ZONE 03 — Achievements ────────────────────────────── */}
+      {/* ── ZONE 04 — Scorecard & scoring-app links ────────────── */}
       {isAthlete && (
         <div>
-          <SectionHead n="03" title="Achievements"
+          <SectionHead n="04" title="Scorecard & scoring links" sub="Link out to CricHeroes, CricClubs and other scoring apps" />
+          <TileGrid
+            items={scorecardLinks}
+            maxItems={15}
+            emptyIcon="🔗"
+            emptyLabel="No scorecard links added yet"
+            emptyHint="Paste links to your match scorecards on other scoring apps."
+            onAdd={isMe ? () => setAddingLink(true) : undefined}
+            onEdit={isMe ? (link, i) => setEditingLink({ index: i, link }) : undefined}
+            onDelete={isMe ? (i) => updateScorecardLinks.mutate(scorecardLinks.filter((_, idx) => idx !== i)) : undefined}
+            renderTile={(link) => (
+              <a href={link.url} target="_blank" rel="noreferrer" className="flex items-center gap-3 pr-14">
+                {link.preview_image ? (
+                  <img src={link.preview_image} alt="" className="h-10 w-10 rounded object-cover flex-shrink-0" />
+                ) : (
+                  <div className="h-10 w-10 rounded bg-fill flex items-center justify-center text-ink-faint flex-shrink-0">🔗</div>
+                )}
+                <div className="min-w-0">
+                  <div className="lab text-brand-500 truncate">{link.source}</div>
+                  <div className="text-[12.5px] font-medium text-ink truncate">{link.preview_title ?? link.label ?? "View scorecard →"}</div>
+                </div>
+              </a>
+            )}
+          />
+          {isMe && (
+            <AddScorecardLinkDrawer
+              isOpen={addingLink || !!editingLink}
+              editing={editingLink?.link}
+              onClose={() => { setAddingLink(false); setEditingLink(null); }}
+              isSubmitting={updateScorecardLinks.isPending}
+              onPreview={(url) => scorecardPreview.mutateAsync(url)}
+              onSubmit={(data) => {
+                if (editingLink) {
+                  const next = scorecardLinks.map((l, idx) => (idx === editingLink.index ? data : l));
+                  updateScorecardLinks.mutate(next, { onSuccess: () => setEditingLink(null) });
+                } else {
+                  updateScorecardLinks.mutate([...scorecardLinks, data], { onSuccess: () => setAddingLink(false) });
+                }
+              }}
+            />
+          )}
+        </div>
+      )}
+
+      {/* ── ZONE 05 — Achievements ────────────────────────────── */}
+      {isAthlete && (
+        <div>
+          <SectionHead n="05" title="Achievements"
             right={isMe && achievements.length === 0 ? (
               <button onClick={() => navigate("/profile/edit")} className="btn-ghost text-[12px]">+ Add</button>
             ) : undefined}
@@ -587,113 +740,11 @@ export default function Profile() {
         </div>
       )}
 
-      {/* ── ZONE 04 — Highlights & media ──────────────────────── */}
-      {isAthlete && (
+      {/* ── ZONE 06 — Documents (owner only) ──────────────────── */}
+      {isAthlete && isMe && (
         <div>
-          <SectionHead n="04" title="Highlights & media"
-            right={reelsQ.data && reelsQ.data.length > 0
-              ? <Link to="/reels" className="btn-ghost text-[12px]">All reels →</Link>
-              : isMe ? <Link to="/reels" className="btn-ghost text-[12px]">+ Add</Link> : undefined}
-          />
-          {reelsQ.data && reelsQ.data.length > 0 ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {reelsQ.data.slice(0, 3).map((r: any) => (
-                <div key={r.id} className="card overflow-hidden cursor-pointer group">
-                  <div className="h-28 bg-ink relative overflow-hidden">
-                    {r.thumbnail_url
-                      ? <img src={r.thumbnail_url} alt="" className="h-full w-full object-cover" />
-                      : <Placeholder label="reel" height={112} />
-                    }
-                    <span className="absolute inset-0 flex items-center justify-center text-white/60 text-xl group-hover:text-white transition">▶</span>
-                  </div>
-                  <div className="px-3 py-2">
-                    <p className="text-[12px] font-medium text-ink truncate">{r.caption || "Reel"}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="card card-body text-center border-dashed">
-              <div className="text-3xl text-ink-faint mb-2">▶</div>
-              <div className="lab text-ink-faint">No highlights added yet</div>
-              {isMe && <p className="text-[12.5px] text-ink-sub mt-1">Upload match clips and training reels.</p>}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ── ZONE 05 — Availability & discovery ────────────────── */}
-      {isAthlete && ath && (
-        <div>
-          <SectionHead n="05" title="Availability & discovery" />
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Status & Preferences */}
-            <div className="card card-body">
-              <Kicker>Status & preferences</Kicker>
-              <div className="mt-4">
-                <SpecRow label="Status" value={ath.availability?.replace(/_/g, " ")} />
-                <SpecRow label="Looking for club" value={ath.looking_for_club ? "Yes" : "No"} />
-                {ath.experience_level && <SpecRow label="Experience" value={ath.experience_level.replace(/_/g, " ")} />}
-                {u.country && <SpecRow label="Country" value={u.country} />}
-              </div>
-            </div>
-
-            {/* Coach endorsements / Additional info */}
-            <div className="card card-body">
-              <Kicker>Scout & coach endorsements</Kicker>
-              <div className="mt-4 lab text-ink-faint">Endorsements not yet added</div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── ZONE 06 — Career timeline ───────────────────────── */}
-      {isAthlete && (
-        <div>
-          <SectionHead n="06" title="Career timeline"
-            right={isMe ? (
-              <button onClick={() => navigate("/profile/edit")} className="btn-ghost text-[12px]">
-                {careerHistory.length === 0 ? "+ Add clubs" : "Edit"}
-              </button>
-            ) : undefined}
-          />
-          {careerHistory.length > 0 ? (
-          <div className="card card-body">
-            {careerHistory.map((h, i, arr) => {
-              const label = h.current
-                ? "Present"
-                : h.years ?? (h.from ? `${h.from.slice(0, 7)}${h.to ? ` → ${h.to.slice(0, 7)}` : " → present"}` : "");
-              return (
-                <div key={h.club + i} className="flex gap-4 pb-4 last:pb-0">
-                  <div className="flex flex-col items-center flex-shrink-0">
-                    <span className="w-2.5 h-2.5 rounded-full"
-                      style={{ background: h.current ? "#FA4D14" : "rgba(20,17,13,0.2)" }} />
-                    {i < arr.length - 1 && (
-                      <span className="w-px flex-1 bg-hair mt-1" style={{ minHeight: 24 }} />
-                    )}
-                  </div>
-                  <div>
-                    <div className="text-[13.5px] font-semibold text-ink">{h.club}</div>
-                    <div className="lab mt-0.5">{label}</div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-          ) : (
-            <div className="card card-body text-center border-dashed">
-              <div className="lab text-ink-faint">No career history added yet</div>
-              {isMe && <p className="text-[12.5px] text-ink-sub mt-1">Add clubs, teams and career milestones.</p>}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ── ZONE 07 — Documents ───────────────────────────────── */}
-      {isAthlete && (
-        <div>
-          <SectionHead n="07" title="Documents"
-            sub={isMe ? "Attach supporting documents to strengthen your profile" : "Supporting documents"}
+          <SectionHead n="06" title="Documents"
+            sub="Attach supporting documents to strengthen your profile"
           />
           <div className="card card-body space-y-3">
             {/* Uploaded documents list */}
@@ -724,8 +775,6 @@ export default function Profile() {
                   </div>
                 </div>
               ))
-            ) : !isMe ? (
-              <div className="lab text-ink-faint text-center py-4">No documents uploaded.</div>
             ) : null}
 
             {/* Upload progress row */}
@@ -819,20 +868,6 @@ export default function Profile() {
             </button>
           ))}
         </div>
-
-        {tab === "posts" &&
-          (postsQ.data?.length ? (
-            <ul className="space-y-3">
-              {postsQ.data.map((p) => (
-                <li key={p.id} className="card card-body">
-                  <div className="lab">{new Date(p.created_at).toLocaleString()}</div>
-                  <p className="mt-1.5 whitespace-pre-wrap text-sm leading-relaxed text-ink-70">{p.text}</p>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <div className="card card-body lab">No posts yet.</div>
-          ))}
 
         {tab === "followers" &&
           (followersQ.isLoading ? (
@@ -982,6 +1017,8 @@ export default function Profile() {
           )
         )}
       </div>
+      </>
+      )}
     </div>
   );
 }
@@ -989,8 +1026,8 @@ export default function Profile() {
 function Stat({ label, value }: { label: string; value?: string }) {
   return (
     <div className="panel px-3.5 py-3">
-      <div className="lab">{label}</div>
-      <div className="font-disp mt-1.5 text-2xl capitalize">{value ?? "—"}</div>
+      <div className="lab truncate">{label}</div>
+      <div className="font-disp mt-1.5 text-base sm:text-2xl capitalize leading-snug">{value ?? "—"}</div>
     </div>
   );
 }

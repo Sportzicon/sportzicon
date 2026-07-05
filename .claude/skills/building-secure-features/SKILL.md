@@ -38,6 +38,7 @@ skip Master Rule #11 (security checklist before writing a line of code).
 - Haven't named which `SECURITY_RULES.md` sections apply
 - Can't say which `ROLES.*` constant (or "self-only") applies to a new route
 - Can't say which layer (routes/service/schema, or pages/hooks/services) each change lands in
+- New/changed UI and can't say it's been checked at 375px width, 44px touch targets
 - About to declare done without having driven the feature in a real browser
 
 ## Core Pattern
@@ -45,8 +46,9 @@ skip Master Rule #11 (security checklist before writing a line of code).
 1. **Gather** — restate the request in one paragraph. YAGNI-check: is the full
    feature needed, or is a smaller change sufficient?
 2. **Audit** (required, before any plan text is written):
-   - CLAUDE.md Master Rules — especially #1 Admin Override, #5 Architecture
-     layering, #7 Migrations, #8 Role helpers, #9 Sport/Position cascade
+   - CLAUDE.md Master Rules — especially #1 Admin Override, #4 Mobile-First
+     Responsive UI, #5 Architecture layering, #7 Migrations, #8 Role helpers,
+     #9 Sport/Position cascade
    - `SECURITY_RULES.md` — name which numbered sections apply (not all 12
      apply to every feature)
    - `SECURITY_RULES.md` "Known gaps" section — does this feature touch one?
@@ -59,8 +61,9 @@ skip Master Rule #11 (security checklist before writing a line of code).
      principles that are trivially satisfied.
 3. **Plan** — use plan mode (`ExitPlanMode`). The plan must state: files
    touched per layer, migration needed (y/n), `ROLES.*` used or "self-only",
-   `SECURITY_RULES.md` sections consulted, and any Known gap fixed
-   opportunistically.
+   `SECURITY_RULES.md` sections consulted, any Known gap fixed
+   opportunistically, and — for any new/changed UI — mobile-first approach
+   (375px base layout, `sm:`/`md:`/`lg:` for wider, no hardcoded pixel widths).
 4. **Wait for explicit approval.** This is the gate.
 5. **Build** — implement per plan. For any new/changed UI (component, page,
    layout, styling), use `ui-ux-pro-max` for the design/styling approach
@@ -72,8 +75,10 @@ skip Master Rule #11 (security checklist before writing a line of code).
    see `superpowers:verification-before-completion`.
 7. **Browser-test** — for any frontend-visible change, use the `dev-browser`
    skill to drive the golden path and edge cases against the running dev
-   server. Typecheck/build proves the code compiles, not that the feature
-   works — this step is not optional for UI changes (CLAUDE.md UI rule).
+   server, at both 375px (iPhone SE) and desktop width — no horizontal
+   overflow, no touch target under 44px. Typecheck/build proves the code
+   compiles, not that the feature works — this step is not optional for UI
+   changes (CLAUDE.md Mobile-First rule #4).
 8. **Changelog** — append one entry to `CHANGELOG.md` at repo root (create it
    with a `## [Unreleased]` header if it doesn't exist yet). One bullet:
    what was added/changed and why, under `### Added`/`### Changed`/`### Fixed`
@@ -93,7 +98,8 @@ skip Master Rule #11 (security checklist before writing a line of code).
 | New public endpoint | `SECURITY_RULES.md` §2 (rate limiting) |
 | Returns user data | `safeUserSelect`, never raw secrets/hashes (§1, §9) |
 | Ownership check | `resource.owner_id !== user.id && user.role !== "admin"` |
-| New/changed UI component or page | `ui-ux-pro-max` for design/styling approach |
+| New/changed UI component or page | `ui-ux-pro-max` for design/styling approach; mobile-first (base=375px, `sm:`/`md:`/`lg:` up), no hardcoded px widths, `min-h-[44px]` touch targets |
+| Server-side fetch of user-supplied URL | SSRF guard — domain allowlist, reject internal/private IPs (see `backend/src/modules/users/scorecardLinkPreview.ts` for precedent) |
 
 ## Common Mistakes
 
@@ -103,6 +109,8 @@ skip Master Rule #11 (security checklist before writing a line of code).
 - Writing the plan after starting to code, "to save time"
 - Skipping a migration because "it's just a JSON field"
 - Calling it done after typecheck/build passes without ever loading the page
+- Building desktop-first then retrofitting `sm:`/`md:` breakpoints instead of
+  designing mobile-first (base classes = 375px, override up)
 - Skipping the changelog entry because "it's a small change"
 
 ## Cross-References

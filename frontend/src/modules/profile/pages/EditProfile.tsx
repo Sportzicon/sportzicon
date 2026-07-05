@@ -54,12 +54,6 @@ export default function EditProfile() {
   });
   const [newAchievement, setNewAchievement] = useState("");
 
-  const [stats, setStats] = useState<Record<string, string>>(
-    (user?.athlete?.stats as Record<string, string>) ?? {}
-  );
-  const [newStatKey, setNewStatKey] = useState("");
-  const [newStatValue, setNewStatValue] = useState("");
-
   const [profilePhoto, setProfilePhoto] = useState<string | undefined>(user?.profile_photo_url);
   const [coverPhoto, setCoverPhoto] = useState<string | undefined>(user?.cover_photo_url);
   const [uploading, setUploading] = useState<"profile" | "cover" | null>(null);
@@ -131,7 +125,6 @@ export default function EditProfile() {
         if (sport) athPayload.primary_sport = sport;
         if (position) athPayload.position = position;
         athPayload.achievements = achievements;
-        athPayload.stats = stats;
         // Remove empty/falsy optional fields
         Object.keys(athPayload).forEach((k) => {
           const v = athPayload[k];
@@ -263,15 +256,15 @@ export default function EditProfile() {
               maxLength={100}
             />
           </Field>
-          <Field label="Bio">
+          <Field label="Career Headline">
             <textarea
               className="input"
               rows={3}
-              maxLength={500}
+              maxLength={200}
               value={form.bio}
               onChange={(e) => setForm({ ...form, bio: e.target.value })}
             />
-            <p className="mt-1 text-xs text-ink-faint text-right">{form.bio.length}/500</p>
+            <p className="mt-1 text-xs text-ink-faint text-right">{form.bio.length}/200</p>
           </Field>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Field label="Phone">
@@ -591,62 +584,6 @@ export default function EditProfile() {
               </div>
             )}
             <p className="text-xs text-ink-faint">Press Enter or click + to add. {achievements.length}/20 items.</p>
-          </div>
-        </section>
-      )}
-
-      {/* ── Section 06: Statistics ── */}
-      {isAthlete && (
-        <section className="mb-8">
-          <SectionHead n="06" title="Statistics" sub="Career statistics & records" />
-          <div className="card card-body space-y-3">
-            {Object.entries(stats).map(([key, value]) => (
-              <div key={key} className="flex gap-2 items-center">
-                <span className="flex-1 rounded bg-fill px-3 py-2 text-sm min-h-[44px] flex items-center">
-                  <span className="font-medium text-ink">{key}:</span>
-                  <span className="ml-2 text-ink-sub">{value}</span>
-                </span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const next = { ...stats };
-                    delete next[key];
-                    setStats(next);
-                  }}
-                  className="flex-shrink-0 rounded border border-hairsoft bg-paper p-2 text-ink-sub hover:text-red-500 hover:border-red-300 transition min-h-[44px] min-w-[44px] flex items-center justify-center"
-                  title="Remove"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-            ))}
-            <div className="flex flex-col sm:flex-row gap-2">
-              <input
-                className="input flex-1 min-h-[44px]"
-                placeholder="e.g. Runs scored, Wickets"
-                value={newStatKey}
-                onChange={(e) => setNewStatKey(e.target.value)}
-              />
-              <input
-                className="input flex-1 min-h-[44px]"
-                placeholder="Value"
-                value={newStatValue}
-                onChange={(e) => setNewStatValue(e.target.value)}
-              />
-              <button
-                type="button"
-                onClick={() => {
-                  if (newStatKey.trim() && newStatValue.trim()) {
-                    setStats({ ...stats, [newStatKey.trim()]: newStatValue.trim() });
-                    setNewStatKey("");
-                    setNewStatValue("");
-                  }
-                }}
-                className="btn-secondary min-h-[44px]"
-              >
-                Add
-              </button>
-            </div>
           </div>
         </section>
       )}

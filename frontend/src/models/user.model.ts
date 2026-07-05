@@ -34,3 +34,35 @@ export interface UpdateAthleteRequest {
   level?: string;
   [key: string]: unknown;
 }
+
+export interface Tournament {
+  id: string;
+  name: string;
+  year: string;
+  team?: string;
+  format?: string;
+  result?: string;
+  created_at: string;
+}
+
+export interface NewTournament {
+  name: string;
+  year: string;
+  team?: string;
+  format?: string;
+  result?: string;
+}
+
+export interface ScorecardLink {
+  url: string;
+  label?: string;
+  source?: string;
+  preview_title?: string;
+  preview_image?: string;
+}
+
+export interface ScorecardPreview {
+  source: string;
+  title: string | null;
+  image: string | null;
+}

@@ -1,0 +1,25 @@
+# Changelog
+
+## [Unreleased]
+
+### Added
+- Athlete profile: "Tournaments" zone — tile grid (max 30) backed by a new `AthleteTournament` model, `GET/POST/PUT/DELETE /users/:id/tournaments`. Tiles show a trophy icon; owner-only edit (pencil) and delete (trash can) icons.
+- Athlete profile: "Scorecard & scoring links" zone — tile grid (max 15, enforced server-side via Zod `.max(15)`) for pasting external scorecard/scoring-app links (CricHeroes, CricClubs, ESPNcricinfo, Cricbuzz). `POST /users/me/scorecard-link-preview` fetches title/thumbnail for allowlisted domains only (SSRF-guarded); non-allowlisted URLs fall back to a plain hostname label. Tile body opens the link; owner-only edit/delete icons.
+- Profile page: new top-level "Overview" / "Feed" tab bar right below the header, sticky on scroll (same `-top-4 sm:-top-7` offset trick as `PageHeader`'s `sticky` prop, canceling `main`'s own top padding so it hugs the app header with no gap). "Feed" (`ProfileFeedTab`) is a unified, Instagram/LinkedIn-style activity stream merging the user's Posts, Blogs and Reels into one chronological list — first step toward eventually unifying Post/Blog/Reel into one content model app-wide; for now each item still lives in its existing table and is only merged for display.
+- "Bio" renamed to "Career Headline" and capped at 200 characters (was 500).
+
+### Changed
+- Athlete profile "Career summary" zone no longer shows the generic `stats` key/value grid — only the free-text career summary, removing the redundant second "stats-shaped" section next to Statistics. The `EditProfile` stats key/value editor was removed to match.
+- "Career summary" zone now shows the career summary text and career timeline side by side in a 70/30 card grid; the standalone "Availability & discovery" zone was removed.
+- "Highlights & media" zone removed from the profile (reels now surface via the new Feed tab instead).
+- "Documents" zone is now visible to the profile owner only (previously visible, read-only, to all viewers).
+- The old plain "Posts" tab (text posts only) was removed from the profile's secondary tab row — superseded by the new top-level Feed tab.
+- Renumbered "Overview" zones to: Career summary (01, includes timeline), Tournaments (02), Statistics (03), Scorecard & scoring links (04), Achievements (05), Documents (06, owner only).
+- Add/Edit Scorecard Link drawer collapsed from a two-phase flow (URL entry → fetch preview → confirm) into one flat form showing URL and Label together; preview metadata is fetched once on Save instead of gating the form behind a "Continue" step.
+
+### Fixed
+- `updateAthleteFields`/`updateCoachFields` were missing the Master Rule #1 admin bypass on their role checks.
+- `POST /users/:id/documents` and `DELETE /users/:id/documents/:docId` had no Zod validation (ad-hoc `type` check, unvalidated params) — now validated like every other route in the module.
+- Add Tournament / Add Scorecard Link drawers had no way to back out without submitting on desktop (`MobileDrawer` renders inline with no close chrome there) — added explicit Cancel buttons.
+- Mobile (375px): profile header stat cards (Sport/Position/etc) rendered oversized text that wrapped awkwardly in the 2-column grid; Tournament and Scorecard Link tiles were cramped 2-up and truncated labels down to 1-2 characters (e.g. a link title collapsing to "C.."). Header stat value text is now responsive (smaller on mobile), and both tile grids are single-column on mobile / 2-up on tablet / 3-up on desktop.
+- Demo seed data (`database/seeds/seed.ts`) stored `primary_sport`/`position` in non-canonical casing/strings (e.g. `"Cricket"`/`"All-rounder"`) that didn't match `VALID_SPORTS`/`SPORT_POSITIONS`, so the Sport/Position selects on Edit Profile silently failed to pre-select the athlete's existing values even though the profile view rendered them fine. Fixed for all 9 seeded athletes. Also fixed two unrelated latent seed bugs surfaced while re-seeding: `application_deadline` needs a `Date`, not a date-only string; `Reel`/`Blog` seeding referenced a non-existent `view_count` field.

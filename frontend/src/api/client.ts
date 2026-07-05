@@ -36,6 +36,25 @@ async function doRefresh(): Promise<string | null> {
   }
 }
 
+// Server-side refresh tokens are single-use (rotated on every call). With the
+// app open in 2+ tabs, both tabs' access tokens expire around the same time,
+// so both independently POST /auth/refresh with the same cookie — the loser
+// gets "Session expired" and wipes its session, which then propagates to every
+// tab via the storage-based logout sync in App.tsx. That's the intermittent
+// logout. Fix: serialize the actual network call across tabs with the Web
+// Locks API. A tab that loses the lock rehydrates from localStorage (written
+// by the winner's persisted store) and reuses that token instead of racing.
+// Falls back to per-tab-only dedup on browsers without Web Locks (Safari <15.4).
+export async function refreshAcrossTabs(staleToken: string | null): Promise<string | null> {
+  if (!("locks" in navigator)) return doRefresh();
+  return navigator.locks.request("sportivox-auth-refresh", async () => {
+    await useAuthStore.persist.rehydrate();
+    const current = useAuthStore.getState().accessToken;
+    if (current && current !== staleToken) return current;
+    return doRefresh();
+  });
+}
+
 api.interceptors.response.use(
   (r) => r,
   async (error: AxiosError & { config?: any }) => {
@@ -45,7 +64,8 @@ api.interceptors.response.use(
     const isAuthRoute = (original.url ?? "").includes("/auth/");
     if (error.response?.status === 401 && !isAuthRoute) {
       original._retry = true;
-      refreshing ||= doRefresh().finally(() => { refreshing = null; });
+      const staleToken = useAuthStore.getState().accessToken;
+      refreshing ||= refreshAcrossTabs(staleToken).finally(() => { refreshing = null; });
       const newToken = await refreshing;
       if (!newToken) return Promise.reject(error);
       original.headers = { ...original.headers, Authorization: `Bearer ${newToken}` };

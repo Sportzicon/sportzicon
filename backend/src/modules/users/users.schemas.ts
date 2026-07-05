@@ -26,7 +26,7 @@ function sportPositionSuperRefine(
 export const updateProfileSchema = z
   .object({
     full_name: z.string().min(2).max(100).trim().optional(),
-    bio: z.string().max(500).optional(),
+    bio: z.string().max(200).optional(),
     location: z.string().max(100).optional(),
     avatar_url: z.union([z.string().url(), z.literal("")]).optional(),
     profile_photo_url: z.union([z.string().url(), z.null()]).optional(),
@@ -91,6 +91,18 @@ export const athleteFieldsSchema = z
     career_summary: z.string().max(1000).optional(),
     availability: z.enum(["available", "not_available", "open_to_offers"]).optional(),
     looking_for_club: z.boolean().optional(),
+    scorecard_links: z
+      .array(
+        z.object({
+          url: z.string().url().max(500),
+          label: z.string().max(120).optional(),
+          source: z.string().max(120).optional(),
+          preview_title: z.string().max(300).optional(),
+          preview_image: z.string().url().max(500).optional(),
+        })
+      )
+      .max(15)
+      .optional(),
   })
   .superRefine((data, ctx) => {
     // Use primary_sport / position for cascade validation in athlete schema
@@ -113,3 +125,44 @@ export const coachFieldsSchema = z
   .strict();
 
 export const userIdParamSchema = z.object({ id: z.string().min(8) });
+
+export const linkPreviewRequestSchema = z.object({
+  url: z.string().url().max(500),
+});
+
+export const DOCUMENT_TYPES = [
+  "Sports CV",
+  "Government ID",
+  "Coach Endorsement",
+  "Medical Certificate",
+  "Fitness Report",
+  "Training Certificate",
+  "Reference Letter",
+  "Academic Transcript",
+  "Age Proof",
+  "NOC from Current Club",
+  "Passport Copy",
+  "Other",
+] as const;
+
+export const uploadDocumentBodySchema = z.object({
+  type: z.enum(DOCUMENT_TYPES),
+});
+
+export const documentParamSchema = z.object({
+  id: z.string().min(8),
+  docId: z.string().min(8),
+});
+
+export const tournamentParamSchema = z.object({
+  id: z.string().min(8),
+  tournamentId: z.string().min(8),
+});
+
+export const tournamentSchema = z.object({
+  name: z.string().min(1).max(200),
+  year: z.string().max(4),
+  team: z.string().max(120).optional(),
+  format: z.string().max(60).optional(),
+  result: z.string().max(200).optional(),
+});

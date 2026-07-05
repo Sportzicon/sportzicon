@@ -113,6 +113,7 @@ model User {
   comment_likes  CommentLike[]
   documents      UserDocument[]
   email_logs     EmailLog[]
+  tournaments    AthleteTournament[]
 }
 
 model UserDocument {
@@ -122,6 +123,21 @@ model UserDocument {
   file_name   String
   url         String
   size_bytes  Int
+  created_at  DateTime @default(now())
+
+  user        User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+}
+
+model AthleteTournament {
+  id          String   @id @default(uuid()) @db.Uuid
+  user_id     String   @db.Uuid
+  name        String
+  year        String
+  team        String?
+  format      String?
+  result      String?
   created_at  DateTime @default(now())
 
   user        User     @relation(fields: [user_id], references: [id], onDelete: Cascade)

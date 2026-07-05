@@ -47,6 +47,7 @@ export const queryKeys = {
   userPosts:       (id: string) => ["user-posts", id] as const,
   userReels:       (id: string) => ["user-reels", id] as const,
   userDocs:        (id: string) => ["user-docs", id] as const,
+  athleteTournaments: (id: string) => ["athlete-tournaments", id] as const,
   followStatus:    (id: string) => ["follow-status", id] as const,
   followers:       (id: string) => ["followers", id] as const,
   following:       (id: string) => ["following", id] as const,
