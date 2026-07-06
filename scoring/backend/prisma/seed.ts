@@ -2,7 +2,7 @@
  * Seed: Sample T20 match ready for live scoring
  *
  * Creates:
- *  - 1 admin user (for scoring console login if ever needed)
+ *  - 1 admin user (regular main-app user, reachable via normal login + SSO into scoring)
  *  - 1 tournament  (Sportzicon T20 Invitational)
  *  - 2 teams       (Mumbai Lions vs Pune Warriors)
  *  - 11 players each (mix of batters, bowlers, all-rounders, keeper)
@@ -22,10 +22,10 @@ async function main() {
   console.log("🌱  Seeding sample live match…");
 
   // ── Admin user ──────────────────────────────────────────────────────────────
-  const adminEmail = "admin@sportzicon.local";
+  const adminEmail = "admin@scoring.local";
   let admin = await prisma.user.findUnique({ where: { email: adminEmail } });
   if (!admin) {
-    const hash = await bcrypt.hash("Admin@1234", 12);
+    const hash = await bcrypt.hash("Demo1234!", 12);
     admin = await prisma.user.create({
       data: {
         email: adminEmail,
@@ -36,7 +36,7 @@ async function main() {
         role: "scorer"
       }
     });
-    console.log("  ✔ Admin user created:", adminEmail, "/ Admin@1234");
+    console.log("  ✔ Admin user created:", adminEmail, "/ Demo1234!");
   } else {
     console.log("  ✔ Admin user already exists");
   }

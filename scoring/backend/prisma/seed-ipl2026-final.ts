@@ -24,11 +24,11 @@ const prisma = new PrismaClient();
 async function main() {
   console.log("🏆  Seeding IPL 2026 Final: RCB vs GT…");
 
-  // ── Admin user (reuse or create) ────────────────────────────────────────────
-  const adminEmail = "admin@sportzicon.local";
+  // ── Admin user (reuse or create; regular main-app user, SSO into scoring) ──
+  const adminEmail = "admin@scoring.local";
   let admin = await prisma.user.findUnique({ where: { email: adminEmail } });
   if (!admin) {
-    const hash = await bcrypt.hash("Admin@1234", 12);
+    const hash = await bcrypt.hash("Demo1234!", 12);
     admin = await prisma.user.create({
       data: {
         email: adminEmail,

@@ -28,10 +28,12 @@ export async function initSocket(httpServer: HttpServer): Promise<SocketServer> 
     transports: ["websocket", "polling"],
   });
 
-  // ponytail: single-instance in-memory adapter today (service is pinned to
-  // min/max-instances=1). Swap to multi-instance only when concurrent
-  // connections approach ~15-20K or deploy-during-live-match becomes painful
-  // (see docs/SCALING_PLAN.md Future-Scale Hooks table).
+  // ponytail: single-instance in-memory adapter today. Cloud Run scaling for
+  // this service is NOT currently pinned to max-instances=1 (see
+  // infra/terraform/variables.tf's min_instances_api/max_instances_api,
+  // which apply here too) — if this service scales beyond 1 instance before
+  // any room/broadcast logic is added, wire REDIS_URL first. See
+  // docs/SCALING_PLAN.md Future-Scale Hooks table.
   if (process.env.REDIS_URL) {
     const { createAdapter } = await import("@socket.io/redis-adapter");
     const { default: Redis } = await import("ioredis");

@@ -138,7 +138,7 @@ athlete@demo.sportivox  / Demo1234!
 club@demo.sportivox     / Demo1234!
 scout@demo.sportivox    / Demo1234!
 admin@sportivox.local   / Demo1234!
-admin@scoring.local     / Demo1234!  (scoring subsystem only)
+admin@scoring.local     / Demo1234!  (seeded by scoring backend's seed script)
 ```
 
 ---
