@@ -43,7 +43,25 @@ jobs:
           echo "$OUTPUT"
 
           if [ $EXIT_CODE -ne 0 ]; then
-            if echo "$OUTPUT" | grep -q "P1001\|P1002\|P1003"; then
+            if echo "$OUTPUT" | grep -q "P1002" && echo "$OUTPUT" | grep -qi "advisory lock"; then
+              echo "⚠️  P1002: advisory lock timeout (stale connection, not real unreachability) — clearing and retrying..."
+              npx tsx scripts/clear-stale-migration-lock.ts || true
+
+              set +e
+              OUTPUT2=$(npx prisma migrate deploy 2>&1)
+              EXIT_CODE2=$?
+              set -e
+              echo "$OUTPUT2"
+
+              if [ $EXIT_CODE2 -ne 0 ]; then
+                echo "❌ Still failing after clearing the stale advisory lock — NOT blocking this deploy."
+                echo "   Cloud Run's own 'prisma migrate deploy && node dist/server.js' at container boot"
+                echo "   (backend/Dockerfile) is the authoritative gate and will keep traffic on the"
+                echo "   previous revision if it also fails there. Investigate manually:"
+                echo "$OUTPUT2"
+                exit 0
+              fi
+            elif echo "$OUTPUT" | grep -q "P1001\|P1002\|P1003"; then
               echo "⚠️ Database unreachable — skipping migrations. Existing schema assumed current."
               exit 0
             elif echo "$OUTPUT" | grep -q "P3005"; then
