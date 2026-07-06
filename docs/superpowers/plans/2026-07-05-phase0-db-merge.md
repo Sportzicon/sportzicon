@@ -1982,17 +1982,33 @@ git commit -m "feat(scoring-backend): add Socket.io with REDIS_URL-gated multi-i
 
 ### Task 9: Update docker-compose.yml for the merged database
 
+**Revised after Task 2**: while executing this plan, staging DB credentials were rotated mid-session (new Supabase project). Per the user's explicit decision at that point, `docker-compose.yml` no longer hardcodes the connection string in the tracked file — it uses `${DATABASE_URL}`/`${DIRECT_URL}` substitution instead, sourced from a root `.env` file (already created, gitignored — confirmed via `git check-ignore`). This deviates from this plan's original literal text (which hardcoded the string, matching the pre-rotation convention) but was an explicit, deliberate call given the credential rotation. Both `api` and `scoring-backend` now read from the same two variables — no more per-service hardcoded duplication.
+
 **Files:**
 - Modify: `docker-compose.yml`
 
 **Interfaces:**
-- Produces: `scoring-backend` service pointed at the same Supabase `DATABASE_URL`/`DIRECT_URL` as `api`, no more standalone `scoring-db` Postgres container.
+- Produces: `api` and `scoring-backend` services both reading `${DATABASE_URL}`/`${DIRECT_URL}` from the project-root `.env` (docker compose auto-loads a file literally named `.env` in the same directory as the compose file for `${VAR}` substitution — this is separate from the `environment:` block values passed into the container). No more standalone `scoring-db` Postgres container.
 
 - [ ] **Step 1: Remove the `scoring-db` service block entirely**
 
-Delete lines 57-71 (the whole `scoring-db:` service) and the `scoring_pgdata: {}` line from the `volumes:` section at the bottom.
+Delete the whole `scoring-db:` service block and the `scoring_pgdata: {}` line from the `volumes:` section at the bottom.
 
-- [ ] **Step 2: Update the `scoring-backend` service**
+- [ ] **Step 2: Update the `api` service's hardcoded connection string to `${VAR}` substitution**
+
+Replace, inside the `api:` service's `environment:` block:
+```yaml
+      DATABASE_URL: postgresql://postgres.vrybsjdrftpoaexnffyv:Sportivox%402026@aws-1-ap-northeast-2.pooler.supabase.com:6543/postgres?sslmode=require&pgbouncer=true
+      DIRECT_URL: postgresql://postgres:Sportivox%402026@db.vrybsjdrftpoaexnffyv.supabase.co:5432/postgres?sslmode=require
+```
+with:
+```yaml
+      DATABASE_URL: ${DATABASE_URL}
+      DIRECT_URL: ${DIRECT_URL}
+```
+(Leave every other line in the `api:` service's `environment:` block unchanged — only these two lines change.)
+
+- [ ] **Step 3: Update the `scoring-backend` service**
 
 Replace:
 ```yaml
@@ -2025,8 +2041,8 @@ with:
     # No host port needed — web container reaches this via internal network as http://scoring-backend:4000
     # To expose for direct access/debugging: add "4001:4000" here (avoids conflict with local dev on 4000)
     environment:
-      DATABASE_URL: postgresql://postgres.vrybsjdrftpoaexnffyv:Sportivox%402026@aws-1-ap-northeast-2.pooler.supabase.com:6543/postgres?sslmode=require&pgbouncer=true
-      DIRECT_URL: postgresql://postgres:Sportivox%402026@db.vrybsjdrftpoaexnffyv.supabase.co:5432/postgres?sslmode=require
+      DATABASE_URL: ${DATABASE_URL}
+      DIRECT_URL: ${DIRECT_URL}
       JWT_SECRET: dev-secret-change-in-prod
       MAIN_JWT_SECRET: dev-access-secret-change-me
       PORT: 4000
@@ -2039,17 +2055,19 @@ with:
 
 (Same DB as the `api` service — no `depends_on: scoring-db` anymore since there's no local Postgres container left; no more `prisma db push` at container start since migrations are managed centrally via `database/prisma/migrations`.)
 
-- [ ] **Step 2: Validate the compose file parses**
+- [ ] **Step 4: Validate the compose file parses and substitution resolves**
 
 Run: `docker compose config --quiet`
-Expected: exits 0, no YAML/schema errors. (Does not start containers — just validates.)
+Expected: exits 0, no YAML/schema errors, no "variable is not set" warnings for `DATABASE_URL`/`DIRECT_URL` (confirms the root `.env` is being picked up).
 
-- [ ] **Step 3: Commit**
+- [ ] **Step 5: Commit**
 
 ```bash
 git add docker-compose.yml
-git commit -m "chore(docker-compose): point scoring-backend at the shared Supabase DB, drop scoring-db container"
+git commit -m "chore(docker-compose): use \${DATABASE_URL}/\${DIRECT_URL} substitution, drop scoring-db container"
 ```
+
+**Do not add or modify the root `.env` file in this task — it already exists (created directly by the controller earlier in this session, contains live staging credentials) and must not be read, printed, or echoed by an implementer.**
 
 ---
 
