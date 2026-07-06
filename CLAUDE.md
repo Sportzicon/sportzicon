@@ -1600,13 +1600,17 @@ npm run typecheck # tsc --noEmit
 ### Scoring backend (`cd scoring/backend`)
 
 ```
-npm run dev        # ts-node-dev hot-reload on :4000
-npm run build      # tsc compile to dist/
-npm run db:seed    # seed scoring demo admin account
-npm run db:push    # push schema without migrations (dev only)
-npm run db:migrate # prisma migrate dev
-npm run db:studio  # Prisma Studio GUI
+npm run dev         # ts-node-dev hot-reload on :4000
+npm run build       # tsc compile to dist/
+npm run db:seed     # seed scoring demo admin account
+npm run db:generate # copy database/prisma/schema.prisma locally, then prisma generate
+npm run db:push     # push schema without migrations (dev only)
+npm run db:studio   # Prisma Studio GUI
 ```
+
+Scoring has no migration history of its own — its tables live in the shared
+`database/prisma/migrations`. Run `npm run db:generate` after any schema
+change upstream to regenerate this package's Prisma Client.
 
 ### Scoring frontend (`cd scoring/frontend`)
 
@@ -1624,8 +1628,14 @@ npx prisma studio                               # GUI browser
 npx prisma generate                             # regenerate client after schema change
 ```
 
-The main schema is at `database/prisma/schema.prisma` (not `backend/`).
-Scoring schema: `scoring/backend/prisma/schema.prisma`.
+`database/prisma/schema.prisma` is the single source of truth for both the
+main app and the scoring domain (Prisma `multiSchema`: main app models under
+`@@schema("public")`, scoring's 13 models under `@@schema("scoring")`, one
+Postgres database). `backend/prisma/schema.prisma` and
+`scoring/backend/prisma/schema.prisma` are generated local copies (each
+app's own `db:generate` script copies the real file in and runs
+`prisma generate`) — never edit those copies directly, edit
+`database/prisma/schema.prisma` and re-run `db:generate` in each app.
 
 ### E2E tests (`cd e2e`)
 
@@ -1656,10 +1666,13 @@ npm run report
 ```
 backend/      Main Node.js + Express API (port 8080)
 frontend/     React 18 + Vite SPA (port 5173 dev)
-scoring/      Standalone cricket scoring service
-  backend/      Node.js + Express (port 4000, own PostgreSQL)
+scoring/      Cricket scoring console, deployed separately
+  backend/      Node.js + Express (port 4000), shares the main app's
+                Postgres database under a "scoring" schema namespace —
+                no database of its own
   frontend/     React app (port 5174), auth via SSO with main app
-database/     Single Prisma schema for the main backend
+database/     Single Prisma schema (multiSchema) covering both the main
+              app (public schema) and scoring (scoring schema)
 e2e/          Playwright suite covering both SPAs
 infra/        Terraform for GCP Cloud Run deployment
 ```
@@ -1775,3 +1788,97 @@ Response shape: `{ error: { code, message, details? } }` on every non-2xx.
 5. Add matching method to `services/<name>.service.ts`
 6. Add/update hook in `hooks/use<Name>.ts` using `queryKeys.*`
 7. Update `hooks/queryKeys.ts` if new cache key needed
+
+---
+
+## Performance — Current Implementation (verified against code, not the prompt spec)
+
+The PROMPT 0–15 blocks above are the original build instructions and may
+describe intent that shipped differently. This section reflects what's
+actually in the code — treat it as the source of truth over the prompts
+where they disagree.
+
+### Redis caching (`backend/src/config/redis.ts`)
+
+Graceful-degrade: no `REDIS_URL` set, or connection drops → `cacheGet`
+returns `null`, `cacheSet`/`cacheDel` no-op. App behaves identically with
+or without Redis, just no speedup without it.
+
+| Cache key | TTL | Set in | Invalidated on |
+|---|---|---|---|
+| `user:profile:{id}` | 300s | `users.service.ts` `getUserById` | profile/athlete_data/coach_data update, follow, unfollow |
+| `org:{orgId}` | 300s | `organizations.service.ts` `getOrganization` | org update/delete, verify approve/reject |
+| `notif:count:{userId}` | 30s | `notifications.service.ts` `countUnread` | new notification, markRead, markOneRead |
+| `opps:list:{hash(query)}` | 60s | `opportunities.service.ts` `listOpportunities` | version-bump key (`OPP_VERSION_KEY`), not per-key delete — avoids enumerating every filter permutation |
+
+### DB indexes
+
+- `perf_add_indexes` migration — composite B-tree indexes matching real
+  query shapes: `User(role, status)`, `Organization(owner_user_id, created_at DESC)`,
+  `Reel`/`Blog(author_id, created_at DESC)`, `Report`/`Verification(status, created_at DESC)`.
+- `add_fts_indexes` + `fix_org_opp_search_vector_city` — Postgres full-text
+  search (`search_vector` tsvector + GIN) on User/Organization/Opportunity,
+  replaces LIKE-based search.
+- `add_athlete_data_gin_index` — GIN index on `athlete_data` JSONB
+  (`jsonb_path_ops`).
+
+### Pagination
+
+Cursor-based (`nextCursor`, `take: limit + 1` overfetch-by-one trick) on
+search, reels, opportunities, notifications, feed, comments, blogs. No
+offset pagination anywhere in these paths, no load-all-then-filter.
+
+### Atomic counters
+
+- **Post likes** — `posts.service.ts`: `$transaction` +
+  `$executeRaw INSERT ... ON CONFLICT DO NOTHING` then a recount `UPDATE`
+  in the same transaction.
+- **Messaging unread count** — dedicated `UnreadCount` table,
+  `INSERT ... ON CONFLICT (conversation_id, user_id) DO UPDATE SET count = count + 1`
+  (`messaging.service.ts`).
+- **Follows** — NOT a denormalized counter. Follower/following counts are
+  computed live via Prisma `_count` on the `Follow` relation
+  (`users.service.ts` `getUserById`), then Redis-cached. Correctness comes
+  from a unique constraint + idempotent `P2002` handling on concurrent
+  follow/unfollow, not from a counter that can drift.
+
+### Real-time messaging
+
+WebSocket is the primary channel. `refetchInterval` (60s in
+`useMessages.ts`, 30s in `Messages.tsx`) is a dumb safety-net poll for
+missed WS events only. This is **not** long-polling — PROMPT 9 above
+specs a 25s-hold long-poll endpoint; that was superseded by WS during
+implementation and the long-poll endpoint does not exist in
+`messaging.routes.ts`.
+
+### Frontend
+
+- Route-level code splitting: `React.lazy`/`Suspense` in `App.tsx`,
+  `Layout.tsx`, `PublicLayout.tsx`.
+- `manualChunks` in `vite.config.ts` — vendor bundle split for
+  cross-deploy browser caching.
+- React Query defaults (`main.tsx`): `staleTime` 2min, `gcTime` 10min,
+  `refetchOnWindowFocus: false`.
+- `useDebounce` (300ms) on search input.
+- `IntersectionObserver` used in Search, Reels (video autoplay-on-view),
+  Notifications (infinite scroll trigger).
+- `loading="lazy"` on Feed images.
+
+### Compression (`backend/src/app.ts`)
+
+`compression()` middleware wraps all responses in gzip/deflate, except
+`/api/v1/media/upload` (already-binary, would force full buffering for no
+gain):
+```ts
+app.use(compression({ filter: (req, res) =>
+  !req.path.startsWith("/api/v1/media/upload") && compression.filter(req, res) }));
+```
+
+### DB connection pool
+
+`DATABASE_URL` template (`database/.env.example`) carries
+`?connection_limit=10&pool_timeout=20`. Without it Prisma defaults to
+`num_cpus*2+1` connections per instance — fine locally, risky on Cloud Run
+where `max_instances * pool_size` can blow past Postgres's
+`max_connections`. Tune `connection_limit` down as instance count scales
+up, or front it with pgbouncer if instance count gets high.

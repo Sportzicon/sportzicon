@@ -2,6 +2,7 @@ import express, { type Express } from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import helmet from "helmet";
+import compression from "compression";
 import pinoHttp from "pino-http";
 import { logger } from "./config/logger";
 import { corsOrigins, env } from "./config/env";
@@ -61,6 +62,10 @@ export function createApp(): Express {
       allowedHeaders: ["Authorization", "Content-Type", "X-Request-Id"]
     })
   );
+
+  // gzip/deflate response bodies — skip for the raw upload route, no point
+  // compressing already-binary/large uploads and it'd force full buffering.
+  app.use(compression({ filter: (req, res) => !req.path.startsWith("/api/v1/media/upload") && compression.filter(req, res) }));
 
   // Raw body parser for file uploads (MUST come before other parsers)
   app.use("/api/v1/media/upload", express.raw({ type: "*/*", limit: "100mb" }));
