@@ -67,50 +67,6 @@ jobs:
           fi
           echo "✅ Main DB migrations complete"
 
-  migrate-scoring-db:
-    name: Migrate Scoring DB
-    runs-on: ubuntu-latest
-    environment: staging
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: npm
-          cache-dependency-path: scoring/backend/package-lock.json
-
-      - name: Run scoring database migrations
-        working-directory: scoring/backend
-        env:
-          DATABASE_URL: ${{ secrets.SCORING_DIRECT_URL }}
-          DIRECT_URL: ${{ secrets.SCORING_DIRECT_URL }}
-        run: |
-          npm ci --no-audit --no-fund
-
-          set +e
-          OUTPUT=$(npx prisma migrate deploy 2>&1)
-          EXIT_CODE=$?
-          set -e
-          echo "$OUTPUT"
-
-          if [ $EXIT_CODE -ne 0 ]; then
-            if echo "$OUTPUT" | grep -q "P1001\|P1002\|P1003"; then
-              echo "⚠️ Scoring database unreachable — skipping migrations. Existing schema assumed current."
-              exit 0
-            elif echo "$OUTPUT" | grep -q "P3005"; then
-              echo "⚠️  P3005: scoring database has no migration history — baselining latest migration..."
-              LATEST=$(ls prisma/migrations | grep -v migration_lock | sort | tail -1)
-              echo "Baselining: $LATEST"
-              npx prisma migrate resolve --applied "$LATEST"
-              npx prisma migrate deploy
-            else
-              exit $EXIT_CODE
-            fi
-          fi
-          echo "✅ Scoring DB migrations complete"
-
   build-api:
     name: Build & Push API Image
     runs-on: ubuntu-latest
@@ -234,7 +190,6 @@ jobs:
     environment: staging
     needs:
       - migrate-main-db
-      - migrate-scoring-db
       - build-api
       - build-web
       - build-scoring-api
@@ -286,8 +241,6 @@ jobs:
             -var-file=terraform.tfvars.staging \
             -var="database_url=${{ secrets.DATABASE_URL }}" \
             -var="direct_url=${{ secrets.DIRECT_URL }}" \
-            -var="scoring_database_url=${{ secrets.SCORING_DATABASE_URL }}" \
-            -var="scoring_direct_url=${{ secrets.SCORING_DIRECT_URL }}" \
             -var="resend_api_key=${{ secrets.RESEND_API_KEY }}" \
             'google_cloud_run_v2_service.scoring_api[0]' \
             "projects/${{ secrets.GCP_PROJECT_ID }}/locations/asia-south1/services/sportivox-scoring-api-staging" \
@@ -303,8 +256,6 @@ jobs:
             -var-file=terraform.tfvars.staging \
             -var="database_url=${{ secrets.DATABASE_URL }}" \
             -var="direct_url=${{ secrets.DIRECT_URL }}" \
-            -var="scoring_database_url=${{ secrets.SCORING_DATABASE_URL }}" \
-            -var="scoring_direct_url=${{ secrets.SCORING_DIRECT_URL }}" \
             -var="resend_api_key=${{ secrets.RESEND_API_KEY }}" \
             'google_secret_manager_secret.direct_url' \
             "projects/${{ secrets.GCP_PROJECT_ID }}/secrets/sportivox-direct-url-staging" \
@@ -317,8 +268,6 @@ jobs:
             -var-file=terraform.tfvars.staging \
             -var="database_url=${{ secrets.DATABASE_URL }}" \
             -var="direct_url=${{ secrets.DIRECT_URL }}" \
-            -var="scoring_database_url=${{ secrets.SCORING_DATABASE_URL }}" \
-            -var="scoring_direct_url=${{ secrets.SCORING_DIRECT_URL }}" \
             -var="resend_api_key=${{ secrets.RESEND_API_KEY }}" \
             -out=tfplan
 

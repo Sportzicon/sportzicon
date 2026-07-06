@@ -54,4 +54,4 @@ gcs_bucket_terraform_state = "sportivox-terraform-state-sportzicon-app"
 scoring_cors_origin        = "https://sportzicon.com,https://www.sportzicon.com"
 optional_scoring_secrets   = []
 scoring_api_custom_domain  = "scoring-api.sportzicon.com"
-# scoring_database_url and scoring_direct_url are passed as CI secrets (not committed)
+# Scoring API shares the main app's database_url/direct_url — no separate scoring DB vars.
