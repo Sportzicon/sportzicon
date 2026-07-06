@@ -250,20 +250,6 @@ variable "scoring_api_custom_domain" {
   description = "Custom domain for the scoring API (e.g. scoring-api.sportzicon.com). Leave empty to use the Cloud Run run.app URL. If set, a Cloud Run domain mapping is created and Cloudflare DNS must point to it."
 }
 
-variable "scoring_database_url" {
-  type        = string
-  sensitive   = true
-  default     = ""
-  description = "PostgreSQL connection URL for the scoring database (pooler, port 6543)."
-}
-
-variable "scoring_direct_url" {
-  type        = string
-  sensitive   = true
-  default     = ""
-  description = "PostgreSQL direct connection URL for the scoring database (port 5432). Used by Prisma for migrations."
-}
-
 variable "scoring_api_url" {
   type        = string
   default     = ""

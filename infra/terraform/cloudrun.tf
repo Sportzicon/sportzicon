@@ -245,11 +245,11 @@ resource "google_cloud_run_v2_service" "scoring_api" {
       }
       env {
         name  = "DATABASE_URL"
-        value = var.scoring_database_url != "" ? var.scoring_database_url : var.database_url
+        value = var.database_url
       }
       env {
         name  = "DIRECT_URL"
-        value = var.scoring_direct_url != "" ? var.scoring_direct_url : var.direct_url
+        value = var.direct_url
       }
       env {
         name  = "JWT_SECRET"
