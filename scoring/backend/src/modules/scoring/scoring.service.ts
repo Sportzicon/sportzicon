@@ -1,5 +1,8 @@
+import { Prisma } from "@prisma/client";
 import { prisma } from "../../config/prisma";
 import { BadRequest, Forbidden, NotFound } from "../../utils/errors";
+
+type TxClient = Prisma.TransactionClient;
 import { validateBall, deriveFreeHit } from "./ballValidation";
 
 // ── Guards ───────────────────────────────────────────────────────────────────
@@ -1107,7 +1110,7 @@ export async function addBall(inningsId: string, actorId: string, actorRole: str
   // Free hit follows a no-ball and persists through wides until the next legal ball.
   const freeHitEnabled = tournament?.free_hit_enabled ?? (match.format !== "Test");
   const recentForFreeHit = await prisma.ballEvent.findMany({
-    where: { innings_id: inningsId },
+    where: { innings_id: inningsId, voided: false },
     orderBy: { created_at: "desc" }, take: 6,
     select: { is_no_ball: true, is_wide: true }
   });
@@ -1140,115 +1143,15 @@ export async function addBall(inningsId: string, actorId: string, actorRole: str
   // The server decides free-hit status from the previous delivery — not the client.
   const effectiveFreeHit = freeHitActive;
 
-  // Ball event row with full PPTX fields
-  const ball = await prisma.ballEvent.create({
-    data: {
-      innings_id: inningsId,
-      over_number, ball_number,
-      batsman_id, bowler_id, non_striker_id,
-      runs,
-      is_wide, is_no_ball, is_bye, is_leg_bye, is_penalty,
-      is_wicket, is_four, is_six, is_free_hit: effectiveFreeHit, is_dot: isDot,
-      shot_type, ball_line, ball_length, bowler_variant, delivery_outcome,
-      phase,
-      wicket_type, dismissed_player_id, fielder_id, fielder_name,
-      fielding_position, dismissal_zone, ball_trajectory,
-      commentary
-    }
-  });
-
   // Phase increment helpers
   const phaseInc = (key: "pp" | "mid" | "death") => ({
     [`${key}_runs`]: phase === key ? { increment: totalRuns } : undefined,
     [`${key}_balls`]: phase === key && isLegal ? { increment: 1 } : undefined,
     [`${key}_wickets`]: phase === key && is_wicket ? { increment: 1 } : undefined
   });
-
-  // Innings totals + phase splits + counters
-  await prisma.innings.update({
-    where: { id: inningsId },
-    data: {
-      total_runs: { increment: totalRuns },
-      total_wickets: is_wicket ? { increment: 1 } : undefined,
-      total_balls: isLegal ? { increment: 1 } : undefined,
-      extras: { increment: extraRuns + byeRuns + (is_penalty ? 5 : 0) },
-      wides: is_wide ? { increment: runs + 1 } : undefined,
-      no_balls: is_no_ball ? { increment: 1 } : undefined,
-      byes: !is_wide && is_bye ? { increment: runs } : undefined,
-      leg_byes: !is_wide && is_leg_bye ? { increment: runs } : undefined,
-      penalty_runs: is_penalty ? { increment: 5 } : undefined,
-      boundary_4s: is_four ? { increment: 1 } : undefined,
-      boundary_6s: is_six ? { increment: 1 } : undefined,
-      dot_balls: isDot ? { increment: 1 } : undefined,
-      ...phaseInc("pp"), ...phaseInc("mid"), ...phaseInc("death")
-    }
-  });
-
-  // Batsman stats with PPTX shot detail counters
   const oneRun = batsmanRuns === 1;
   const twoRun = batsmanRuns === 2;
   const threeRun = batsmanRuns === 3;
-  await prisma.battingEntry.upsert({
-    where: { innings_id_player_id: { innings_id: inningsId, player_id: batsman_id } },
-    create: {
-      innings_id: inningsId, player_id: batsman_id, batting_position: 99,
-      runs: batsmanRuns, balls_faced: isLegal ? 1 : 0,
-      fours: is_four ? 1 : 0, sixes: is_six ? 1 : 0,
-      dot_balls: isDot ? 1 : 0,
-      singles: oneRun ? 1 : 0, doubles: twoRun ? 1 : 0, threes: threeRun ? 1 : 0,
-      status: "not_out"
-    },
-    update: {
-      runs: { increment: batsmanRuns },
-      balls_faced: isLegal ? { increment: 1 } : undefined,
-      fours: is_four ? { increment: 1 } : undefined,
-      sixes: is_six ? { increment: 1 } : undefined,
-      dot_balls: isDot ? { increment: 1 } : undefined,
-      singles: oneRun ? { increment: 1 } : undefined,
-      doubles: twoRun ? { increment: 1 } : undefined,
-      threes: threeRun ? { increment: 1 } : undefined,
-      status: "not_out"
-    }
-  });
-
-  // Mark non-striker as "not_out" so they appear on public scoreboards immediately.
-  // Without this, a non-striker who hasn't faced a ball stays "yet_to_bat" and is
-  // invisible on the live scores page until they take strike.
-  if (non_striker_id) {
-    await prisma.battingEntry.upsert({
-      where: { innings_id_player_id: { innings_id: inningsId, player_id: non_striker_id } },
-      create: {
-        innings_id: inningsId, player_id: non_striker_id, batting_position: 99,
-        runs: 0, balls_faced: 0, fours: 0, sixes: 0, dot_balls: 0,
-        singles: 0, doubles: 0, threes: 0, status: "not_out"
-      },
-      update: { status: "not_out" }
-    });
-  }
-
-  // Dismiss out batsman + capture dismissal context for scorecard view
-  if (is_wicket && dismissed_player_id) {
-    const bowlerCredit = ["caught", "bowled", "lbw", "stumped", "hit_wicket", "cb"].includes(wicket_type ?? "");
-    await prisma.battingEntry.updateMany({
-      where: { innings_id: inningsId, player_id: dismissed_player_id },
-      data: {
-        status: "out",
-        dismissal_type: wicket_type,
-        dismissed_by_id: bowlerCredit ? bowler_id : null,
-        fielder_id: fielder_id ?? null,
-        dismissal_shot: shot_type ?? null,
-        dismissal_line: ball_line ?? null,
-        dismissal_length: ball_length ?? null,
-        dismissal_bowler_type: bowler_variant ?? null,
-        dismissal_zone: dismissal_zone ?? null,
-        dismissal_trajectory: ball_trajectory ?? null,
-        dismissal_fielding_position: fielding_position ?? null
-      }
-    });
-  }
-
-  // Bowler stats with phase splits
-  // On a no-ball+bye, the bowler is charged the penalty (1) + the bye runs; on a wide all extras are already in extraRuns
   const bowlerRunsConceded = batsmanRuns + (is_no_ball ? byeRuns : 0) + (is_wide ? runs + 1 : 0) + (is_no_ball ? 1 : 0);
   const bowlerWicket = is_wicket && !["run_out", "obstructing_field", "handled_ball", "retired_hurt"].includes(wicket_type ?? "");
   const bowlPhaseInc = (key: "pp" | "mid" | "death") => ({
@@ -1256,69 +1159,176 @@ export async function addBall(inningsId: string, actorId: string, actorRole: str
     [`${key}_balls`]: phase === key && isLegal ? { increment: 1 } : undefined,
     [`${key}_wickets`]: phase === key && bowlerWicket ? { increment: 1 } : undefined
   });
-  await prisma.bowlingEntry.upsert({
-    where: { innings_id_player_id: { innings_id: inningsId, player_id: bowler_id } },
-    create: {
-      innings_id: inningsId, player_id: bowler_id,
-      balls: isLegal ? 1 : 0, runs_conceded: bowlerRunsConceded,
-      wickets: bowlerWicket ? 1 : 0,
-      wides: is_wide ? 1 : 0, no_balls: is_no_ball ? 1 : 0,
-      dot_balls: isDot ? 1 : 0,
-      boundaries_4s: is_four ? 1 : 0, boundaries_6s: is_six ? 1 : 0,
-      pp_runs: phase === "pp" ? bowlerRunsConceded : 0, pp_balls: phase === "pp" && isLegal ? 1 : 0, pp_wickets: phase === "pp" && bowlerWicket ? 1 : 0,
-      mid_runs: phase === "mid" ? bowlerRunsConceded : 0, mid_balls: phase === "mid" && isLegal ? 1 : 0, mid_wickets: phase === "mid" && bowlerWicket ? 1 : 0,
-      death_runs: phase === "death" ? bowlerRunsConceded : 0, death_balls: phase === "death" && isLegal ? 1 : 0, death_wickets: phase === "death" && bowlerWicket ? 1 : 0
-    },
-    update: {
-      balls: isLegal ? { increment: 1 } : undefined,
-      runs_conceded: { increment: bowlerRunsConceded },
-      wickets: bowlerWicket ? { increment: 1 } : undefined,
-      wides: is_wide ? { increment: 1 } : undefined,
-      no_balls: is_no_ball ? { increment: 1 } : undefined,
-      dot_balls: isDot ? { increment: 1 } : undefined,
-      boundaries_4s: is_four ? { increment: 1 } : undefined,
-      boundaries_6s: is_six ? { increment: 1 } : undefined,
-      ...bowlPhaseInc("pp"), ...bowlPhaseInc("mid"), ...bowlPhaseInc("death")
-    }
-  });
 
-  // Fielding entry — catches, drops, run-outs, stumpings, assists
-  if (is_wicket && fielder_id) {
-    const isCatch = wicket_type === "caught" || wicket_type === "cb";
-    const isRunOut = wicket_type === "run_out";
-    const isStump = wicket_type === "stumped";
-    if (isCatch || isRunOut || isStump) {
-      await prisma.fieldingEntry.upsert({
-        where: { innings_id_player_id: { innings_id: inningsId, player_id: fielder_id } },
+  // Ledger + all stat deltas as one atomic unit — a partial failure here must
+  // never leave the ball recorded without its Innings/entry/partnership deltas
+  // (or vice versa).
+  const ball = await prisma.$transaction(async (tx) => {
+    // Ball event row with full PPTX fields
+    const ball = await tx.ballEvent.create({
+      data: {
+        innings_id: inningsId,
+        over_number, ball_number,
+        batsman_id, bowler_id, non_striker_id,
+        runs,
+        is_wide, is_no_ball, is_bye, is_leg_bye, is_penalty,
+        is_wicket, is_four, is_six, is_free_hit: effectiveFreeHit, is_dot: isDot,
+        shot_type, ball_line, ball_length, bowler_variant, delivery_outcome,
+        phase,
+        wicket_type, dismissed_player_id, fielder_id, fielder_name,
+        fielding_position, dismissal_zone, ball_trajectory,
+        commentary
+      }
+    });
+
+    // Innings totals + phase splits + counters
+    await tx.innings.update({
+      where: { id: inningsId },
+      data: {
+        total_runs: { increment: totalRuns },
+        total_wickets: is_wicket ? { increment: 1 } : undefined,
+        total_balls: isLegal ? { increment: 1 } : undefined,
+        extras: { increment: extraRuns + byeRuns + (is_penalty ? 5 : 0) },
+        wides: is_wide ? { increment: runs + 1 } : undefined,
+        no_balls: is_no_ball ? { increment: 1 } : undefined,
+        byes: !is_wide && is_bye ? { increment: runs } : undefined,
+        leg_byes: !is_wide && is_leg_bye ? { increment: runs } : undefined,
+        penalty_runs: is_penalty ? { increment: 5 } : undefined,
+        boundary_4s: is_four ? { increment: 1 } : undefined,
+        boundary_6s: is_six ? { increment: 1 } : undefined,
+        dot_balls: isDot ? { increment: 1 } : undefined,
+        ...phaseInc("pp"), ...phaseInc("mid"), ...phaseInc("death")
+      }
+    });
+
+    // Batsman stats with PPTX shot detail counters
+    await tx.battingEntry.upsert({
+      where: { innings_id_player_id: { innings_id: inningsId, player_id: batsman_id } },
+      create: {
+        innings_id: inningsId, player_id: batsman_id, batting_position: 99,
+        runs: batsmanRuns, balls_faced: isLegal ? 1 : 0,
+        fours: is_four ? 1 : 0, sixes: is_six ? 1 : 0,
+        dot_balls: isDot ? 1 : 0,
+        singles: oneRun ? 1 : 0, doubles: twoRun ? 1 : 0, threes: threeRun ? 1 : 0,
+        status: "not_out"
+      },
+      update: {
+        runs: { increment: batsmanRuns },
+        balls_faced: isLegal ? { increment: 1 } : undefined,
+        fours: is_four ? { increment: 1 } : undefined,
+        sixes: is_six ? { increment: 1 } : undefined,
+        dot_balls: isDot ? { increment: 1 } : undefined,
+        singles: oneRun ? { increment: 1 } : undefined,
+        doubles: twoRun ? { increment: 1 } : undefined,
+        threes: threeRun ? { increment: 1 } : undefined,
+        status: "not_out"
+      }
+    });
+
+    // Mark non-striker as "not_out" so they appear on public scoreboards immediately.
+    // Without this, a non-striker who hasn't faced a ball stays "yet_to_bat" and is
+    // invisible on the live scores page until they take strike.
+    if (non_striker_id) {
+      await tx.battingEntry.upsert({
+        where: { innings_id_player_id: { innings_id: inningsId, player_id: non_striker_id } },
         create: {
-          innings_id: inningsId, player_id: fielder_id,
-          catches: isCatch ? 1 : 0,
-          run_outs_direct: isRunOut ? 1 : 0,
-          stumpings: isStump ? 1 : 0,
-          direct_hits: isRunOut ? 1 : 0,
-          impact_score: 1
+          innings_id: inningsId, player_id: non_striker_id, batting_position: 99,
+          runs: 0, balls_faced: 0, fours: 0, sixes: 0, dot_balls: 0,
+          singles: 0, doubles: 0, threes: 0, status: "not_out"
         },
-        update: {
-          catches: isCatch ? { increment: 1 } : undefined,
-          run_outs_direct: isRunOut ? { increment: 1 } : undefined,
-          stumpings: isStump ? { increment: 1 } : undefined,
-          direct_hits: isRunOut ? { increment: 1 } : undefined,
-          impact_score: { increment: 1 }
+        update: { status: "not_out" }
+      });
+    }
+
+    // Dismiss out batsman + capture dismissal context for scorecard view
+    if (is_wicket && dismissed_player_id) {
+      const bowlerCredit = ["caught", "bowled", "lbw", "stumped", "hit_wicket", "cb"].includes(wicket_type ?? "");
+      await tx.battingEntry.updateMany({
+        where: { innings_id: inningsId, player_id: dismissed_player_id },
+        data: {
+          status: "out",
+          dismissal_type: wicket_type,
+          dismissed_by_id: bowlerCredit ? bowler_id : null,
+          fielder_id: fielder_id ?? null,
+          dismissal_shot: shot_type ?? null,
+          dismissal_line: ball_line ?? null,
+          dismissal_length: ball_length ?? null,
+          dismissal_bowler_type: bowler_variant ?? null,
+          dismissal_zone: dismissal_zone ?? null,
+          dismissal_trajectory: ball_trajectory ?? null,
+          dismissal_fielding_position: fielding_position ?? null
         }
       });
     }
-  }
 
-  // Partnership tracking — open on first ball, close on wicket of dismissed_player
-  await updatePartnerships(inningsId, {
-    runs: totalRuns, isLegal, batsman_id, non_striker_id,
-    is_wicket, dismissed_player_id, over_number, ball_number,
-    is_four, is_six
+    // Bowler stats with phase splits
+    // On a no-ball+bye, the bowler is charged the penalty (1) + the bye runs; on a wide all extras are already in extraRuns
+    await tx.bowlingEntry.upsert({
+      where: { innings_id_player_id: { innings_id: inningsId, player_id: bowler_id } },
+      create: {
+        innings_id: inningsId, player_id: bowler_id,
+        balls: isLegal ? 1 : 0, runs_conceded: bowlerRunsConceded,
+        wickets: bowlerWicket ? 1 : 0,
+        wides: is_wide ? 1 : 0, no_balls: is_no_ball ? 1 : 0,
+        dot_balls: isDot ? 1 : 0,
+        boundaries_4s: is_four ? 1 : 0, boundaries_6s: is_six ? 1 : 0,
+        pp_runs: phase === "pp" ? bowlerRunsConceded : 0, pp_balls: phase === "pp" && isLegal ? 1 : 0, pp_wickets: phase === "pp" && bowlerWicket ? 1 : 0,
+        mid_runs: phase === "mid" ? bowlerRunsConceded : 0, mid_balls: phase === "mid" && isLegal ? 1 : 0, mid_wickets: phase === "mid" && bowlerWicket ? 1 : 0,
+        death_runs: phase === "death" ? bowlerRunsConceded : 0, death_balls: phase === "death" && isLegal ? 1 : 0, death_wickets: phase === "death" && bowlerWicket ? 1 : 0
+      },
+      update: {
+        balls: isLegal ? { increment: 1 } : undefined,
+        runs_conceded: { increment: bowlerRunsConceded },
+        wickets: bowlerWicket ? { increment: 1 } : undefined,
+        wides: is_wide ? { increment: 1 } : undefined,
+        no_balls: is_no_ball ? { increment: 1 } : undefined,
+        dot_balls: isDot ? { increment: 1 } : undefined,
+        boundaries_4s: is_four ? { increment: 1 } : undefined,
+        boundaries_6s: is_six ? { increment: 1 } : undefined,
+        ...bowlPhaseInc("pp"), ...bowlPhaseInc("mid"), ...bowlPhaseInc("death")
+      }
+    });
+
+    // Fielding entry — catches, drops, run-outs, stumpings, assists
+    if (is_wicket && fielder_id) {
+      const isCatch = wicket_type === "caught" || wicket_type === "cb";
+      const isRunOut = wicket_type === "run_out";
+      const isStump = wicket_type === "stumped";
+      if (isCatch || isRunOut || isStump) {
+        await tx.fieldingEntry.upsert({
+          where: { innings_id_player_id: { innings_id: inningsId, player_id: fielder_id } },
+          create: {
+            innings_id: inningsId, player_id: fielder_id,
+            catches: isCatch ? 1 : 0,
+            run_outs_direct: isRunOut ? 1 : 0,
+            stumpings: isStump ? 1 : 0,
+            direct_hits: isRunOut ? 1 : 0,
+            impact_score: 1
+          },
+          update: {
+            catches: isCatch ? { increment: 1 } : undefined,
+            run_outs_direct: isRunOut ? { increment: 1 } : undefined,
+            stumpings: isStump ? { increment: 1 } : undefined,
+            direct_hits: isRunOut ? { increment: 1 } : undefined,
+            impact_score: { increment: 1 }
+          }
+        });
+      }
+    }
+
+    // Partnership tracking — open on first ball, close on wicket of dismissed_player
+    await updatePartnerships(tx, inningsId, {
+      runs: totalRuns, isLegal, batsman_id, non_striker_id,
+      is_wicket, dismissed_player_id, over_number, ball_number,
+      is_four, is_six
+    });
+
+    return ball;
   });
 
   // Recompute derived: projected score / win probability / momentum
   const recent = await prisma.ballEvent.findMany({
-    where: { innings_id: inningsId },
+    where: { innings_id: inningsId, voided: false },
     orderBy: { created_at: "desc" }, take: 12,
     select: { is_wicket: true, runs: true, is_four: true, is_six: true, is_dot: true }
   });
@@ -1353,6 +1363,7 @@ export async function addBall(inningsId: string, actorId: string, actorRole: str
 // ── Partnerships ─────────────────────────────────────────────────────────────
 
 async function updatePartnerships(
+  tx: TxClient,
   inningsId: string,
   ev: {
     runs: number; isLegal: boolean; batsman_id: string; non_striker_id?: string;
@@ -1361,15 +1372,15 @@ async function updatePartnerships(
   }
 ) {
   // find unbroken partnership
-  let pship = await prisma.partnership.findFirst({
+  let pship = await tx.partnership.findFirst({
     where: { innings_id: inningsId, is_unbroken: true },
     orderBy: { wicket_number: "desc" }
   });
 
   if (!pship) {
     // open one with current batsman and non-striker (if known)
-    const wicketsSoFar = (await prisma.innings.findUnique({ where: { id: inningsId } }))?.total_wickets ?? 0;
-    pship = await prisma.partnership.create({
+    const wicketsSoFar = (await tx.innings.findUnique({ where: { id: inningsId } }))?.total_wickets ?? 0;
+    pship = await tx.partnership.create({
       data: {
         innings_id: inningsId,
         wicket_number: wicketsSoFar,
@@ -1380,7 +1391,7 @@ async function updatePartnerships(
       }
     });
   } else {
-    await prisma.partnership.update({
+    await tx.partnership.update({
       where: { id: pship.id },
       data: {
         runs: { increment: ev.runs },
@@ -1392,7 +1403,7 @@ async function updatePartnerships(
   }
 
   if (ev.is_wicket && pship) {
-    await prisma.partnership.update({
+    await tx.partnership.update({
       where: { id: pship.id },
       data: { is_unbroken: false, ended_over: ev.over_number, ended_ball: ev.ball_number }
     });
@@ -1435,7 +1446,7 @@ export async function getInningsAnalytics(inningsId: string) {
   });
   if (!innings) throw NotFound("Innings not found");
 
-  const balls = await prisma.ballEvent.findMany({ where: { innings_id: inningsId } });
+  const balls = await prisma.ballEvent.findMany({ where: { innings_id: inningsId, voided: false } });
 
   // Dismissal patterns (PPTX § Analytics — Key Numbers: dismissed_outside_off %)
   const wickets = balls.filter(b => b.is_wicket);
@@ -1510,7 +1521,7 @@ export async function getPlayerScouting(playerId: string) {
   if (!player) throw NotFound("Player not found");
 
   // Aggregate batting balls
-  const balls = await prisma.ballEvent.findMany({ where: { batsman_id: playerId } });
+  const balls = await prisma.ballEvent.findMany({ where: { batsman_id: playerId, voided: false } });
   const dismissals = balls.filter(b => b.is_wicket && b.dismissed_player_id === playerId);
 
   const byLength: Record<string, { balls: number; runs: number; wkts: number }> = {};
@@ -1621,7 +1632,7 @@ export async function logFieldingEvent(
 
 // ── Undo last ball (PPTX § Team Analytics · Edit score / Undo last ball) ────
 
-export async function undoLastBall(inningsId: string, actorId: string, actorRole: string) {
+export async function undoLastBall(inningsId: string, actorId: string, actorRole: string, reason?: string) {
   const innings = await prisma.innings.findUnique({ where: { id: inningsId } });
   if (!innings) throw NotFound("Innings not found");
   const match = await prisma.match.findUnique({ where: { id: innings.match_id } });
@@ -1629,7 +1640,7 @@ export async function undoLastBall(inningsId: string, actorId: string, actorRole
   await assertManager(match.tournament_id, actorId, actorRole);
 
   const last = await prisma.ballEvent.findFirst({
-    where: { innings_id: inningsId },
+    where: { innings_id: inningsId, voided: false },
     orderBy: { created_at: "desc" }
   });
   if (!last) throw BadRequest("No balls to undo");
@@ -1641,7 +1652,8 @@ export async function undoLastBall(inningsId: string, actorId: string, actorRole
   const byeRuns = !last.is_wide && (last.is_bye || last.is_leg_bye) ? last.runs : 0;
   const totalRuns = batsmanRuns + extraRuns + byeRuns + (last.is_penalty ? 5 : 0);
 
-  await prisma.innings.update({
+  return prisma.$transaction(async (tx) => {
+  await tx.innings.update({
     where: { id: inningsId },
     data: {
       total_runs: { decrement: totalRuns },
@@ -1674,7 +1686,7 @@ export async function undoLastBall(inningsId: string, actorId: string, actorRole
   const threeRun = batsmanRuns === 3;
 
   // Reverse batsman + bowler entries
-  await prisma.battingEntry.updateMany({
+  await tx.battingEntry.updateMany({
     where: { innings_id: inningsId, player_id: last.batsman_id },
     data: {
       runs: { decrement: batsmanRuns },
@@ -1689,7 +1701,7 @@ export async function undoLastBall(inningsId: string, actorId: string, actorRole
   });
 
   if (last.is_wicket && last.dismissed_player_id) {
-    await prisma.battingEntry.updateMany({
+    await tx.battingEntry.updateMany({
       where: { innings_id: inningsId, player_id: last.dismissed_player_id },
       data: {
         status: "not_out",
@@ -1703,7 +1715,7 @@ export async function undoLastBall(inningsId: string, actorId: string, actorRole
 
   const bowlerRunsConceded = batsmanRuns + (last.is_no_ball ? byeRuns : 0) + (last.is_wide ? last.runs + 1 : 0) + (last.is_no_ball ? 1 : 0);
   const bowlerWicket = last.is_wicket && !["run_out", "obstructing_field", "handled_ball", "retired_hurt"].includes(last.wicket_type ?? "");
-  await prisma.bowlingEntry.updateMany({
+  await tx.bowlingEntry.updateMany({
     where: { innings_id: inningsId, player_id: last.bowler_id },
     data: {
       balls: isLegal ? { decrement: 1 } : undefined,
@@ -1733,7 +1745,7 @@ export async function undoLastBall(inningsId: string, actorId: string, actorRole
     const isRunOut = last.wicket_type === "run_out";
     const isStump = last.wicket_type === "stumped";
     if (isCatch || isRunOut || isStump) {
-      await prisma.fieldingEntry.updateMany({
+      await tx.fieldingEntry.updateMany({
         where: { innings_id: inningsId, player_id: last.fielder_id },
         data: {
           catches: isCatch ? { decrement: 1 } : undefined,
@@ -1749,7 +1761,7 @@ export async function undoLastBall(inningsId: string, actorId: string, actorRole
   // Reverse partnership state
   if (last.is_wicket) {
     // Reopen the most recently closed partnership and reverse its contribution
-    const closedPship = await prisma.partnership.findFirst({
+    const closedPship = await tx.partnership.findFirst({
       where: { innings_id: inningsId, is_unbroken: false },
       orderBy: [{ ended_over: "desc" }, { ended_ball: "desc" }]
     });
@@ -1758,9 +1770,9 @@ export async function undoLastBall(inningsId: string, actorId: string, actorRole
       const newBalls = closedPship.balls - (isLegal ? 1 : 0);
       if (newRuns <= 0 && newBalls <= 0) {
         // Partnership was created and immediately closed by this ball — delete it
-        await prisma.partnership.delete({ where: { id: closedPship.id } });
+        await tx.partnership.delete({ where: { id: closedPship.id } });
       } else {
-        await prisma.partnership.update({
+        await tx.partnership.update({
           where: { id: closedPship.id },
           data: {
             is_unbroken: true,
@@ -1776,7 +1788,7 @@ export async function undoLastBall(inningsId: string, actorId: string, actorRole
     }
   } else {
     // Reverse contribution to the active (unbroken) partnership
-    const activePship = await prisma.partnership.findFirst({
+    const activePship = await tx.partnership.findFirst({
       where: { innings_id: inningsId, is_unbroken: true },
       orderBy: { wicket_number: "desc" }
     });
@@ -1785,9 +1797,9 @@ export async function undoLastBall(inningsId: string, actorId: string, actorRole
       const newBalls = activePship.balls - (isLegal ? 1 : 0);
       if (newRuns <= 0 && newBalls <= 0) {
         // This was the first ball of this partnership — delete it
-        await prisma.partnership.delete({ where: { id: activePship.id } });
+        await tx.partnership.delete({ where: { id: activePship.id } });
       } else {
-        await prisma.partnership.update({
+        await tx.partnership.update({
           where: { id: activePship.id },
           data: {
             runs: { decrement: totalRuns },
@@ -1800,12 +1812,19 @@ export async function undoLastBall(inningsId: string, actorId: string, actorRole
     }
   }
 
-  await prisma.ballEvent.delete({ where: { id: last.id } });
-  return { deleted: last.id };
+  // Void, don't delete — keeps the delivery as an audit trail instead of
+  // erasing it. `correction_of_id` stays null: a pure undo has no
+  // replacement ball.
+  await tx.ballEvent.update({
+    where: { id: last.id },
+    data: { voided: true, voided_reason: reason?.trim() || "Corrected by scorer" }
+  });
+  return { voided: last.id };
+  });
 }
 
 export async function getOverSummary(inningsId: string, overNumber?: number) {
-  const where: any = { innings_id: inningsId };
+  const where: any = { innings_id: inningsId, voided: false };
   if (overNumber !== undefined) where.over_number = overNumber;
 
   return prisma.ballEvent.findMany({

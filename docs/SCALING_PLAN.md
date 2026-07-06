@@ -204,48 +204,57 @@ blockers.
 
 ---
 
-## Phase 2: Live Scoring Correctness — `BallEvent` Hardening
+## Phase 2: Live Scoring Correctness — `BallEvent` Hardening — DONE (2026-07-06)
 
 ### Goal
 Make ball-by-ball scoring append-only and correction-safe, per the original
 brief's event-sourcing intent — applied to the existing `BallEvent` table
 rather than a new generic model.
 
-### Current vs Needed
-- `BallEvent` rows are mutable, no correction trail → add `voided`,
-  `voided_reason`, `correction_of_id` (self-relation) fields; enforce
-  insert-only at the service layer (never `UPDATE` a delivery in place).
-- No derived `MatchState`/current-score row exists yet (confirm during
-  implementation — if scoring/frontend currently computes live score by
-  re-summing `BallEvent` on every read, that's the actual current behavior
-  to replace) → add one `MatchState`-equivalent per match, recomputed by
-  replaying non-voided `BallEvent` rows in `(over_number, ball_number)` order
-  inside one transaction on every correction.
+**Re-verified against the actual scoring service before implementing:**
+`Innings` already carries denormalized running totals updated by
+`addBall`/`undoLastBall` — it already **is** the derived-state row this
+phase wondered whether it needed to build. No new table was needed. The
+only correction feature that existed was "undo last ball," which
+hard-deleted the `BallEvent` row and manually reversed deltas across 5
+tables with **no transaction wrapper at all** — a real atomicity gap on top
+of the append-only one.
 
-### Migrations / Schema Changes
-- `ALTER TABLE "BallEvent" ADD COLUMN voided BOOLEAN DEFAULT false, ADD COLUMN voided_reason TEXT, ADD COLUMN correction_of_id UUID REFERENCES "BallEvent"(id)`.
-- New table (or existing per-match summary row, if one already exists —
-  verify against `Match`/`Innings` current-score fields first): derived
-  current-state row keyed by `match_id`.
-
-### Files to Create / Modify / Delete
-- Modify: `scoring/backend/src/modules/**/scoring.service.ts` (whichever
-  module owns ball recording) — add void+append+recompute transaction for
-  corrections, reject direct mutation of a non-voided row.
-- Modify: relevant Prisma schema section for `BallEvent`.
+### Scope actually implemented (see plan file discussion — full replay/
+recompute engine was considered and deliberately not built)
+- `BallEvent` gained `voided`, `voided_reason`, `correction_of_id`
+  (self-relation) fields (migration `20260706120000_ball_event_correction_fields`).
+- `undoLastBall` now **voids** the row (`voided: true, voided_reason`)
+  instead of `ballEvent.delete()` — ledger is genuinely append-only,
+  `correction_of_id` stays `null` for a pure undo (no replacement ball).
+- Both `addBall` and `undoLastBall`'s write sequences are wrapped in
+  `prisma.$transaction(...)` — fixes the pre-existing atomicity gap.
+- All 6 `BallEvent` read sites in `scoring.service.ts` (free-hit derivation,
+  momentum calc, `getInningsAnalytics`, `getPlayerScouting`, `undoLastBall`'s
+  own lookup, `getOverSummary`) now filter `voided: false`.
+- **Not built**: a full replay-based recompute engine for `Innings`/entry
+  tables, an "edit a specific historical ball" endpoint (nothing today asks
+  for it — only "undo last" exists), socket broadcast on ball events
+  (unrelated to this phase). The existing increment/decrement math is
+  correct for the one correction case that exists (always the tail of the
+  sequence) and was left as-is.
 
 ### Acceptance Criteria
-- A correction (e.g. umpire review overturn) produces two rows (original
-  voided + new), never a row mutation — verifiable in the DB directly.
-- Recomputing match state from the full non-voided event list is
-  deterministic and matches what live viewers see.
-- `cd backend && npm run typecheck` (scoring backend's own typecheck/build)
-  passes.
+- A correction (undo) produces a voided row, never a deleted one — verified
+  directly against the live DB: 3 balls recorded, undo twice, all 3 rows
+  still present (2 voided, 1 live), `Innings` totals correctly reverted at
+  each step, a second undo correctly targets the next non-voided ball
+  rather than re-touching the just-voided one.
+- `getOverSummary` (and the other 5 read sites) confirmed to exclude voided
+  balls.
+- `cd backend && npm run typecheck`, `cd scoring/backend && npx tsc --noEmit`,
+  and `npm run build` all pass with zero errors.
 
 ### Risks / Rollback
-- If scoring already has live/staging match data using the current mutate-in-place
-  correction flow, this is a behavior change for in-flight matches — ship
-  between matches, not mid-tournament.
+- Checked before starting: 1 tournament / 1 match / 2 innings exist in the
+  live DB, but 0 `BallEvent` rows — no deliveries have been recorded yet, so
+  no in-flight match was using the old mutate-in-place undo flow. Migration
+  is purely additive (nullable/defaulted columns + index), safe regardless.
 
 ---
 

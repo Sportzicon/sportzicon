@@ -186,9 +186,11 @@ router.get("/innings/:inningsId/balls", optionalAuth, asyncHandler(async (req: a
 }));
 
 // Undo last ball (PPTX § Team Analytics)
+const undoBallSchema = z.object({ reason: z.string().max(200).optional() });
 router.post("/innings/:inningsId/balls/undo", requireAuth, requireRole("organizer", "admin", "scorer"),
   asyncHandler(async (req: any, res: any) => {
-    const r = await svc.undoLastBall(req.params.inningsId, req.user.sub, req.user.role);
+    const { reason } = undoBallSchema.parse(req.body ?? {});
+    const r = await svc.undoLastBall(req.params.inningsId, req.user.sub, req.user.role, reason);
     res.json(r);
   })
 );

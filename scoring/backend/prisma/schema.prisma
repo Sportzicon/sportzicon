@@ -1097,6 +1097,14 @@ model BallEvent {
   // Optional commentary text
   commentary          String?
 
+  // Append-only correction trail — corrections void the original row and
+  // (optionally) append a replacement, never mutate/delete the delivery data.
+  voided              Boolean     @default(false)
+  voided_reason       String?
+  correction_of_id    String?     @db.Uuid
+  correctionOf        BallEvent?  @relation("BallCorrection", fields: [correction_of_id], references: [id])
+  corrections         BallEvent[] @relation("BallCorrection")
+
   innings             Innings  @relation(fields: [innings_id], references: [id], onDelete: Cascade)
   batsman             Player   @relation("BallBatsman", fields: [batsman_id], references: [id])
   bowler              Player   @relation("BallBowler", fields: [bowler_id], references: [id])
@@ -1105,6 +1113,7 @@ model BallEvent {
 
   @@index([innings_id, over_number, ball_number])
   @@index([innings_id, phase])
+  @@index([innings_id, voided])
   @@index([bowler_id, ball_length])
   @@index([bowler_id, ball_line])
   @@schema("scoring")
