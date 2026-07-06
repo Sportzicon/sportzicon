@@ -17,8 +17,8 @@ RUN npm install --no-audit --no-fund
 FROM deps AS build
 COPY scoring/backend/tsconfig.json ./
 COPY scoring/backend/src ./src
-# Copy scoring database schema for Prisma generation
-COPY scoring/backend/prisma ./prisma
+# Copy shared database schema for Prisma generation
+COPY database/prisma ./prisma
 # Generate Prisma client
 RUN ./node_modules/.bin/prisma generate
 # Build and prune

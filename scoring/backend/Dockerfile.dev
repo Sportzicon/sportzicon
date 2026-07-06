@@ -1,10 +1,10 @@
 FROM node:20-alpine
 RUN apk add --no-cache openssl
 WORKDIR /app
-COPY package*.json ./
+COPY scoring/backend/package*.json ./
 RUN npm install
-COPY prisma ./prisma
+COPY database/prisma ./prisma
 RUN npx prisma generate
-COPY . .
+COPY scoring/backend/. .
 EXPOSE 4000
 CMD ["npm", "run", "dev"]
