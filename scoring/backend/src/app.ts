@@ -8,10 +8,12 @@ import scoringRoutes from "./modules/scoring/scoring.routes";
 export function createApp() {
   const app = express();
 
-  app.use(helmet({ contentSecurityPolicy: false }));
+  // Pure JSON API, no HTML ever served — default-deny CSP as a
+  // defense-in-depth backstop, same reasoning as the main backend.
+  app.use(helmet({ contentSecurityPolicy: { directives: { defaultSrc: ["'none'"], frameAncestors: ["'none'"] } } }));
   // No wildcard: explicit allowlist only, even though this API is header-auth
   // (not cookie-based) — "*" still lets any origin script read responses.
-  const corsOrigins = (process.env.CORS_ORIGIN || "").split(",").map(o => o.trim()).filter(Boolean);
+  const corsOrigins = (process.env.CORS_ORIGINS || "").split(",").map(o => o.trim()).filter(Boolean);
   app.use(cors({
     origin(origin, cb) {
       if (!origin) return cb(null, true);

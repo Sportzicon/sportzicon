@@ -6,6 +6,12 @@ import { logger } from "./logger";
 let client: any | null = null;
 let redisAvailable = false;
 
+// Exposed for callers that need the raw client (e.g. rate limiter's atomic
+// INCR) rather than the string get/set/del helpers below.
+export async function getRedisClient() {
+  return getClient();
+}
+
 async function getClient() {
   if (client !== null) return client;
   if (!env.REDIS_URL) return null;

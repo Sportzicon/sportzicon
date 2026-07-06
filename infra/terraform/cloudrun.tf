@@ -270,7 +270,7 @@ resource "google_cloud_run_v2_service" "scoring_api" {
         }
       }
       env {
-        name  = "CORS_ORIGIN"
+        name  = "CORS_ORIGINS"
         value = var.scoring_cors_origin
       }
       env {

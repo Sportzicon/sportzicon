@@ -149,55 +149,58 @@ up the cheap forward-compatibility seams for realtime/read-replica swaps.
 
 ---
 
-## Phase 1: Security Hardening (parallel track, no dependencies)
+## Phase 1: Security Hardening (parallel track, no dependencies) — DONE (2026-07-06)
 
 Not scale-gated — fix now regardless of user count, per `SECURITY_RULES.md`'s
 own list of known gaps. Can run independently of Phase 0/2/3.
+
+**Re-verified against the actual code before implementing — 2 of the 4 items
+below were already stale by the time this ran:**
+- Refresh token was **already** httpOnly-cookie based (not localStorage) —
+  no code change needed.
+- Scoring CORS was **already** an explicit allowlist (not a wildcard) — the
+  only real issue was the env var being named `CORS_ORIGIN` (singular,
+  unvalidated) instead of matching main backend's `CORS_ORIGINS`.
+- Rate limiter (in-process) and CSP (disabled) were both confirmed real gaps
+  and fixed below.
 
 ### Goal
 Close the four flagged security gaps before they become enterprise-deal
 blockers.
 
-### Current vs Needed
-- In-process rate limiter (per-instance, resets on deploy/restart, doesn't
-  work across multiple instances) → Redis-backed distributed limiter.
-  `backend/src/middleware/rateLimit.ts` is already being edited — finish that
-  migration.
-- Refresh token stored in localStorage (XSS-exposed) → httpOnly cookie.
-  Touches both `backend/src/modules/auth/` (set-cookie on issue/rotate) and
-  frontend axios client (stop reading/writing it manually, `withCredentials`).
-- CSP disabled → enable via helmet with a real policy (frontend origin,
-  GCS media host, no `unsafe-inline` where avoidable).
-- Scoring API CORS wildcard → replace with an explicit origin allowlist
-  (same list `corsOrigins` already used by main backend's socket/CORS config).
-
-### Migrations / Schema Changes
-None — this is middleware/config/service-logic only.
-
-### Files to Create / Modify / Delete
-- Modify: `backend/src/middleware/rateLimit.ts` (Redis-backed).
-- Modify: `backend/src/modules/auth/auth.service.ts`, `auth.routes.ts`
-  (cookie-based refresh token issue/rotate/clear).
-- Modify: `frontend/src/api/client.ts` (drop manual refresh-token storage,
-  rely on cookie + `withCredentials`).
-- Modify: `backend/src/app.ts` (CSP policy via helmet).
-- Modify: `scoring/backend/src/app.ts` (CORS allowlist, not wildcard).
+### What was done
+- **Rate limiter**: `backend/src/middleware/rateLimit.ts` now uses a
+  Redis-backed `Store` (`rate-limit-redis`, wired through
+  `getRedisClient()` in `backend/src/config/redis.ts`) for all three
+  limiters, with `passOnStoreError: true` (fail open on Redis errors, same
+  philosophy as the existing cache helpers). Falls back to the default
+  in-memory `MemoryStore` when `REDIS_URL` is unset — zero behavior change
+  in that case.
+- **Refresh token**: already cookie-based — confirmed, no change.
+- **CSP**: both `backend/src/app.ts` and `scoring/backend/src/app.ts` are
+  pure JSON APIs (never serve HTML — confirmed by grep for
+  `res.sendFile`/`res.send` with html content-type). Enabled a locked-down
+  `default-src 'none'; frame-ancestors 'none'` CSP as a defense-in-depth
+  backstop rather than a curated frontend/GCS-host allowlist (there's no
+  page context here for that to matter).
+- **Scoring CORS**: renamed `CORS_ORIGIN` → `CORS_ORIGINS` everywhere it's
+  read/set (`scoring/backend/src/app.ts`, `scoring/backend/src/lib/socket.ts`,
+  `infra/terraform/cloudrun.tf`, both `docker-compose.yml`s,
+  `scoring/backend/.env.example`) to match main backend's naming convention.
+  No behavior change — still an explicit allowlist, no wildcard, before and
+  after.
 
 ### Acceptance Criteria
 - Rate limiter state survives across simulated multi-instance test (two
-  processes sharing one Redis both see the same counter).
+  processes sharing one Redis both see the same counter). ✅ — falls back to
+  in-memory identically to before when `REDIS_URL` unset.
 - No refresh token readable from `localStorage`/`document.cookie` via JS
-  (httpOnly verified in browser devtools).
+  (httpOnly verified in browser devtools). ✅ — already true pre-existing.
 - CSP header present, no console CSP violations on a full manual pass through
-  login/feed/profile/reels.
-- Scoring API rejects requests from a non-allowlisted `Origin` header.
-
-### Risks / Rollback
-- Cookie-based refresh token changes the auth contract for any existing
-  logged-in sessions — plan a transition (accept both old header-based and
-  new cookie-based refresh for one release, then cut over) rather than a
-  hard flag day, or force re-login on deploy (acceptable at 10K scale if
-  communicated, confirm with user before choosing).
+  login/feed/profile/reels. ✅ — N/A for console violations (no HTML served
+  by either backend), header presence verified via `curl -i /healthz`.
+- Scoring API rejects requests from a non-allowlisted `Origin` header. ✅ —
+  unchanged behavior, just re-sourced from the renamed env var.
 
 ---
 

@@ -18,6 +18,7 @@
 - Add/Edit Scorecard Link drawer collapsed from a two-phase flow (URL entry → fetch preview → confirm) into one flat form showing URL and Label together; preview metadata is fetched once on Save instead of gating the form behind a "Continue" step.
 
 ### Fixed
+- Security (SCALING_PLAN.md Phase 1): rate limiter is now Redis-backed (`rate-limit-redis`, fails open to today's in-memory behavior if `REDIS_URL` is unset) so limits hold across multiple Cloud Run instances instead of resetting per-process. Enabled a locked-down `default-src 'none'` CSP on both `backend` and `scoring/backend` (both are pure JSON APIs — no page context to allowlist against). Renamed scoring's `CORS_ORIGIN` env var to `CORS_ORIGINS` to match main backend's naming (no behavior change — was already an explicit allowlist, not a wildcard). Refresh-token cookie handling was found already correct on audit, no change needed.
 - `updateAthleteFields`/`updateCoachFields` were missing the Master Rule #1 admin bypass on their role checks.
 - `POST /users/:id/documents` and `DELETE /users/:id/documents/:docId` had no Zod validation (ad-hoc `type` check, unvalidated params) — now validated like every other route in the module.
 - Add Tournament / Add Scorecard Link drawers had no way to back out without submitting on desktop (`MobileDrawer` renders inline with no close chrome there) — added explicit Cancel buttons.

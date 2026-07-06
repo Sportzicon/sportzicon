@@ -126,10 +126,12 @@ editing a single line of code, run it against that checklist — secrets,
 rate limiting, input validation, auth/authz, SQL safety, CORS, security
 headers, file upload safety, error handling, dependency security, XSS,
 AI/LLM safety. That file also lists known unresolved gaps in this app
-(refresh token in localStorage, scoring API CORS wildcard, disabled CSP,
-in-process AI rate limiter, legacy upload endpoint) — do not reintroduce
-these patterns elsewhere, and fix them opportunistically when touching
-nearby code.
+(in-process AI daily-budget limiter, legacy `POST /media/upload` endpoint) —
+do not reintroduce these patterns elsewhere, and fix them opportunistically
+when touching nearby code. Refresh-token-in-localStorage, scoring-CORS-
+wildcard, and disabled-CSP were fixed in SCALING_PLAN.md Phase 1 (2026-07-06)
+— do not reintroduce httpOnly-cookie bypasses, CORS wildcards, or
+`contentSecurityPolicy: false` on either backend.
 
 ### 10. Demo Accounts for Testing
 

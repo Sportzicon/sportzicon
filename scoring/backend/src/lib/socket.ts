@@ -4,7 +4,7 @@ import jwt from "jsonwebtoken";
 
 const JWT_SECRET      = process.env.JWT_SECRET || "";
 const MAIN_JWT_SECRET = process.env.MAIN_JWT_SECRET || "";
-const CORS_ORIGINS = (process.env.CORS_ORIGIN || "").split(",").map(o => o.trim()).filter(Boolean);
+const CORS_ORIGINS = (process.env.CORS_ORIGINS || "").split(",").map(o => o.trim()).filter(Boolean);
 
 let io: SocketServer | null = null;
 

@@ -40,10 +40,14 @@ export function createApp(): Express {
   // Behind a load balancer in Cloud Run — trust the first proxy for X-Forwarded-* headers.
   app.set("trust proxy", 1);
 
-  // Security headers (CSP intentionally permissive for cross-origin API + signed-URL uploads).
+  // Security headers. This is a pure JSON API — it never serves HTML, so the
+  // CSP doesn't need frontend-origin/GCS-host allowlisting (nothing here
+  // loads a script/style/image into a page). Locked to default-deny as a
+  // defense-in-depth backstop against any accidental HTML reflection
+  // (framework error pages, misconfigured routes).
   app.use(
     helmet({
-      contentSecurityPolicy: false,
+      contentSecurityPolicy: { directives: { defaultSrc: ["'none'"], frameAncestors: ["'none'"] } },
       crossOriginResourcePolicy: { policy: "cross-origin" }
     })
   );

@@ -94,9 +94,9 @@ Referenced from `CLAUDE.md` MASTER RULES #11 — read on every task, not just se
 ---
 
 ## Known gaps in this app (found 2026-07-04 audit — fix before relying on above as "done")
-- **High**: refresh token stored in `localStorage` via `frontend/src/store/auth.ts` persisted Zustand store — XSS token-theft exposure. Move to httpOnly cookie.
-- **High**: `scoring/backend/src/app.ts` CORS defaults to `*` when `CORS_ORIGIN` unset; `infra/terraform/terraform.tfvars.staging` sets `scoring_cors_origin = "*"` explicitly for staging.
-- **Medium**: CSP disabled (`contentSecurityPolicy: false`) in both `backend/src/app.ts` and `scoring/backend/src/app.ts`.
+- ~~**High**: refresh token stored in `localStorage`~~ — **Fixed**: httpOnly cookie (`backend/src/modules/auth/auth.routes.ts` `setRefreshCookie`, frontend reads nothing manually, `withCredentials: true`).
+- ~~**High**: `scoring/backend/src/app.ts` CORS defaults to `*`~~ — **Fixed on re-check (2026-07-06)**: was already an explicit allowlist, not a wildcard, in both code and `terraform.tfvars.staging`/`.prod.example`; only issue was the env var being named `CORS_ORIGIN` (singular, unvalidated) instead of matching main backend's `CORS_ORIGINS` — renamed for consistency (`scoring/backend/src/app.ts`, `scoring/backend/src/lib/socket.ts`, `infra/terraform/cloudrun.tf`, both `docker-compose.yml`s, `scoring/backend/.env.example`).
+- ~~**Medium**: CSP disabled (`contentSecurityPolicy: false`) in both `backend/src/app.ts` and `scoring/backend/src/app.ts`~~ — **Fixed**: both are pure JSON APIs (never serve HTML), now `default-src 'none'; frame-ancestors 'none'` as a defense-in-depth backstop.
 - **Medium**: AI daily-budget rate limit (`backend/src/modules/ai/ai.service.ts`) is in-process `Map`, resets on restart, doesn't work across multiple instances.
 - **Medium**: `POST /media/upload` legacy direct-buffer endpoint live in prod router, 100MB body limit, no dedicated rate limit — DoS vector.
 - **Medium**: `/auth/refresh`, media upload routes, and `/ai/athlete-tips` rely only on the flat global rate limiter, no stricter dedicated limit.
