@@ -258,44 +258,52 @@ recompute engine was considered and deliberately not built)
 
 ---
 
-## Phase 3: Historical Stats Aggregation
+## Phase 3: Historical Stats Aggregation — DONE (2026-07-06)
 
 ### Goal
 Add the match-completion aggregation step that doesn't exist yet, extending
 `PlayerCareerStats` rather than replacing it.
 
-### Current vs Needed
-- `PlayerCareerStats` exists, overall-only → add `PlayerSeasonStats` and
-  `PlayerTournamentStats` as siblings, same shape, scoped by season/tournament.
-- No aggregation job exists today → add one. **At 10K scale this is a plain
-  synchronous function call on match-status-flip-to-`COMPLETED`, not a job
-  queue** — write it as a standalone async function
-  (`aggregateMatchStats(matchId)`) called directly from the status-transition
-  handler, so swapping the direct call for `queue.enqueue(...)` later (only
-  if it ever becomes necessary) is a one-line change at the call site.
-- Idempotency guard (`lastMatchId`/processed-match tracking) so re-triggering
-  doesn't double-count.
+**Re-verified against the actual scoring service before implementing — the
+"no aggregation job exists today" premise was stale.** `syncCareerStats(matchId)`
+already existed and already ran career-stats aggregation from both places
+`Match.status` transitions to `"completed"` (`maybeAutoCompleteMatch`,
+cricket auto-complete; `updateMatch`, generic manual "End Match" for any
+sport), each already guarded on the status-transition edge
+(`match.status !== "completed"` before the write) — this repo's existing,
+working idempotency mechanism. The only real gap was the missing
+season/tournament-scoped sibling tables.
 
-### Migrations / Schema Changes
-- New `PlayerSeasonStats`, `PlayerTournamentStats` tables (same fields as
-  `PlayerCareerStats`, plus `season`/`tournamentId` scoping key).
-- New `MatchSummary` if one doesn't already exist under a different name
-  (check `Match`/`Innings` current fields first — don't duplicate).
-
-### Files to Create / Modify / Delete
-- Create: `aggregateMatchStats(matchId)` in scoring service layer.
-- Modify: match-completion status-transition handler to call it.
-- Modify: Prisma schema for new stats tables.
+### What was done
+- `PlayerSeasonStats`/`PlayerTournamentStats` added (migration
+  `20260706130000_player_season_tournament_stats`), same field shape as
+  `PlayerCareerStats`, scoped by `season`/`tournament_id` respectively.
+- `syncCareerStats` renamed to `aggregateMatchStats` (matches the name this
+  Future-Scale Hooks table already used) and extended: the same per-player
+  batting/bowling/fielding increments it already computed are now fanned out
+  to all three tables via one shared `upsertStatRow` helper, instead of
+  duplicating the upsert logic three times. Tournament stats always get
+  written (every match belongs to a tournament); season stats only if
+  `tournament.season` is set (it's optional — skipped, not erred, when unset).
+- No new `MatchSummary` table — confirmed `Match`/`Innings` already carry
+  every completion-relevant field.
+- No new idempotency column — the existing transition-edge guard (unchanged)
+  already covers the two new tables for free, since they're written from the
+  same already-guarded call.
 
 ### Acceptance Criteria
-- Completing a match produces correct incremental updates to career/season/
-  tournament stats, verified against a hand-computed example match.
-- Re-running the aggregation for an already-processed match is a no-op
-  (idempotency guard holds).
+- Verified end-to-end against the live DB: recorded 2 balls (a four and a
+  six), completed the match via the manual `updateMatch` path, confirmed
+  `PlayerCareerStats`/`PlayerTournamentStats`/`PlayerSeasonStats` all show
+  `matches_played: 1, total_runs: 10` consistently. Re-triggered completion
+  a second time — all three tables' numbers held unchanged (idempotency
+  guard confirmed to now cover all three, not just career stats). Test data
+  cleaned up after.
+- `cd backend && npm run typecheck`, `cd scoring/backend && npx tsc --noEmit && npm run build` all pass.
 
 ### Risks / Rollback
-- Low risk, purely additive tables + one new function. Rollback = don't call
-  the function, existing `PlayerCareerStats` untouched.
+- Purely additive tables + a rename/extend of an existing, already-working
+  function. No behavior change to existing `PlayerCareerStats` writes.
 
 ---
 

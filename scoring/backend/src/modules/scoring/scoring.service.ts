@@ -552,10 +552,91 @@ export async function getLiveMatches() {
   });
 }
 
-export async function syncCareerStats(matchId: string) {
+// Same shape as PlayerCareerStats/PlayerSeasonStats/PlayerTournamentStats —
+// shared so the one aggregation pass below can fan out to all three tables
+// without tripling the upsert logic.
+type StatDelegate = {
+  findUnique: (args: { where: any }) => Promise<any>;
+  update: (args: { where: any; data: any }) => Promise<any>;
+  create: (args: { data: any }) => Promise<any>;
+};
+
+type StatIncrement = {
+  inningsBatted: number; totalRuns: number; ballsFaced: number; highestScore: number;
+  notOuts: number; hundreds: number; fifties: number; fours: number; sixes: number;
+  inningsBowled: number; ballsBowled: number; runsConceded: number; wickets: number;
+  maidens: number; fiveWicketHauls: number; bestInnings: { w: number; r: number } | null;
+  catches: number; runOuts: number; stumpings: number;
+};
+
+async function upsertStatRow(delegate: StatDelegate, whereUnique: any, createExtra: Record<string, any>, s: StatIncrement) {
+  const existing = await delegate.findUnique({ where: whereUnique });
+  if (existing) {
+    const bestBetter = !!s.bestInnings && (
+      s.bestInnings.w > existing.best_bowling_wickets ||
+      (s.bestInnings.w === existing.best_bowling_wickets && s.bestInnings.r < existing.best_bowling_runs)
+    );
+    await delegate.update({
+      where: whereUnique,
+      data: {
+        matches_played: { increment: 1 },
+        innings_batted: { increment: s.inningsBatted },
+        total_runs: { increment: s.totalRuns },
+        balls_faced: { increment: s.ballsFaced },
+        highest_score: Math.max(existing.highest_score, s.highestScore),
+        not_outs: { increment: s.notOuts },
+        hundreds: { increment: s.hundreds },
+        fifties: { increment: s.fifties },
+        fours: { increment: s.fours },
+        sixes: { increment: s.sixes },
+        innings_bowled: { increment: s.inningsBowled },
+        balls_bowled: { increment: s.ballsBowled },
+        runs_conceded: { increment: s.runsConceded },
+        wickets: { increment: s.wickets },
+        maidens: { increment: s.maidens },
+        five_wicket_hauls: { increment: s.fiveWicketHauls },
+        best_bowling_wickets: bestBetter ? s.bestInnings!.w : existing.best_bowling_wickets,
+        best_bowling_runs: bestBetter ? s.bestInnings!.r : existing.best_bowling_runs,
+        catches: { increment: s.catches },
+        run_outs: { increment: s.runOuts },
+        stumpings: { increment: s.stumpings }
+      }
+    });
+  } else {
+    await delegate.create({
+      data: {
+        ...createExtra,
+        matches_played: 1,
+        innings_batted: s.inningsBatted,
+        total_runs: s.totalRuns,
+        balls_faced: s.ballsFaced,
+        highest_score: s.highestScore,
+        not_outs: s.notOuts,
+        hundreds: s.hundreds,
+        fifties: s.fifties,
+        fours: s.fours,
+        sixes: s.sixes,
+        innings_bowled: s.inningsBowled,
+        balls_bowled: s.ballsBowled,
+        runs_conceded: s.runsConceded,
+        wickets: s.wickets,
+        maidens: s.maidens,
+        five_wicket_hauls: s.fiveWicketHauls,
+        best_bowling_wickets: s.bestInnings?.w ?? 0,
+        best_bowling_runs: s.bestInnings?.r ?? 9999,
+        catches: s.catches,
+        run_outs: s.runOuts,
+        stumpings: s.stumpings
+      }
+    });
+  }
+}
+
+export async function aggregateMatchStats(matchId: string) {
   const match = await prisma.match.findUnique({
     where: { id: matchId },
     include: {
+      tournament: true,
       playing_xi: true,
       innings: {
         include: {
@@ -646,74 +727,28 @@ export async function syncCareerStats(matchId: string) {
     const runOuts = fieldEntries.reduce((s, e) => s + e.runOuts, 0);
     const stumpings = fieldEntries.reduce((s, e) => s + e.stumpings, 0);
 
-    // Upsert — increment existing career stats
-    const existing = await prisma.playerCareerStats.findUnique({ where: { player_id: playerId } });
-    if (existing) {
-      const newHighest = Math.max(existing.highest_score, highestScore);
-      const newBestW = bestInnings
-        ? (bestInnings.w > existing.best_bowling_wickets ||
-           (bestInnings.w === existing.best_bowling_wickets && bestInnings.r < existing.best_bowling_runs)
-            ? bestInnings.w : existing.best_bowling_wickets)
-        : existing.best_bowling_wickets;
-      const newBestR = bestInnings
-        ? (bestInnings.w > existing.best_bowling_wickets ||
-           (bestInnings.w === existing.best_bowling_wickets && bestInnings.r < existing.best_bowling_runs)
-            ? bestInnings.r : existing.best_bowling_runs)
-        : existing.best_bowling_runs;
+    const computed: StatIncrement = {
+      inningsBatted, totalRuns, ballsFaced, highestScore, notOuts, hundreds, fifties, fours, sixes,
+      inningsBowled, ballsBowled, runsConceded, wickets, maidens, fiveWicketHauls, bestInnings,
+      catches, runOuts, stumpings
+    };
 
-      await prisma.playerCareerStats.update({
-        where: { player_id: playerId },
-        data: {
-          matches_played: { increment: 1 },
-          innings_batted: { increment: inningsBatted },
-          total_runs: { increment: totalRuns },
-          balls_faced: { increment: ballsFaced },
-          highest_score: newHighest,
-          not_outs: { increment: notOuts },
-          hundreds: { increment: hundreds },
-          fifties: { increment: fifties },
-          fours: { increment: fours },
-          sixes: { increment: sixes },
-          innings_bowled: { increment: inningsBowled },
-          balls_bowled: { increment: ballsBowled },
-          runs_conceded: { increment: runsConceded },
-          wickets: { increment: wickets },
-          maidens: { increment: maidens },
-          five_wicket_hauls: { increment: fiveWicketHauls },
-          best_bowling_wickets: newBestW,
-          best_bowling_runs: newBestR,
-          catches: { increment: catches },
-          run_outs: { increment: runOuts },
-          stumpings: { increment: stumpings }
-        }
-      });
-    } else {
-      await prisma.playerCareerStats.create({
-        data: {
-          player_id: playerId,
-          matches_played: 1,
-          innings_batted: inningsBatted,
-          total_runs: totalRuns,
-          balls_faced: ballsFaced,
-          highest_score: highestScore,
-          not_outs: notOuts,
-          hundreds,
-          fifties,
-          fours,
-          sixes,
-          innings_bowled: inningsBowled,
-          balls_bowled: ballsBowled,
-          runs_conceded: runsConceded,
-          wickets,
-          maidens,
-          five_wicket_hauls: fiveWicketHauls,
-          best_bowling_wickets: bestInnings?.w ?? 0,
-          best_bowling_runs: bestInnings?.r ?? 9999,
-          catches,
-          run_outs: runOuts,
-          stumpings
-        }
-      });
+    await upsertStatRow(prisma.playerCareerStats, { player_id: playerId }, { player_id: playerId }, computed);
+
+    await upsertStatRow(
+      prisma.playerTournamentStats,
+      { player_id_tournament_id: { player_id: playerId, tournament_id: match.tournament_id } },
+      { player_id: playerId, tournament_id: match.tournament_id },
+      computed
+    );
+
+    if (match.tournament?.season) {
+      await upsertStatRow(
+        prisma.playerSeasonStats,
+        { player_id_season: { player_id: playerId, season: match.tournament.season } },
+        { player_id: playerId, season: match.tournament.season },
+        computed
+      );
     }
   }
 }
@@ -748,7 +783,7 @@ async function maybeAutoCompleteMatch(matchId: string, finishedInningsNumber: nu
   }
 
   await prisma.match.update({ where: { id: matchId }, data });
-  await syncCareerStats(matchId);
+  await aggregateMatchStats(matchId);
 }
 
 // ── Playing XI ────────────────────────────────────────────────────────────────
@@ -832,7 +867,7 @@ export async function updateMatch(matchId: string, actorId: string, actorRole: s
   const updated = await prisma.match.update({ where: { id: matchId }, data });
 
   if (patch.status === "completed" && match.status !== "completed") {
-    await syncCareerStats(matchId);
+    await aggregateMatchStats(matchId);
   }
 
   return updated;
