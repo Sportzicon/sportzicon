@@ -23,8 +23,8 @@ services:
     environment:
       NODE_ENV: development
       PORT: 8080
-      DATABASE_URL: postgresql://postgres.vrybsjdrftpoaexnffyv:Sportivox%402026@aws-1-ap-northeast-2.pooler.supabase.com:6543/postgres?sslmode=require&pgbouncer=true
-      DIRECT_URL: postgresql://postgres:Sportivox%402026@db.vrybsjdrftpoaexnffyv.supabase.co:5432/postgres?sslmode=require
+      DATABASE_URL: ${DATABASE_URL}
+      DIRECT_URL: ${DIRECT_URL}
       STORAGE_EMULATOR_HOST: http://gcs:4443
       GCP_PROJECT_ID: sportivox-dev
       GCS_BUCKET_MEDIA: sportivox-media-dev
@@ -54,41 +54,23 @@ services:
       gcs:
         condition: service_started
 
-  scoring-db:
-    image: postgres:16-alpine
-    environment:
-      POSTGRES_DB: scoring_db
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-    ports:
-      - "5433:5432"   # exposed to host so local seeds/migrations run without Docker exec
-    volumes:
-      - scoring_pgdata:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
   scoring-backend:
     build:
-      context: ./scoring/backend
-      dockerfile: Dockerfile.dev
+      context: .
+      dockerfile: ./scoring/backend/Dockerfile.dev
     # No host port needed — web container reaches this via internal network as http://scoring-backend:4000
     # To expose for direct access/debugging: add "4001:4000" here (avoids conflict with local dev on 4000)
     environment:
-      DATABASE_URL: postgresql://postgres:postgres@scoring-db:5432/scoring_db
+      DATABASE_URL: ${DATABASE_URL}
+      DIRECT_URL: ${DIRECT_URL}
       JWT_SECRET: dev-secret-change-in-prod
       MAIN_JWT_SECRET: dev-access-secret-change-me
       PORT: 4000
       CORS_ORIGIN: http://localhost:5173,http://localhost:5174
       NODE_ENV: development
-    depends_on:
-      scoring-db:
-        condition: service_healthy
     volumes:
       - ./scoring/backend/src:/app/src
-    command: sh -c "npx prisma db push --skip-generate && npm run dev"
+    command: npm run dev
 
   web:
     build:
@@ -110,4 +92,3 @@ services:
 
 volumes:
   gcs-data: {}
-  scoring_pgdata: {}
