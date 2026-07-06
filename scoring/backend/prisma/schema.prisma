@@ -1,0 +1,1172 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["multiSchema"]
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+  schemas   = ["public", "scoring"]
+}
+
+enum Role {
+  athlete
+  club
+  scout
+  organizer
+  admin
+  scorer
+
+  @@schema("public")
+}
+
+enum AccountStatus {
+  active
+  suspended
+  pending
+
+  @@schema("public")
+}
+
+enum VerificationStatus {
+  unverified
+  pending
+  approved
+  rejected
+
+  @@schema("public")
+}
+
+enum OpportunityType {
+  trial
+  recruitment
+  scholarship
+  tournament
+  coaching_job
+
+  @@schema("public")
+}
+
+enum OpportunityStatus {
+  open
+  closed
+  filled
+
+  @@schema("public")
+}
+
+enum ApplicationStatus {
+  pending
+  shortlisted
+  selected
+  rejected
+  withdrawn
+
+  @@schema("public")
+}
+
+model User {
+  id                 String             @id @default(uuid()) @db.Uuid
+  email              String             @unique
+  email_lower        String             @unique
+  email_verified     Boolean            @default(false)
+  phone              String?
+  phone_verified     Boolean            @default(false)
+  password_hash      String
+  full_name          String
+  full_name_lower    String
+  role               Role
+  status             AccountStatus      @default(active)
+  bio                String?            @db.Text
+  profile_photo_url  String?
+  cover_photo_url    String?
+  country            String?
+  state              String?
+  city               String?
+  dob                String?
+  gender             String?
+  preferred_language String?
+
+  verification_status VerificationStatus @default(unverified)
+  verification_badges String[]           @default([])
+
+  athlete_data Json?
+  coach_data   Json?
+
+  is_suspended      Boolean  @default(false)
+  suspension_reason String?
+  suspended_at      DateTime?
+
+  created_at     DateTime @default(now())
+  updated_at     DateTime @updatedAt
+  last_active_at DateTime @default(now())
+
+  @@index([full_name_lower])
+  @@index([status, created_at(sort: Desc)])
+  @@index([role, status])
+
+  organizations  Organization[]
+  opportunities  Opportunity[]   @relation("PostedBy")
+  applications   Application[]
+  posts          Post[]
+  reels          Reel[]
+  blogs          Blog[]
+  comments       Comment[]
+  messages_sent  Message[]       @relation("Sender")
+  unread_counts  UnreadCount[]
+  notifications         Notification[]  @relation("NotificationRecipient")
+  actor_notifications   Notification[]  @relation("NotificationActor")
+  followers      Follow[]        @relation("Followee")
+  following      Follow[]        @relation("Follower")
+  reports_made   Report[]        @relation("Reporter")
+  audit_logs     AuditLog[]
+  post_likes     PostLike[]
+  reel_likes     ReelLike[]
+  blog_likes     BlogLike[]
+  comment_likes  CommentLike[]
+  documents      UserDocument[]
+  email_logs     EmailLog[]
+  tournaments    AthleteTournament[]
+  scoring_tournaments Tournament[]
+
+  @@schema("public")
+}
+
+model UserDocument {
+  id          String   @id @default(uuid()) @db.Uuid
+  user_id     String   @db.Uuid
+  type        String
+  file_name   String
+  url         String
+  size_bytes  Int
+  created_at  DateTime @default(now())
+
+  user        User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@schema("public")
+}
+
+model AthleteTournament {
+  id          String   @id @default(uuid()) @db.Uuid
+  user_id     String   @db.Uuid
+  name        String
+  year        String
+  team        String?
+  format      String?
+  result      String?
+  created_at  DateTime @default(now())
+
+  user        User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@schema("public")
+}
+
+model Organization {
+  id                   String             @id @default(uuid()) @db.Uuid
+  owner_user_id        String             @db.Uuid
+  org_name             String
+  org_name_lower       String
+  org_type             String
+  description          String?            @db.Text
+  logo_url             String?
+  cover_url            String?
+  sport_categories     String[]
+  year_established     Int?
+  country              String?
+  state                String?
+  city                 String?
+  address              String?
+  website              String?
+  contact_name         String?
+  contact_email        String?
+  contact_phone        String?
+  social_links         Json?
+  registration_doc_url String?
+  verification_status  VerificationStatus @default(unverified)
+  verification_badges  String[]           @default([])
+  subscription_plan    String             @default("free")
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  owner         User          @relation(fields: [owner_user_id], references: [id])
+  opportunities Opportunity[]
+  documents     OrgDocument[]
+
+  @@index([owner_user_id, created_at(sort: Desc)])
+  @@index([org_name_lower])
+  @@index([verification_status])
+  @@schema("public")
+}
+
+model OrgDocument {
+  id          String   @id @default(uuid()) @db.Uuid
+  org_id      String   @db.Uuid
+  key         String
+  name        String
+  uploaded_at DateTime @default(now())
+
+  organization Organization @relation(fields: [org_id], references: [id], onDelete: Cascade)
+
+  @@index([org_id])
+  @@schema("public")
+}
+
+model Opportunity {
+  id                        String            @id @default(uuid()) @db.Uuid
+  org_id                    String            @db.Uuid
+  posted_by_user_id         String            @db.Uuid
+  title                     String
+  title_lower               String
+  type                      OpportunityType
+  sport                     String
+  description               String            @db.Text
+  eligibility               String?
+  age_min                   Int
+  age_max                   Int
+  gender_eligibility        String            @default("all")
+  experience_level_required String            @default("any")
+  country                   String
+  state                     String
+  city                      String
+  start_date                String
+  end_date                  String
+  application_deadline      DateTime          @db.Date
+  entry_fee                 Float?
+  documents_required        String[]          @default([])
+  vacancies                 Int?
+  vacancies_filled          Int               @default(0)
+  contact_email             String?
+  contact_phone             String?
+  status                    OpportunityStatus @default(open)
+  application_count         Int               @default(0)
+
+  // Link to scoring console Tournament — cross-DB reference, no FK
+  scoring_tournament_id     String?
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  organization Organization  @relation(fields: [org_id], references: [id])
+  posted_by    User          @relation("PostedBy", fields: [posted_by_user_id], references: [id])
+  applications Application[]
+
+  @@index([status, sport, city])
+  @@index([status, type])
+  @@index([org_id])
+  @@schema("public")
+}
+
+model Application {
+  id                String            @id @default(uuid()) @db.Uuid
+  opportunity_id    String            @db.Uuid
+  applicant_user_id String            @db.Uuid
+  cover_note        String?           @db.Text
+  documents         String[]          @default([])
+  status            ApplicationStatus @default(pending)
+  rejection_reason  String?
+  history           Json              @default("[]")
+  applied_at        DateTime          @default(now())
+  updated_at        DateTime          @updatedAt
+
+  opportunity Opportunity @relation(fields: [opportunity_id], references: [id])
+  applicant   User        @relation(fields: [applicant_user_id], references: [id])
+
+  @@unique([opportunity_id, applicant_user_id])
+  @@index([applicant_user_id])
+  @@index([opportunity_id])
+  @@schema("public")
+}
+
+model Follow {
+  id          String   @id @default(uuid()) @db.Uuid
+  follower_id String   @db.Uuid
+  followee_id String   @db.Uuid
+  created_at  DateTime @default(now())
+
+  follower User @relation("Follower", fields: [follower_id], references: [id])
+  followee User @relation("Followee", fields: [followee_id], references: [id])
+
+  @@unique([follower_id, followee_id])
+  @@index([followee_id])
+  @@schema("public")
+}
+
+model Post {
+  id            String   @id @default(uuid()) @db.Uuid
+  author_id     String   @db.Uuid
+  type          String   @default("post")
+  text          String   @db.Text
+  media_urls    String[] @default([])
+  sport         String?
+  tags          String[] @default([])
+  like_count    Int      @default(0)
+  comment_count Int      @default(0)
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  author   User       @relation(fields: [author_id], references: [id])
+  comments Comment[]  @relation("PostComments")
+  likes    PostLike[]
+
+  @@index([author_id, created_at(sort: Desc)])
+  @@schema("public")
+}
+
+model Reel {
+  id               String   @id @default(uuid()) @db.Uuid
+  author_id        String   @db.Uuid
+  title            String?
+  description      String?
+  caption          String?
+  video_url        String
+  thumbnail_url    String?
+  duration_seconds Int?
+  sport            String?
+  like_count       Int      @default(0)
+  comment_count    Int      @default(0)
+  created_at       DateTime @default(now())
+
+  author   User       @relation(fields: [author_id], references: [id])
+  comments Comment[]  @relation("ReelComments")
+  likes    ReelLike[]
+
+  @@index([author_id, created_at(sort: Desc)])
+  @@index([created_at(sort: Desc)])
+  @@schema("public")
+}
+
+model Blog {
+  id              String    @id @default(uuid()) @db.Uuid
+  author_id       String    @db.Uuid
+  title           String
+  slug            String    @unique
+  cover_image_url String?
+  excerpt         String    @db.Text
+  body_markdown   String    @db.Text
+  tags            String[]  @default([])
+  sport           String?
+  status          String    @default("draft")
+  like_count      Int       @default(0)
+  comment_count   Int       @default(0)
+  published_at    DateTime?
+  created_at      DateTime  @default(now())
+  updated_at      DateTime  @updatedAt
+
+  author   User       @relation(fields: [author_id], references: [id])
+  comments Comment[]  @relation("BlogComments")
+  likes    BlogLike[]
+
+  @@index([status, published_at(sort: Desc)])
+  @@index([author_id, created_at(sort: Desc)])
+  @@index([slug])
+  @@schema("public")
+}
+
+model Comment {
+  id          String   @id @default(uuid()) @db.Uuid
+  parent_type String
+  post_id     String?  @db.Uuid
+  reel_id     String?  @db.Uuid
+  blog_id     String?  @db.Uuid
+  author_id   String   @db.Uuid
+  text        String   @db.Text
+  like_count  Int      @default(0)
+  created_at  DateTime @default(now())
+
+  author User          @relation(fields: [author_id], references: [id])
+  post   Post?          @relation("PostComments", fields: [post_id], references: [id])
+  reel   Reel?          @relation("ReelComments", fields: [reel_id], references: [id])
+  blog   Blog?          @relation("BlogComments", fields: [blog_id], references: [id])
+  likes  CommentLike[]
+
+  @@index([post_id, created_at(sort: Desc)])
+  @@index([reel_id, created_at(sort: Desc)])
+  @@index([blog_id, created_at(sort: Desc)])
+  @@schema("public")
+}
+
+model CommentLike {
+  comment_id String   @db.Uuid
+  user_id    String   @db.Uuid
+  created_at DateTime @default(now())
+
+  comment Comment @relation(fields: [comment_id], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@id([comment_id, user_id])
+  @@schema("public")
+}
+
+model Conversation {
+  id              String   @id @default(uuid()) @db.Uuid
+  participant_ids String[]
+  last_message    Json?
+  unread_counts   Json     @default("{}")
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  messages      Message[]
+  unread_counts_table UnreadCount[]
+
+  @@index([participant_ids])
+  @@schema("public")
+}
+
+model UnreadCount {
+  id              String   @id @default(uuid()) @db.Uuid
+  conversation_id String   @db.Uuid
+  user_id         String   @db.Uuid
+  count           Int      @default(0)
+
+  conversation Conversation @relation(fields: [conversation_id], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([conversation_id, user_id])
+  @@index([user_id])
+  @@schema("public")
+}
+
+model Message {
+  id              String    @id @default(uuid()) @db.Uuid
+  conversation_id String    @db.Uuid
+  sender_id       String    @db.Uuid
+  recipient_id    String    @db.Uuid
+  body            String    @db.Text
+  read_at         DateTime?
+  flagged         Boolean   @default(false)
+  created_at      DateTime  @default(now())
+
+  conversation Conversation @relation(fields: [conversation_id], references: [id])
+  sender       User         @relation("Sender", fields: [sender_id], references: [id])
+
+  @@index([conversation_id, created_at(sort: Desc)])
+  @@schema("public")
+}
+
+model Notification {
+  id         String   @id @default(uuid()) @db.Uuid
+  user_id    String   @db.Uuid
+  actor_id   String?  @db.Uuid
+  type       String
+  title      String
+  body       String
+  link       String?
+  read       Boolean  @default(false)
+  created_at DateTime @default(now())
+
+  user  User  @relation("NotificationRecipient", fields: [user_id], references: [id])
+  actor User? @relation("NotificationActor", fields: [actor_id], references: [id])
+
+  @@index([user_id, created_at(sort: Desc)])
+  @@index([user_id, read])
+  @@schema("public")
+}
+
+model AuditLog {
+  id          String   @id @default(uuid()) @db.Uuid
+  actor_id    String   @db.Uuid
+  actor_role  Role
+  action      String
+  target_type String?
+  target_id   String?  @db.Uuid
+  details     Json?
+  ip          String?
+  created_at  DateTime @default(now())
+
+  actor User @relation(fields: [actor_id], references: [id])
+
+  @@index([actor_id])
+  @@index([created_at(sort: Desc)])
+  @@schema("public")
+}
+
+model Report {
+  id          String    @id @default(uuid()) @db.Uuid
+  reporter_id String    @db.Uuid
+  target_type String
+  target_id   String    @db.Uuid
+  reason      String    @db.Text
+  status      String    @default("open")
+  resolved_by String?   @db.Uuid
+  resolved_at DateTime?
+  notes       String?
+  created_at  DateTime  @default(now())
+
+  reporter User @relation("Reporter", fields: [reporter_id], references: [id])
+
+  @@index([status, created_at(sort: Desc)])
+  @@index([reporter_id])
+  @@schema("public")
+}
+
+model Verification {
+  id                String             @id @default(uuid()) @db.Uuid
+  entity_type       String
+  entity_id         String             @db.Uuid
+  verification_type String
+  documents         String[]
+  notes             String?
+  status            VerificationStatus @default(pending)
+  submitted_by      String             @db.Uuid
+  reviewed_by       String?            @db.Uuid
+  reviewed_at       DateTime?
+  rejection_reason  String?
+  created_at        DateTime           @default(now())
+
+  @@index([status, created_at(sort: Desc)])
+  @@index([submitted_by])
+  @@index([entity_id])
+  @@schema("public")
+}
+
+enum EmailType {
+  email_verification
+  password_reset
+  notification
+  other
+
+  @@schema("public")
+}
+
+enum EmailStatus {
+  sent
+  failed
+  stub
+
+  @@schema("public")
+}
+
+model EmailLog {
+  id         String      @id @default(uuid()) @db.Uuid
+  user_id    String?     @db.Uuid
+  to_email   String
+  subject    String
+  email_type EmailType   @default(other)
+  status     EmailStatus @default(sent)
+  error      String?
+  created_at DateTime    @default(now())
+
+  user User? @relation(fields: [user_id], references: [id], onDelete: SetNull)
+
+  @@index([user_id, created_at(sort: Desc)])
+  @@index([created_at(sort: Desc)])
+  @@index([email_type])
+  @@index([status])
+  @@schema("public")
+}
+
+model EmailVerification {
+  id         String   @id @default(uuid()) @db.Uuid
+  user_id    String   @db.Uuid
+  token      String   @unique
+  expires_at DateTime
+  created_at DateTime @default(now())
+
+  @@index([user_id])
+  @@schema("public")
+}
+
+model PasswordReset {
+  id         String   @id @default(uuid()) @db.Uuid
+  user_id    String   @db.Uuid
+  token      String   @unique
+  expires_at DateTime
+  used       Boolean  @default(false)
+  created_at DateTime @default(now())
+
+  @@index([user_id])
+  @@schema("public")
+}
+
+model RefreshToken {
+  id         String   @id @default(uuid()) @db.Uuid
+  user_id    String   @db.Uuid
+  token      String   @unique
+  expires_at DateTime
+  revoked    Boolean  @default(false)
+  created_at DateTime @default(now())
+
+  @@index([user_id])
+  @@schema("public")
+}
+
+model LoginAttempt {
+  id           String   @id @default(uuid()) @db.Uuid
+  email        String
+  attempted_at DateTime @default(now())
+
+  @@index([email, attempted_at])
+  @@schema("public")
+}
+
+model PostLike {
+  post_id    String   @db.Uuid
+  user_id    String   @db.Uuid
+  created_at DateTime @default(now())
+
+  post Post @relation(fields: [post_id], references: [id], onDelete: Cascade)
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@id([post_id, user_id])
+  @@schema("public")
+}
+
+model ReelLike {
+  reel_id    String   @db.Uuid
+  user_id    String   @db.Uuid
+  created_at DateTime @default(now())
+
+  reel Reel @relation(fields: [reel_id], references: [id], onDelete: Cascade)
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@id([reel_id, user_id])
+  @@schema("public")
+}
+
+model BlogLike {
+  blog_id    String   @db.Uuid
+  user_id    String   @db.Uuid
+  created_at DateTime @default(now())
+
+  blog Blog @relation(fields: [blog_id], references: [id], onDelete: Cascade)
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@id([blog_id, user_id])
+  @@schema("public")
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// Scoring domain — merged from scoring/backend/prisma/schema.prisma.
+// Its own User/RefreshToken models are dropped; every FK that pointed at
+// them now points at the main User model above.
+// ══════════════════════════════════════════════════════════════════════════
+
+enum TournamentStatus {
+  upcoming
+  ongoing
+  completed
+  cancelled
+
+  @@schema("scoring")
+}
+
+enum MatchStatus {
+  upcoming
+  live
+  completed
+  abandoned
+  no_result
+
+  @@schema("scoring")
+}
+
+enum BattingStatus {
+  yet_to_bat
+  not_out
+  out
+  retired_hurt
+
+  @@schema("scoring")
+}
+
+model Tournament {
+  id          String           @id @default(uuid()) @db.Uuid
+  name        String
+  sport       String           // "cricket", "football", "basketball"
+  format      String?          // "T20", "ODI", "Test", "League", "Knockout"
+  season      String?          // "2026", "2025-26"
+  match_type  String?          // "league" · "tournament" · "friendly" · "trial" · "academy" · "knockout"
+  description String?          @db.Text
+  start_date  String?
+  end_date    String?
+  location    String?
+  status      TournamentStatus @default(upcoming)
+
+  // Cricket match configuration (PPTX § Team Scoring · Match & Innings setup)
+  overs_per_innings    Int?     // T20 → 20, ODI → 50, custom integer
+  number_of_innings    Int?     // 2 (LO) or 4 (Test)
+  ball_type            String?  // "red" · "white" · "pink"
+  powerplay_overs      Json?    // { pp_start: 1, pp_end: 6, death_start: 16, death_end: 20 }
+  super_over_enabled   Boolean  @default(false)
+  dls_enabled          Boolean  @default(false)
+  free_hit_enabled     Boolean  @default(true)
+  no_ball_rule         String?  // "front_foot" · "back_foot" · "both"
+  wide_rule            String?  // "men" · "women" · "junior" — affects tramline width
+  tie_break_rule       String?  // "super_over" · "boundary_count" · "shared"
+  retired_hurt_allowed Boolean  @default(true)
+  substitutes_allowed  Boolean  @default(true)
+  logo_url    String?
+  banner_url  String?
+  is_public   Boolean          @default(true)
+
+  // Link to main Sportivox Opportunity (type=tournament) — cross-DB reference, no FK
+  opportunity_id String?       @db.Uuid
+
+  created_by  String           @db.Uuid
+  creator     User             @relation(fields: [created_by], references: [id], onDelete: Cascade)
+
+  teams       Team[]
+  matches     Match[]
+
+  created_at  DateTime         @default(now())
+  updated_at  DateTime         @updatedAt
+
+  @@index([status, sport])
+  @@index([created_by])
+  @@index([opportunity_id])
+  @@schema("scoring")
+}
+
+model Team {
+  id            String     @id @default(uuid()) @db.Uuid
+  tournament_id String     @db.Uuid
+  name          String
+  short_name    String?    // e.g. "CSK", "RCB"
+  logo_url      String?
+  color         String?    // hex color for UI
+
+  tournament      Tournament @relation(fields: [tournament_id], references: [id], onDelete: Cascade)
+  players         Player[]
+  home_matches    Match[]    @relation("Team1")
+  away_matches    Match[]    @relation("Team2")
+  batting_innings Innings[]  @relation("BattingTeam")
+  bowling_innings Innings[]  @relation("BowlingTeam")
+  match_players   MatchPlayer[]
+
+  created_at    DateTime   @default(now())
+
+  @@index([tournament_id])
+  @@schema("scoring")
+}
+
+model Player {
+  id             String    @id @default(uuid()) @db.Uuid
+  team_id        String    @db.Uuid
+  name           String
+  jersey_number  Int?
+  role           String?   // "batsman","bowler","all-rounder","wicket-keeper","goalkeeper"
+  batting_style  String?   // "right-hand bat","left-hand bat"
+  bowling_style  String?   // "right-arm fast","left-arm off-spin" etc.
+  is_captain     Boolean   @default(false)
+  is_keeper      Boolean   @default(false)
+  photo_url      String?
+
+  // Link to Sportivox user (for future integration)
+  sportivox_user_id String?
+
+  team            Team      @relation(fields: [team_id], references: [id], onDelete: Cascade)
+  batting_entries BattingEntry[]
+  bowling_entries BowlingEntry[]
+  fielding_entries FieldingEntry[]
+  ball_as_batsman BallEvent[] @relation("BallBatsman")
+  ball_as_bowler  BallEvent[] @relation("BallBowler")
+  career_stats    PlayerCareerStats?
+  match_players   MatchPlayer[]
+
+  created_at     DateTime  @default(now())
+
+  @@index([team_id])
+  @@schema("scoring")
+}
+
+model Match {
+  id             String      @id @default(uuid()) @db.Uuid
+  tournament_id  String      @db.Uuid
+  match_number   Int?
+  title          String?     // "Semi-Final 1", "Group A - Match 3"
+  sport          String
+  format         String?
+
+  team1_id       String      @db.Uuid
+  team2_id       String      @db.Uuid
+  venue          String?
+  scheduled_at   DateTime?
+  status         MatchStatus @default(upcoming)
+
+  winner_team_id String?     @db.Uuid
+  result_summary String?
+
+  toss_winner_id String?     @db.Uuid
+  toss_decision  String?     // "bat" or "bowl"
+
+  // Playing level for each team in this match
+  team1_playing_level  String?  // "amateur" | "club" | "district" | "state" | "national" | "international"
+  team2_playing_level  String?
+
+  // Match context for analytics filtering
+  match_type     String?     // "league" · "friendly" · "trial" · "academy" · "knockout"
+
+  // Match officials
+  umpire1        String?
+  umpire2        String?
+  tv_umpire      String?
+  match_referee  String?
+
+  // Player of the Match — no FK (cross-team reference, UUID only)
+  player_of_match_id String? @db.Uuid
+
+  // For non-cricket sports: flexible event-based score data
+  match_data     Json?       // { team1_score: 0, team2_score: 0, events: [] }
+
+  tournament     Tournament  @relation(fields: [tournament_id], references: [id], onDelete: Cascade)
+  team1          Team        @relation("Team1", fields: [team1_id], references: [id])
+  team2          Team        @relation("Team2", fields: [team2_id], references: [id])
+
+  innings        Innings[]
+  events         MatchEvent[]
+  playing_xi     MatchPlayer[]
+
+  created_at     DateTime    @default(now())
+  updated_at     DateTime    @updatedAt
+
+  @@index([tournament_id, status])
+  @@index([status])
+  @@schema("scoring")
+}
+
+model MatchPlayer {
+  id               String  @id @default(uuid()) @db.Uuid
+  match_id         String  @db.Uuid
+  team_id          String  @db.Uuid
+  player_id        String  @db.Uuid
+  batting_position Int?    // 1-11, set when XI is locked
+  is_impact_player Boolean @default(false) // IPL Impact Player rule substitution
+
+  match   Match   @relation(fields: [match_id], references: [id], onDelete: Cascade)
+  team    Team    @relation(fields: [team_id], references: [id], onDelete: Cascade)
+  player  Player  @relation(fields: [player_id], references: [id], onDelete: Cascade)
+
+  @@unique([match_id, player_id])
+  @@index([match_id, team_id])
+  @@schema("scoring")
+}
+
+model Innings {
+  id              String    @id @default(uuid()) @db.Uuid
+  match_id        String    @db.Uuid
+  innings_number  Int       // 1 or 2 (up to 4 for Test)
+  batting_team_id String    @db.Uuid
+  bowling_team_id String    @db.Uuid
+
+  total_runs      Int       @default(0)
+  total_wickets   Int       @default(0)
+  total_balls     Int       @default(0)
+  extras          Int       @default(0)
+  wides           Int       @default(0)
+  no_balls        Int       @default(0)
+  byes            Int       @default(0)
+  leg_byes        Int       @default(0)
+  penalty_runs    Int       @default(0)
+
+  // Boundary / dot counters (PPTX § Team Analytics)
+  boundary_4s     Int       @default(0)
+  boundary_6s     Int       @default(0)
+  dot_balls       Int       @default(0)
+
+  // Phase splits (PP / Middle / Death) — denormalised for fast reads
+  pp_runs         Int       @default(0)
+  pp_wickets      Int       @default(0)
+  pp_balls        Int       @default(0)
+  mid_runs        Int       @default(0)
+  mid_wickets     Int       @default(0)
+  mid_balls       Int       @default(0)
+  death_runs      Int       @default(0)
+  death_wickets   Int       @default(0)
+  death_balls     Int       @default(0)
+
+  // Derived metrics (PPTX § Live Innings Tracking & Analytics)
+  projected_score Int?
+  win_probability Float?
+  momentum_index  Float?    // -1 falling, 0 neutral, +1 rising
+
+  target          Int?
+  is_declared     Boolean   @default(false)
+  is_completed    Boolean   @default(false)
+
+  match           Match     @relation(fields: [match_id], references: [id], onDelete: Cascade)
+  batting_team    Team      @relation("BattingTeam", fields: [batting_team_id], references: [id])
+  bowling_team    Team      @relation("BowlingTeam", fields: [bowling_team_id], references: [id])
+  batting_entries BattingEntry[]
+  bowling_entries BowlingEntry[]
+  fielding_entries FieldingEntry[]
+  partnerships     Partnership[]
+  ball_events     BallEvent[]
+
+  created_at      DateTime  @default(now())
+  updated_at      DateTime  @updatedAt
+
+  @@unique([match_id, innings_number])
+  @@index([match_id])
+  @@schema("scoring")
+}
+
+model BattingEntry {
+  id               String        @id @default(uuid()) @db.Uuid
+  innings_id       String        @db.Uuid
+  player_id        String        @db.Uuid
+  batting_position Int
+
+  runs             Int           @default(0)
+  balls_faced      Int           @default(0)
+  fours            Int           @default(0)
+  sixes            Int           @default(0)
+  dot_balls        Int           @default(0)
+  singles          Int           @default(0)
+  doubles          Int           @default(0)
+  threes           Int           @default(0)
+
+  status           BattingStatus @default(yet_to_bat)
+  dismissal_type   String?       // "caught","bowled","lbw","run_out","stumped","hit_wicket"
+  dismissed_by_id  String?       @db.Uuid
+  fielder_id       String?       @db.Uuid
+  dismissal_desc   String?
+
+  // Dismissal context (PPTX § Batter Dismissal & Analytics) — denormalised for scorecard view
+  dismissal_shot     String?
+  dismissal_line     String?
+  dismissal_length   String?
+  dismissal_bowler_type String?
+  dismissal_zone     String?
+  dismissal_trajectory String?
+  dismissal_fielding_position String?
+
+  // Post-match scouting (PPTX § Batter Scouting)
+  strong_zone      String?       // "cover" · "straight" · "mid_wicket" · "square_leg" · "fine_leg" · "all_around"
+  weak_zone        String?       // "outside_off" · "short_ball" · "yorker" · "vs_spin" · "vs_la_pace"
+  strength_vs      String?       // "pace" · "spin" · "la_pace" · "ra_pace" · "la_spin" · "leg_spin"
+  preferred_zone   String?       // "off_side" · "leg_side" · "straight" · "360"
+  scouting_notes   String?       @db.Text
+
+  innings          Innings       @relation(fields: [innings_id], references: [id], onDelete: Cascade)
+  player           Player        @relation(fields: [player_id], references: [id], onDelete: Cascade)
+
+  created_at       DateTime      @default(now())
+  updated_at       DateTime      @updatedAt
+
+  @@unique([innings_id, player_id])
+  @@index([innings_id])
+  @@schema("scoring")
+}
+
+model BowlingEntry {
+  id            String   @id @default(uuid()) @db.Uuid
+  innings_id    String   @db.Uuid
+  player_id     String   @db.Uuid
+
+  balls         Int      @default(0)
+  maidens       Int      @default(0)
+  runs_conceded Int      @default(0)
+  wickets       Int      @default(0)
+  wides         Int      @default(0)
+  no_balls      Int      @default(0)
+  dot_balls     Int      @default(0)
+  boundaries_4s Int      @default(0)
+  boundaries_6s Int      @default(0)
+
+  // Spell tracking (PPTX § Bowler Spell & Analytics)
+  spell_number  Int?     // 1 = first spell, 2 = return spell, etc
+  spell_start_over Int?
+  spell_end_over Int?
+
+  // Phase-wise splits (PPTX § Phase-wise economy)
+  pp_runs       Int      @default(0)
+  pp_balls      Int      @default(0)
+  pp_wickets    Int      @default(0)
+  mid_runs      Int      @default(0)
+  mid_balls     Int      @default(0)
+  mid_wickets   Int      @default(0)
+  death_runs    Int      @default(0)
+  death_balls   Int      @default(0)
+  death_wickets Int      @default(0)
+
+  innings       Innings  @relation(fields: [innings_id], references: [id], onDelete: Cascade)
+  player        Player   @relation(fields: [player_id], references: [id], onDelete: Cascade)
+
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  @@unique([innings_id, player_id])
+  @@index([innings_id])
+  @@schema("scoring")
+}
+
+model FieldingEntry {
+  id                  String   @id @default(uuid()) @db.Uuid
+  innings_id          String   @db.Uuid
+  player_id           String   @db.Uuid
+
+  catches             Int      @default(0)
+  drops               Int      @default(0)
+  run_outs_direct     Int      @default(0)
+  run_outs_assist     Int      @default(0)
+  stumpings           Int      @default(0)
+  direct_hits         Int      @default(0)
+  misfields           Int      @default(0)
+  assists             Int      @default(0)
+
+  // Derived: catches + run_outs + stumpings - drops - misfields
+  impact_score        Int      @default(0)
+
+  innings             Innings  @relation(fields: [innings_id], references: [id], onDelete: Cascade)
+  player              Player   @relation(fields: [player_id], references: [id], onDelete: Cascade)
+
+  created_at          DateTime @default(now())
+  updated_at          DateTime @updatedAt
+
+  @@unique([innings_id, player_id])
+  @@index([innings_id])
+  @@schema("scoring")
+}
+
+model Partnership {
+  id            String   @id @default(uuid()) @db.Uuid
+  innings_id    String   @db.Uuid
+  wicket_number Int      // partnership for this wicket (0 = opening pair, 1 = 1st wkt fall, ...)
+
+  player1_id    String   @db.Uuid
+  player2_id    String   @db.Uuid
+
+  runs          Int      @default(0)
+  balls         Int      @default(0)
+  fours         Int      @default(0)
+  sixes         Int      @default(0)
+
+  is_unbroken   Boolean  @default(true)
+  ended_over    Int?
+  ended_ball    Int?
+
+  innings       Innings  @relation(fields: [innings_id], references: [id], onDelete: Cascade)
+
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  @@unique([innings_id, wicket_number])
+  @@index([innings_id])
+  @@schema("scoring")
+}
+
+model BallEvent {
+  id                  String   @id @default(uuid()) @db.Uuid
+  innings_id          String   @db.Uuid
+  over_number         Int
+  ball_number         Int
+
+  batsman_id          String   @db.Uuid
+  bowler_id           String   @db.Uuid
+  non_striker_id      String?  @db.Uuid
+
+  runs                Int      @default(0)
+  is_wide             Boolean  @default(false)
+  is_no_ball          Boolean  @default(false)
+  is_bye              Boolean  @default(false)
+  is_leg_bye          Boolean  @default(false)
+  is_penalty          Boolean  @default(false)
+  is_wicket           Boolean  @default(false)
+  is_four             Boolean  @default(false)
+  is_six              Boolean  @default(false)
+  is_free_hit         Boolean  @default(false)
+  is_dot              Boolean  @default(false)
+
+  // PPTX § Level 1 ball entry — captured every delivery
+  shot_type           String?  // "defensive","drive","cut","pull","sweep","flick","lofted","edge","no_shot"
+  ball_line           String?  // "outside_off_wide","outside_off","off_stump","middle","leg_stump","outside_leg","down_leg_wide"
+  ball_length         String?  // "yorker","full","good_length","back_of_length","short","bouncer"
+  bowler_variant      String?  // "rf","rfm","rmf","rm","lf","lfm","lm","ob","lb","googly","sla","slw","doosra","carrom","teesra"
+  delivery_outcome    String?  // "dot","1","2","3","4","6","wide","no_ball","bye","leg_bye","wicket"
+
+  // Match phase derived at write-time
+  phase               String?  // "pp" · "mid" · "death"
+
+  // Season/year for future partitioning (Phase 0 seam — free now, expensive to retrofit later)
+  season              String?
+  year                Int?
+
+  // PPTX § Level 2 wicket panel
+  wicket_type         String?  // "caught","bowled","lbw","run_out","stumped","hit_wicket","cb","retired_hurt","obstruction"
+  dismissed_player_id String?  @db.Uuid
+  fielder_id          String?  @db.Uuid
+  fielder_name        String?  // free text fallback if fielder not in roster
+  fielding_position   String?  // see PPTX positions list (wk, slip_1, gully, cover, mid_off, ...)
+  dismissal_zone      String?  // "off_side","leg_side","straight","behind_wicket"
+  ball_trajectory     String?  // "edged_behind","top_edge","leading_edge","mishit","beaten","trapped","squeezed"
+
+  // Optional commentary text
+  commentary          String?
+
+  innings             Innings  @relation(fields: [innings_id], references: [id], onDelete: Cascade)
+  batsman             Player   @relation("BallBatsman", fields: [batsman_id], references: [id])
+  bowler              Player   @relation("BallBowler", fields: [bowler_id], references: [id])
+
+  created_at          DateTime @default(now())
+
+  @@index([innings_id, over_number, ball_number])
+  @@index([innings_id, phase])
+  @@index([bowler_id, ball_length])
+  @@index([bowler_id, ball_line])
+  @@schema("scoring")
+}
+
+model PlayerCareerStats {
+  id                   String   @id @default(uuid()) @db.Uuid
+  player_id            String   @unique @db.Uuid
+
+  // Batting
+  matches_played       Int      @default(0)
+  innings_batted       Int      @default(0)
+  total_runs           Int      @default(0)
+  balls_faced          Int      @default(0)
+  highest_score        Int      @default(0)
+  not_outs             Int      @default(0)
+  hundreds             Int      @default(0)
+  fifties              Int      @default(0)
+  fours                Int      @default(0)
+  sixes                Int      @default(0)
+
+  // Bowling
+  innings_bowled       Int      @default(0)
+  balls_bowled         Int      @default(0)
+  runs_conceded        Int      @default(0)
+  wickets              Int      @default(0)
+  maidens              Int      @default(0)
+  five_wicket_hauls    Int      @default(0)
+  best_bowling_wickets Int      @default(0)
+  best_bowling_runs    Int      @default(9999)
+
+  // Fielding
+  catches              Int      @default(0)
+  run_outs             Int      @default(0)
+  stumpings            Int      @default(0)
+
+  player               Player   @relation(fields: [player_id], references: [id], onDelete: Cascade)
+
+  updated_at           DateTime @updatedAt
+
+  @@schema("scoring")
+}
+
+model MatchEvent {
+  id          String   @id @default(uuid()) @db.Uuid
+  match_id    String   @db.Uuid
+  team_id     String?  @db.Uuid
+  player_id   String?  @db.Uuid
+  event_type  String   // "goal","yellow_card","red_card","substitution","point","timeout"
+  minute      Int?
+  period      String?  // "1st_half","2nd_half","Q1","Q2","extra_time"
+  value       Int      @default(1)
+  description String?
+
+  // Season/year for future partitioning (Phase 0 seam — free now, expensive to retrofit later)
+  season      String?
+  year        Int?
+
+  match       Match    @relation(fields: [match_id], references: [id], onDelete: Cascade)
+
+  created_at  DateTime @default(now())
+
+  @@index([match_id])
+  @@schema("scoring")
+}
