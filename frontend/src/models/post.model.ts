@@ -1,10 +1,17 @@
 import type { Role } from "./user.model";
+import type { JSONContent } from "@tiptap/react";
 
 export interface PostAuthor {
   id: string;
   full_name: string;
   role: Role;
   profile_photo_url?: string;
+}
+
+export interface PostMedia {
+  url: string;
+  type: "image" | "video";
+  thumbnail_url?: string;
 }
 
 export interface Post {
@@ -14,8 +21,8 @@ export interface Post {
   author_name?: string;
   author_role?: Role;
   type: "log" | "post";
-  text: string;
-  media_urls?: string[];
+  content_json: JSONContent;
+  media: PostMedia[];
   sport?: string;
   tags?: string[];
   like_count: number;
@@ -25,11 +32,14 @@ export interface Post {
 
 export interface CreatePostRequest {
   type: "log" | "post";
-  text: string;
+  content_json: JSONContent;
+  media?: PostMedia[];
   sport?: string;
   tags?: string[];
 }
 
 export interface UpdatePostRequest {
-  text: string;
+  content_json?: JSONContent;
+  media?: PostMedia[];
+  tags?: string[];
 }

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useInfiniteQuery, useMutation, useQueryClient, type InfiniteData } from "@tanstack/react-query";
 import { postService } from "../../../services";
 import { queryKeys } from "../../../hooks/queryKeys";
-import type { CreatePostRequest, Post } from "../../../models";
+import type { CreatePostRequest, Post, UpdatePostRequest } from "../../../models";
 import type { FeedPage } from "../services/post.service";
 
 export function useFeed() {
@@ -24,7 +24,7 @@ export function useFeed() {
   });
 
   const update = useMutation({
-    mutationFn: ({ id, text }: { id: string; text: string }) => postService.update(id, { text }),
+    mutationFn: ({ id, ...data }: { id: string } & UpdatePostRequest) => postService.update(id, data),
     onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.feedInfinite() }),
   });
 
