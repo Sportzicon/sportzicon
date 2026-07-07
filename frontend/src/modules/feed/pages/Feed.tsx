@@ -7,9 +7,11 @@ import { ErrorBoundary } from "../../../components/ErrorBoundary";
 import { Heart, Trash2, Pencil, MoreVertical, MessageCircle, PenLine, RefreshCw } from "lucide-react";
 import { Link } from "react-router-dom";
 import { humanizeError } from "../../../api/client";
-import type { Post } from "../../../models";
-
-const MAX_CHARS = 2000;
+import { PostComposer } from "../components/PostComposer";
+import { PostContentView } from "../components/PostContentView";
+import { MediaCarousel } from "../components/MediaCarousel";
+import type { Post, PostMedia } from "../../../models";
+import type { JSONContent } from "@tiptap/react";
 
 // Post card with read-more toggle, media, likes, comments
 function PostCard({
@@ -27,10 +29,8 @@ function PostCard({
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
 }) {
-  const [expanded, setExpanded] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const isOwner = currentUserId === p.author_id;
-  const longText = p.text.length > 300;
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -95,39 +95,12 @@ function PostCard({
         </div>
       </div>
 
-      {/* Post text with read-more */}
+      {/* Post content */}
       <div className="mt-3">
-        <p
-          className={`text-[14.5px] text-ink-70 leading-relaxed whitespace-pre-wrap ${
-            !expanded && longText ? "line-clamp-3" : ""
-          }`}
-        >
-          {p.text}
-        </p>
-        {longText && (
-          <button
-            onClick={() => setExpanded((v) => !v)}
-            className="text-brand-500 text-sm mt-1 min-h-[44px] flex items-center"
-          >
-            {expanded ? "Show less" : "Read more"}
-          </button>
-        )}
+        <PostContentView content={p.content_json} />
       </div>
 
-      {/* Media */}
-      {p.media_urls && p.media_urls.length > 0 && (
-        <div className="mt-3 space-y-2">
-          {p.media_urls.map((url, i) => (
-            <img
-              key={i}
-              src={url}
-              alt=""
-              className="w-full max-h-80 object-cover rounded-lg"
-              loading="lazy"
-            />
-          ))}
-        </div>
-      )}
+      <MediaCarousel media={p.media} />
 
       {/* Like / Comment row */}
       <div className="mt-4 pt-3 border-t border-hairsoft flex items-center gap-5">
@@ -168,8 +141,6 @@ function PullIndicator({ distance, isRefreshing }: { distance: number; isRefresh
 export default function Feed() {
   const user = useAuthStore((s) => s.user);
   const { feedQuery, posts, create, update, remove, toggleLike, likedPosts } = useFeed();
-  const [text, setText] = useState("");
-  const [type, setType] = useState<"post" | "log">("post");
   const [tab, setTab] = useState("All");
   const [createOpen, setCreateOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -185,8 +156,6 @@ export default function Feed() {
     : tab === "Training logs"
     ? posts.filter((p) => p.type === "log")
     : posts;
-
-  const charsLeft = MAX_CHARS - text.length;
 
   // Pull-to-refresh touch handlers
   const onTouchStart = (e: React.TouchEvent) => {
@@ -206,68 +175,23 @@ export default function Feed() {
     setPullDistance(0);
   };
 
-  const handleCreate = () => {
-    if (!text.trim()) return;
+  const handleCreate = (data: { type: "post" | "log"; content_json: JSONContent; media: PostMedia[] }) => {
     setCreateError("");
-    create.mutate(
-      { type, text: text.trim() },
-      {
-        onSuccess: () => {
-          setText("");
-          setCreateOpen(false);
-        },
-        onError: (err) => setCreateError(humanizeError(err)),
-      }
-    );
+    create.mutate(data, {
+      onSuccess: () => setCreateOpen(false),
+      onError: (err) => setCreateError(humanizeError(err)),
+    });
   };
 
   const createForm = (
     <div className="space-y-3">
-      <div className="flex gap-2">
-        {(["post", "log"] as const).map((t) => (
-          <button
-            key={t}
-            type="button"
-            onClick={() => setType(t)}
-            className={`font-mononum text-[10px] uppercase tracking-[0.08em] px-3 min-h-[44px] rounded border transition ${
-              type === t
-                ? "bg-ink text-paper border-ink"
-                : "border-hair text-ink-sub hover:border-ink hover:text-ink"
-            }`}
-          >
-            {t === "log" ? "Training log" : "Update"}
-          </button>
-        ))}
-      </div>
-      <div>
-        <textarea
-          className="input w-full"
-          rows={4}
-          placeholder={type === "log" ? "What did you train today?" : "Share an update with your network…"}
-          value={text}
-          onChange={(e) => setText(e.target.value.slice(0, MAX_CHARS))}
-          style={{ resize: "none" }}
-        />
-        <div className={`text-right text-xs mt-1 ${charsLeft < 200 ? "text-red-500" : "text-ink-faint"}`}>
-          {text.length}/{MAX_CHARS}
-        </div>
-      </div>
+      <PostComposer
+        submitting={create.isPending}
+        submitLabel="Post →"
+        onSubmit={handleCreate}
+        onCancel={() => setCreateOpen(false)}
+      />
       {createError && <p className="text-sm text-red-600">{createError}</p>}
-      <div className="flex gap-2 justify-end">
-        <button
-          onClick={() => { setCreateOpen(false); setText(""); setCreateError(""); }}
-          className="btn-secondary min-h-[44px]"
-        >
-          Cancel
-        </button>
-        <button
-          className="btn-accent min-h-[44px]"
-          disabled={create.isPending || !text.trim()}
-          onClick={handleCreate}
-        >
-          {create.isPending ? "Posting…" : "Post →"}
-        </button>
-      </div>
     </div>
   );
 
@@ -335,32 +259,20 @@ export default function Feed() {
                 return (
                   <li key={p.id} className="panel p-4 sm:p-5">
                     <p className="text-sm font-semibold text-ink mb-2">Edit post</p>
-                    <textarea
-                      id={`edit-${p.id}`}
-                      defaultValue={p.text}
-                      className="input w-full text-sm"
-                      rows={4}
-                      maxLength={MAX_CHARS}
-                      style={{ resize: "none" }}
+                    <PostComposer
+                      showTypeToggle={false}
+                      initialContentJson={p.content_json}
+                      initialMedia={p.media}
+                      submitting={update.isPending}
+                      submitLabel="Save"
+                      onSubmit={(data) =>
+                        update.mutate(
+                          { id: p.id, content_json: data.content_json, media: data.media },
+                          { onSuccess: () => setEditingId(null) }
+                        )
+                      }
+                      onCancel={() => setEditingId(null)}
                     />
-                    <div className="flex gap-2 justify-end mt-2">
-                      <button onClick={() => setEditingId(null)} className="btn-secondary min-h-[44px]">
-                        Cancel
-                      </button>
-                      <button
-                        onClick={() => {
-                          const el = document.getElementById(`edit-${p.id}`) as HTMLTextAreaElement;
-                          update.mutate(
-                            { id: p.id, text: el.value },
-                            { onSuccess: () => setEditingId(null) }
-                          );
-                        }}
-                        disabled={update.isPending}
-                        className="btn-primary min-h-[44px]"
-                      >
-                        {update.isPending ? "Saving…" : "Save"}
-                      </button>
-                    </div>
                   </li>
                 );
               }
