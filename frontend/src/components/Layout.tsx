@@ -198,7 +198,7 @@ function NotificationDropdown({
   );
 }
 
-/** Role-based bottom nav items (mobile only, 5 per role). */
+/** Role-based bottom nav items (mobile only, up to 5 per role). */
 function getMobileNavItems(user: { id: string; role: string }) {
   const profileTo = `/profile/${user.id}`;
   const base = [
