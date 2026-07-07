@@ -5,6 +5,8 @@ import { queryKeys } from "../../../hooks/queryKeys";
 import { Badge, Placeholder } from "../../../components/UI";
 import type { Post, Blog, Reel } from "../../../models";
 import { Heart, MessageCircle, Play } from "lucide-react";
+import { PostContentView } from "../../feed/components/PostContentView";
+import { MediaCarousel } from "../../feed/components/MediaCarousel";
 
 // Unified, chronological "Feed" tab on the profile page — merges this user's
 // Posts, Blogs and Reels into one Instagram/LinkedIn-style activity stream.
@@ -84,10 +86,10 @@ export function ProfileFeedTab({ userId }: { userId: string }) {
           return (
             <div key={`post-${p.id}`} className="card card-body">
               <Badge color="blue">Post</Badge>
-              <p className="mt-2.5 whitespace-pre-wrap text-[14px] leading-relaxed text-ink-70">{p.text}</p>
-              {p.media_urls?.[0] && (
-                <img src={p.media_urls[0]} alt="" className="mt-3 max-h-80 w-full rounded object-cover" />
-              )}
+              <div className="mt-2.5">
+                <PostContentView content={p.content_json} />
+              </div>
+              <MediaCarousel media={p.media} />
               <CountsRow likes={p.like_count} comments={p.comment_count} at={item.at} />
             </div>
           );
