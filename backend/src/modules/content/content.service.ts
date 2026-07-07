@@ -1,6 +1,8 @@
+import type { Prisma } from "@prisma/client";
 import { prisma } from "../../config/prisma";
 import { BadRequest, Forbidden, NotFound } from "../../utils/errors";
 import { slugify } from "../../utils/ids";
+import { extractPlainText } from "../../utils/richText";
 import { eventBus } from "../../lib/EventBus";
 import { CONTENT_LIKED, type ContentLikedEvent } from "../../events/types";
 import type { CreateContentInput, ListContentInput, UpdateContentInput } from "./content.schemas";
@@ -29,8 +31,9 @@ export async function createContent(authorId: string, input: CreateContentInput)
         postDetail: {
           create: {
             type: input.type,
-            text: input.text.trim(),
-            media_urls: input.media_urls ?? [],
+            content_json: input.content_json as Prisma.InputJsonValue,
+            text_excerpt: extractPlainText(input.content_json),
+            media: (input.media ?? []) as Prisma.InputJsonValue,
           },
         },
       },
@@ -101,7 +104,11 @@ export async function updateContent(
 
   if (input.content_type === "post") {
     const detailData: Record<string, unknown> = {};
-    if (input.text !== undefined) detailData.text = input.text;
+    if (input.content_json !== undefined) {
+      detailData.content_json = input.content_json as Prisma.InputJsonValue;
+      detailData.text_excerpt = extractPlainText(input.content_json);
+    }
+    if (input.media !== undefined) detailData.media = input.media as Prisma.InputJsonValue;
 
     const ops = [];
     if (input.tags !== undefined) ops.push(prisma.content.update({ where: { id }, data: { tags: input.tags } }));

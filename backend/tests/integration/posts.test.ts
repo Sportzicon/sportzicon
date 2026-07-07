@@ -1,6 +1,11 @@
 import { api, signupAndLogin } from "../helpers/agent";
 import { resetDatabase } from "../helpers/setup";
 
+const DOC = (text: string) => ({
+  type: "doc",
+  content: [{ type: "paragraph", content: [{ type: "text", text }] }],
+});
+
 describe("content: posts + reels + blogs", () => {
   beforeEach(async () => {
     await resetDatabase();
@@ -11,9 +16,10 @@ describe("content: posts + reels + blogs", () => {
     const create = await api()
       .post("/api/v1/content")
       .set(a.auth)
-      .send({ content_type: "post", type: "log", text: "Speed work today. 6x200m." })
+      .send({ content_type: "post", type: "log", content_json: DOC("Speed work today. 6x200m.") })
       .expect(201);
     const id = create.body.content.id;
+    expect(create.body.content.text_excerpt).toBe("Speed work today. 6x200m.");
 
     await api().post(`/api/v1/content/${id}/like`).set(a.auth).expect(200);
     await api().post(`/api/v1/content/${id}/comments`).set(a.auth).send({ text: "Solid." }).expect(201);
@@ -25,11 +31,31 @@ describe("content: posts + reels + blogs", () => {
   test("only author or admin can delete a post", async () => {
     const a = await signupAndLogin({ email: "owner@test.dev" });
     const b = await signupAndLogin({ email: "other@test.dev" });
-    const r = await api().post("/api/v1/content").set(a.auth).send({ content_type: "post", text: "hi" }).expect(201);
+    const r = await api().post("/api/v1/content").set(a.auth).send({ content_type: "post", content_json: DOC("hi") }).expect(201);
     const id = r.body.content.id;
     const denied = await api().delete(`/api/v1/content/${id}`).set(b.auth);
     expect(denied.status).toBe(403);
     await api().delete(`/api/v1/content/${id}`).set(a.auth).expect(200);
+  });
+
+  test("post media carries per-item type", async () => {
+    const a = await signupAndLogin({ email: "media@test.dev" });
+    const r = await api()
+      .post("/api/v1/content")
+      .set(a.auth)
+      .send({
+        content_type: "post",
+        content_json: DOC("carousel test"),
+        media: [
+          { url: "https://example.com/a.jpg", type: "image" },
+          { url: "https://example.com/b.mp4", type: "video" },
+        ],
+      })
+      .expect(201);
+    expect(r.body.content.media).toEqual([
+      { url: "https://example.com/a.jpg", type: "image" },
+      { url: "https://example.com/b.mp4", type: "video" },
+    ]);
   });
 
   test("blog draft is hidden from public list", async () => {
