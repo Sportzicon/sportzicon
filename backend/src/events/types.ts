@@ -38,12 +38,13 @@ export interface OpportunityStatusChangedEvent {
   posterId: string;
 }
 
-// ── Post events ──────────────────────────────────────────────────────────────
+// ── Content events ───────────────────────────────────────────────────────────
 
-export const POST_LIKED = "post.liked";
+export const CONTENT_LIKED = "content.liked";
 
-export interface PostLikedEvent {
-  postId: string;
+export interface ContentLikedEvent {
+  contentId: string;
+  contentType: "post" | "blog" | "reel";
   actorId: string;
   actorName: string;
   authorId: string;

@@ -305,18 +305,27 @@ export async function updateUserRole(
 }
 
 export async function adminDeletePost(actor: { id: string; role: Role }, postId: string) {
-  const post = await prisma.post.findUnique({ where: { id: postId }, select: { id: true } });
-  if (!post) throw NotFound("Post not found");
-  await prisma.post.delete({ where: { id: postId } });
-  await audit({ actor, action: "post.deleted_by_admin", target_type: "post", target_id: postId });
-  return { ok: true };
+  return adminDeleteContent(actor, postId, "post");
 }
 
 export async function adminDeleteReel(actor: { id: string; role: Role }, reelId: string) {
-  const reel = await prisma.reel.findUnique({ where: { id: reelId }, select: { id: true, video_url: true } });
-  if (!reel) throw NotFound("Reel not found");
-  await prisma.reel.delete({ where: { id: reelId } });
-  await audit({ actor, action: "reel.deleted_by_admin", target_type: "reel", target_id: reelId, details: { video_url: reel.video_url } });
+  return adminDeleteContent(actor, reelId, "reel");
+}
+
+async function adminDeleteContent(actor: { id: string; role: Role }, contentId: string, expectedType: "post" | "reel") {
+  const content = await prisma.content.findUnique({
+    where: { id: contentId },
+    select: { id: true, content_type: true, reelDetail: { select: { video_url: true } } },
+  });
+  if (!content || content.content_type !== expectedType) throw NotFound(`${expectedType[0].toUpperCase()}${expectedType.slice(1)} not found`);
+  await prisma.content.delete({ where: { id: contentId } });
+  await audit({
+    actor,
+    action: `${expectedType}.deleted_by_admin`,
+    target_type: expectedType,
+    target_id: contentId,
+    ...(content.reelDetail ? { details: { video_url: content.reelDetail.video_url } } : {}),
+  });
   return { ok: true };
 }
 

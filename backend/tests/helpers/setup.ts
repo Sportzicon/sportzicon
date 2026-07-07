@@ -11,12 +11,8 @@ export async function resetDatabase() {
   await prisma.message.deleteMany();
   await prisma.conversation.deleteMany();
   await prisma.comment.deleteMany();
-  await prisma.blogLike.deleteMany();
-  await prisma.reelLike.deleteMany();
-  await prisma.postLike.deleteMany();
-  await prisma.blog.deleteMany();
-  await prisma.reel.deleteMany();
-  await prisma.post.deleteMany();
+  await prisma.contentLike.deleteMany();
+  await prisma.content.deleteMany();
   await prisma.follow.deleteMany();
   await prisma.application.deleteMany();
   await prisma.opportunity.deleteMany();

@@ -61,6 +61,11 @@ export function useBlog(id: string, options?: { onDeleteSuccess?: () => void }) 
     onError: (_err, _vars, ctx) => {
       if (ctx?.prev) qc.setQueryData(queryKeys.blog(id), ctx.prev);
     },
+    onSuccess: (result) => {
+      qc.setQueryData<Blog>(queryKeys.blog(id), (prev) =>
+        prev ? { ...prev, liked: result.liked, like_count: result.like_count } : prev
+      );
+    },
     onSettled: () => {
       qc.invalidateQueries({ queryKey: queryKeys.blog(id) });
     },
@@ -82,6 +87,11 @@ export function useBlog(id: string, options?: { onDeleteSuccess?: () => void }) 
     },
     onError: (_err, _vars, ctx) => {
       if (ctx?.prev) qc.setQueryData(queryKeys.blog(id), ctx.prev);
+    },
+    onSuccess: (result) => {
+      qc.setQueryData<Blog>(queryKeys.blog(id), (prev) =>
+        prev ? { ...prev, liked: result.liked, like_count: result.like_count } : prev
+      );
     },
     onSettled: () => {
       qc.invalidateQueries({ queryKey: queryKeys.blog(id) });

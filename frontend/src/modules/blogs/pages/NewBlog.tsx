@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, useCallback, KeyboardEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { api, humanizeError } from "../../../api/client";
+import { humanizeError } from "../../../api/client";
+import { blogService } from "../../../services";
 import { queryKeys } from "../../../hooks";
 import { PageHeader, Spinner, SectionHead } from "../../../components/UI";
 import { BackButton } from "../../../components/BackButton";
@@ -152,7 +153,7 @@ export default function NewBlog() {
 
   const blogQ = useQuery({
     queryKey: queryKeys.blog(id ?? ""),
-    queryFn: async () => (await api.get(`/blogs/${id}`)).data.blog,
+    queryFn: () => blogService.get(id!),
     enabled: !!id,
   });
 
@@ -204,13 +205,13 @@ export default function NewBlog() {
       if (coverUrl.trim()) payload.cover_image_url = coverUrl.trim();
       if (sport) payload.sport = sport;
 
-      const r = isEdit
-        ? await api.put(`/blogs/${id}`, payload)
-        : await api.post("/blogs", payload);
+      const saved = isEdit
+        ? await blogService.update(id!, payload)
+        : await blogService.create(payload);
 
       await qc.invalidateQueries({ queryKey: queryKeys.blogs() });
       if (id) await qc.invalidateQueries({ queryKey: queryKeys.blog(id) });
-      navigate(`/blogs/${r.data.blog.id}`);
+      navigate(`/blogs/${saved.id}`);
     } catch (e) {
       setErr(humanizeError(e));
     } finally {

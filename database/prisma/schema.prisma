@@ -105,9 +105,7 @@ model User {
   organizations       Organization[]
   opportunities       Opportunity[]       @relation("PostedBy")
   applications        Application[]
-  posts               Post[]
-  reels               Reel[]
-  blogs               Blog[]
+  content             Content[]
   comments            Comment[]
   messages_sent       Message[]           @relation("Sender")
   unread_counts       UnreadCount[]
@@ -117,9 +115,7 @@ model User {
   following           Follow[]            @relation("Follower")
   reports_made        Report[]            @relation("Reporter")
   audit_logs          AuditLog[]
-  post_likes          PostLike[]
-  reel_likes          ReelLike[]
-  blog_likes          BlogLike[]
+  content_likes       ContentLike[]
   comment_likes       CommentLike[]
   documents           UserDocument[]
   email_logs          EmailLog[]
@@ -363,12 +359,10 @@ model Follow {
   @@schema("public")
 }
 
-model Post {
+model Content {
   id            String   @id @default(uuid()) @db.Uuid
   author_id     String   @db.Uuid
-  type          String   @default("post")
-  text          String   @db.Text
-  media_urls    String[] @default([])
+  content_type  String // "post" | "blog" | "reel"
   sport         String?
   tags          String[] @default([])
   like_count    Int      @default(0)
@@ -376,84 +370,72 @@ model Post {
   created_at    DateTime @default(now())
   updated_at    DateTime @updatedAt
 
-  author   User       @relation(fields: [author_id], references: [id])
-  comments Comment[]  @relation("PostComments")
-  likes    PostLike[]
+  author     User          @relation(fields: [author_id], references: [id])
+  postDetail PostDetail?
+  blogDetail BlogDetail?
+  reelDetail ReelDetail?
+  likes      ContentLike[]
+  comments   Comment[]
 
   @@index([author_id, created_at(sort: Desc)])
+  @@index([content_type, created_at(sort: Desc)])
   @@schema("public")
 }
 
-model Reel {
-  id               String   @id @default(uuid()) @db.Uuid
-  author_id        String   @db.Uuid
-  title            String?
-  description      String?
-  caption          String?
-  video_url        String
-  thumbnail_url    String?
-  duration_seconds Int?
-  sport            String?
-  like_count       Int      @default(0)
-  comment_count    Int      @default(0)
-  created_at       DateTime @default(now())
+model PostDetail {
+  content_id String   @id @db.Uuid
+  type       String   @default("post") // "post" | "log"
+  text       String   @db.Text
+  media_urls String[] @default([])
 
-  author   User       @relation(fields: [author_id], references: [id])
-  comments Comment[]  @relation("ReelComments")
-  likes    ReelLike[]
+  content Content @relation(fields: [content_id], references: [id], onDelete: Cascade)
 
-  @@index([author_id, created_at(sort: Desc)])
-  @@index([created_at(sort: Desc)])
   @@schema("public")
 }
 
-model Blog {
-  id              String    @id @default(uuid()) @db.Uuid
-  author_id       String    @db.Uuid
+model BlogDetail {
+  content_id      String    @id @db.Uuid
   title           String
   slug            String    @unique
   cover_image_url String?
   excerpt         String    @db.Text
   body_markdown   String    @db.Text
-  tags            String[]  @default([])
-  sport           String?
   status          String    @default("draft")
-  like_count      Int       @default(0)
-  comment_count   Int       @default(0)
   published_at    DateTime?
-  created_at      DateTime  @default(now())
-  updated_at      DateTime  @updatedAt
 
-  author   User       @relation(fields: [author_id], references: [id])
-  comments Comment[]  @relation("BlogComments")
-  likes    BlogLike[]
+  content Content @relation(fields: [content_id], references: [id], onDelete: Cascade)
 
   @@index([status, published_at(sort: Desc)])
-  @@index([author_id, created_at(sort: Desc)])
   @@index([slug])
   @@schema("public")
 }
 
+model ReelDetail {
+  content_id       String  @id @db.Uuid
+  title            String?
+  description      String?
+  video_url        String
+  thumbnail_url    String?
+  duration_seconds Int?
+
+  content Content @relation(fields: [content_id], references: [id], onDelete: Cascade)
+
+  @@schema("public")
+}
+
 model Comment {
-  id          String   @id @default(uuid()) @db.Uuid
-  parent_type String
-  post_id     String?  @db.Uuid
-  reel_id     String?  @db.Uuid
-  blog_id     String?  @db.Uuid
-  author_id   String   @db.Uuid
-  text        String   @db.Text
-  like_count  Int      @default(0)
-  created_at  DateTime @default(now())
+  id         String   @id @default(uuid()) @db.Uuid
+  content_id String   @db.Uuid
+  author_id  String   @db.Uuid
+  text       String   @db.Text
+  like_count Int      @default(0)
+  created_at DateTime @default(now())
 
-  author User          @relation(fields: [author_id], references: [id])
-  post   Post?         @relation("PostComments", fields: [post_id], references: [id])
-  reel   Reel?         @relation("ReelComments", fields: [reel_id], references: [id])
-  blog   Blog?         @relation("BlogComments", fields: [blog_id], references: [id])
-  likes  CommentLike[]
+  content Content       @relation(fields: [content_id], references: [id], onDelete: Cascade)
+  author  User          @relation(fields: [author_id], references: [id])
+  likes   CommentLike[]
 
-  @@index([post_id, created_at(sort: Desc)])
-  @@index([reel_id, created_at(sort: Desc)])
-  @@index([blog_id, created_at(sort: Desc)])
+  @@index([content_id, created_at(sort: Desc)])
   @@schema("public")
 }
 
@@ -671,39 +653,15 @@ model LoginAttempt {
   @@schema("public")
 }
 
-model PostLike {
-  post_id    String   @db.Uuid
+model ContentLike {
+  content_id String   @db.Uuid
   user_id    String   @db.Uuid
   created_at DateTime @default(now())
 
-  post Post @relation(fields: [post_id], references: [id], onDelete: Cascade)
-  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  content Content @relation(fields: [content_id], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
-  @@id([post_id, user_id])
-  @@schema("public")
-}
-
-model ReelLike {
-  reel_id    String   @db.Uuid
-  user_id    String   @db.Uuid
-  created_at DateTime @default(now())
-
-  reel Reel @relation(fields: [reel_id], references: [id], onDelete: Cascade)
-  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
-
-  @@id([reel_id, user_id])
-  @@schema("public")
-}
-
-model BlogLike {
-  blog_id    String   @db.Uuid
-  user_id    String   @db.Uuid
-  created_at DateTime @default(now())
-
-  blog Blog @relation(fields: [blog_id], references: [id], onDelete: Cascade)
-  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
-
-  @@id([blog_id, user_id])
+  @@id([content_id, user_id])
   @@schema("public")
 }
 

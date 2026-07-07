@@ -18,12 +18,8 @@ async function truncateAll() {
   await prisma.message.deleteMany();
   await prisma.conversation.deleteMany();
   await prisma.comment.deleteMany();
-  await prisma.blogLike.deleteMany();
-  await prisma.reelLike.deleteMany();
-  await prisma.postLike.deleteMany();
-  await prisma.blog.deleteMany();
-  await prisma.reel.deleteMany();
-  await prisma.post.deleteMany();
+  await prisma.contentLike.deleteMany();
+  await prisma.content.deleteMany();
   await prisma.follow.deleteMany();
   await prisma.application.deleteMany();
   await prisma.opportunity.deleteMany();
@@ -203,49 +199,59 @@ async function makeApplication(
 }
 
 async function makePost(author: { id: string }, text: string, sport: string, type: "post" | "log", likeCount = 0, commentCount = 0) {
-  return prisma.post.create({
+  return prisma.content.create({
     data: {
       author_id: author.id,
-      type,
-      text,
+      content_type: "post",
       sport,
       tags: [sport.toLowerCase(), type === "log" ? "training" : "update"],
       like_count: likeCount,
-      comment_count: commentCount
+      comment_count: commentCount,
+      postDetail: { create: { type, text } }
     }
   });
 }
 
 async function makeReel(author: { id: string }, caption: string, sport: string, likeCount = 0) {
   const SAMPLE = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4";
-  return prisma.reel.create({
+  return prisma.content.create({
     data: {
       author_id: author.id,
-      caption,
-      video_url: SAMPLE,
+      content_type: "reel",
       sport,
-      duration_seconds: Math.floor(Math.random() * 40) + 10,
       like_count: likeCount,
-      comment_count: Math.floor(Math.random() * 18)
+      comment_count: Math.floor(Math.random() * 18),
+      reelDetail: {
+        create: {
+          title: caption,
+          video_url: SAMPLE,
+          duration_seconds: Math.floor(Math.random() * 40) + 10
+        }
+      }
     }
   });
 }
 
 async function makeBlog(author: { id: string }, title: string, sport: string, tags: string[], body: string, excerpt: string) {
   const slug = `${title.toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 55)}-${Math.random().toString(36).slice(2, 7)}`;
-  return prisma.blog.create({
+  return prisma.content.create({
     data: {
       author_id: author.id,
-      title,
-      slug,
-      excerpt,
-      body_markdown: body,
-      tags,
+      content_type: "blog",
       sport,
-      status: "published",
+      tags,
       like_count: Math.floor(Math.random() * 80) + 10,
       comment_count: Math.floor(Math.random() * 14),
-      published_at: new Date()
+      blogDetail: {
+        create: {
+          title,
+          slug,
+          excerpt,
+          body_markdown: body,
+          status: "published",
+          published_at: new Date()
+        }
+      }
     }
   });
 }

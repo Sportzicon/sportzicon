@@ -6,13 +6,19 @@ import {
   APP_TRANSITIONED,
   USER_FOLLOWED,
   MESSAGE_SENT,
-  POST_LIKED,
+  CONTENT_LIKED,
   type ApplicationAppliedEvent,
   type ApplicationTransitionedEvent,
   type UserFollowedEvent,
   type MessageSentEvent,
-  type PostLikedEvent,
+  type ContentLikedEvent,
 } from "../types";
+
+const CONTENT_LINK: Record<ContentLikedEvent["contentType"], (id: string) => string> = {
+  post: () => `/feed`,
+  blog: (id) => `/blogs/${id}`,
+  reel: () => `/reels`,
+};
 
 /**
  * Registers all notification-related event handlers on the shared event bus.
@@ -75,15 +81,15 @@ export function registerNotificationHandlers(): void {
     });
   });
 
-  // ── Post liked ─────────────────────────────────────────────────────────────
-  eventBus.on<PostLikedEvent>(POST_LIKED, async (e) => {
+  // ── Content liked (post/blog/reel) ────────────────────────────────────────
+  eventBus.on<ContentLikedEvent>(CONTENT_LIKED, async (e) => {
     await createNotification({
       user_id: e.authorId,
       actor_id: e.actorId,
-      type: "post_liked",
-      title: "Someone liked your post",
-      body: `${e.actorName} liked your post.`,
-      link: `/feed`,
+      type: `${e.contentType}_liked`,
+      title: `Someone liked your ${e.contentType}`,
+      body: `${e.actorName} liked your ${e.contentType}.`,
+      link: CONTENT_LINK[e.contentType](e.contentId),
       email: false,
     });
   });

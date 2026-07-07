@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { api, humanizeError } from "../../../api/client";
+import { humanizeError } from "../../../api/client";
+import { reelService } from "../../../services";
 import { hasRole, isAdmin as checkAdmin } from "../../../utils/roles";
 import { Spinner, EmptyState, PageHeader } from "../../../components/UI";
 import { MobileDrawer } from "../../../components/MobileDrawer";
@@ -36,7 +37,7 @@ export default function Reels() {
   const isAdmin = checkAdmin(user?.role ?? "");
 
   const create = useMutation({
-    mutationFn: () => api.post("/reels", form),
+    mutationFn: () => reelService.create(form),
     onSuccess: () => {
       setUploadOpen(false);
       setForm({ title: "", video_url: "" });

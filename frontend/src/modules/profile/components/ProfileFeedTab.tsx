@@ -8,11 +8,15 @@ import { Heart, MessageCircle, Play } from "lucide-react";
 
 // Unified, chronological "Feed" tab on the profile page — merges this user's
 // Posts, Blogs and Reels into one Instagram/LinkedIn-style activity stream.
-// Each item still lives in its own table/module; this only merges them for display.
+// The backend already returns them pre-merged/ordered from one Content query
+// (content_type discriminates which shape each row is); this only splits them
+// back out for display.
 type FeedItem =
   | { kind: "post"; at: number; data: Post }
   | { kind: "blog"; at: number; data: Blog }
   | { kind: "reel"; at: number; data: Reel };
+
+type ContentItem = (Post | Blog | Reel) & { content_type: "post" | "blog" | "reel" };
 
 function timeOf(v: string | number): number {
   return typeof v === "number" ? v : new Date(v).getTime();
@@ -43,20 +47,12 @@ function CountsRow({ likes, comments, at }: { likes: number; comments: number; a
 }
 
 export function ProfileFeedTab({ userId }: { userId: string }) {
-  const postsQ = useQuery({
-    queryKey: queryKeys.userPosts(userId),
-    queryFn: async () => (await api.get<{ items: Post[] }>("/posts", { params: { author_id: userId, limit: 20 } })).data.items,
-  });
-  const blogsQ = useQuery({
-    queryKey: ["profile-feed-blogs", userId],
-    queryFn: async () => (await api.get<{ items: Blog[] }>("/blogs", { params: { author_id: userId, limit: 20 } })).data.items,
-  });
-  const reelsQ = useQuery({
-    queryKey: queryKeys.userReels(userId),
-    queryFn: async () => (await api.get<{ items: Reel[] }>("/reels", { params: { author_id: userId, limit: 20 } })).data.items,
+  const contentQ = useQuery({
+    queryKey: queryKeys.authorContent(userId),
+    queryFn: async () => (await api.get<{ items: ContentItem[] }>("/content", { params: { author_id: userId, limit: 20 } })).data.items,
   });
 
-  if (postsQ.isLoading || blogsQ.isLoading || reelsQ.isLoading) {
+  if (contentQ.isLoading) {
     return (
       <div className="space-y-3">
         <div className="skel h-28 rounded" />
@@ -65,11 +61,12 @@ export function ProfileFeedTab({ userId }: { userId: string }) {
     );
   }
 
-  const items: FeedItem[] = [
-    ...(postsQ.data ?? []).map((p): FeedItem => ({ kind: "post", at: timeOf(p.created_at), data: p })),
-    ...(blogsQ.data ?? []).map((b): FeedItem => ({ kind: "blog", at: timeOf(b.created_at), data: b })),
-    ...(reelsQ.data ?? []).map((r): FeedItem => ({ kind: "reel", at: timeOf(r.created_at), data: r })),
-  ].sort((a, b) => b.at - a.at);
+  const items: FeedItem[] = (contentQ.data ?? []).map((c): FeedItem => {
+    const at = timeOf(c.created_at);
+    if (c.content_type === "blog") return { kind: "blog", at, data: c as Blog };
+    if (c.content_type === "reel") return { kind: "reel", at, data: c as Reel };
+    return { kind: "post", at, data: c as Post };
+  });
 
   if (items.length === 0) {
     return (

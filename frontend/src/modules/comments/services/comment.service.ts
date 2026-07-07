@@ -9,15 +9,15 @@ export interface CommentPage {
 export class CommentService {
   constructor(private readonly client: AxiosInstance) {}
 
-  async list(parentType: CommentParentType, parentId: string, cursor?: string): Promise<CommentPage> {
-    const res = await this.client.get<CommentPage>(`/${parentType}s/${parentId}/comments`, {
+  async list(_parentType: CommentParentType, contentId: string, cursor?: string): Promise<CommentPage> {
+    const res = await this.client.get<CommentPage>(`/content/${contentId}/comments`, {
       params: cursor ? { cursor } : undefined
     });
     return res.data;
   }
 
-  async add(parentType: CommentParentType, parentId: string, data: AddCommentRequest): Promise<CommentDoc> {
-    const res = await this.client.post<{ comment: CommentDoc }>(`/${parentType}s/${parentId}/comments`, data);
+  async add(_parentType: CommentParentType, contentId: string, data: AddCommentRequest): Promise<CommentDoc> {
+    const res = await this.client.post<{ comment: CommentDoc }>(`/content/${contentId}/comments`, data);
     return res.data.comment;
   }
 

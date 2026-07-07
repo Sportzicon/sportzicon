@@ -22,10 +22,8 @@ import applicationsRoutes from "./modules/applications/applications.routes";
 import searchRoutes from "./modules/search/search.routes";
 import messagingRoutes from "./modules/messaging/messaging.routes";
 import notificationsRoutes from "./modules/notifications/notifications.routes";
-import postsRoutes from "./modules/posts/posts.routes";
-import commentsRoutes from "./modules/posts/comments.routes";
-import reelsRoutes from "./modules/reels/reels.routes";
-import blogsRoutes from "./modules/blogs/blogs.routes";
+import contentRoutes from "./modules/content/content.routes";
+import commentsRoutes from "./modules/content/comments.routes";
 import aiRoutes from "./modules/ai/ai.routes";
 import mediaRoutes from "./modules/media/media.routes";
 import verificationRoutes from "./modules/verification/verification.routes";
@@ -105,10 +103,8 @@ export function createApp(): Express {
   app.use("/api/v1/search", searchRoutes);
   app.use("/api/v1", messagingRoutes); // /conversations, /messages
   app.use("/api/v1/notifications", notificationsRoutes);
-  app.use("/api/v1/posts", postsRoutes);
+  app.use("/api/v1/content", contentRoutes);
   app.use("/api/v1/comments", commentsRoutes);
-  app.use("/api/v1/reels", reelsRoutes);
-  app.use("/api/v1/blogs", blogsRoutes);
   app.use("/api/v1/ai", aiRoutes);
   app.use("/api/v1/media", mediaRoutes);
   app.use("/api/v1/verifications", verificationRoutes);
