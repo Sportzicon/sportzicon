@@ -383,10 +383,11 @@ model Content {
 }
 
 model PostDetail {
-  content_id String   @id @db.Uuid
-  type       String   @default("post") // "post" | "log"
-  text       String   @db.Text
-  media_urls String[] @default([])
+  content_id   String @id @db.Uuid
+  type         String @default("post") // "post" | "log"
+  content_json Json
+  text_excerpt String @db.Text
+  media        Json   @default("[]")
 
   content Content @relation(fields: [content_id], references: [id], onDelete: Cascade)
 
