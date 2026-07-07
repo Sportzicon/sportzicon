@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useEditor, EditorContent, type JSONContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Link from "@tiptap/extension-link";
 import { Bold, Italic, List, ListOrdered, Link as LinkIcon, Image as ImageIcon, Video as VideoIcon, X } from "lucide-react";
-import { uploadToGCS } from "../../../hooks/useUpload";
+import { uploadToGCS, MAX_SIZE_MB, ACCEPT_BY_CONTEXT } from "../../../hooks/useUpload";
+import { humanizeError } from "../../../api/client";
 import { Spinner } from "../../../components/UI";
 import type { PostMedia } from "../../../models";
 
@@ -75,7 +76,30 @@ export function PostComposer({
       }));
     setSlots((prev) => [...prev, ...newSlots]);
     newSlots.forEach((slot) => {
-      uploadToGCS(slot.file, kind === "video" ? "reel" : "post", (pct) => {
+      const context = kind === "video" ? "reel" : "post";
+      const allowed = ACCEPT_BY_CONTEXT[context].split(",");
+      const maxMB = MAX_SIZE_MB[context];
+      if (!allowed.includes(slot.file.type)) {
+        setSlots((prev) =>
+          prev.map((s) =>
+            s.localId === slot.localId
+              ? { ...s, error: `File type "${slot.file.type}" is not supported.`, uploading: false }
+              : s
+          )
+        );
+        return;
+      }
+      if (slot.file.size > maxMB * 1024 * 1024) {
+        setSlots((prev) =>
+          prev.map((s) =>
+            s.localId === slot.localId
+              ? { ...s, error: `File must be under ${maxMB}MB. Your file is ${(slot.file.size / 1024 / 1024).toFixed(1)}MB.`, uploading: false }
+              : s
+          )
+        );
+        return;
+      }
+      uploadToGCS(slot.file, context, (pct) => {
         setSlots((prev) => prev.map((s) => (s.localId === slot.localId ? { ...s, progress: pct } : s)));
       })
         .then(({ url }) => {
@@ -83,20 +107,26 @@ export function PostComposer({
             prev.map((s) => (s.localId === slot.localId ? { ...s, uploadedUrl: url ?? undefined, uploading: false } : s))
           );
         })
-        .catch((e: Error) => {
+        .catch((e) => {
           setSlots((prev) =>
-            prev.map((s) => (s.localId === slot.localId ? { ...s, error: e.message, uploading: false } : s))
+            prev.map((s) => (s.localId === slot.localId ? { ...s, error: humanizeError(e), uploading: false } : s))
           );
         });
     });
   }
 
   function removeSlot(localId: string) {
-    setSlots((prev) => prev.filter((s) => s.localId !== localId));
+    setSlots((prev) => {
+      const slot = prev.find((s) => s.localId === localId);
+      if (slot && !initialMedia?.some((m) => m.url === slot.previewUrl)) {
+        URL.revokeObjectURL(slot.previewUrl);
+      }
+      return prev.filter((s) => s.localId !== localId);
+    });
   }
 
   const isUploading = slots.some((s) => s.uploading);
-  const isEmpty = (editor?.isEmpty ?? true) && slots.length === 0;
+  const isEmpty = (editor?.isEmpty ?? true) && slots.every((s) => s.error);
 
   function handleSubmit() {
     if (!editor || isEmpty || isUploading) return;
@@ -106,13 +136,17 @@ export function PostComposer({
     onSubmit({ type, content_json: editor.getJSON(), media });
   }
 
+  const slotsRef = useRef(slots);
+  useEffect(() => {
+    slotsRef.current = slots;
+  }, [slots]);
+
   useEffect(() => {
     return () => {
-      slots.forEach((s) => {
+      slotsRef.current.forEach((s) => {
         if (!initialMedia?.some((m) => m.url === s.previewUrl)) URL.revokeObjectURL(s.previewUrl);
       });
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   if (!editor) return null;
