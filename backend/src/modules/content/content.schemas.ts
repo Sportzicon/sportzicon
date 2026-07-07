@@ -1,9 +1,20 @@
 import { z } from "zod";
 
+const tiptapDocSchema = z
+  .object({ type: z.literal("doc"), content: z.array(z.any()).default([]) })
+  .passthrough()
+  .refine((v) => JSON.stringify(v).length <= 20000, { message: "Content is too large" });
+
+const postMediaItemSchema = z.object({
+  url: z.string().url(),
+  type: z.enum(["image", "video"]),
+  thumbnail_url: z.string().url().optional(),
+});
+
 const postFields = {
   type: z.enum(["log", "post"]).default("post"),
-  text: z.string().min(1).max(2000).trim(),
-  media_urls: z.array(z.string().url()).max(10).optional(),
+  content_json: tiptapDocSchema,
+  media: z.array(postMediaItemSchema).max(10).optional(),
   sport: z.string().max(60).optional(),
   tags: z.array(z.string().max(40)).max(20).optional(),
 };
@@ -36,7 +47,8 @@ export const createContentSchema = z.discriminatedUnion("content_type", [
 export const updateContentSchema = z.discriminatedUnion("content_type", [
   z.object({
     content_type: z.literal("post"),
-    text: z.string().min(1).max(4000).optional(),
+    content_json: tiptapDocSchema.optional(),
+    media: z.array(postMediaItemSchema).max(10).optional(),
     tags: z.array(z.string().max(40)).max(20).optional(),
   }),
   z.object({
