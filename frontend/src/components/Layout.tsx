@@ -202,7 +202,7 @@ function NotificationDropdown({
 function getMobileNavItems(user: { id: string; role: string }) {
   const profileTo = `/profile/${user.id}`;
   const base = [
-    { to: "/dashboard",   icon: <Home className="h-5 w-5" />,          label: "Home" },
+    { to: "/feed",   icon: <Home className="h-5 w-5" />,          label: "Home" },
   ];
 
   if (user.role === "admin") {
@@ -227,7 +227,6 @@ function getMobileNavItems(user: { id: string; role: string }) {
     return [
       ...base,
       { to: "/search", icon: <Search className="h-5 w-5" />,           label: "Search" },
-      { to: "/feed",   icon: <FileText className="h-5 w-5" />,         label: "Feed" },
       { to: "/messages", icon: <MessageCircle className="h-5 w-5" />,  label: "Messages" },
       { to: profileTo,  icon: <UserIcon className="h-5 w-5" />,        label: "Profile" },
     ];
@@ -245,7 +244,6 @@ function getMobileNavItems(user: { id: string; role: string }) {
   return [
     ...base,
     { to: "/opportunities", icon: <Briefcase className="h-5 w-5" />,    label: "Trials" },
-    { to: "/feed",          icon: <FileText className="h-5 w-5" />,     label: "Feed" },
     { to: "/messages",      icon: <MessageCircle className="h-5 w-5" />,label: "Messages" },
     { to: profileTo,        icon: <UserIcon className="h-5 w-5" />,     label: "Profile" },
   ];
@@ -319,7 +317,7 @@ export function Layout() {
   };
 
   const navItems = [
-    { to: isAdmin(user.role) ? "/admin" : "/dashboard", icon: <Home className="h-4 w-4" />, label: "Dashboard" },
+    ...(isAdmin(user.role) ? [{ to: "/admin", icon: <Home className="h-4 w-4" />, label: "Dashboard" }] : []),
     { to: "/live-scores",  icon: <Activity className="h-4 w-4" />,      label: "Live Scores" },
     { to: "/feed",         icon: <FileText className="h-4 w-4" />,      label: "Feed" },
     { to: "/reels",        icon: <Video className="h-4 w-4" />,         label: "Reels" },
@@ -355,7 +353,7 @@ export function Layout() {
           </button>
 
           {/* Logo */}
-          <Link to="/dashboard" aria-label="Sportzicon" className="flex items-center flex-shrink-0">
+          <Link to="/feed" aria-label="Sportzicon" className="flex items-center flex-shrink-0">
             <div style={{ width: 140, height: 44, backgroundImage: 'url(/logo.png)', backgroundSize: 'auto 425%', backgroundRepeat: 'no-repeat', backgroundPosition: 'center', flexShrink: 0 }} />
             <span className="lab hidden sm:inline" style={{ fontSize: 8, marginTop: 39, marginLeft: -59, letterSpacing: '0.12em' }}>EST. 2026</span>
           </Link>
@@ -455,6 +453,10 @@ export function Layout() {
               </button>
               {profileMenuOpen && (
                 <div className="absolute right-0 mt-1 panel shadow-pop z-50 min-w-[160px]">
+                  <NavLink to="/dashboard" onClick={() => setProfileMenuOpen(false)}
+                    className="flex items-center gap-2 px-4 py-2.5 text-[12.5px] text-ink hover:bg-fill border-b border-hairsoft">
+                    <Home className="h-3.5 w-3.5" /> My Dashboard
+                  </NavLink>
                   <NavLink to={`/profile/${user.id}`} onClick={() => setProfileMenuOpen(false)}
                     className="flex items-center gap-2 px-4 py-2.5 text-[12.5px] text-ink hover:bg-fill border-b border-hairsoft">
                     <UserIcon className="h-3.5 w-3.5" /> View profile

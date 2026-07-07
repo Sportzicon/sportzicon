@@ -9,7 +9,7 @@ export default function Login() {
   const navigate = useNavigate();
   const { setSession, user, accessToken } = useAuthStore();
 
-  if (user && accessToken) return <Navigate to="/dashboard" replace />;
+  if (user && accessToken) return <Navigate to="/feed" replace />;
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -27,7 +27,7 @@ export default function Login() {
     try {
       const r = await authService.login({ email, password });
       setSession({ user: r.user, accessToken: r.access_token });
-      navigate("/dashboard", { replace: true });
+      navigate("/feed", { replace: true });
     } catch (e) {
       const apiErr = getApiError(e);
       if (apiErr.code === "NETWORK") {

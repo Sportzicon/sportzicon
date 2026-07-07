@@ -7,6 +7,6 @@ export function ProtectedRoute({ children, roles }: { children: React.ReactNode;
   const { user, accessToken } = useAuthStore();
   const loc = useLocation();
   if (!user || !accessToken) return <Navigate to="/login" state={{ from: loc }} replace />;
-  if (roles && !hasRole(user.role, ...roles)) return <Navigate to="/dashboard" replace />;
+  if (roles && !hasRole(user.role, ...roles)) return <Navigate to="/feed" replace />;
   return <>{children}</>;
 }
