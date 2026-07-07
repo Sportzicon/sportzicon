@@ -16,6 +16,7 @@ import authRoutes from "./modules/auth/auth.routes";
 import usersRoutes from "./modules/users/users.routes";
 import followRoutes from "./modules/follow/follow.routes";
 import organizationsRoutes from "./modules/organizations/organizations.routes";
+import tournamentsRoutes from "./modules/tournaments/tournaments.routes";
 import opportunitiesRoutes from "./modules/opportunities/opportunities.routes";
 import applicationsRoutes from "./modules/applications/applications.routes";
 import searchRoutes from "./modules/search/search.routes";
@@ -98,6 +99,7 @@ export function createApp(): Express {
   app.use("/api/v1/users", usersRoutes);
   app.use("/api/v1/follow", followRoutes);
   app.use("/api/v1/organizations", organizationsRoutes);
+  app.use("/api/v1", tournamentsRoutes); // nested under /organizations/:orgId/org-tournaments and /org-tournaments/...
   app.use("/api/v1/opportunities", opportunitiesRoutes);
   app.use("/api/v1", applicationsRoutes); // nested under /opportunities/:id/apply and /applications/...
   app.use("/api/v1/search", searchRoutes);

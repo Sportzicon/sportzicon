@@ -307,45 +307,79 @@ season/tournament-scoped sibling tables.
 
 ---
 
-## Phase 4: Organizations, Tournaments & Applications Linkage
+## Phase 4: Organizations, Tournaments & Applications Linkage — DONE (2026-07-06)
 
 ### Goal
 Build the structured tournament graph additively, without disturbing
 `Organization`/`Application` (already exist) or the uncommitted
 `AthleteTournament` work (already in progress).
 
-### Current vs Needed
-- `Organization`, `Application` already exist and are sufficient as-is.
-- `AthleteTournament` (uncommitted) stays as-is — it's a self-reported resume
-  entry, a different concern from a structured competition record. **Do not
-  merge it into the new `Tournament` model; keep both.**
-- New, additive: `Tournament` (belongs to `Organization`, has many `Team`),
-  `Team`, `Match.tournamentId` FK linking into the scoring domain,
-  `TournamentStandings` (updated incrementally on match completion, same
-  pattern as Phase 3's aggregation).
-- Every new model carries `organizationId` — cheap now, this is what makes
-  future tenant-row-scoping additive instead of a retrofit.
+### Current vs Needed — corrected before implementing (2026-07-06)
+`AthleteTournament`/`tournaments.service.ts` were committed by the time this
+ran (no longer "uncommitted"). More importantly, **the plan's premise
+undercounted what already exists** — there were already 3 tournament-shaped
+things live, not 1:
+1. `Opportunity` with `type: "tournament"` — full CRUD, org-owned, frontend
+   at `/tournaments`, already linkable to a real scoring engine via
+   `scoring_tournament_id`.
+2. scoring-schema `Tournament`/`Team`/`Match` (the cricket-scoring engine) —
+   `Match.tournament_id` is a **required** FK to scoring's own `Tournament`.
+3. `AthleteTournament` — athlete resume stub (correctly identified by the
+   original plan).
+
+Built anyway per explicit direction, as a **4th**, genuinely new entity —
+renamed throughout to avoid 3 real collisions the literal plan text would
+have hit:
+- Prisma model names `Tournament`/`Team` were already taken by the scoring
+  schema (Prisma requires globally-unique model names across `@@schema`
+  boundaries) → new models are `OrgTournament`/`OrgTeam`/`OrgTournamentStandings`.
+- `/tournaments` route + `queryKeys.tournaments` were already taken by #1 →
+  new API mounts at `/api/v1/org-tournaments` (no frontend built this phase
+  — nothing reads it yet, see below).
+- scoring `Match.tournament_id` was already a required column pointing at
+  scoring's own `Tournament` → new link is `Match.org_tournament_id`
+  (nullable, additive), a **soft cross-schema reference** (no FK), same
+  established convention as `Opportunity.scoring_tournament_id` /
+  scoring `Tournament.opportunity_id`.
 
 ### Migrations / Schema Changes
-- New `Tournament`, `Team`, `TournamentStandings` tables.
-- `ALTER TABLE "Match" ADD COLUMN tournament_id UUID REFERENCES "Tournament"(id)`.
+- New `OrgTournament`, `OrgTeam`, `OrgTournamentStandings` tables (public
+  schema), migration `20260706140000_org_tournaments`.
+- `ALTER TABLE "scoring"."Match" ADD COLUMN "org_tournament_id" UUID`
+  (nullable, no FK — soft cross-schema reference).
 
-### Files to Create / Modify / Delete
-- Create: `backend/src/modules/tournament/` (routes/service/schemas) —
-  reconcile naming with existing uncommitted `tournaments.service.ts`, ask
-  the person building it whether this phase supersedes or should build
-  alongside it before writing any code here.
-- Modify: `modules/scoring` completion handler to also update
-  `TournamentStandings` when `Match.tournamentId` is set.
+### Files Created / Modified
+- Created: `backend/src/modules/tournaments/{tournaments.routes,service,schemas}.ts`,
+  mounted in `backend/src/app.ts` at `/api/v1` (nested under
+  `/organizations/:orgId/org-tournaments` and `/org-tournaments/...`).
+- Modified: `scoring/backend/src/modules/scoring/scoring.service.ts` —
+  `updateOrgTournamentStandings(matchId)`, called from the same two
+  status-transition-guarded call sites as Phase 3's `aggregateMatchStats`
+  (`maybeAutoCompleteMatch`, `updateMatch`), so it inherits the same
+  idempotency guard for free. Only runs if `match.org_tournament_id` is set
+  (most matches won't be — opt-in). Added `org_tournament_id` to
+  `updateMatch`'s allowed patch fields so it's actually settable.
 
-### Acceptance Criteria
-- Tournament standings update correctly on match completion.
-- `AthleteTournament` (existing/uncommitted) and the new `Tournament` model
-  coexist without route/name collisions.
+### Acceptance Criteria — verified against the live DB
+- Created an Organization → `OrgTournament` → 2 `OrgTeam`s each mapped
+  (`scoring_team_id`) to real scoring `Team`s, a scoring `Match` between
+  them tagged `org_tournament_id`, completed it (Team A wins): standings
+  came back exactly `{matches_played:1, wins:1, points:2}` /
+  `{matches_played:1, losses:1, points:0}`.
+- Re-triggered completion — no double-count (idempotency guard holds, same
+  as Phase 3).
+- A separate untagged match (`org_tournament_id: null`) completed with zero
+  standings side-effects — confirms the common case (most matches) is
+  unaffected.
+- `AthleteTournament` CRUD and the existing `/tournaments`
+  (Opportunity-type) page share no code path with any of this — untouched.
+- Both backends + frontend typecheck/build clean.
 
 ### Risks / Rollback
-- **Must talk to the person before starting** — this phase directly
-  overlaps in-progress uncommitted work. Don't silently build over it.
+- Purely additive (2 new nullable/soft-referenced columns' worth of schema
+  impact on existing tables: none — `Match.org_tournament_id` is the only
+  touch to a pre-existing table, and it's nullable). Rollback = don't call
+  `updateOrgTournamentStandings`, drop the new tables; nothing else changes.
 
 ---
 

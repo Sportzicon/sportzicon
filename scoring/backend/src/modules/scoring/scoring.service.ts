@@ -753,6 +753,48 @@ export async function aggregateMatchStats(matchId: string) {
   }
 }
 
+// Updates Organization-owned tournament standings (OrgTournament/OrgTeam,
+// public schema) for a completed match — only runs if the match was tagged
+// with org_tournament_id (most matches won't be; this is opt-in, separate
+// from the match's own scoring-engine Tournament grouping). Called from the
+// same two guarded call sites as aggregateMatchStats, so it inherits the
+// same status-transition-edge idempotency guard — no new guard needed.
+async function updateOrgTournamentStandings(matchId: string) {
+  const match = await prisma.match.findUnique({ where: { id: matchId } });
+  if (!match?.org_tournament_id) return;
+
+  for (const teamId of [match.team1_id, match.team2_id]) {
+    const orgTeam = await prisma.orgTeam.findFirst({
+      where: { org_tournament_id: match.org_tournament_id, scoring_team_id: teamId }
+    });
+    if (!orgTeam) continue; // team not mapped to an OrgTeam — skip silently, not an error
+
+    const outcome: "win" | "loss" | "tie" =
+      !match.winner_team_id ? "tie" : match.winner_team_id === teamId ? "win" : "loss";
+    const points = outcome === "win" ? 2 : outcome === "tie" ? 1 : 0;
+
+    await prisma.orgTournamentStandings.upsert({
+      where: { org_team_id: orgTeam.id },
+      create: {
+        org_tournament_id: match.org_tournament_id,
+        org_team_id: orgTeam.id,
+        matches_played: 1,
+        wins: outcome === "win" ? 1 : 0,
+        losses: outcome === "loss" ? 1 : 0,
+        ties: outcome === "tie" ? 1 : 0,
+        points
+      },
+      update: {
+        matches_played: { increment: 1 },
+        wins: outcome === "win" ? { increment: 1 } : undefined,
+        losses: outcome === "loss" ? { increment: 1 } : undefined,
+        ties: outcome === "tie" ? { increment: 1 } : undefined,
+        points: { increment: points }
+      }
+    });
+  }
+}
+
 // Auto-finishes a match once its last innings ends, so it stops sitting stuck
 // as "live" when nobody remembers to press End Match.
 async function maybeAutoCompleteMatch(matchId: string, finishedInningsNumber: number, totalInnings: number, maxWickets: number) {
@@ -784,6 +826,7 @@ async function maybeAutoCompleteMatch(matchId: string, finishedInningsNumber: nu
 
   await prisma.match.update({ where: { id: matchId }, data });
   await aggregateMatchStats(matchId);
+  await updateOrgTournamentStandings(matchId);
 }
 
 // ── Playing XI ────────────────────────────────────────────────────────────────
@@ -859,7 +902,7 @@ export async function updateMatch(matchId: string, actorId: string, actorRole: s
   await assertManager(match.tournament_id, actorId, actorRole);
 
   const data: any = {};
-  for (const k of ["title", "venue", "status", "winner_team_id", "result_summary", "toss_winner_id", "toss_decision", "match_type", "team1_playing_level", "team2_playing_level", "umpire1", "umpire2", "tv_umpire", "match_referee"]) {
+  for (const k of ["title", "venue", "status", "winner_team_id", "result_summary", "toss_winner_id", "toss_decision", "match_type", "team1_playing_level", "team2_playing_level", "umpire1", "umpire2", "tv_umpire", "match_referee", "org_tournament_id"]) {
     if (patch[k] !== undefined) data[k] = patch[k];
   }
   if (patch.scheduled_at) data.scheduled_at = new Date(patch.scheduled_at);
@@ -868,6 +911,7 @@ export async function updateMatch(matchId: string, actorId: string, actorRole: s
 
   if (patch.status === "completed" && match.status !== "completed") {
     await aggregateMatchStats(matchId);
+    await updateOrgTournamentStandings(matchId);
   }
 
   return updated;

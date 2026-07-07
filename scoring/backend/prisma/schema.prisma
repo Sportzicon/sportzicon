@@ -191,9 +191,10 @@ model Organization {
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 
-  owner         User          @relation(fields: [owner_user_id], references: [id])
-  opportunities Opportunity[]
-  documents     OrgDocument[]
+  owner           User            @relation(fields: [owner_user_id], references: [id])
+  opportunities   Opportunity[]
+  documents       OrgDocument[]
+  org_tournaments OrgTournament[]
 
   @@index([owner_user_id, created_at(sort: Desc)])
   @@index([org_name_lower])
@@ -211,6 +212,74 @@ model OrgDocument {
   organization Organization @relation(fields: [org_id], references: [id], onDelete: Cascade)
 
   @@index([org_id])
+  @@schema("public")
+}
+
+// Organization-owned structured tournament — distinct from:
+//  - Opportunity(type="tournament"): the loose org posting/listing, already
+//    linkable to a scoring Tournament via scoring_tournament_id
+//  - scoring.Tournament/Team: the cricket-scoring engine's own entities
+//  - AthleteTournament: athlete self-reported resume entries
+// Named Org* to avoid colliding with scoring's own Tournament/Team model names
+// (Prisma requires globally-unique model names across @@schema boundaries).
+model OrgTournament {
+  id              String  @id @default(uuid()) @db.Uuid
+  organization_id String  @db.Uuid
+  name            String
+  sport           String
+  season          String?
+  status          String  @default("upcoming") // "upcoming" | "ongoing" | "completed"
+
+  // Cross-schema reference to scoring.Tournament, no FK — same convention as
+  // Opportunity.scoring_tournament_id / scoring.Tournament.opportunity_id.
+  scoring_tournament_id String?
+
+  organization Organization             @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+  teams        OrgTeam[]
+  standings    OrgTournamentStandings[]
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@index([organization_id])
+  @@schema("public")
+}
+
+model OrgTeam {
+  id                String @id @default(uuid()) @db.Uuid
+  org_tournament_id String @db.Uuid
+  name              String
+
+  // Cross-schema reference to scoring.Team, no FK — lets standings
+  // aggregation map a scored Match's team1_id/team2_id back to this team.
+  scoring_team_id String?
+
+  tournament OrgTournament           @relation(fields: [org_tournament_id], references: [id], onDelete: Cascade)
+  standing   OrgTournamentStandings?
+
+  created_at DateTime @default(now())
+
+  @@index([org_tournament_id])
+  @@schema("public")
+}
+
+model OrgTournamentStandings {
+  id                String @id @default(uuid()) @db.Uuid
+  org_tournament_id String @db.Uuid
+  org_team_id       String @unique @db.Uuid
+
+  matches_played Int @default(0)
+  wins           Int @default(0)
+  losses         Int @default(0)
+  ties           Int @default(0)
+  points         Int @default(0)
+
+  tournament OrgTournament @relation(fields: [org_tournament_id], references: [id], onDelete: Cascade)
+  team       OrgTeam       @relation(fields: [org_team_id], references: [id], onDelete: Cascade)
+
+  updated_at DateTime @updatedAt
+
+  @@index([org_tournament_id])
   @@schema("public")
 }
 
@@ -782,6 +851,12 @@ model Match {
   title         String? // "Semi-Final 1", "Group A - Match 3"
   sport         String
   format        String?
+
+  // Optional cross-schema link to an Organization-owned OrgTournament
+  // (public schema) for standings — soft reference, no FK, same convention
+  // as Tournament.opportunity_id above. Independent of tournament_id (this
+  // match's own scoring-engine Tournament grouping).
+  org_tournament_id String? @db.Uuid
 
   team1_id     String      @db.Uuid
   team2_id     String      @db.Uuid
