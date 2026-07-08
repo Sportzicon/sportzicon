@@ -9,7 +9,7 @@ import { ErrorBoundary } from "../../../components/ErrorBoundary";
 import { queryKeys } from "../../../hooks/queryKeys";
 import { Send, Plus, Search, ArrowLeft, X } from "lucide-react";
 import type { Conversation, Message } from "../../../models";
-import { connectSocket, disconnectSocket } from "../../../lib/socket";
+import { connectSocket } from "../../../lib/socket";
 
 // ── helpers ────────────────────────────────────────────────────────────────────
 
@@ -171,7 +171,9 @@ export default function Messages() {
     select: (data) => data.items,
   });
 
-  // WebSocket — connect once, join/leave conversation rooms
+  // WebSocket — connection itself is owned app-wide by useContentRealtime()
+  // (mounted in Layout), so this only attaches/detaches this page's own
+  // listener, it doesn't connect/disconnect the shared socket.
   useEffect(() => {
     const token = useAuthStore.getState().accessToken;
     if (!token) return;
@@ -191,7 +193,6 @@ export default function Messages() {
 
     return () => {
       socket.off("new_message");
-      disconnectSocket();
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

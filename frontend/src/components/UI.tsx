@@ -173,10 +173,14 @@ export function Placeholder({ label, height = 160, className }: { label?: string
   );
 }
 
-export function Tabs({ tabs, active, onChange, className }: { tabs: { id: string; label: string }[] | string[]; active: string; onChange: (id: string) => void; className?: string }) {
+export function Tabs({ tabs, active, onChange, sticky, className }: { tabs: { id: string; label: string }[] | string[]; active: string; onChange: (id: string) => void; sticky?: boolean; className?: string }) {
   const norm = tabs.map((t) => (typeof t === "string" ? { id: t, label: t } : t));
   return (
-    <div className={clsx("flex gap-1 overflow-x-auto border-b border-hair", className)}>
+    <div className={clsx(
+      "flex gap-1 overflow-x-auto border-b border-hair",
+      sticky && "sticky -top-4 sm:-top-7 z-30 bg-panel -mx-3 sm:-mx-6 px-3 sm:px-6",
+      className
+    )}>
       {norm.map((t) => (
         <button
           key={t.id}

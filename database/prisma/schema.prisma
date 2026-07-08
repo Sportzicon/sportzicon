@@ -367,6 +367,7 @@ model Content {
   tags          String[] @default([])
   like_count    Int      @default(0)
   comment_count Int      @default(0)
+  hidden        Boolean  @default(false)
   created_at    DateTime @default(now())
   updated_at    DateTime @updatedAt
 
@@ -397,7 +398,6 @@ model PostDetail {
 model BlogDetail {
   content_id      String    @id @db.Uuid
   title           String
-  slug            String    @unique
   cover_image_url String?
   excerpt         String    @db.Text
   body_markdown   String    @db.Text
@@ -407,7 +407,6 @@ model BlogDetail {
   content Content @relation(fields: [content_id], references: [id], onDelete: Cascade)
 
   @@index([status, published_at(sort: Desc)])
-  @@index([slug])
   @@schema("public")
 }
 

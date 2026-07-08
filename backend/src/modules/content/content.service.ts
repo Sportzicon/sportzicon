@@ -1,24 +1,14 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "../../config/prisma";
 import { BadRequest, Forbidden, NotFound } from "../../utils/errors";
-import { slugify } from "../../utils/ids";
 import { extractPlainText } from "../../utils/richText";
 import { eventBus } from "../../lib/EventBus";
+import { emitContentLikeChanged } from "../../lib/socket";
 import { CONTENT_LIKED, type ContentLikedEvent } from "../../events/types";
 import type { CreateContentInput, ListContentInput, UpdateContentInput } from "./content.schemas";
 
 const AUTHOR_SELECT = { id: true, full_name: true, role: true, profile_photo_url: true };
 const DETAIL_INCLUDE = { postDetail: true, blogDetail: true, reelDetail: true } as const;
-
-async function uniqueSlug(base: string): Promise<string> {
-  const root = slugify(base) || "post";
-  for (let i = 0; i < 6; i++) {
-    const candidate = i === 0 ? root : `${root}-${i + 1}`;
-    const existing = await prisma.blogDetail.findUnique({ where: { slug: candidate }, select: { content_id: true } });
-    if (!existing) return candidate;
-  }
-  return `${root}-${Date.now().toString(36)}`;
-}
 
 export async function createContent(authorId: string, input: CreateContentInput) {
   if (input.content_type === "post") {
@@ -43,7 +33,6 @@ export async function createContent(authorId: string, input: CreateContentInput)
   }
 
   if (input.content_type === "blog") {
-    const slug = await uniqueSlug(input.title);
     const isPublished = input.status === "published";
     const cover = input.cover_image_url === "" ? undefined : input.cover_image_url;
 
@@ -56,7 +45,6 @@ export async function createContent(authorId: string, input: CreateContentInput)
         blogDetail: {
           create: {
             title: input.title,
-            slug,
             cover_image_url: cover,
             excerpt: input.excerpt ?? input.body_markdown.replace(/[#*`>_\-[\]!]/g, "").slice(0, 240),
             body_markdown: input.body_markdown,
@@ -160,6 +148,14 @@ export async function deleteContent(id: string, actorId: string, isAdmin: boolea
   return { ok: true };
 }
 
+export async function setContentHidden(id: string, actorId: string, isAdmin: boolean, hidden: boolean) {
+  const content = await prisma.content.findUnique({ where: { id }, select: { author_id: true, content_type: true } });
+  if (!content) throw NotFound("Content not found");
+  if (content.author_id !== actorId && !isAdmin) throw Forbidden(`Cannot hide another user's ${content.content_type}`);
+  await prisma.content.update({ where: { id }, data: { hidden } });
+  return { id, hidden };
+}
+
 export async function listContent(q: ListContentInput, actor?: { id: string; role: string }) {
   const limit = q.limit ?? (q.content_type === "reel" ? 10 : 20);
   const where: Record<string, unknown> = {};
@@ -170,6 +166,10 @@ export async function listContent(q: ListContentInput, actor?: { id: string; rol
 
   const isAdmin = actor?.role === "admin";
   const isOwnerViewingSelf = !!(actor && q.author_id && q.author_id === actor.id);
+
+  // Hidden content only shows on the author's own view (e.g. their profile
+  // feed) or to admins — never in a listing scoped to someone else.
+  if (!isAdmin && !isOwnerViewingSelf) where.hidden = false;
 
   if (q.content_type === "blog") {
     const blogWhere: Record<string, unknown> = {};
@@ -211,18 +211,14 @@ export async function listContent(q: ListContentInput, actor?: { id: string; rol
 }
 
 export async function getFeedForUser(userId: string, limit = 20, cursor?: string) {
-  const followeeIds = await prisma.follow
-    .findMany({ where: { follower_id: userId }, select: { followee_id: true } })
-    .then((rows) => rows.map((r) => r.followee_id));
-
-  const authorIds = [userId, ...followeeIds];
-
-  // Mixed post/reel/blog feed — only the viewer's own draft blogs are
-  // visible; followees' drafts are hidden, same rule as listContent()'s
-  // mixed-type branch.
+  // Unrestricted mixed post/reel/blog feed across all users — only the
+  // viewer's own draft blogs are visible, everyone else's drafts are
+  // hidden, same rule as listContent()'s mixed-type branch. Content the
+  // author has explicitly hidden never shows here, even for the author's
+  // own view — hidden content only surfaces on the author's own profile feed.
   const rows = await prisma.content.findMany({
     where: {
-      author_id: { in: authorIds },
+      hidden: false,
       OR: [
         { content_type: { in: ["post", "reel"] } },
         { content_type: "blog", blogDetail: { status: "published" } },
@@ -241,9 +237,9 @@ export async function getFeedForUser(userId: string, limit = 20, cursor?: string
   return { data, nextCursor: hasMore ? data[data.length - 1].id : null };
 }
 
-export async function getContentByIdOrSlug(idOrSlug: string, opts: { userId?: string } = {}) {
-  const content = await prisma.content.findFirst({
-    where: { OR: [{ id: idOrSlug }, { blogDetail: { slug: idOrSlug } }] },
+export async function getContentById(id: string, opts: { userId?: string } = {}) {
+  const content = await prisma.content.findUnique({
+    where: { id },
     include: { ...DETAIL_INCLUDE, author: { select: AUTHOR_SELECT }, _count: { select: { likes: true, comments: true } } },
   });
   if (!content) throw NotFound("Content not found");
@@ -280,7 +276,9 @@ export async function likeContent(id: string, userId: string) {
       .catch(() => undefined);
   }
 
-  return { like_count: Number((countResult as any)[0]?.like_count ?? 0), liked: true };
+  const likeCount = Number((countResult as any)[0]?.like_count ?? 0);
+  emitContentLikeChanged({ contentId: id, like_count: likeCount, liked_by: userId });
+  return { like_count: likeCount, liked: true };
 }
 
 export async function unlikeContent(id: string, userId: string) {
@@ -294,7 +292,9 @@ export async function unlikeContent(id: string, userId: string) {
       WHERE id = ${id}::uuid RETURNING like_count`,
   ]);
 
-  return { like_count: Number((countResult as any)[0]?.like_count ?? 0), liked: false };
+  const likeCount = Number((countResult as any)[0]?.like_count ?? 0);
+  emitContentLikeChanged({ contentId: id, like_count: likeCount, liked_by: userId });
+  return { like_count: likeCount, liked: false };
 }
 
 export async function checkLiked(id: string, userId: string): Promise<boolean> {

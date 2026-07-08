@@ -524,7 +524,7 @@ export default function Profile() {
         </button>
       </div>
 
-      {view === "feed" && <ProfileFeedTab userId={id} />}
+      {view === "feed" && <ProfileFeedTab userId={id} isOwner={isMe} />}
 
       {view === "overview" && (
       <>

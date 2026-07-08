@@ -15,6 +15,9 @@ interface CommentSectionProps {
   /** When true, skip the nested MobileDrawer and render full inline list+form.
    *  Use this when CommentSection is already inside a MobileDrawer. */
   inDrawer?: boolean;
+  /** When true, show only a "N comments" trigger until clicked — no comment
+   *  fetch/render (and no add-comment form) until revealed. */
+  startCollapsed?: boolean;
 }
 
 function CommentItem({
@@ -199,12 +202,14 @@ export function CommentSection({
   parentId,
   commentCount: initialCount,
   inDrawer = false,
+  startCollapsed = false,
 }: CommentSectionProps) {
   const { user } = useAuthStore();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const { list, add, update, remove, toggleLike } = useComments(parentType, parentId);
+  const [revealed, setRevealed] = useState(!startCollapsed);
+  const { list, add, update, remove, toggleLike } = useComments(parentType, parentId, { enabled: revealed });
 
   const comments = list.data ?? [];
   const count = comments.length || initialCount;
@@ -276,6 +281,19 @@ export function CommentSection({
       )}
     </div>
   );
+
+  // Collapsed: show only a trigger, no fetch/render until clicked.
+  if (startCollapsed && !revealed) {
+    return (
+      <button
+        onClick={() => setRevealed(true)}
+        className="mt-4 flex items-center gap-1.5 font-mononum text-[11px] uppercase tracking-[0.08em] text-ink-sub min-h-[44px]"
+      >
+        <MessageCircle className="h-3.5 w-3.5" />
+        {initialCount} {initialCount === 1 ? "comment" : "comments"}
+      </button>
+    );
+  }
 
   // When already inside a MobileDrawer (e.g. Reels page), render full inline
   // view to avoid nested drawers conflicting with each other.

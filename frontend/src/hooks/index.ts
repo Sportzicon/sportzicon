@@ -1,4 +1,5 @@
 export { queryKeys } from "./queryKeys";
+export { useContentRealtime } from "./useContentRealtime";
 export { useFeed } from "../modules/feed/hooks/useFeed";
 export { useOpportunities, useInfiniteOpportunities, useOpportunity, useOpportunityForm, useMyOpportunities } from "../modules/opportunities/hooks/useOpportunities";
 export { useMyApplications, useApplicants, useOpportunityApplication } from "../modules/applications/hooks/useApplications";

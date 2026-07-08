@@ -1,5 +1,6 @@
 import { prisma } from "../../config/prisma";
 import { Forbidden, NotFound } from "../../utils/errors";
+import { emitCommentAdded, emitCommentLikeChanged } from "../../lib/socket";
 
 export async function addComment(contentId: string, authorId: string, text: string) {
   const author = await prisma.user.findUnique({ where: { id: authorId }, select: { id: true, full_name: true } });
@@ -8,18 +9,21 @@ export async function addComment(contentId: string, authorId: string, text: stri
   const content = await prisma.content.findUnique({ where: { id: contentId }, select: { id: true } });
   if (!content) throw NotFound("Content not found");
 
-  const [comment] = await prisma.$transaction([
+  const [comment, updated] = await prisma.$transaction([
     prisma.comment.create({ data: { content_id: contentId, author_id: authorId, text } }),
-    prisma.content.update({ where: { id: contentId }, data: { comment_count: { increment: 1 } } }),
+    prisma.content.update({ where: { id: contentId }, data: { comment_count: { increment: 1 } }, select: { comment_count: true } }),
   ]);
 
-  return {
+  const result = {
     ...comment,
     author_name: author.full_name,
     like_count: 0,
     liked: false,
     created_at: comment.created_at.getTime(),
   };
+
+  emitCommentAdded({ contentId, comment: result, comment_count: updated.comment_count });
+  return result;
 }
 
 export async function listComments(
@@ -52,7 +56,7 @@ export async function listComments(
 }
 
 export async function likeComment(commentId: string, userId: string) {
-  const exists = await prisma.comment.findUnique({ where: { id: commentId }, select: { id: true } });
+  const exists = await prisma.comment.findUnique({ where: { id: commentId }, select: { id: true, content_id: true } });
   if (!exists) throw NotFound("Comment not found");
 
   const [, countResult] = await prisma.$transaction([
@@ -62,11 +66,13 @@ export async function likeComment(commentId: string, userId: string) {
       WHERE id = ${commentId}::uuid RETURNING like_count`,
   ]);
 
-  return { like_count: Number((countResult as any)[0]?.like_count ?? 0), liked: true };
+  const likeCount = Number((countResult as any)[0]?.like_count ?? 0);
+  emitCommentLikeChanged({ contentId: exists.content_id, commentId, like_count: likeCount });
+  return { like_count: likeCount, liked: true };
 }
 
 export async function unlikeComment(commentId: string, userId: string) {
-  const exists = await prisma.comment.findUnique({ where: { id: commentId }, select: { id: true } });
+  const exists = await prisma.comment.findUnique({ where: { id: commentId }, select: { id: true, content_id: true } });
   if (!exists) throw NotFound("Comment not found");
 
   const [, countResult] = await prisma.$transaction([
@@ -76,7 +82,9 @@ export async function unlikeComment(commentId: string, userId: string) {
       WHERE id = ${commentId}::uuid RETURNING like_count`,
   ]);
 
-  return { like_count: Number((countResult as any)[0]?.like_count ?? 0), liked: false };
+  const likeCount = Number((countResult as any)[0]?.like_count ?? 0);
+  emitCommentLikeChanged({ contentId: exists.content_id, commentId, like_count: likeCount });
+  return { like_count: likeCount, liked: false };
 }
 
 export async function updateComment(commentId: string, actorId: string, isAdmin: boolean, text: string) {

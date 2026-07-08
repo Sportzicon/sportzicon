@@ -10,7 +10,6 @@ export interface Blog {
   author_name: string;
   author?: BlogAuthor;
   title: string;
-  slug: string;
   excerpt: string;
   body_markdown: string;
   cover_image_url?: string | null;
@@ -19,6 +18,7 @@ export interface Blog {
   status: "draft" | "published";
   like_count: number;
   comment_count: number;
+  hidden?: boolean;
   liked?: boolean;
   published_at?: number;
   created_at: number;

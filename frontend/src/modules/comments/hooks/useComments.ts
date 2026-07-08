@@ -4,7 +4,7 @@ import { queryKeys } from "../../../hooks/queryKeys";
 import type { CommentDoc, CommentParentType } from "../../../models";
 import type { CommentPage } from "../services/comment.service";
 
-export function useComments(parentType: CommentParentType, parentId: string) {
+export function useComments(parentType: CommentParentType, parentId: string, options?: { enabled?: boolean }) {
   const qc = useQueryClient();
   const key = queryKeys.comments(parentType, parentId);
 
@@ -12,6 +12,7 @@ export function useComments(parentType: CommentParentType, parentId: string) {
     queryKey: key,
     queryFn: () => commentService.list(parentType, parentId),
     select: (page) => page.data,
+    enabled: options?.enabled ?? true,
   });
 
   const add = useMutation({

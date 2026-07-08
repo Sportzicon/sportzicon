@@ -143,6 +143,23 @@ admin@sportivox.local   / Demo1234!
 admin@scoring.local     / Demo1234!  (seeded by scoring backend's seed script)
 ```
 
+### 12. Content Addressing — IDs Only, Never Slugs
+
+Every content record (`Post`/`Blog`/`Reel`, unified under the `Content` model)
+is addressed by its `id` (a native Postgres `uuid` column) everywhere —
+routes, links, service calls. This is mandatory, with **no slug fallback**.
+
+- Blog content used to also carry a `slug` field for SEO-friendly URLs.
+  It was removed entirely (`20260708230000_remove_blog_slug` migration) after
+  slug-based lookups caused a hard 500: `Content.id` is a native `uuid`
+  column, and Postgres throws a type-cast error on a non-UUID string before
+  an `OR` clause mixing `{ id }` / `{ slug }` can even be evaluated.
+- Never reintroduce a `slug` field, a slug generator, or an `idOrSlug`-style
+  lookup anywhere in this codebase — content routes/links must always use
+  `id` (e.g. `/blogs/${b.id}`, never `/blogs/${b.slug}`).
+- Backend: `getContentById()` in `backend/src/modules/content/content.service.ts`
+  is the only content lookup-by-identifier function — id-only, no fallback.
+
 ---
 
 ## Execution Prompts — Run In Order

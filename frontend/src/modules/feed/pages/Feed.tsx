@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect, useMemo, useCallback } from "react";
+import ReactMarkdown from "react-markdown";
 import { useFeed } from "../../../hooks";
 import { useAuthStore } from "../../../store/auth";
 import { PageHeader, Spinner, EmptyState, Avatar, Tabs, Badge, Placeholder } from "../../../components/UI";
@@ -6,13 +7,54 @@ import { CommentSection } from "../../comments/components/CommentSection";
 import { ErrorBoundary } from "../../../components/ErrorBoundary";
 import { CreateContentModal } from "../../../components/CreateContentModal";
 import { ReelViewer } from "../../reels/components/ReelViewer";
-import { Heart, Trash2, Pencil, MoreVertical, MessageCircle, RefreshCw, PenLine, Play } from "lucide-react";
+import { Heart, Trash2, Pencil, MoreVertical, MessageCircle, RefreshCw, PenLine, Play, Share2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { PostComposer } from "../components/PostComposer";
 import { PostContentView } from "../components/PostContentView";
 import { MediaCarousel } from "../components/MediaCarousel";
 import { toFeedItem } from "../../../models";
 import type { Post, Blog, Reel, FeedItem } from "../../../models";
+
+// Web Share API with clipboard fallback — same pattern as ReelViewer's handleShare.
+function useContentShare() {
+  const [toast, setToast] = useState(false);
+  const share = useCallback(async (url: string, title: string, text: string) => {
+    const fullUrl = `${window.location.origin}${url}`;
+    const shareData = { title, text, url: fullUrl };
+    try {
+      if (navigator.share && navigator.canShare?.(shareData)) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(fullUrl);
+        setToast(true);
+        setTimeout(() => setToast(false), 2000);
+      }
+    } catch {
+      // user cancelled
+    }
+  }, []);
+  return { toast, share };
+}
+
+function ShareButton({ onShare }: { onShare: () => void }) {
+  return (
+    <button
+      onClick={onShare}
+      className="font-mononum text-[11.5px] flex items-center gap-1.5 text-ink-sub hover:text-brand-500 transition min-h-[44px] ml-auto"
+      aria-label="Share"
+    >
+      <Share2 className="h-4 w-4" /> Share
+    </button>
+  );
+}
+
+function ShareToast() {
+  return (
+    <div className="absolute top-2 left-1/2 -translate-x-1/2 bg-black/80 text-white text-[12px] px-3 py-1.5 rounded-full pointer-events-none z-10">
+      Link copied!
+    </div>
+  );
+}
 
 // Post card with read-more toggle, media, likes, comments
 function PostCard({
@@ -32,6 +74,7 @@ function PostCard({
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const isOwner = currentUserId === p.author_id;
+  const { toast: shareToast, share } = useContentShare();
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -44,7 +87,8 @@ function PostCard({
   }, [menuOpen]);
 
   return (
-    <li className="panel p-4 sm:p-5">
+    <li className="panel p-4 sm:p-5 relative">
+      {shareToast && <ShareToast />}
       {/* Header row */}
       <div className="flex items-center gap-3">
         <Link to={`/profile/${p.author_id}`}>
@@ -56,7 +100,7 @@ function PostCard({
               to={`/profile/${p.author_id}`}
               className="text-[13.5px] font-semibold text-ink hover:text-brand-500 truncate"
             >
-              {p.author_name}
+              {isOwner ? "You" : p.author_name}
             </Link>
             <div className="flex items-center gap-2 flex-shrink-0">
               <span className="lab">{new Date(p.created_at).toLocaleDateString()}</span>
@@ -112,46 +156,109 @@ function PostCard({
           <Heart className="h-4 w-4" fill={isLiked ? "currentColor" : "none"} />
           {p.like_count}
         </button>
-        <span className="font-mononum text-[11.5px] text-ink-sub flex items-center gap-1.5 min-h-[44px]">
-          <MessageCircle className="h-4 w-4" /> {p.comment_count}
-        </span>
+        <ShareButton
+          onShare={() =>
+            share(
+              "/feed",
+              p.author_name ? `${p.author_name} on Sportivox` : "Check out this post on Sportivox",
+              "Shared from Sportivox"
+            )
+          }
+        />
       </div>
 
-      <CommentSection parentType="post" parentId={p.id} commentCount={p.comment_count} />
+      <CommentSection parentType="post" parentId={p.id} commentCount={p.comment_count} startCollapsed />
     </li>
   );
 }
 
-function BlogCard({ b }: { b: Blog }) {
+// Article card — fully readable in place (title, cover, body, likes, comments),
+// no navigation required. Collapsed state shows the excerpt; "Read more" swaps
+// in the full markdown body, matching an Instagram/LinkedIn in-feed read.
+function BlogCard({
+  b,
+  currentUserId,
+  isLiked,
+  onToggleLike,
+}: {
+  b: Blog;
+  currentUserId?: string;
+  isLiked: boolean;
+  onToggleLike: (id: string) => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const { toast: shareToast, share } = useContentShare();
+
   return (
-    <li className="panel p-0 overflow-hidden">
-      <Link to={`/blogs/${b.slug}`} className="block transition hover:bg-fill/40">
-        <div className="p-4 sm:p-5">
-          <Badge color="amber">Article</Badge>
-          <div className="mt-2.5 flex gap-3">
-            {b.cover_image_url ? (
-              <img src={b.cover_image_url} alt="" className="h-16 w-16 rounded object-cover flex-shrink-0" />
-            ) : (
-              <Placeholder height={64} className="w-16 flex-shrink-0" />
-            )}
-            <div className="min-w-0">
-              <div className="font-disp text-[16px] leading-tight truncate">{b.title}</div>
-              <p className="mt-1 text-[12.5px] text-ink-sub line-clamp-2">{b.excerpt}</p>
-            </div>
-          </div>
-          <div className="mt-3 pt-3 border-t border-hairsoft flex items-center gap-5 text-ink-sub">
-            <span className="font-mononum text-[11.5px] flex items-center gap-1.5"><Heart className="h-4 w-4" /> {b.like_count}</span>
-            <span className="font-mononum text-[11.5px] flex items-center gap-1.5"><MessageCircle className="h-4 w-4" /> {b.comment_count}</span>
+    <li className="panel p-4 sm:p-5 relative">
+      {shareToast && <ShareToast />}
+      {/* Header row */}
+      <div className="flex items-center gap-3">
+        <Link to={`/profile/${b.author_id}`}>
+          <Avatar name={b.author_name ?? ""} src={b.author?.profile_photo_url} size={40} />
+        </Link>
+        <div className="flex-1 min-w-0">
+          <Link
+            to={`/profile/${b.author_id}`}
+            className="text-[13.5px] font-semibold text-ink hover:text-brand-500 truncate"
+          >
+            {currentUserId === b.author_id ? "You" : b.author_name}
+          </Link>
+          <div className="lab mt-0.5">
+            {new Date(b.created_at).toLocaleDateString()}{b.sport ? ` · ${b.sport}` : ""}
           </div>
         </div>
-      </Link>
+        <Badge color="amber">Article</Badge>
+      </div>
+
+      <div className="font-disp text-[18px] leading-tight mt-3">{b.title}</div>
+
+      {b.cover_image_url && (
+        <img src={b.cover_image_url} alt="" className="mt-3 w-full aspect-video object-cover rounded-lg" />
+      )}
+
+      <div className="mt-3 text-[13.5px] text-ink-70 leading-relaxed">
+        {expanded ? (
+          <div className="prose prose-sm max-w-none">
+            <ReactMarkdown>{b.body_markdown}</ReactMarkdown>
+          </div>
+        ) : (
+          <p>{b.excerpt}</p>
+        )}
+        <button
+          onClick={() => setExpanded((e) => !e)}
+          className="mt-1.5 text-brand-500 text-[13px] font-semibold hover:underline min-h-[44px]"
+        >
+          {expanded ? "Show less" : "Read more"}
+        </button>
+      </div>
+
+      {/* Like / Comment row */}
+      <div className="mt-4 pt-3 border-t border-hairsoft flex items-center gap-5">
+        <button
+          onClick={() => onToggleLike(b.id)}
+          className={`font-mononum text-[11.5px] flex items-center gap-1.5 transition min-h-[44px] ${
+            isLiked ? "text-brand-500" : "text-ink-sub hover:text-brand-500"
+          }`}
+          aria-label={isLiked ? "Unlike" : "Like"}
+        >
+          <Heart className="h-4 w-4" fill={isLiked ? "currentColor" : "none"} />
+          {b.like_count}
+        </button>
+        <ShareButton onShare={() => share(`/blogs/${b.id}`, b.title, b.excerpt)} />
+      </div>
+
+      <CommentSection parentType="blog" parentId={b.id} commentCount={b.comment_count} startCollapsed />
     </li>
   );
 }
 
 function ReelCard({ r, onOpen }: { r: Reel; onOpen: () => void }) {
+  const { toast: shareToast, share } = useContentShare();
+
   return (
-    <li className="panel p-4 sm:p-5">
+    <li className="panel p-4 sm:p-5 relative">
+      {shareToast && <ShareToast />}
       <button onClick={onOpen} className="block w-full text-left">
         <Badge color="emerald">Video</Badge>
         <div className="mt-2.5 flex gap-3">
@@ -169,11 +276,12 @@ function ReelCard({ r, onOpen }: { r: Reel; onOpen: () => void }) {
             <p className="text-[13.5px] text-ink-70 line-clamp-3">{r.caption || r.title || "Video"}</p>
           </div>
         </div>
-        <div className="mt-3 pt-3 border-t border-hairsoft flex items-center gap-5 text-ink-sub">
-          <span className="font-mononum text-[11.5px] flex items-center gap-1.5"><Heart className="h-4 w-4" /> {r.like_count}</span>
-          <span className="font-mononum text-[11.5px] flex items-center gap-1.5"><MessageCircle className="h-4 w-4" /> {r.comment_count}</span>
-        </div>
       </button>
+      <div className="mt-3 pt-3 border-t border-hairsoft flex items-center gap-5 text-ink-sub">
+        <span className="font-mononum text-[11.5px] flex items-center gap-1.5"><Heart className="h-4 w-4" /> {r.like_count}</span>
+        <span className="font-mononum text-[11.5px] flex items-center gap-1.5"><MessageCircle className="h-4 w-4" /> {r.comment_count}</span>
+        <ShareButton onShare={() => share("/feed", r.title ?? "Check out this video on Sportivox", r.caption ?? r.description ?? "Shared from Sportivox")} />
+      </div>
     </li>
   );
 }
@@ -264,7 +372,7 @@ export default function Feed() {
       </button>
       <CreateContentModal open={createOpen} onClose={() => setCreateOpen(false)} />
 
-      <Tabs tabs={["All", "Posts", "Articles", "Videos"]} active={tab} onChange={setTab} />
+      <Tabs tabs={["All", "Posts", "Articles", "Videos"]} active={tab} onChange={setTab} sticky />
 
       <ErrorBoundary>
       {feedQuery.isLoading ? (
@@ -277,7 +385,17 @@ export default function Feed() {
         <>
           <ul className="space-y-3">
             {filtered.map((item) => {
-              if (item.kind === "blog") return <BlogCard key={`blog-${item.data.id}`} b={item.data} />;
+              if (item.kind === "blog") {
+                return (
+                  <BlogCard
+                    key={`blog-${item.data.id}`}
+                    b={item.data}
+                    currentUserId={user?.id}
+                    isLiked={likedPosts.has(item.data.id)}
+                    onToggleLike={(id) => toggleLike.mutate(id)}
+                  />
+                );
+              }
 
               if (item.kind === "reel") {
                 const r = item.data;

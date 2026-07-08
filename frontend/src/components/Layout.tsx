@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { authService } from "../services";
 import { api } from "../api/client";
 import { queryKeys } from "../hooks/queryKeys";
-import { useNotificationCount, useNotifications } from "../hooks";
+import { useNotificationCount, useNotifications, useContentRealtime } from "../hooks";
 import { useNotificationStore } from "../store/notifications";
 import { hasRole, isAdmin } from "../utils/roles";
 import {
@@ -284,6 +284,7 @@ export function Layout() {
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   useNotificationCount(!!user);
+  useContentRealtime();
   const unreadCount = useNotificationStore((s) => s.unreadCount);
 
   const pendingVerifCount = useQuery({

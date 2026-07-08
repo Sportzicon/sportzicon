@@ -9,7 +9,10 @@ import * as commentSvc from "./comments.service";
 import { createContentSchema, updateContentSchema, listContentSchema, type ListContentInput } from "./content.schemas";
 
 const router = Router();
-const idParam = z.object({ id: z.string().min(8) });
+// Content.id is a native Postgres uuid column — reject anything else with a
+// clean 400 here rather than letting a malformed id reach Postgres as a
+// type-cast error (500). No slug fallback: id is mandatory everywhere.
+const idParam = z.object({ id: z.string().uuid() });
 
 router.post(
   "/",
@@ -21,7 +24,8 @@ router.post(
   })
 );
 
-// Follows-based feed — posts only, matches the original /posts/feed behavior.
+// Unrestricted mixed post/reel/blog feed across all users — see
+// getFeedForUser() for the exact visibility rule (own drafts only).
 router.get(
   "/feed",
   requireAuth,
@@ -50,10 +54,11 @@ router.get(
 );
 
 router.get(
-  "/:idOrSlug",
+  "/:id",
   optionalAuth,
+  validate(idParam, "params"),
   asyncHandler(async (req, res) => {
-    const content = await svc.getContentByIdOrSlug(req.params.idOrSlug, { userId: req.user?.sub });
+    const content = await svc.getContentById(req.params.id, { userId: req.user?.sub });
     if (content.content_type !== "blog" && !req.user) throw Unauthorized();
     res.json({ content });
   })
@@ -76,6 +81,17 @@ router.delete(
   validate(idParam, "params"),
   asyncHandler(async (req, res) => {
     const r = await svc.deleteContent(req.params.id, req.user!.sub, req.user!.role === "admin");
+    res.json(r);
+  })
+);
+
+router.patch(
+  "/:id/hidden",
+  requireAuth,
+  validate(idParam, "params"),
+  validate(z.object({ hidden: z.boolean() })),
+  asyncHandler(async (req, res) => {
+    const r = await svc.setContentHidden(req.params.id, req.user!.sub, req.user!.role === "admin", req.body.hidden);
     res.json(r);
   })
 );

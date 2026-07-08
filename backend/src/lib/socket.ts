@@ -77,3 +77,27 @@ export function emitNewMessage(
   if (!io) return;
   io.to(`conv:${conversationId}`).emit("new_message", payload);
 }
+
+// Content (post/blog/reel) and comment engagement is broadcast to every
+// connected client rather than a per-content room — like/comment counts are
+// small, already-public-once-visible payloads, and this app's scale doesn't
+// need per-card room join/leave churn as users scroll a mixed feed. Clients
+// no-op on events for content not currently in their cache.
+
+/** Broadcast a content like/unlike count change. */
+export function emitContentLikeChanged(payload: { contentId: string; like_count: number; liked_by: string }) {
+  if (!io) return;
+  io.emit("content_like_changed", payload);
+}
+
+/** Broadcast a newly-added comment. */
+export function emitCommentAdded(payload: { contentId: string; comment: unknown; comment_count: number }) {
+  if (!io) return;
+  io.emit("comment_added", payload);
+}
+
+/** Broadcast a comment like/unlike count change. */
+export function emitCommentLikeChanged(payload: { contentId: string; commentId: string; like_count: number }) {
+  if (!io) return;
+  io.emit("comment_like_changed", payload);
+}
