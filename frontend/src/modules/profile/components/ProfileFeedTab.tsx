@@ -3,7 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "../../../api/client";
 import { queryKeys } from "../../../hooks/queryKeys";
 import { Badge, Placeholder } from "../../../components/UI";
-import type { Post, Blog, Reel } from "../../../models";
+import type { ContentItem, FeedItem } from "../../../models";
+import { toFeedItem } from "../../../models";
 import { Heart, MessageCircle, Play } from "lucide-react";
 import { PostContentView } from "../../feed/components/PostContentView";
 import { MediaCarousel } from "../../feed/components/MediaCarousel";
@@ -13,16 +14,6 @@ import { MediaCarousel } from "../../feed/components/MediaCarousel";
 // The backend already returns them pre-merged/ordered from one Content query
 // (content_type discriminates which shape each row is); this only splits them
 // back out for display.
-type FeedItem =
-  | { kind: "post"; at: number; data: Post }
-  | { kind: "blog"; at: number; data: Blog }
-  | { kind: "reel"; at: number; data: Reel };
-
-type ContentItem = (Post | Blog | Reel) & { content_type: "post" | "blog" | "reel" };
-
-function timeOf(v: string | number): number {
-  return typeof v === "number" ? v : new Date(v).getTime();
-}
 
 function relativeTime(ms: number): string {
   const diff = Date.now() - ms;
@@ -63,12 +54,7 @@ export function ProfileFeedTab({ userId }: { userId: string }) {
     );
   }
 
-  const items: FeedItem[] = (contentQ.data ?? []).map((c): FeedItem => {
-    const at = timeOf(c.created_at);
-    if (c.content_type === "blog") return { kind: "blog", at, data: c as Blog };
-    if (c.content_type === "reel") return { kind: "reel", at, data: c as Reel };
-    return { kind: "post", at, data: c as Post };
-  });
+  const items: FeedItem[] = (contentQ.data ?? []).map(toFeedItem);
 
   if (items.length === 0) {
     return (

@@ -20,21 +20,17 @@ interface MediaSlot {
 }
 
 interface PostComposerProps {
-  showTypeToggle?: boolean;
-  initialType?: "post" | "log";
   initialContentJson?: JSONContent;
   initialMedia?: PostMedia[];
   submitting: boolean;
   submitLabel: string;
-  onSubmit: (data: { type: "post" | "log"; content_json: JSONContent; media: PostMedia[] }) => void;
+  onSubmit: (data: { content_json: JSONContent; media: PostMedia[] }) => void;
   onCancel?: () => void;
 }
 
 const EMPTY_DOC: JSONContent = { type: "doc", content: [{ type: "paragraph" }] };
 
 export function PostComposer({
-  showTypeToggle = true,
-  initialType = "post",
   initialContentJson,
   initialMedia,
   submitting,
@@ -42,7 +38,6 @@ export function PostComposer({
   onSubmit,
   onCancel,
 }: PostComposerProps) {
-  const [type, setType] = useState<"post" | "log">(initialType);
   const [slots, setSlots] = useState<MediaSlot[]>(
     (initialMedia ?? []).map((m) => ({
       localId: m.url,
@@ -133,7 +128,7 @@ export function PostComposer({
     const media: PostMedia[] = slots
       .filter((s) => s.uploadedUrl)
       .map((s) => ({ url: s.uploadedUrl!, type: s.type }));
-    onSubmit({ type, content_json: editor.getJSON(), media });
+    onSubmit({ content_json: editor.getJSON(), media });
   }
 
   const slotsRef = useRef(slots);
@@ -153,23 +148,6 @@ export function PostComposer({
 
   return (
     <div className="space-y-3">
-      {showTypeToggle && (
-        <div className="flex gap-2">
-          {(["post", "log"] as const).map((t) => (
-            <button
-              key={t}
-              type="button"
-              onClick={() => setType(t)}
-              className={`font-mononum text-[10px] uppercase tracking-[0.08em] px-3 min-h-[44px] rounded border transition ${
-                type === t ? "bg-ink text-paper border-ink" : "border-hair text-ink-sub hover:border-ink hover:text-ink"
-              }`}
-            >
-              {t === "log" ? "Training log" : "Update"}
-            </button>
-          ))}
-        </div>
-      )}
-
       <div className="rounded-lg border border-hair">
         <div className="flex items-center gap-1 border-b border-hairsoft p-1.5">
           <button type="button" onClick={() => editor.chain().focus().toggleBold().run()}

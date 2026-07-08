@@ -11,7 +11,7 @@ import { hasRole, isAdmin } from "../utils/roles";
 import {
   Bell, Home, Search, Briefcase, FileText, MessageCircle, LogOut,
   User as UserIcon, Menu, X, Trophy, ChevronDown, Building2, Target, Activity,
-  Video, Plus, Flag, Users,
+  Plus, Flag, Users,
 } from "lucide-react";
 import { useState, useEffect, useRef, Suspense } from "react";
 import type { Notification } from "../models";
@@ -78,35 +78,53 @@ function GlobalSearch({ user, inputRef, mobileOpen, onMobileClose }: {
   );
 }
 
+function navItemClasses(isActive: boolean) {
+  return `group flex items-center gap-3 rounded px-3 py-2.5 font-mononum text-[12px] tracking-[0.04em] transition ${
+    isActive ? "bg-ink text-paper" : "text-ink-70 hover:bg-fill"}`;
+}
+
+function NavItemContent({ icon, label, isCollapsed, badge, isActive }: { icon: React.ReactNode; label: string; isCollapsed?: boolean; badge?: number; isActive: boolean }) {
+  return (
+    <>
+      <span className={`relative w-4 flex-shrink-0 text-center ${isActive ? "text-brand-500" : "text-ink-faint"}`}>
+        {icon}
+        {badge != null && badge > 0 && isCollapsed && (
+          <span className="absolute -top-1.5 -right-1.5 h-3.5 min-w-3.5 rounded-full bg-red-500 text-[8px] font-bold text-white flex items-center justify-center px-0.5">
+            {badge > 99 ? "99+" : badge}
+          </span>
+        )}
+      </span>
+      {!isCollapsed && (
+        <span className="flex-1 flex items-center gap-2 truncate">
+          <span className="truncate">{label}</span>
+          {badge != null && badge > 0 && (
+            <span className="ml-auto inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white">
+              {badge > 99 ? "99+" : badge}
+            </span>
+          )}
+        </span>
+      )}
+    </>
+  );
+}
+
 function NavItem({ to, icon, label, onClick, isCollapsed, badge }: { to: string; icon: React.ReactNode; label: string; onClick?: () => void; isCollapsed?: boolean; badge?: number }) {
   return (
     <NavLink to={to} onClick={onClick} title={isCollapsed ? label : undefined}
-      className={({ isActive }) =>
-        `group flex items-center gap-3 rounded px-3 py-2.5 font-mononum text-[12px] tracking-[0.04em] transition ${
-          isActive ? "bg-ink text-paper" : "text-ink-70 hover:bg-fill"}`}>
+      className={({ isActive }) => navItemClasses(isActive)}>
       {({ isActive }: { isActive: boolean }) => (
-        <>
-          <span className={`relative w-4 flex-shrink-0 text-center ${isActive ? "text-brand-500" : "text-ink-faint"}`}>
-            {icon}
-            {badge != null && badge > 0 && isCollapsed && (
-              <span className="absolute -top-1.5 -right-1.5 h-3.5 min-w-3.5 rounded-full bg-red-500 text-[8px] font-bold text-white flex items-center justify-center px-0.5">
-                {badge > 99 ? "99+" : badge}
-              </span>
-            )}
-          </span>
-          {!isCollapsed && (
-            <span className="flex-1 flex items-center gap-2 truncate">
-              <span className="truncate">{label}</span>
-              {badge != null && badge > 0 && (
-                <span className="ml-auto inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white">
-                  {badge > 99 ? "99+" : badge}
-                </span>
-              )}
-            </span>
-          )}
-        </>
+        <NavItemContent icon={icon} label={label} isCollapsed={isCollapsed} badge={badge} isActive={isActive} />
       )}
     </NavLink>
+  );
+}
+
+/** Nav entry that opens an action (e.g. a modal) instead of routing. */
+function NavButton({ icon, label, onClick, isCollapsed, badge }: { icon: React.ReactNode; label: string; onClick: () => void; isCollapsed?: boolean; badge?: number }) {
+  return (
+    <button type="button" onClick={onClick} title={isCollapsed ? label : undefined} className={navItemClasses(false)}>
+      <NavItemContent icon={icon} label={label} isCollapsed={isCollapsed} badge={badge} isActive={false} />
+    </button>
   );
 }
 
@@ -202,7 +220,7 @@ function NotificationDropdown({
 function getMobileNavItems(user: { id: string; role: string }) {
   const profileTo = `/profile/${user.id}`;
   const base = [
-    { to: "/feed",   icon: <Home className="h-5 w-5" />,          label: "Home" },
+    { to: "/feed",   icon: <Home className="h-5 w-5" />,          label: "Catch" },
   ];
 
   if (user.role === "admin") {
@@ -316,12 +334,9 @@ export function Layout() {
     clear(); qc.clear(); navigate("/login", { replace: true });
   };
 
-  const navItems = [
-    ...(isAdmin(user.role) ? [{ to: "/admin", icon: <Home className="h-4 w-4" />, label: "Dashboard" }] : []),
+  const navItems: Array<{ key?: string; to?: string; onClick?: () => void; icon: React.ReactNode; label: string }> = [
+    { to: "/feed",         icon: <FileText className="h-4 w-4" />,      label: "Catch" },
     { to: "/live-scores",  icon: <Activity className="h-4 w-4" />,      label: "Live Scores" },
-    { to: "/feed",         icon: <FileText className="h-4 w-4" />,      label: "Feed" },
-    { to: "/reels",        icon: <Video className="h-4 w-4" />,         label: "Reels" },
-    { to: "/blogs",        icon: <FileText className="h-4 w-4" />,      label: "Blogs" },
     { to: "/search",       icon: <Search className="h-4 w-4" />,        label: "Search" },
     { to: "/opportunities",icon: <Briefcase className="h-4 w-4" />,     label: "Opportunities" },
     { to: "/tournaments",  icon: <Trophy className="h-4 w-4" />,        label: "Tournaments" },
@@ -482,16 +497,25 @@ export function Layout() {
         >
           <nav className="flex flex-col h-full">
             <div className="space-y-0.5 p-3 flex-1">
-              {navItems.map((item) => (
-                <NavItem
-                  key={item.to}
-                  to={item.to}
-                  icon={item.icon}
-                  label={item.label}
-                  isCollapsed={!sidebarHovered}
-                  badge={"badge" in item ? (item as any).badge : undefined}
-                />
-              ))}
+              {navItems.map((item) =>
+                item.to ? (
+                  <NavItem
+                    key={item.key ?? item.to}
+                    to={item.to}
+                    icon={item.icon}
+                    label={item.label}
+                    isCollapsed={!sidebarHovered}
+                  />
+                ) : (
+                  <NavButton
+                    key={item.key}
+                    icon={item.icon}
+                    label={item.label}
+                    isCollapsed={!sidebarHovered}
+                    onClick={item.onClick!}
+                  />
+                )
+              )}
             </div>
           </nav>
         </aside>
@@ -536,17 +560,26 @@ export function Layout() {
             </div>
             {/* Nav items */}
             <nav className="flex-1 overflow-y-auto p-3 space-y-0.5">
-              {navItems.map((item) => (
-                <NavItem
-                  key={item.to}
-                  to={item.to}
-                  icon={item.icon}
-                  label={item.label}
-                  isCollapsed={false}
-                  badge={"badge" in item ? (item as any).badge : undefined}
-                  onClick={() => setMobileMenuOpen(false)}
-                />
-              ))}
+              {navItems.map((item) =>
+                item.to ? (
+                  <NavItem
+                    key={item.key ?? item.to}
+                    to={item.to}
+                    icon={item.icon}
+                    label={item.label}
+                    isCollapsed={false}
+                    onClick={() => setMobileMenuOpen(false)}
+                  />
+                ) : (
+                  <NavButton
+                    key={item.key}
+                    icon={item.icon}
+                    label={item.label}
+                    isCollapsed={false}
+                    onClick={() => { setMobileMenuOpen(false); item.onClick!(); }}
+                  />
+                )
+              )}
             </nav>
             {/* User info + logout at bottom */}
             <div className="p-3 border-t border-hairsoft">

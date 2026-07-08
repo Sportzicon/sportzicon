@@ -215,8 +215,20 @@ export async function getFeedForUser(userId: string, limit = 20, cursor?: string
     .findMany({ where: { follower_id: userId }, select: { followee_id: true } })
     .then((rows) => rows.map((r) => r.followee_id));
 
+  const authorIds = [userId, ...followeeIds];
+
+  // Mixed post/reel/blog feed — only the viewer's own draft blogs are
+  // visible; followees' drafts are hidden, same rule as listContent()'s
+  // mixed-type branch.
   const rows = await prisma.content.findMany({
-    where: { content_type: "post", author_id: { in: [userId, ...followeeIds] } },
+    where: {
+      author_id: { in: authorIds },
+      OR: [
+        { content_type: { in: ["post", "reel"] } },
+        { content_type: "blog", blogDetail: { status: "published" } },
+        { content_type: "blog", author_id: userId },
+      ],
+    },
     orderBy: { created_at: "desc" },
     take: limit + 1,
     ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),

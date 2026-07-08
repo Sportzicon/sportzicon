@@ -5,6 +5,7 @@ export * from "./application.model";
 export * from "./post.model";
 export * from "./reel.model";
 export * from "./blog.model";
+export * from "./content.model";
 export * from "./notification.model";
 export * from "./comment.model";
 export * from "./message.model";

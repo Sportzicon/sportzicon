@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { useBlogs } from "../../../hooks";
-import { useAuthStore } from "../../../store/auth";
 import { PageHeader, Spinner, EmptyState, Kicker, StatusPill, Avatar } from "../../../components/UI";
 import { MobileDrawer } from "../../../components/MobileDrawer";
 import { SlidersHorizontal, X, Search } from "lucide-react";
@@ -106,9 +105,6 @@ function BlogCard({ b, layout }: { b: Blog; layout: "grid" | "list" }) {
 }
 
 export default function Blogs() {
-  const user = useAuthStore((s) => s.user);
-  const canWrite = !!user;
-
   const [sport, setSport] = useState("");
   const [tag, setTag] = useState("");
   const [status, setStatus] = useState("");
@@ -202,13 +198,6 @@ export default function Blogs() {
         title="Blogs"
         subtitle="Guides & insights"
         sticky
-        action={
-          canWrite ? (
-            <Link to="/blogs/new" className="btn-accent min-h-[44px] flex items-center">
-              + Write blog
-            </Link>
-          ) : undefined
-        }
       />
 
       {/* Mobile filter bar */}
@@ -341,7 +330,6 @@ export default function Blogs() {
                       Clear filters
                     </button>
                   )}
-                  {canWrite && <Link to="/blogs/new" className="btn-accent">+ Write blog</Link>}
                 </div>
               }
             />

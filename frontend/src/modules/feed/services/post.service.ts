@@ -1,8 +1,8 @@
 import type { AxiosInstance } from "axios";
-import type { Post, CreatePostRequest, UpdatePostRequest } from "../../../models";
+import type { ContentItem, CreatePostRequest, UpdatePostRequest } from "../../../models";
 
 export interface FeedPage {
-  data: Post[];
+  data: ContentItem[];
   nextCursor: string | null;
 }
 

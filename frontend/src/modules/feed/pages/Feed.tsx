@@ -1,17 +1,18 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { useFeed } from "../../../hooks";
 import { useAuthStore } from "../../../store/auth";
-import { PageHeader, Spinner, EmptyState, Avatar, Tabs } from "../../../components/UI";
+import { PageHeader, Spinner, EmptyState, Avatar, Tabs, Badge, Placeholder } from "../../../components/UI";
 import { CommentSection } from "../../comments/components/CommentSection";
 import { ErrorBoundary } from "../../../components/ErrorBoundary";
-import { Heart, Trash2, Pencil, MoreVertical, MessageCircle, PenLine, RefreshCw } from "lucide-react";
+import { CreateContentModal } from "../../../components/CreateContentModal";
+import { ReelViewer } from "../../reels/components/ReelViewer";
+import { Heart, Trash2, Pencil, MoreVertical, MessageCircle, RefreshCw, PenLine, Play } from "lucide-react";
 import { Link } from "react-router-dom";
-import { humanizeError } from "../../../api/client";
 import { PostComposer } from "../components/PostComposer";
 import { PostContentView } from "../components/PostContentView";
 import { MediaCarousel } from "../components/MediaCarousel";
-import type { Post, PostMedia } from "../../../models";
-import type { JSONContent } from "@tiptap/react";
+import { toFeedItem } from "../../../models";
+import type { Post, Blog, Reel, FeedItem } from "../../../models";
 
 // Post card with read-more toggle, media, likes, comments
 function PostCard({
@@ -88,10 +89,7 @@ function PostCard({
               )}
             </div>
           </div>
-          <div className="lab mt-0.5">
-            {p.type === "log" ? "Training log" : "Update"}
-            {p.sport ? ` · ${p.sport}` : ""}
-          </div>
+          {p.sport && <div className="lab mt-0.5">{p.sport}</div>}
         </div>
       </div>
 
@@ -124,6 +122,62 @@ function PostCard({
   );
 }
 
+function BlogCard({ b }: { b: Blog }) {
+  return (
+    <li className="panel p-0 overflow-hidden">
+      <Link to={`/blogs/${b.slug}`} className="block transition hover:bg-fill/40">
+        <div className="p-4 sm:p-5">
+          <Badge color="amber">Article</Badge>
+          <div className="mt-2.5 flex gap-3">
+            {b.cover_image_url ? (
+              <img src={b.cover_image_url} alt="" className="h-16 w-16 rounded object-cover flex-shrink-0" />
+            ) : (
+              <Placeholder height={64} className="w-16 flex-shrink-0" />
+            )}
+            <div className="min-w-0">
+              <div className="font-disp text-[16px] leading-tight truncate">{b.title}</div>
+              <p className="mt-1 text-[12.5px] text-ink-sub line-clamp-2">{b.excerpt}</p>
+            </div>
+          </div>
+          <div className="mt-3 pt-3 border-t border-hairsoft flex items-center gap-5 text-ink-sub">
+            <span className="font-mononum text-[11.5px] flex items-center gap-1.5"><Heart className="h-4 w-4" /> {b.like_count}</span>
+            <span className="font-mononum text-[11.5px] flex items-center gap-1.5"><MessageCircle className="h-4 w-4" /> {b.comment_count}</span>
+          </div>
+        </div>
+      </Link>
+    </li>
+  );
+}
+
+function ReelCard({ r, onOpen }: { r: Reel; onOpen: () => void }) {
+  return (
+    <li className="panel p-4 sm:p-5">
+      <button onClick={onOpen} className="block w-full text-left">
+        <Badge color="emerald">Video</Badge>
+        <div className="mt-2.5 flex gap-3">
+          <div className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded bg-ink">
+            {r.thumbnail_url ? (
+              <img src={r.thumbnail_url} alt="" className="h-full w-full object-cover" />
+            ) : (
+              <Placeholder height={80} />
+            )}
+            <span className="absolute inset-0 flex items-center justify-center text-white/80">
+              <Play className="h-5 w-5" />
+            </span>
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-[13.5px] text-ink-70 line-clamp-3">{r.caption || r.title || "Video"}</p>
+          </div>
+        </div>
+        <div className="mt-3 pt-3 border-t border-hairsoft flex items-center gap-5 text-ink-sub">
+          <span className="font-mononum text-[11.5px] flex items-center gap-1.5"><Heart className="h-4 w-4" /> {r.like_count}</span>
+          <span className="font-mononum text-[11.5px] flex items-center gap-1.5"><MessageCircle className="h-4 w-4" /> {r.comment_count}</span>
+        </div>
+      </button>
+    </li>
+  );
+}
+
 // Pull-to-refresh indicator
 function PullIndicator({ distance, isRefreshing }: { distance: number; isRefreshing: boolean }) {
   if (distance === 0 && !isRefreshing) return null;
@@ -140,22 +194,31 @@ function PullIndicator({ distance, isRefreshing }: { distance: number; isRefresh
 
 export default function Feed() {
   const user = useAuthStore((s) => s.user);
-  const { feedQuery, posts, create, update, remove, toggleLike, likedPosts } = useFeed();
+  const { feedQuery, items, update, remove, toggleLike, likedPosts } = useFeed();
   const [tab, setTab] = useState("All");
-  const [createOpen, setCreateOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
-  const [createError, setCreateError] = useState("");
   const [pullDistance, setPullDistance] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [viewerIndex, setViewerIndex] = useState<number | null>(null);
   const touchStartY = useRef(0);
   const feedRef = useRef<HTMLDivElement>(null);
 
-  const filtered = tab === "Updates"
-    ? posts.filter((p) => p.type === "post")
-    : tab === "Training logs"
-    ? posts.filter((p) => p.type === "log")
-    : posts;
+  const feedItems: FeedItem[] = useMemo(() => items.map(toFeedItem), [items]);
+
+  const filtered = tab === "Posts"
+    ? feedItems.filter((f) => f.kind === "post")
+    : tab === "Articles"
+    ? feedItems.filter((f) => f.kind === "blog")
+    : tab === "Videos"
+    ? feedItems.filter((f) => f.kind === "reel")
+    : feedItems;
+
+  const reelsInView = useMemo(
+    () => filtered.filter((f) => f.kind === "reel").map((f) => f.data as Reel),
+    [filtered]
+  );
 
   // Pull-to-refresh touch handlers
   const onTouchStart = (e: React.TouchEvent) => {
@@ -175,26 +238,6 @@ export default function Feed() {
     setPullDistance(0);
   };
 
-  const handleCreate = (data: { type: "post" | "log"; content_json: JSONContent; media: PostMedia[] }) => {
-    setCreateError("");
-    create.mutate(data, {
-      onSuccess: () => setCreateOpen(false),
-      onError: (err) => setCreateError(humanizeError(err)),
-    });
-  };
-
-  const createForm = (
-    <div className="space-y-3">
-      <PostComposer
-        submitting={create.isPending}
-        submitLabel="Post →"
-        onSubmit={handleCreate}
-        onCancel={() => setCreateOpen(false)}
-      />
-      {createError && <p className="text-sm text-red-600">{createError}</p>}
-    </div>
-  );
-
   return (
     <div
       ref={feedRef}
@@ -203,46 +246,25 @@ export default function Feed() {
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
     >
-      <PageHeader title="Feed" subtitle="Your network" />
+      <PageHeader title="Catch" subtitle="Your network" />
 
       <PullIndicator distance={pullDistance} isRefreshing={isRefreshing} />
 
-      {/* Create post — collapsed tap-target on mobile, always open on desktop */}
-      <ErrorBoundary>
-      <div className="panel p-4">
-        {/* Mobile collapsed state */}
-        <div className="lg:hidden">
-          {!createOpen ? (
-            <button
-              onClick={() => setCreateOpen(true)}
-              className="w-full flex items-center gap-3 min-h-[44px]"
-              aria-label="Create post"
-            >
-              <Avatar name={user?.full_name ?? ""} src={user?.profile_photo_url} size={36} accent />
-              <span className="flex-1 text-left text-sm text-ink-faint bg-fill rounded-full px-4 py-2">
-                Share an update…
-              </span>
-              <PenLine className="h-5 w-5 text-ink-faint" />
-            </button>
-          ) : (
-            createForm
-          )}
-        </div>
+      {/* Create trigger */}
+      <button
+        onClick={() => setCreateOpen(true)}
+        className="panel w-full flex items-center gap-3 p-4 min-h-[44px]"
+        aria-label="Create"
+      >
+        <Avatar name={user?.full_name ?? ""} src={user?.profile_photo_url} size={36} accent />
+        <span className="flex-1 text-left text-sm text-ink-faint bg-fill rounded-full px-4 py-2">
+          Share an update…
+        </span>
+        <PenLine className="h-5 w-5 text-ink-faint" />
+      </button>
+      <CreateContentModal open={createOpen} onClose={() => setCreateOpen(false)} />
 
-        {/* Desktop: always visible */}
-        <div className="hidden lg:block">
-          <div className="flex gap-3 mb-3">
-            <Avatar name={user?.full_name ?? ""} src={user?.profile_photo_url} size={40} accent />
-            <div className="flex-1">
-              {createForm}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      </ErrorBoundary>
-
-      <Tabs tabs={["All", "Updates", "Training logs"]} active={tab} onChange={setTab} />
+      <Tabs tabs={["All", "Posts", "Articles", "Videos"]} active={tab} onChange={setTab} />
 
       <ErrorBoundary>
       {feedQuery.isLoading ? (
@@ -250,17 +272,31 @@ export default function Feed() {
           <Spinner className="text-brand-500" />
         </div>
       ) : filtered.length === 0 ? (
-        <EmptyState title="Nothing here yet" hint="Follow people or post your first training log." />
+        <EmptyState title="Nothing here yet" hint="Follow people or share your first update." />
       ) : (
         <>
           <ul className="space-y-3">
-            {filtered.map((p: Post) => {
+            {filtered.map((item) => {
+              if (item.kind === "blog") return <BlogCard key={`blog-${item.data.id}`} b={item.data} />;
+
+              if (item.kind === "reel") {
+                const r = item.data;
+                return (
+                  <ReelCard
+                    key={`reel-${r.id}`}
+                    r={r}
+                    onOpen={() => setViewerIndex(reelsInView.findIndex((rr) => rr.id === r.id))}
+                  />
+                );
+              }
+
+              const p = item.data;
+
               if (editingId === p.id) {
                 return (
                   <li key={p.id} className="panel p-4 sm:p-5">
                     <p className="text-sm font-semibold text-ink mb-2">Edit post</p>
                     <PostComposer
-                      showTypeToggle={false}
                       initialContentJson={p.content_json}
                       initialMedia={p.media}
                       submitting={update.isPending}
@@ -332,6 +368,13 @@ export default function Feed() {
       )}
       </ErrorBoundary>
 
+      {viewerIndex !== null && reelsInView.length > 0 && (
+        <ReelViewer
+          reels={reelsInView}
+          initialIndex={viewerIndex}
+          onClose={() => setViewerIndex(null)}
+        />
+      )}
     </div>
   );
 }
