@@ -6,7 +6,8 @@ import { blogService } from "../../../services";
 import { queryKeys } from "../../../hooks";
 import { PageHeader, Spinner, SectionHead } from "../../../components/UI";
 import { BackButton } from "../../../components/BackButton";
-import { Field, AutoGrowTextarea, TagInput, SPORTS } from "../components/BlogFormFields";
+import { Field, TagInput, SPORTS } from "../components/BlogFormFields";
+import { RichMarkdownEditor } from "../components/RichMarkdownEditor";
 
 const MAX_CONTENT = 50000;
 const CONTENT_WARN = 45000;
@@ -25,7 +26,6 @@ export default function NewBlog() {
 
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
-  const [excerpt, setExcerpt] = useState("");
   const [coverUrl, setCoverUrl] = useState("");
   const [tags, setTags] = useState<string[]>([]);
   const [sport, setSport] = useState("");
@@ -38,7 +38,6 @@ export default function NewBlog() {
       const b = blogQ.data;
       setTitle(b.title || "");
       setBody(b.body_markdown || "");
-      setExcerpt(b.excerpt || "");
       setCoverUrl(b.cover_image_url || "");
       setTags(Array.isArray(b.tags) ? b.tags : []);
       setSport(b.sport || "");
@@ -67,7 +66,6 @@ export default function NewBlog() {
         status,
         tags,
       };
-      if (excerpt.trim()) payload.excerpt = excerpt.trim();
       if (coverUrl.trim()) payload.cover_image_url = coverUrl.trim();
       if (sport) payload.sport = sport;
 
@@ -159,26 +157,16 @@ export default function NewBlog() {
           <img src={coverUrl} alt="" className="w-full aspect-video object-cover rounded border border-hair" />
         )}
 
-        <div className="grid sm:grid-cols-2 gap-4">
-          <Field label="Sport">
-            <select
-              className="input w-full min-h-[44px]"
-              value={sport}
-              onChange={(e) => setSport(e.target.value)}
-            >
-              <option value="">No sport</option>
-              {SPORTS.filter(Boolean).map((s) => <option key={s} value={s}>{s}</option>)}
-            </select>
-          </Field>
-          <Field label="Excerpt" hint="Auto-generated if left blank">
-            <AutoGrowTextarea
-              className="input w-full"
-              value={excerpt}
-              onChange={setExcerpt}
-              placeholder="A compelling summary…"
-            />
-          </Field>
-        </div>
+        <Field label="Sport">
+          <select
+            className="input w-full min-h-[44px] sm:max-w-xs"
+            value={sport}
+            onChange={(e) => setSport(e.target.value)}
+          >
+            <option value="">No sport</option>
+            {SPORTS.filter(Boolean).map((s) => <option key={s} value={s}>{s}</option>)}
+          </select>
+        </Field>
 
         <div>
           <span className="label block mb-1">Tags</span>
@@ -191,12 +179,12 @@ export default function NewBlog() {
         <SectionHead n="02" title="Body" sub="Markdown supported" />
 
         <div className="relative">
-          <AutoGrowTextarea
-            className={`input w-full font-mono text-sm leading-relaxed min-h-[240px] ${errors.body ? "border-red-500" : ""}`}
+          <RichMarkdownEditor
             value={body}
             onChange={setBody}
-            placeholder={"# Your heading\n\nStart writing here. Markdown is supported — **bold**, _italic_, ## headings, - lists, and more."}
-            maxLength={MAX_CONTENT}
+            placeholder="Start writing here…"
+            minHeightClass="min-h-[280px]"
+            error={!!errors.body}
           />
           <span
             className={`absolute bottom-2 right-3 font-mononum text-[10px] pointer-events-none ${
@@ -207,9 +195,6 @@ export default function NewBlog() {
           </span>
         </div>
         {errors.body && <p className="text-red-600 text-[11px]">{errors.body}</p>}
-        <p className="lab normal-case tracking-normal text-[11px]">
-          Tip: Use ## for section headings, **bold** for emphasis, &gt; for quotes.
-        </p>
       </div>
 
       {err && (

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, KeyboardEvent } from "react";
+import { useRef, useState, KeyboardEvent } from "react";
 import { X } from "lucide-react";
 
 export const SPORTS = [
@@ -19,42 +19,6 @@ export function Field({ label, children, hint, error }: {
       {hint && <span className="lab mt-1.5 block normal-case tracking-normal text-[10.5px]">{hint}</span>}
       {error && <span className="text-red-600 text-[11px] mt-1 block">{error}</span>}
     </label>
-  );
-}
-
-export function AutoGrowTextarea({
-  value,
-  onChange,
-  placeholder,
-  className,
-  maxLength,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-  placeholder?: string;
-  className?: string;
-  maxLength?: number;
-}) {
-  const ref = useRef<HTMLTextAreaElement>(null);
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    el.style.height = "auto";
-    el.style.height = `${el.scrollHeight}px`;
-  }, [value]);
-
-  return (
-    <textarea
-      ref={ref}
-      className={className}
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      placeholder={placeholder}
-      maxLength={maxLength}
-      rows={3}
-      style={{ resize: "none", overflow: "hidden" }}
-    />
   );
 }
 

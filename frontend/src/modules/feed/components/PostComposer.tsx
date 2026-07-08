@@ -1,8 +1,12 @@
 import { useEffect, useRef, useState } from "react";
-import { useEditor, EditorContent, type JSONContent } from "@tiptap/react";
+import { useEditor, EditorContent, type Editor, type JSONContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Link from "@tiptap/extension-link";
-import { Bold, Italic, List, ListOrdered, Link as LinkIcon, Image as ImageIcon, Video as VideoIcon, X } from "lucide-react";
+import Underline from "@tiptap/extension-underline";
+import {
+  Bold, Italic, UnderlineIcon, Strikethrough, List, ListOrdered, Quote, Code, Heading2, Heading3,
+  Link as LinkIcon, Undo2, Redo2, Image as ImageIcon, Video as VideoIcon, X,
+} from "lucide-react";
 import { uploadToGCS, MAX_SIZE_MB, ACCEPT_BY_CONTEXT } from "../../../hooks/useUpload";
 import { humanizeError } from "../../../api/client";
 import { Spinner } from "../../../components/UI";
@@ -30,6 +34,39 @@ interface PostComposerProps {
 
 const EMPTY_DOC: JSONContent = { type: "doc", content: [{ type: "paragraph" }] };
 
+function ToolbarButton({
+  onClick,
+  active,
+  disabled,
+  label,
+  children,
+}: {
+  onClick: () => void;
+  active?: boolean;
+  disabled?: boolean;
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={`p-2 min-h-[44px] min-w-[44px] flex-shrink-0 rounded transition disabled:opacity-30 ${
+        active ? "bg-fill text-ink" : "text-ink-sub hover:bg-fill"
+      }`}
+      aria-label={label}
+      title={label}
+    >
+      {children}
+    </button>
+  );
+}
+
+function ToolbarDivider() {
+  return <div className="w-px self-stretch my-1.5 bg-hairsoft flex-shrink-0" />;
+}
+
 export function PostComposer({
   initialContentJson,
   initialMedia,
@@ -51,7 +88,7 @@ export function PostComposer({
   );
 
   const editor = useEditor({
-    extensions: [StarterKit, Link],
+    extensions: [StarterKit, Link, Underline],
     content: initialContentJson ?? EMPTY_DOC,
   });
 
@@ -149,27 +186,64 @@ export function PostComposer({
   return (
     <div className="space-y-3">
       <div className="rounded-lg border border-hair">
-        <div className="flex items-center gap-1 border-b border-hairsoft p-1.5">
-          <button type="button" onClick={() => editor.chain().focus().toggleBold().run()}
-            className={`p-2 min-h-[44px] min-w-[44px] rounded ${editor.isActive("bold") ? "bg-fill text-ink" : "text-ink-sub hover:bg-fill"}`}
-            aria-label="Bold"><Bold className="h-4 w-4" /></button>
-          <button type="button" onClick={() => editor.chain().focus().toggleItalic().run()}
-            className={`p-2 min-h-[44px] min-w-[44px] rounded ${editor.isActive("italic") ? "bg-fill text-ink" : "text-ink-sub hover:bg-fill"}`}
-            aria-label="Italic"><Italic className="h-4 w-4" /></button>
-          <button type="button" onClick={() => editor.chain().focus().toggleBulletList().run()}
-            className={`p-2 min-h-[44px] min-w-[44px] rounded ${editor.isActive("bulletList") ? "bg-fill text-ink" : "text-ink-sub hover:bg-fill"}`}
-            aria-label="Bullet list"><List className="h-4 w-4" /></button>
-          <button type="button" onClick={() => editor.chain().focus().toggleOrderedList().run()}
-            className={`p-2 min-h-[44px] min-w-[44px] rounded ${editor.isActive("orderedList") ? "bg-fill text-ink" : "text-ink-sub hover:bg-fill"}`}
-            aria-label="Numbered list"><ListOrdered className="h-4 w-4" /></button>
-          <button type="button" onClick={() => {
+        <div className="flex items-center gap-0.5 overflow-x-auto border-b border-hairsoft p-1.5">
+          <ToolbarButton label="Bold" active={editor.isActive("bold")} onClick={() => editor.chain().focus().toggleBold().run()}>
+            <Bold className="h-4 w-4" />
+          </ToolbarButton>
+          <ToolbarButton label="Italic" active={editor.isActive("italic")} onClick={() => editor.chain().focus().toggleItalic().run()}>
+            <Italic className="h-4 w-4" />
+          </ToolbarButton>
+          <ToolbarButton label="Underline" active={editor.isActive("underline")} onClick={() => editor.chain().focus().toggleUnderline().run()}>
+            <UnderlineIcon className="h-4 w-4" />
+          </ToolbarButton>
+          <ToolbarButton label="Strikethrough" active={editor.isActive("strike")} onClick={() => editor.chain().focus().toggleStrike().run()}>
+            <Strikethrough className="h-4 w-4" />
+          </ToolbarButton>
+
+          <ToolbarDivider />
+
+          <ToolbarButton label="Heading 2" active={editor.isActive("heading", { level: 2 })} onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}>
+            <Heading2 className="h-4 w-4" />
+          </ToolbarButton>
+          <ToolbarButton label="Heading 3" active={editor.isActive("heading", { level: 3 })} onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}>
+            <Heading3 className="h-4 w-4" />
+          </ToolbarButton>
+
+          <ToolbarDivider />
+
+          <ToolbarButton label="Bullet list" active={editor.isActive("bulletList")} onClick={() => editor.chain().focus().toggleBulletList().run()}>
+            <List className="h-4 w-4" />
+          </ToolbarButton>
+          <ToolbarButton label="Numbered list" active={editor.isActive("orderedList")} onClick={() => editor.chain().focus().toggleOrderedList().run()}>
+            <ListOrdered className="h-4 w-4" />
+          </ToolbarButton>
+          <ToolbarButton label="Quote" active={editor.isActive("blockquote")} onClick={() => editor.chain().focus().toggleBlockquote().run()}>
+            <Quote className="h-4 w-4" />
+          </ToolbarButton>
+          <ToolbarButton label="Code" active={editor.isActive("code")} onClick={() => editor.chain().focus().toggleCode().run()}>
+            <Code className="h-4 w-4" />
+          </ToolbarButton>
+          <ToolbarButton
+            label="Link"
+            active={editor.isActive("link")}
+            onClick={() => {
               const url = window.prompt("Link URL");
               if (url) editor.chain().focus().setLink({ href: url }).run();
             }}
-            className={`p-2 min-h-[44px] min-w-[44px] rounded ${editor.isActive("link") ? "bg-fill text-ink" : "text-ink-sub hover:bg-fill"}`}
-            aria-label="Link"><LinkIcon className="h-4 w-4" /></button>
+          >
+            <LinkIcon className="h-4 w-4" />
+          </ToolbarButton>
+
+          <ToolbarDivider />
+
+          <ToolbarButton label="Undo" disabled={!editor.can().undo()} onClick={() => editor.chain().focus().undo().run()}>
+            <Undo2 className="h-4 w-4" />
+          </ToolbarButton>
+          <ToolbarButton label="Redo" disabled={!editor.can().redo()} onClick={() => editor.chain().focus().redo().run()}>
+            <Redo2 className="h-4 w-4" />
+          </ToolbarButton>
         </div>
-        <EditorContent editor={editor} className="prose prose-sm max-w-none px-3 py-2 min-h-[96px]" />
+        <EditorContent editor={editor} className="prose prose-sm max-w-none px-3 py-2.5 min-h-[200px]" />
       </div>
 
       {slots.length > 0 && (

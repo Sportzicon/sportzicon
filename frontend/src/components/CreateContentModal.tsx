@@ -4,7 +4,8 @@ import type { JSONContent } from "@tiptap/react";
 import { X } from "lucide-react";
 import { PostComposer } from "../modules/feed/components/PostComposer";
 import { ImageUpload } from "../modules/reels/components/ImageUpload";
-import { Field, AutoGrowTextarea, TagInput, SPORTS } from "../modules/blogs/components/BlogFormFields";
+import { Field, TagInput, SPORTS } from "../modules/blogs/components/BlogFormFields";
+import { RichMarkdownEditor } from "../modules/blogs/components/RichMarkdownEditor";
 import { MobileDrawer } from "./MobileDrawer";
 import { postService, blogService } from "../services";
 import { queryKeys } from "../hooks/queryKeys";
@@ -151,12 +152,12 @@ export function CreateContentModal({ open, onClose }: CreateContentModalProps) {
       </div>
 
       <Field label="Content *" error={errors.body} hint={`${body.length}/50,000`}>
-        <AutoGrowTextarea
-          className={`input w-full font-mono text-sm leading-relaxed min-h-[160px] ${errors.body ? "border-red-500" : ""}`}
+        <RichMarkdownEditor
           value={body}
           onChange={setBody}
-          placeholder={"Write your article… Markdown supported."}
-          maxLength={50000}
+          placeholder="Write your article…"
+          minHeightClass="min-h-[160px]"
+          error={!!errors.body}
         />
       </Field>
 
