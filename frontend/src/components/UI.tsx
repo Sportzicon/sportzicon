@@ -96,7 +96,10 @@ export function StatusPill({ status }: { status: string }) {
     unverified: { c: "#726B60", bg: "#F2F1EC" },
     draft: { c: "#726B60", bg: "#F2F1EC" },
     published: { c: "#2E7D52", bg: "#E2F0E8" },
-    review: { c: "#B6791E", bg: "#F6ECD7", label: "in review" }
+    review: { c: "#B6791E", bg: "#F6ECD7", label: "in review" },
+    ongoing: { c: "#C0392B", bg: "#F8E3E0", label: "live" },
+    upcoming: { c: "#2B66C9", bg: "#E2EAF8" },
+    completed: { c: "#726B60", bg: "#F2F1EC" }
   };
   const s = map[status] ?? { c: "#726B60", bg: "#F2F1EC" };
   return (

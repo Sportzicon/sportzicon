@@ -102,7 +102,7 @@ Referenced from `CLAUDE.md` MASTER RULES #11 — read on every task, not just se
 - **Medium**: `/auth/refresh`, media upload routes, and `/ai/athlete-tips` rely only on the flat global rate limiter, no stricter dedicated limit.
 - **High** (npm audit): `form-data`, `multer`, `nodemailer` in backend; `vitest`, `vite` (dev-only) in frontend.
 - **Low**: main backend `cors()` code path still accepts `"*"` in `CORS_ORIGINS` env if ever misconfigured (currently not misconfigured in tfvars).
-- **Medium**: `backend/src/modules/users/users.routes.ts` `DELETE /:id/documents/:docId` has no `validate()` at all — neither param schema-checked.
-- **Low-medium**: `POST /:id/documents` — `type` field checked ad-hoc (`if (!type) throw...`), not Zod-validated (no enum/allowlist).
+- ~~**Medium**: `backend/src/modules/users/users.routes.ts` `DELETE /:id/documents/:docId` has no `validate()` at all — neither param schema-checked.~~ — **Fixed on re-check (2026-07-09)**: already has `validate(documentParamSchema, "params")`.
+- ~~**Low-medium**: `POST /:id/documents` — `type` field checked ad-hoc (`if (!type) throw...`), not Zod-validated (no enum/allowlist).~~ — **Fixed on re-check (2026-07-09)**: already validated via `z.enum(DOCUMENT_TYPES)` in `uploadDocumentBodySchema`.
 - **Low**: `backend/src/modules/ai/ai.routes.ts` `POST /athlete-tips` has no `*.schemas.ts` / `validate()` — currently no body taken so low exploitability, but unguarded mutating route.
 - **Low**: only `follow.service.ts` catches `PrismaClientKnownRequestError` (P2002/P2025) into proper 4xx; other modules' unique-constraint violations fall through to generic 500 (masked in prod, but wrong status class).

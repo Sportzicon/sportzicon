@@ -3,6 +3,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { messageService, userService, searchService } from "../../../services";
 import { useAuthStore } from "../../../store/auth";
+import { humanizeError } from "../../../api/client";
 import { PageHeader, Spinner, Avatar, EmptyState } from "../../../components/UI";
 import { MobileDrawer } from "../../../components/MobileDrawer";
 import { ErrorBoundary } from "../../../components/ErrorBoundary";
@@ -126,6 +127,7 @@ export default function Messages() {
   const [recipientAvatar, setRecipientAvatar] = useState<string | null>(null);
   const [mobileView, setMobileView] = useState<"list" | "thread">(initialTo ? "thread" : "list");
   const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const qc = useQueryClient();
   const endRef = useRef<HTMLDivElement>(null);
@@ -234,12 +236,15 @@ export default function Messages() {
     e?.preventDefault();
     if (!text.trim() || !recipientId || sending) return;
     setSending(true);
+    setSendError(null);
     try {
       const result = await messageService.send({ recipient_id: recipientId, body: text });
       setText("");
       setActiveId(result.conversation_id);
       qc.invalidateQueries({ queryKey: queryKeys.messages(result.conversation_id) });
       qc.invalidateQueries({ queryKey: queryKeys.conversations() });
+    } catch (e) {
+      setSendError(humanizeError(e));
     } finally {
       setSending(false);
     }
@@ -491,6 +496,11 @@ export default function Messages() {
             </div>
 
             {/* Input area */}
+            {sendError && (
+              <div className="mx-3 sm:mx-[22px] mt-2 rounded bg-red-50 border border-red-200 p-3 text-sm text-red-800">
+                {sendError}
+              </div>
+            )}
             <form
               onSubmit={send}
               noValidate

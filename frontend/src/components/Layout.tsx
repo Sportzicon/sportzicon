@@ -261,7 +261,7 @@ function getMobileNavItems(user: { id: string; role: string }) {
   // athlete (default)
   return [
     ...base,
-    { to: "/opportunities", icon: <Briefcase className="h-5 w-5" />,    label: "Trials" },
+    { to: "/opportunities", icon: <Briefcase className="h-5 w-5" />,    label: "Opportunities" },
     { to: "/messages",      icon: <MessageCircle className="h-5 w-5" />,label: "Messages" },
     { to: profileTo,        icon: <UserIcon className="h-5 w-5" />,     label: "Profile" },
   ];

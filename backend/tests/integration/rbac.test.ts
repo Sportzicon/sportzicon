@@ -31,16 +31,16 @@ describe("RBAC enforcement", () => {
     const orgRes = await api()
       .post("/api/v1/organizations")
       .set(club.auth)
-      .send({ org_name: "K", org_type: "club" })
+      .send({ org_name: "Klub", org_type: "club" })
       .expect(201);
     const oppRes = await api()
       .post("/api/v1/opportunities")
       .set(club.auth)
       .send({
         org_id: orgRes.body.organization.id,
-        title: "T",
+        title: "Trial opening",
         type: "trial",
-        sport: "Football",
+        sport: "football",
         description: "Lorem ipsum dolor sit",
         age_min: 16,
         age_max: 26,

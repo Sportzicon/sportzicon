@@ -8,6 +8,7 @@ import { Forbidden, BadRequest } from "../../utils/errors";
 import * as svc from "./users.service";
 import * as docSvc from "./documents.service";
 import * as tourSvc from "./tournaments.service";
+import { hasApprovedAccess } from "../documentAccess/documentAccess.service";
 import {
   updateProfileSchema,
   athleteFieldsSchema,
@@ -30,7 +31,7 @@ router.get(
   requireAuth,
   validate(userIdParamSchema, "params"),
   asyncHandler(async (req, res) => {
-    const u = await svc.getUserById(req.params.id);
+    const u = await svc.getUserById(req.params.id, { id: req.user!.sub, role: req.user!.role });
     res.json({ user: u });
   })
 );
@@ -82,6 +83,12 @@ router.get(
   requireAuth,
   validate(userIdParamSchema, "params"),
   asyncHandler(async (req, res) => {
+    const isSelf = req.user!.sub === req.params.id;
+    const isAdminUser = req.user!.role === "admin";
+    if (!isSelf && !isAdminUser) {
+      const allowed = await hasApprovedAccess(req.user!.sub, req.params.id);
+      if (!allowed) throw Forbidden("You do not have access to this user's documents");
+    }
     const docs = await docSvc.listDocuments(req.params.id);
     res.json({ items: docs });
   })

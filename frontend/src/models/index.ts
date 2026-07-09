@@ -1,6 +1,7 @@
 export * from "./user.model";
 export * from "./organization.model";
 export * from "./opportunity.model";
+export * from "./tournament.model";
 export * from "./application.model";
 export * from "./post.model";
 export * from "./reel.model";
@@ -9,3 +10,4 @@ export * from "./content.model";
 export * from "./notification.model";
 export * from "./comment.model";
 export * from "./message.model";
+export * from "./documentAccess.model";

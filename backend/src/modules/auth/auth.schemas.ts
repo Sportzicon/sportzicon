@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { ROLES } from "../../types/domain";
+import { isMinorAge } from "../../utils/age";
 
 const passwordSchema = z
   .string()
@@ -46,6 +47,10 @@ export const verifyEmailSchema = z.object({
   token: z.string().min(20)
 });
 
+export const guardianConsentConfirmSchema = z.object({
+  token: z.string().min(20)
+});
+
 export const forgotPasswordSchema = z.object({
   email: z.string().email()
 });
@@ -82,7 +87,23 @@ export const registerBasicSchema = z.object({
     (v) => !v || new Date(v) <= new Date(),
     "Date of birth cannot be in the future"
   ),
-  gender: z.string().max(30).optional()
+  gender: z.string().max(30).optional(),
+  guardian_email: z.string().trim().toLowerCase().email().max(254).optional()
+}).superRefine((val, ctx) => {
+  if (val.dob && isMinorAge(val.dob) && !val.guardian_email) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["guardian_email"],
+      message: "A guardian's email is required for accounts under 18"
+    });
+  }
+  if (val.guardian_email && val.guardian_email === val.email.trim().toLowerCase()) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["guardian_email"],
+      message: "Guardian email cannot be the same as your own email"
+    });
+  }
 });
 
 // Step-2: save sport profile / org details and trigger verification email

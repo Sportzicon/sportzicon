@@ -6,19 +6,21 @@ import { queryKeys } from "../../../hooks/queryKeys";
 import { uploadToGCS } from "../../../hooks/useUpload";
 import { scoringApi } from "../../../api/scoringClient";
 import { useAuthStore } from "../../../store/auth";
-import { isAdmin } from "../../../utils/roles";
+import { isAdmin, hasRole } from "../../../utils/roles";
 import { Spinner, VerifiedBadge, Avatar, SectionHead, Kicker, Badge, StatusPill } from "../../../components/UI";
 import { BackButton } from "../../../components/BackButton";
 import type { User } from "../../../types";
 import type { ScorecardLink, Tournament } from "../../../models";
 import { useSavedOpportunities } from "../../../store/savedOpportunities";
-import { Bookmark, Camera, FileText, Trash2, Trophy, Upload, X } from "lucide-react";
+import { Bookmark, Camera, FileText, Trash2, Trophy, Upload, X, Lock } from "lucide-react";
 import { TileGrid } from "../components/TileGrid";
 import { AddTournamentDrawer } from "../components/AddTournamentDrawer";
 import { AddScorecardLinkDrawer } from "../components/AddScorecardLinkDrawer";
 import { useTournaments } from "../hooks/useTournaments";
 import { useScorecardLinkPreview, useUpdateScorecardLinks } from "../hooks/useScorecardLinks";
+import { useDocuments } from "../hooks/useDocuments";
 import { ProfileFeedTab } from "../components/ProfileFeedTab";
+import { useMyAccessStatus, useRequestDocAccess } from "../../documentAccess/hooks/useDocumentAccess";
 
 // ── Cricbuzz-style cricket stats table ───────────────────────────────────────
 function CricketStatRow({ label, values }: { label: string; values: (string | number)[] }) {
@@ -190,7 +192,6 @@ export default function Profile() {
   const [tab, setTab] = useState<Tab>("followers");
   const [view, setView] = useState<ProfileView>("overview");
   const [docType, setDocType] = useState("");
-  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [uploadingName, setUploadingName] = useState<string>("");
   const docFileRef = useRef<HTMLInputElement>(null);
   const { saved: savedOpps, toggle: toggleSaved } = useSavedOpportunities();
@@ -254,10 +255,12 @@ export default function Profile() {
     enabled: tab === "following"
   });
 
-  const docsQ = useQuery({
-    queryKey: queryKeys.userDocs(id),
-    queryFn: async () => (await api.get<{ items: any[] }>(`/users/${id}/documents`)).data.items,
-  });
+  const isRecruiterViewer = !isMe && hasRole(me?.role ?? "", "club", "scout", "organizer");
+  const myAccessStatus = useMyAccessStatus(id, isRecruiterViewer);
+  const requestDocAccess = useRequestDocAccess(id);
+  const [accessRequestError, setAccessRequestError] = useState<string | null>(null);
+  const canViewDocuments = isMe || isAdmin(me?.role ?? "") || myAccessStatus.data === "approved";
+  const { docsQ, uploadDoc, deleteDoc, uploadProgress } = useDocuments(id, canViewDocuments);
 
   const tournaments = useTournaments(id);
   const [addingTournament, setAddingTournament] = useState(false);
@@ -273,36 +276,6 @@ export default function Profile() {
     queryFn: async () =>
       (await api.get<{ items: any[]; total: number; stats: any }>(`/users/${id}/email-logs`)).data,
     enabled: tab === "emails" && (isMe || isAdmin(me?.role ?? ""))
-  });
-
-  const uploadDoc = useMutation({
-    mutationFn: async ({ file, type }: { file: File; type: string }) => {
-      const form = new FormData();
-      form.append("file", file);
-      form.append("type", type);
-      setUploadProgress(0);
-      setUploadingName(file.name);
-      return api.post(`/users/${id}/documents`, form, {
-        headers: { "Content-Type": "multipart/form-data" },
-        onUploadProgress: (e) => {
-          if (e.total) setUploadProgress(Math.round((e.loaded / e.total) * 100));
-        },
-      });
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: queryKeys.userDocs(id) });
-      setUploadProgress(null);
-      setUploadingName("");
-    },
-    onError: () => {
-      setUploadProgress(null);
-      setUploadingName("");
-    },
-  });
-
-  const deleteDoc = useMutation({
-    mutationFn: async (docId: string) => api.delete(`/users/${id}/documents/${docId}`),
-    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.userDocs(id) }),
   });
 
   const [followError, setFollowError] = useState<string | null>(null);
@@ -740,11 +713,42 @@ export default function Profile() {
         </div>
       )}
 
-      {/* ── ZONE 06 — Documents (owner only) ──────────────────── */}
-      {isAthlete && isMe && (
+      {/* ── ZONE 06 — Documents (owner, admin, or approved requester) ── */}
+      {isAthlete && !isMe && isRecruiterViewer && myAccessStatus.data !== "approved" && (
+        <div>
+          <SectionHead n="06" title="Documents" sub="This athlete's supporting documents are private" />
+          <div className="card card-body space-y-3 text-center py-6">
+            <Lock className="h-5 w-5 text-ink-faint mx-auto" />
+            {myAccessStatus.data === "pending" ? (
+              <p className="lab text-[11px] text-ink-sub">Request pending — you'll be notified when reviewed.</p>
+            ) : (
+              <>
+                <p className="lab text-[11px] text-ink-sub">Request access to view this athlete's documents.</p>
+                {accessRequestError && <p className="text-[12px] text-red-600">{accessRequestError}</p>}
+                <button
+                  className="btn-secondary min-h-[44px] px-4"
+                  disabled={requestDocAccess.isPending}
+                  onClick={() =>
+                    requestDocAccess.mutate(undefined, { onError: (err) => setAccessRequestError(humanizeError(err)) })
+                  }
+                >
+                  {requestDocAccess.isPending ? "Requesting…" : "Request access to documents"}
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {isAthlete && canViewDocuments && (
         <div>
           <SectionHead n="06" title="Documents"
             sub="Attach supporting documents to strengthen your profile"
+            right={isMe ? (
+              <Link to="/profile/document-access" className="btn-ghost text-[11.5px] min-h-[44px] inline-flex items-center">
+                Manage access requests →
+              </Link>
+            ) : undefined}
           />
           <div className="card card-body space-y-3">
             {/* Uploaded documents list */}

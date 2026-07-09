@@ -285,7 +285,7 @@ export default function Search() {
   const isEmpty = !isLoading && allItems.length === 0;
 
   return (
-    <div className="max-w-7xl mx-auto">
+    <div>
       {/* Mobile tab bar */}
       <div className="flex border-b border-hair mb-4 overflow-x-auto scrollbar-none lg:hidden">
         {(["players", "clubs", "opportunities"] as Mode[]).map((m) => (

@@ -242,7 +242,37 @@
       "Bash(curl -s -X GET http://localhost:4000/api/matches/live -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIwMmE2Yzc4My04ZjllLTQ5NGQtYmYwZS1hODRjZjJiMWU3M2EiLCJyb2xlIjoib3JnYW5pemVyIiwiZW1haWwiOiJyZWdfdGVzdEB0ZXN0LmNvbSIsImlhdCI6MTc4MDY0OTg1OCwiZXhwIjoxNzgwNjUwNzU4fQ.ARQm2Wouk-ONzqdfqJbcbyujqgVSpV0wIlxUf13S7nA')",
       "Bash(echo \"Backend: $?\")",
       "Bash(echo \"Frontend: $?\")",
-      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5173/)"
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5173/)",
+      "Bash(env)",
+      "Bash(grep -n \"^\\\\.env$\\\\|^\\\\.env\\\\*\\\\|^\\\\*\\\\.env$\\\\|/\\\\.env$\\\\|\\\\.env\" /Users/maheshsingare/sportzicon/.gitignore)",
+      "Bash(curl -sS -o /dev/null -w \"healthz status: %{http_code}\\\\n\" http://localhost:8080/healthz)",
+      "Bash(cd /Users/maheshsingare/sportzicon/frontend/src && \\\\ *)",
+      "Read(//Users/backend/src/modules/reels/**)",
+      "Bash(cd /Users/maheshsingare/sportzicon/frontend/src *)",
+      "Read(//Users/maheshsingare/sportzicon/frontend/src/modules/feed/hooks/**)",
+      "Skill(update-config)",
+      "Skill(update-config:*)",
+      "Bash(cat ~/.claude/settings.json 2>/dev/null || echo \"FILE_NOT_FOUND\")",
+      "Read(//Users/maheshsingare/.claude/**)",
+      "Bash(curl -sS -o /dev/null -w \"web / : %{http_code}\\\\n\" http://localhost:5173/)",
+      "Bash(curl -sS -o /dev/null -w \"web /feed : %{http_code}\\\\n\" http://localhost:5173/feed)",
+      "Bash(curl -sS -o /dev/null -w \"web /blogs : %{http_code}\\\\n\" http://localhost:5173/blogs)",
+      "Bash(curl -sS -o /dev/null -w \"healthz: %{http_code}\\\\n\" http://localhost:8080/healthz)",
+      "Bash(curl -sS -o /dev/null -w \"web /feed: %{http_code}\\\\n\" http://localhost:5173/feed)",
+      "Bash(curl -sS -X POST http://localhost:8080/api/v1/auth/login -H 'Content-Type: application/json' -d '{\"email\":\"club@demo.sportivox\",\"password\":\"Demo1234!\"}')",
+      "Bash(curl -sS \"http://localhost:8080/api/v1/content?content_type=blog&limit=10\")",
+      "Bash(curl -sS -o /tmp/resp.json -w \"HTTP %{http_code}\\\\n\" \"http://localhost:8080/api/v1/content/five-warm-up-drills-every-cricket-batsman-should-do-before-nets\")",
+      "Read(//tmp/**)",
+      "Bash(grep -n \"b\\\\.id\\\\|/blogs/\\\\$\" /Users/maheshsingare/sportzicon/frontend/src/modules/blogs/pages/Blogs.tsx)",
+      "Bash(echo \"exit: $?\")",
+      "Bash(grep -n \"BlogCard\\\\s*$\\\\|BlogCard$\\\\|<BlogCard\" /Users/maheshsingare/sportzicon/frontend/src/modules/feed/pages/Feed.tsx)",
+      "Bash(grep -n \"comment_count}\\\\s*$\\\\|MessageCircle className=\\\\\"h-4 w-4\\\\\" /> {b.comment_count}\" /Users/maheshsingare/sportzicon/frontend/src/modules/feed/pages/Feed.tsx)",
+      "Read(//Users/maheshsingare/.nvm/versions/node/**)",
+      "Read(//Users/maheshsingare/.volta/**)",
+      "Bash(brew --prefix node)",
+      "Read(//usr/local/bin/**)",
+      "Read(//Users/maheshsingare/**)",
+      "Bash(which node *)"
     ]
   },
   "hooks": {
@@ -251,13 +281,13 @@
         "hooks": [
           {
             "type": "command",
-            "shell": "powershell",
             "command": "& 'f:/My Project/sportivox-main/sportivox-main/.claude/hooks/update-claude-md.ps1'",
+            "shell": "powershell",
+            "timeout": 20,
+            "statusMessage": "Scanning for new feature files...",
             "asyncRewake": true,
             "rewakeMessage": "New TypeScript source files were created during this session. If a new feature or module was implemented, please update CLAUDE.md now — add it to the module list, document any new patterns, update route counts, or note architectural changes introduced. Only update if the changes are feature-level (new module, new service, new hook, new component). Skip for bug fixes or refactors.",
-            "rewakeSummary": "New feature files detected — checking if CLAUDE.md needs updating",
-            "statusMessage": "Scanning for new feature files...",
-            "timeout": 20
+            "rewakeSummary": "New feature files detected — checking if CLAUDE.md needs updating"
           }
         ]
       }

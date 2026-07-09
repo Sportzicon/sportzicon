@@ -7,11 +7,17 @@ import {
   USER_FOLLOWED,
   MESSAGE_SENT,
   CONTENT_LIKED,
+  GUARDIAN_CONSENT_APPROVED,
+  DOC_ACCESS_REQUESTED,
+  DOC_ACCESS_DECIDED,
   type ApplicationAppliedEvent,
   type ApplicationTransitionedEvent,
   type UserFollowedEvent,
   type MessageSentEvent,
   type ContentLikedEvent,
+  type GuardianConsentApprovedEvent,
+  type DocumentAccessRequestedEvent,
+  type DocumentAccessDecidedEvent,
 } from "../types";
 
 const CONTENT_LINK: Record<ContentLikedEvent["contentType"], (id: string) => string> = {
@@ -91,6 +97,58 @@ export function registerNotificationHandlers(): void {
       body: `${e.actorName} liked your ${e.contentType}.`,
       link: CONTENT_LINK[e.contentType](e.contentId),
       email: false,
+    });
+  });
+
+  // ── Guardian consent approved ─────────────────────────────────────────────
+  eventBus.on<GuardianConsentApprovedEvent>(GUARDIAN_CONSENT_APPROVED, async (e) => {
+    await createNotification({
+      user_id: e.userId,
+      type: "guardian_consent_approved",
+      title: "Guardian consent approved",
+      body: "Your guardian approved your account. Clubs, scouts, and organizers can now message you.",
+      link: "/dashboard",
+      email: false,
+    });
+  });
+
+  // ── Document access requested ─────────────────────────────────────────────
+  eventBus.on<DocumentAccessRequestedEvent>(DOC_ACCESS_REQUESTED, async (e) => {
+    await createNotification({
+      user_id: e.athleteId,
+      actor_id: e.requesterId,
+      type: "doc_access_requested",
+      title: "New document access request",
+      body: `${e.requesterName} requested access to your profile documents.`,
+      link: "/profile/document-access",
+      email: true,
+    });
+  });
+
+  // ── Document access decided (approved / rejected / revoked) ──────────────
+  eventBus.on<DocumentAccessDecidedEvent>(DOC_ACCESS_DECIDED, async (e) => {
+    const copy: Record<DocumentAccessDecidedEvent["status"], { title: string; body: string }> = {
+      approved: {
+        title: "Document access granted",
+        body: "Your document access request was approved.",
+      },
+      rejected: {
+        title: "Document access request declined",
+        body: "Your document access request was not approved.",
+      },
+      revoked: {
+        title: "Document access revoked",
+        body: "Your access to this athlete's documents has been revoked.",
+      },
+    };
+    await createNotification({
+      user_id: e.requesterId,
+      actor_id: e.actorId,
+      type: `doc_access_${e.status}`,
+      title: copy[e.status].title,
+      body: copy[e.status].body,
+      link: `/profile/${e.athleteId}`,
+      email: e.status === "approved",
     });
   });
 }

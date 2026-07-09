@@ -84,6 +84,15 @@ router.patch(
 );
 
 router.patch(
+  "/users/:id/guardian-consent/approve",
+  validate(z.object({ id: z.string().min(8) }), "params"),
+  asyncHandler(async (req, res) => {
+    const r = await svc.approveGuardianConsent({ id: req.user!.sub, role: req.user!.role }, req.params.id);
+    res.json(r);
+  })
+);
+
+router.patch(
   "/users/:id/activate",
   validate(z.object({ id: z.string().min(8) }), "params"),
   asyncHandler(async (req, res) => {

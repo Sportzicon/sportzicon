@@ -4,8 +4,11 @@ import { sendMail } from "../../config/mailer";
 import { logger } from "../../config/logger";
 import { BadRequest, Conflict, Forbidden, NotFound, Unauthorized, TooManyRequests } from "../../utils/errors";
 import { omitSensitive } from "../../utils/user";
+import { isMinorAge } from "../../utils/age";
 import { validateAthleteSportProfile } from "../users/sportProfile";
 import { createOrganization } from "../organizations/organizations.service";
+import { eventBus } from "../../lib/EventBus";
+import { GUARDIAN_CONSENT_APPROVED, type GuardianConsentApprovedEvent } from "../../events/types";
 import {
   comparePassword,
   generateToken,
@@ -20,6 +23,7 @@ import type { Role } from "../../types/domain";
 
 const VERIFY_TTL_MS = 1000 * 60 * 60 * 24; // 24h
 const RESET_TTL_MS = 1000 * 60 * 30; // 30m
+const GUARDIAN_CONSENT_TTL_MS = 1000 * 60 * 60 * 24 * 7; // 7d — depends on a third party (the guardian) acting
 
 export async function signup(input: {
   email: string;
@@ -131,6 +135,63 @@ export async function verifyEmail(token: string) {
   return { ok: true };
 }
 
+async function issueAndSendGuardianConsentEmail(userId: string, guardianEmail: string, minorName: string) {
+  const token = generateToken();
+  const expiresAt = new Date(Date.now() + GUARDIAN_CONSENT_TTL_MS);
+
+  await prisma.guardianConsent.create({
+    data: { user_id: userId, guardian_email: guardianEmail, token, expires_at: expiresAt }
+  });
+
+  const link = `${env.WEB_APP_URL.replace(/\/$/, "")}/guardian-consent/${encodeURIComponent(token)}`;
+  await sendMail({
+    to: guardianEmail,
+    subject: `Confirm you're ${minorName}'s guardian on Sportzicon`,
+    html: `<p>Hi,</p>
+           <p>${escapeHtml(minorName)} listed you as their parent or guardian while creating a Sportzicon account (a platform for athletes to build a sports profile). Because they're under 18, clubs, scouts, and organizers can't message them until you confirm you're aware of and approve the account. This link expires in <strong>7 days</strong>.</p>
+           <p><a href="${link}" style="display:inline-block;padding:10px 20px;background:#FA4D14;color:#fff;text-decoration:none;border-radius:4px;font-weight:bold;">Confirm guardian consent</a></p>
+           <p>If the button above doesn't work, copy and paste this link into your browser:</p>
+           <p style="word-break:break-all;color:#555;">${link}</p>
+           <p>If you don't recognize this request, you can safely ignore this email — no account access is granted by this link.</p>`,
+    text: `Hi,\n\n${minorName} listed you as their parent or guardian while creating a Sportzicon account. Because they're under 18, clubs, scouts, and organizers can't message them until you confirm. This link expires in 7 days.\n\nConfirm guardian consent:\n${link}\n\nIf you don't recognize this request, you can safely ignore this email.`,
+    user_id: userId,
+    email_type: "guardian_consent"
+  });
+  logger.info({ userId }, "guardian consent email queued");
+}
+
+export async function confirmGuardianConsent(token: string) {
+  const record = await prisma.guardianConsent.findUnique({ where: { token } });
+  if (!record) throw BadRequest("Invalid or already-used confirmation link");
+  if (record.expires_at < new Date()) throw BadRequest("This link has expired");
+
+  const user = await prisma.user.findUnique({
+    where: { id: record.user_id },
+    select: { id: true, full_name: true, guardian_consent_status: true }
+  });
+  if (!user) throw NotFound("Account not found");
+
+  if (user.guardian_consent_status === "approved") {
+    await prisma.guardianConsent.delete({ where: { token } });
+    return { ok: true };
+  }
+
+  await prisma.$transaction([
+    prisma.user.update({
+      where: { id: record.user_id },
+      data: { guardian_consent_status: "approved", guardian_consent_at: new Date() }
+    }),
+    prisma.guardianConsent.delete({ where: { token } })
+  ]);
+
+  eventBus.emit<GuardianConsentApprovedEvent>(GUARDIAN_CONSENT_APPROVED, {
+    userId: user.id,
+    userName: user.full_name
+  });
+
+  return { ok: true };
+}
+
 export async function resendVerification(email: string) {
   const user = await prisma.user.findUnique({
     where: { email_lower: email.trim().toLowerCase() },
@@ -202,7 +263,7 @@ export async function login(email: string, password: string) {
   const access_token = signAccessToken(user);
   const refresh_token = await issueRefreshToken(user.id);
 
-  return { access_token, refresh_token, user: omitSensitive(user) };
+  return { access_token, refresh_token, user: omitSensitive(user, { includeGuardianEmail: true }) };
 }
 
 export async function refresh(token: string) {
@@ -218,7 +279,7 @@ export async function refresh(token: string) {
   return {
     access_token: signAccessToken(user),
     refresh_token: result.newToken,
-    user: omitSensitive(user)
+    user: omitSensitive(user, { includeGuardianEmail: true })
   };
 }
 
@@ -289,9 +350,11 @@ export async function registerBasic(input: {
   user_id?: string;
   email: string; password: string; full_name: string; phone: string;
   role: Role; country?: string; state?: string; city?: string; dob?: string; gender?: string;
+  guardian_email?: string;
 }) {
   const email = input.email.trim();
   const emailLower = email.toLowerCase();
+  const minor = isMinorAge(input.dob);
 
   // If resuming (user_id present), verify the record is still pending and belongs to this email/phone
   if (input.user_id) {
@@ -323,7 +386,10 @@ export async function registerBasic(input: {
           full_name_lower: input.full_name.toLowerCase(),
           role: input.role,
           country: input.country, state: input.state, city: input.city,
-          dob: input.dob, gender: input.gender
+          dob: input.dob, gender: input.gender,
+          is_minor: minor,
+          guardian_consent_status: minor ? "pending" : "not_applicable",
+          guardian_email: minor ? input.guardian_email : null
         }
       });
       return { user_id: input.user_id };
@@ -363,7 +429,10 @@ export async function registerBasic(input: {
       full_name_lower: input.full_name.toLowerCase(),
       role: input.role, status: "pending",
       country: input.country, state: input.state, city: input.city,
-      dob: input.dob, gender: input.gender
+      dob: input.dob, gender: input.gender,
+      is_minor: minor,
+      guardian_consent_status: minor ? "pending" : "not_applicable",
+      guardian_email: minor ? input.guardian_email : null
     }
   });
   return { user_id: user.id, resumed: false };
@@ -376,7 +445,7 @@ export async function registerProfile(input: {
 }) {
   const user = await prisma.user.findUnique({
     where: { id: input.user_id },
-    select: { id: true, status: true, email: true, full_name: true, role: true }
+    select: { id: true, status: true, email: true, full_name: true, role: true, is_minor: true, guardian_email: true }
   });
   if (!user) throw NotFound("Registration session not found. Please start again.");
   if (user.status !== "pending") throw Conflict("Account is already active.");
@@ -422,6 +491,9 @@ export async function registerProfile(input: {
   }
 
   await issueAndSendVerificationEmail(user.id, user.email, user.full_name);
+  if (user.is_minor && user.guardian_email) {
+    await issueAndSendGuardianConsentEmail(user.id, user.guardian_email, user.full_name);
+  }
   return { ok: true, email: user.email };
 }
 

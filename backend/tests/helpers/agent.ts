@@ -21,11 +21,12 @@ export async function signupAndLogin(opts: {
   const body = {
     email: opts.email,
     password,
-    full_name: opts.full_name ?? opts.email.split("@")[0],
+    full_name: opts.full_name ?? opts.email.split("@")[0].padEnd(2, "x"),
     phone: opts.phone ?? "+91" + Math.floor(Math.random() * 10_000_000_000).toString().padStart(10, "0"),
     role: opts.role ?? "athlete"
   };
-  await api().post("/api/v1/auth/signup").send(body).expect(201);
+  const basic = await api().post("/api/v1/auth/register/basic").send(body).expect(201);
+  await api().post("/api/v1/auth/register/profile").send({ user_id: basic.body.user_id }).expect(200);
 
   // Bypass email verification for tests — mark the account directly in the DB.
   await prisma.user.update({

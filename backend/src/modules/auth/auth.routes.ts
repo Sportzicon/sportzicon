@@ -16,7 +16,8 @@ import {
   changePasswordSchema,
   checkAvailabilitySchema,
   registerBasicSchema,
-  registerProfileSchema
+  registerProfileSchema,
+  guardianConsentConfirmSchema
 } from "./auth.schemas";
 
 const router = Router();
@@ -119,6 +120,16 @@ router.post(
 );
 
 router.post(
+  "/guardian-consent/confirm",
+  authLimiter,
+  validate(guardianConsentConfirmSchema),
+  asyncHandler(async (req, res) => {
+    const r = await svc.confirmGuardianConsent(req.body.token);
+    res.json(r);
+  })
+);
+
+router.post(
   "/resend-verification",
   authLimiter,
   validate(forgotPasswordSchema), // same shape (just email)
@@ -162,7 +173,7 @@ router.get(
   "/me",
   requireAuth,
   asyncHandler(async (req, res) => {
-    const user = await getUserById(req.user!.sub);
+    const user = await getUserById(req.user!.sub, { id: req.user!.sub, role: req.user!.role });
     res.json({ user });
   })
 );

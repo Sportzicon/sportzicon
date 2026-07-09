@@ -15,6 +15,7 @@ import { notFound } from "./middleware/notFound";
 import authRoutes from "./modules/auth/auth.routes";
 import usersRoutes from "./modules/users/users.routes";
 import followRoutes from "./modules/follow/follow.routes";
+import documentAccessRoutes from "./modules/documentAccess/documentAccess.routes";
 import organizationsRoutes from "./modules/organizations/organizations.routes";
 import tournamentsRoutes from "./modules/tournaments/tournaments.routes";
 import opportunitiesRoutes from "./modules/opportunities/opportunities.routes";
@@ -96,6 +97,7 @@ export function createApp(): Express {
   app.use("/api/v1/auth", authRoutes);
   app.use("/api/v1/users", usersRoutes);
   app.use("/api/v1/follow", followRoutes);
+  app.use("/api/v1/document-access", documentAccessRoutes);
   app.use("/api/v1/organizations", organizationsRoutes);
   app.use("/api/v1", tournamentsRoutes); // nested under /organizations/:orgId/org-tournaments and /org-tournaments/...
   app.use("/api/v1/opportunities", opportunitiesRoutes);

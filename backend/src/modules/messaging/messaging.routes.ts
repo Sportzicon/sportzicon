@@ -23,7 +23,7 @@ router.post(
   requireAuth,
   validate(z.object({ recipient_id: z.string().uuid() })),
   asyncHandler(async (req, res) => {
-    const result = await svc.createConversation(req.user!.sub, req.body.recipient_id);
+    const result = await svc.createConversation({ id: req.user!.sub, role: req.user!.role }, req.body.recipient_id);
     res.status(result.created ? 201 : 200).json(result);
   })
 );
@@ -37,7 +37,7 @@ router.post(
     body: z.string().min(1).max(5000).trim()
   })),
   asyncHandler(async (req, res) => {
-    const r = await svc.sendMessage(req.user!.sub, req.body.recipient_id, req.body.body);
+    const r = await svc.sendMessage({ id: req.user!.sub, role: req.user!.role }, req.body.recipient_id, req.body.body);
     res.status(201).json(r);
   })
 );

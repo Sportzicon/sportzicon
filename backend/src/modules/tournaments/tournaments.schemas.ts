@@ -3,6 +3,15 @@ import { VALID_SPORTS } from "../../utils/sportValidation";
 
 export const ORG_TOURNAMENT_STATUSES = ["upcoming", "ongoing", "completed"] as const;
 
+export const listOrgTournamentsQuerySchema = z
+  .object({
+    status: z.enum(ORG_TOURNAMENT_STATUSES).optional(),
+    sport: z.string().refine((s) => VALID_SPORTS.includes(s), { message: "Invalid sport" }).optional(),
+    cursor: z.string().uuid().optional(),
+    limit: z.coerce.number().int().min(1).max(50).default(20)
+  })
+  .strict();
+
 export const createOrgTournamentSchema = z
   .object({
     name: z.string().trim().min(2).max(200),

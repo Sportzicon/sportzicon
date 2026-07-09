@@ -4,26 +4,40 @@ import { omitSensitive } from "../../utils/user";
 import { validateAthleteSportProfile } from "./sportProfile";
 import { cacheGet, cacheSet, cacheDel } from "../../config/redis";
 import { fetchScorecardPreview } from "./scorecardLinkPreview";
+import type { Role } from "../../types/domain";
 
-export async function getUserById(id: string) {
+// The cached blob is always guardian-email-free (viewer-independent cache key),
+// so it can be safely shared across every viewer. guardian_email is fetched
+// separately, uncached, and spliced in only for the account owner or an admin.
+export async function getUserById(id: string, viewer: { id: string; role: Role }) {
   const key = `user:profile:${id}`;
   const cached = await cacheGet(key);
-  if (cached !== null) return JSON.parse(cached);
+  let result: Record<string, unknown>;
 
-  const user = await prisma.user.findUnique({
-    where: { id },
-    include: {
-      _count: { select: { followers: true, following: true } }
-    }
-  });
-  if (!user) throw NotFound("User not found");
-  const { _count, ...rest } = user;
-  const result = {
-    ...omitSensitive(rest),
-    follower_count: _count.followers,
-    following_count: _count.following
-  };
-  await cacheSet(key, JSON.stringify(result), 300);
+  if (cached !== null) {
+    result = JSON.parse(cached);
+  } else {
+    const user = await prisma.user.findUnique({
+      where: { id },
+      include: {
+        _count: { select: { followers: true, following: true } }
+      }
+    });
+    if (!user) throw NotFound("User not found");
+    const { _count, ...rest } = user;
+    result = {
+      ...omitSensitive(rest),
+      follower_count: _count.followers,
+      following_count: _count.following
+    };
+    await cacheSet(key, JSON.stringify(result), 300);
+  }
+
+  const canSeeGuardianEmail = viewer.id === id || viewer.role === "admin";
+  if (canSeeGuardianEmail) {
+    const g = await prisma.user.findUnique({ where: { id }, select: { guardian_email: true } });
+    if (g?.guardian_email) return { ...result, guardian_email: g.guardian_email };
+  }
   return result;
 }
 
@@ -55,7 +69,7 @@ export async function updateProfile(userId: string, patch: Record<string, unknow
 
   const updated = await prisma.user.update({ where: { id: userId }, data });
   await cacheDel(`user:profile:${userId}`);
-  return omitSensitive(updated);
+  return omitSensitive(updated, { includeGuardianEmail: true });
 }
 
 export async function updateAthleteFields(userId: string, fields: Record<string, unknown>) {
@@ -73,7 +87,7 @@ export async function updateAthleteFields(userId: string, fields: Record<string,
     data: { athlete_data: merged as object }
   });
   await cacheDel(`user:profile:${userId}`);
-  return omitSensitive(updated);
+  return omitSensitive(updated, { includeGuardianEmail: true });
 }
 
 export async function updateCoachFields(userId: string, fields: Record<string, unknown>) {
@@ -88,7 +102,7 @@ export async function updateCoachFields(userId: string, fields: Record<string, u
     data: { coach_data: { ...existing, ...fields } as object }
   });
   await cacheDel(`user:profile:${userId}`);
-  return omitSensitive(updated);
+  return omitSensitive(updated, { includeGuardianEmail: true });
 }
 
 export async function getScorecardLinkPreview(url: string) {

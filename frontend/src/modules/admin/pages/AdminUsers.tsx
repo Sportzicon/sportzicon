@@ -15,6 +15,8 @@ type UserItem = {
   status: string;
   is_suspended: boolean;
   suspension_reason?: string;
+  is_minor: boolean;
+  guardian_consent_status: string;
 };
 
 export default function AdminUsers() {
@@ -70,6 +72,12 @@ export default function AdminUsers() {
     onError: (e) => setActionErr(humanizeError(e))
   });
 
+  const approveGuardianConsent = useMutation({
+    mutationFn: async (id: string) => api.patch(`/admin/users/${id}/guardian-consent/approve`),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.adminUsers() }); setActionErr(null); },
+    onError: (e) => setActionErr(humanizeError(e))
+  });
+
   const changeRole = useMutation({
     mutationFn: async (vars: { id: string; role: string }) =>
       api.patch(`/admin/users/${vars.id}/role`, { role: vars.role }),
@@ -102,7 +110,7 @@ export default function AdminUsers() {
   }
 
   const users = q.data ?? [];
-  const isActing = setStatus.isPending || suspendUser.isPending || unsuspendUser.isPending || deleteUser.isPending || changeRole.isPending;
+  const isActing = setStatus.isPending || suspendUser.isPending || unsuspendUser.isPending || deleteUser.isPending || changeRole.isPending || approveGuardianConsent.isPending;
 
   return (
     <div className="space-y-4">
@@ -202,6 +210,13 @@ export default function AdminUsers() {
                       }`}>
                         {u.is_suspended ? "suspended" : u.status}
                       </span>
+                      {u.is_minor && (
+                        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                          u.guardian_consent_status === "approved" ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"
+                        }`}>
+                          minor · guardian {u.guardian_consent_status === "approved" ? "approved" : "pending"}
+                        </span>
+                      )}
                     </div>
                     {u.is_suspended && u.suspension_reason && (
                       <div className="text-xs text-red-600 mt-1">Reason: {u.suspension_reason}</div>
@@ -253,6 +268,11 @@ export default function AdminUsers() {
                   )}
                   {u.status === "suspended" && !u.is_suspended && (
                     <button onClick={() => setStatus.mutate({ id: u.id, status: "active" })} disabled={isActing} className="btn-primary btn-sm min-h-[44px]">Activate</button>
+                  )}
+                  {u.is_minor && u.guardian_consent_status === "pending" && (
+                    <button onClick={() => approveGuardianConsent.mutate(u.id)} disabled={isActing} className="btn-primary btn-sm flex items-center gap-1 min-h-[44px]">
+                      <ShieldCheck className="h-3.5 w-3.5" /> Approve guardian consent
+                    </button>
                   )}
                   {pendingDeleteId === u.id ? (
                     <>
@@ -325,6 +345,13 @@ export default function AdminUsers() {
                       }`}>
                         {u.is_suspended ? "suspended" : u.status}
                       </span>
+                      {u.is_minor && (
+                        <span className={`ml-1.5 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                          u.guardian_consent_status === "approved" ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"
+                        }`}>
+                          minor · guardian {u.guardian_consent_status === "approved" ? "approved" : "pending"}
+                        </span>
+                      )}
                       {u.is_suspended && u.suspension_reason && (
                         <div className="text-xs text-slate-400 mt-0.5 max-w-[160px] truncate" title={u.suspension_reason}>{u.suspension_reason}</div>
                       )}
@@ -352,6 +379,11 @@ export default function AdminUsers() {
                           )}
                           {u.status === "suspended" && !u.is_suspended && (
                             <button onClick={() => setStatus.mutate({ id: u.id, status: "active" })} disabled={isActing} className="btn-primary btn-sm min-h-[44px]">Activate</button>
+                          )}
+                          {u.is_minor && u.guardian_consent_status === "pending" && (
+                            <button onClick={() => approveGuardianConsent.mutate(u.id)} disabled={isActing} className="btn-primary btn-sm min-h-[44px] flex items-center gap-1" title="Approve guardian consent">
+                              <ShieldCheck className="h-3.5 w-3.5" /> Approve consent
+                            </button>
                           )}
                           <button onClick={() => setPendingDeleteId(u.id)} className="btn-danger btn-sm min-h-[44px]" title="Delete">
                             <Trash2 className="h-3.5 w-3.5" />

@@ -285,144 +285,142 @@ export default function LiveScores() {
   const totalCount = liveMatches.length + upcomingMatches.length + recentMatches.length;
 
   return (
-    <div className="py-6 px-3 sm:px-4">
-      <div className="max-w-xl mx-auto space-y-4">
+    <div className="max-w-2xl space-y-4">
 
-        {/* Page header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="kicker mb-1">Cricket</div>
-            <h1 className="font-disp text-4xl text-ink">Scores</h1>
-          </div>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => refetch()}
-              disabled={isFetching}
-              className="btn-secondary text-xs px-3 py-2 min-h-0 gap-1.5"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${isFetching ? "animate-spin" : ""}`} />
-              Refresh
-            </button>
-          </div>
+      {/* Page header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <div className="kicker mb-1">Cricket</div>
+          <h1 className="font-disp text-4xl text-ink">Scores</h1>
         </div>
-
-        {/* Filter tabs */}
-        <div className="flex gap-1 border-b border-hair">
-          {(["all", "live", "upcoming", "results"] as Filter[]).map(f => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className={`px-4 py-2.5 lab capitalize transition-colors border-b-2 -mb-px ${
-                filter === f
-                  ? "border-brand-500 text-brand-500"
-                  : "border-transparent text-ink-sub hover:text-ink"
-              }`}
-            >
-              {f === "all" ? "All" : f === "live" ? (
-                <span className="flex items-center gap-1.5">
-                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-                  Live {liveMatches.length > 0 && `(${liveMatches.length})`}
-                </span>
-              ) : f === "upcoming" ? (
-                <span className="flex items-center gap-1.5">
-                  <Calendar className="w-3 h-3" />
-                  Upcoming
-                </span>
-              ) : (
-                <span className="flex items-center gap-1.5">
-                  <CheckCircle className="w-3 h-3" />
-                  Results
-                </span>
-              )}
-            </button>
-          ))}
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => refetch()}
+            disabled={isFetching}
+            className="btn-secondary text-xs px-3 py-2 min-h-0 gap-1.5"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isFetching ? "animate-spin" : ""}`} />
+            Refresh
+          </button>
         </div>
-
-        {/* Skeleton */}
-        {isLoading && (
-          <div className="space-y-3">
-            {[1, 2, 3].map(i => <div key={i} className="skel h-40 rounded" />)}
-          </div>
-        )}
-
-        {/* No matches at all */}
-        {!isLoading && totalCount === 0 && (
-          <div className="card p-12 text-center">
-            <Activity className="w-10 h-10 text-ink-faint mx-auto mb-3" />
-            <p className="font-semibold text-ink">No matches found</p>
-            <p className="lab text-ink-faint mt-2">Matches will appear here automatically.</p>
-          </div>
-        )}
-
-        {/* ── LIVE ── */}
-        {!isLoading && showLive && liveMatches.length > 0 && (
-          <Section
-            title="Live"
-            icon={<Activity className="w-3.5 h-3.5 text-red-500 animate-pulse" />}
-            count={liveMatches.length}
-            defaultOpen
-          >
-            {liveMatches.map((m: any) => <LiveMatchCard key={m.id} match={m} />)}
-          </Section>
-        )}
-
-        {/* No live — empty state only when on live filter */}
-        {!isLoading && filter === "live" && liveMatches.length === 0 && (
-          <div className="card p-10 text-center">
-            <Activity className="w-8 h-8 text-ink-faint mx-auto mb-2" />
-            <p className="font-semibold text-ink">No matches live right now</p>
-            <p className="lab text-ink-faint mt-1">Scorecards appear automatically when a match goes live.</p>
-          </div>
-        )}
-
-        {/* ── UPCOMING ── */}
-        {!isLoading && showUpcoming && upcomingMatches.length > 0 && (
-          <Section
-            title="Upcoming"
-            icon={<Clock className="w-3.5 h-3.5 text-blue-500" />}
-            count={upcomingMatches.length}
-            defaultOpen
-          >
-            {upcomingMatches.map((m: any) => <UpcomingMatchCard key={m.id} match={m} />)}
-          </Section>
-        )}
-
-        {!isLoading && filter === "upcoming" && upcomingMatches.length === 0 && (
-          <div className="card p-10 text-center">
-            <Calendar className="w-8 h-8 text-ink-faint mx-auto mb-2" />
-            <p className="font-semibold text-ink">No upcoming matches scheduled</p>
-          </div>
-        )}
-
-        {/* ── RECENT RESULTS ── */}
-        {!isLoading && showResults && recentMatches.length > 0 && (
-          <Section
-            title="Recent Results"
-            icon={<CheckCircle className="w-3.5 h-3.5 text-ink-sub" />}
-            count={recentMatches.length}
-            defaultOpen
-          >
-            {recentMatches.map((m: any) => <ResultCard key={m.id} match={m} />)}
-            {hasNextPage && (
-              <button
-                onClick={() => fetchNextPage()}
-                disabled={isFetchingNextPage}
-                className="btn-secondary w-full min-h-[44px] text-sm"
-              >
-                {isFetchingNextPage ? "Loading…" : "Load more"}
-              </button>
-            )}
-          </Section>
-        )}
-
-        {!isLoading && filter === "results" && recentMatches.length === 0 && (
-          <div className="card p-10 text-center">
-            <CheckCircle className="w-8 h-8 text-ink-faint mx-auto mb-2" />
-            <p className="font-semibold text-ink">No completed matches yet</p>
-          </div>
-        )}
-
       </div>
+
+      {/* Filter tabs */}
+      <div className="flex gap-1 border-b border-hair">
+        {(["all", "live", "upcoming", "results"] as Filter[]).map(f => (
+          <button
+            key={f}
+            onClick={() => setFilter(f)}
+            className={`px-4 py-2.5 lab capitalize transition-colors border-b-2 -mb-px ${
+              filter === f
+                ? "border-brand-500 text-brand-500"
+                : "border-transparent text-ink-sub hover:text-ink"
+            }`}
+          >
+            {f === "all" ? "All" : f === "live" ? (
+              <span className="flex items-center gap-1.5">
+                <span className="inline-block w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                Live {liveMatches.length > 0 && `(${liveMatches.length})`}
+              </span>
+            ) : f === "upcoming" ? (
+              <span className="flex items-center gap-1.5">
+                <Calendar className="w-3 h-3" />
+                Upcoming
+              </span>
+            ) : (
+              <span className="flex items-center gap-1.5">
+                <CheckCircle className="w-3 h-3" />
+                Results
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {/* Skeleton */}
+      {isLoading && (
+        <div className="space-y-3">
+          {[1, 2, 3].map(i => <div key={i} className="skel h-40 rounded" />)}
+        </div>
+      )}
+
+      {/* No matches at all */}
+      {!isLoading && totalCount === 0 && (
+        <div className="card p-12 text-center">
+          <Activity className="w-10 h-10 text-ink-faint mx-auto mb-3" />
+          <p className="font-semibold text-ink">No matches found</p>
+          <p className="lab text-ink-faint mt-2">Matches will appear here automatically.</p>
+        </div>
+      )}
+
+      {/* ── LIVE ── */}
+      {!isLoading && showLive && liveMatches.length > 0 && (
+        <Section
+          title="Live"
+          icon={<Activity className="w-3.5 h-3.5 text-red-500 animate-pulse" />}
+          count={liveMatches.length}
+          defaultOpen
+        >
+          {liveMatches.map((m: any) => <LiveMatchCard key={m.id} match={m} />)}
+        </Section>
+      )}
+
+      {/* No live — empty state only when on live filter */}
+      {!isLoading && filter === "live" && liveMatches.length === 0 && (
+        <div className="card p-10 text-center">
+          <Activity className="w-8 h-8 text-ink-faint mx-auto mb-2" />
+          <p className="font-semibold text-ink">No matches live right now</p>
+          <p className="lab text-ink-faint mt-1">Scorecards appear automatically when a match goes live.</p>
+        </div>
+      )}
+
+      {/* ── UPCOMING ── */}
+      {!isLoading && showUpcoming && upcomingMatches.length > 0 && (
+        <Section
+          title="Upcoming"
+          icon={<Clock className="w-3.5 h-3.5 text-blue-500" />}
+          count={upcomingMatches.length}
+          defaultOpen
+        >
+          {upcomingMatches.map((m: any) => <UpcomingMatchCard key={m.id} match={m} />)}
+        </Section>
+      )}
+
+      {!isLoading && filter === "upcoming" && upcomingMatches.length === 0 && (
+        <div className="card p-10 text-center">
+          <Calendar className="w-8 h-8 text-ink-faint mx-auto mb-2" />
+          <p className="font-semibold text-ink">No upcoming matches scheduled</p>
+        </div>
+      )}
+
+      {/* ── RECENT RESULTS ── */}
+      {!isLoading && showResults && recentMatches.length > 0 && (
+        <Section
+          title="Recent Results"
+          icon={<CheckCircle className="w-3.5 h-3.5 text-ink-sub" />}
+          count={recentMatches.length}
+          defaultOpen
+        >
+          {recentMatches.map((m: any) => <ResultCard key={m.id} match={m} />)}
+          {hasNextPage && (
+            <button
+              onClick={() => fetchNextPage()}
+              disabled={isFetchingNextPage}
+              className="btn-secondary w-full min-h-[44px] text-sm"
+            >
+              {isFetchingNextPage ? "Loading…" : "Load more"}
+            </button>
+          )}
+        </Section>
+      )}
+
+      {!isLoading && filter === "results" && recentMatches.length === 0 && (
+        <div className="card p-10 text-center">
+          <CheckCircle className="w-8 h-8 text-ink-faint mx-auto mb-2" />
+          <p className="font-semibold text-ink">No completed matches yet</p>
+        </div>
+      )}
+
     </div>
   );
 }

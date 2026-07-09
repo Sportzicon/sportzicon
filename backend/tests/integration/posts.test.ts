@@ -66,7 +66,7 @@ describe("content: posts + reels + blogs", () => {
       .send({
         content_type: "blog",
         title: "Draft post",
-        body_markdown: "# Hello world this is enough characters for the validator.",
+        body_markdown: "# Hello world\n\nThis blog body is padded out to be well over one hundred characters so it satisfies the minimum length validator used by the content creation schema.",
         status: "draft"
       })
       .expect(201);

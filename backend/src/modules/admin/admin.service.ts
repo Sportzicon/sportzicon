@@ -4,6 +4,8 @@ import { omitSensitive } from "../../utils/user";
 import { hashPassword } from "../auth/tokens";
 import { validateAthleteSportProfile } from "../users/sportProfile";
 import { dateOnly } from "../opportunities/opportunities.service";
+import { eventBus } from "../../lib/EventBus";
+import { GUARDIAN_CONSENT_APPROVED, type GuardianConsentApprovedEvent } from "../../events/types";
 import type { AccountStatus, Role, ReportStatus } from "../../types/domain";
 
 export async function audit(input: {
@@ -55,7 +57,7 @@ export async function listUsers(filter: {
   const hasMore = items.length > filter.limit;
   const page = hasMore ? items.slice(0, filter.limit) : items;
   return {
-    items: page.map(omitSensitive),
+    items: page.map((u) => omitSensitive(u, { includeGuardianEmail: true })),
     next_cursor: hasMore ? page[page.length - 1].id : null
   };
 }
@@ -112,6 +114,28 @@ export async function unsuspendUser(actor: { id: string; role: Role }, userId: s
   });
 
   await audit({ actor, action: "user.unsuspended", target_type: "user", target_id: userId });
+  return { ok: true };
+}
+
+export async function approveGuardianConsent(actor: { id: string; role: Role }, userId: string) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true, is_minor: true, guardian_consent_status: true, full_name: true }
+  });
+  if (!user) throw NotFound("User not found");
+  if (!user.is_minor) throw BadRequest("This account is not flagged as a minor");
+  if (user.guardian_consent_status === "approved") throw Conflict("Guardian consent is already approved");
+
+  await prisma.$transaction([
+    prisma.user.update({
+      where: { id: userId },
+      data: { guardian_consent_status: "approved", guardian_consent_at: new Date() }
+    }),
+    prisma.guardianConsent.deleteMany({ where: { user_id: userId } })
+  ]);
+
+  await audit({ actor, action: "user.guardian_consent_approved", target_type: "user", target_id: userId });
+  eventBus.emit<GuardianConsentApprovedEvent>(GUARDIAN_CONSENT_APPROVED, { userId, userName: user.full_name });
   return { ok: true };
 }
 
@@ -253,7 +277,7 @@ export async function deleteUser(actor: { id: string; role: Role }, userId: stri
 export async function getUserDetail(userId: string) {
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) throw NotFound("User not found");
-  return omitSensitive(user);
+  return omitSensitive(user, { includeGuardianEmail: true });
 }
 
 export async function updateUserProfile(
@@ -288,7 +312,7 @@ export async function updateUserProfile(
 
   const updated = await prisma.user.update({ where: { id: userId }, data });
   await audit({ actor, action: "user.profile_edited", target_type: "user", target_id: userId, details: { fields: Object.keys(data) } });
-  return omitSensitive(updated);
+  return omitSensitive(updated, { includeGuardianEmail: true });
 }
 
 export async function updateUserRole(
@@ -301,7 +325,7 @@ export async function updateUserRole(
   if (userId === actor.id) throw BadRequest("Cannot change your own role");
   const updated = await prisma.user.update({ where: { id: userId }, data: { role: newRole as any } });
   await audit({ actor, action: "user.role_changed", target_type: "user", target_id: userId, details: { from: user.role, to: newRole } });
-  return omitSensitive(updated);
+  return omitSensitive(updated, { includeGuardianEmail: true });
 }
 
 export async function adminDeletePost(actor: { id: string; role: Role }, postId: string) {
@@ -518,7 +542,7 @@ export async function adminCreateUser(
     }
   });
   await audit({ actor, action: "user.created_by_admin", target_type: "user", target_id: user.id, details: { role: input.role } });
-  return omitSensitive(user);
+  return omitSensitive(user, { includeGuardianEmail: true });
 }
 
 export async function adminCreateOrganization(

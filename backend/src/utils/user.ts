@@ -18,6 +18,9 @@ export const safeUserSelect = {
   gender: true,
   verification_status: true,
   verification_badges: true,
+  is_minor: true,
+  guardian_consent_status: true,
+  guardian_consent_at: true,
   athlete_data: true,
   coach_data: true,
   created_at: true,
@@ -30,10 +33,11 @@ export const safeUserSelect = {
 //   - renames athlete_data → athlete, coach_data → coach
 //   - converts flat verification_status/badges → nested verification object
 //   - converts Date objects to epoch ms numbers
-export function omitSensitive(user: User) {
+//   - never leaks guardian_email unless the caller opts in (self or admin viewer)
+export function omitSensitive(user: User, opts: { includeGuardianEmail?: boolean } = {}) {
   const {
     password_hash: _password_hash, email_lower: _email_lower, full_name_lower: _full_name_lower,
-    athlete_data, coach_data,
+    athlete_data, coach_data, guardian_email,
     verification_status, verification_badges,
     created_at, updated_at, last_active_at,
     ...rest
@@ -41,6 +45,7 @@ export function omitSensitive(user: User) {
 
   return {
     ...rest,
+    ...(opts.includeGuardianEmail && guardian_email ? { guardian_email } : {}),
     athlete: athlete_data ?? undefined,
     coach: coach_data ?? undefined,
     verification: { status: verification_status, badges: verification_badges },

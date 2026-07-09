@@ -1,5 +1,14 @@
 export type Role = "athlete" | "club" | "scout" | "organizer" | "admin" | "scorer";
 
+export interface UserDocument {
+  id: string;
+  type: string;
+  file_name: string;
+  size_bytes: number;
+  created_at: string;
+  url: string;
+}
+
 export interface User {
   id: string;
   email: string;
@@ -18,6 +27,10 @@ export interface User {
   gender?: string;
   preferred_language?: string;
   verification: { status: string; badges: string[] };
+  is_minor?: boolean;
+  guardian_consent_status?: "not_applicable" | "pending" | "approved";
+  guardian_consent_at?: number;
+  guardian_email?: string;
   athlete?: Record<string, any>;
   coach?: Record<string, any>;
   follower_count: number;

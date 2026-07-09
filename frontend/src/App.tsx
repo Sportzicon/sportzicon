@@ -48,12 +48,14 @@ const Landing             = lazy(() => import("./modules/landing/pages/Landing")
 const Login               = lazy(() => import("./modules/auth/pages/Login"));
 const Signup              = lazy(() => import("./modules/auth/pages/Signup"));
 const VerifyEmail         = lazy(() => import("./modules/auth/pages/VerifyEmail"));
+const GuardianConsentConfirm = lazy(() => import("./modules/auth/pages/GuardianConsentConfirm"));
 const ForgotPassword      = lazy(() => import("./modules/auth/pages/ForgotPassword"));
 const ResetPassword       = lazy(() => import("./modules/auth/pages/ResetPassword"));
 
 const Dashboard           = lazy(() => import("./modules/dashboard/pages/Dashboard"));
 const Profile             = lazy(() => import("./modules/profile/pages/Profile"));
 const EditProfile         = lazy(() => import("./modules/profile/pages/EditProfile"));
+const DocumentAccessRequests = lazy(() => import("./modules/documentAccess/pages/DocumentAccessRequests"));
 const Search              = lazy(() => import("./modules/search/pages/Search"));
 const Opportunities       = lazy(() => import("./modules/opportunities/pages/Opportunities"));
 const OpportunityDetail   = lazy(() => import("./modules/opportunities/pages/OpportunityDetail"));
@@ -126,6 +128,7 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/verify-email" element={<VerifyEmail />} />
+        <Route path="/guardian-consent/:token" element={<GuardianConsentConfirm />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
       </Route>
@@ -136,6 +139,7 @@ export default function App() {
         <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
         <Route path="/profile/:id" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
         <Route path="/profile/edit" element={<ProtectedRoute><EditProfile /></ProtectedRoute>} />
+        <Route path="/profile/document-access" element={<ProtectedRoute roles={["athlete"]}><DocumentAccessRequests /></ProtectedRoute>} />
         <Route path="/search" element={<ProtectedRoute><Search /></ProtectedRoute>} />
         <Route path="/opportunities" element={<ProtectedRoute><Opportunities /></ProtectedRoute>} />
         <Route path="/opportunities/new" element={<ProtectedRoute roles={["club", "organizer", "admin"]}><NewOpportunity /></ProtectedRoute>} />

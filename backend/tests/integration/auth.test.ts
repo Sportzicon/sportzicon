@@ -7,7 +7,7 @@ describe("auth", () => {
   });
 
   test("signup rejects weak passwords", async () => {
-    const r = await api().post("/api/v1/auth/signup").send({
+    const r = await api().post("/api/v1/auth/register/basic").send({
       email: "weak@test.dev",
       password: "weak",
       full_name: "Weak Pwd",
@@ -18,7 +18,7 @@ describe("auth", () => {
   });
 
   test("signup rejects admin role from public registration", async () => {
-    const r = await api().post("/api/v1/auth/signup").send({
+    const r = await api().post("/api/v1/auth/register/basic").send({
       email: "naughty@test.dev",
       password: "StrongPass1!",
       full_name: "Naughty",
@@ -29,7 +29,7 @@ describe("auth", () => {
   });
 
   test("login fails before email verification", async () => {
-    await api().post("/api/v1/auth/signup").send({
+    await api().post("/api/v1/auth/register/basic").send({
       email: "unverified@test.dev",
       password: "StrongPass1!",
       full_name: "Unverified",
@@ -59,7 +59,7 @@ describe("auth", () => {
 
   test("duplicate email is rejected", async () => {
     await signupAndLogin({ email: "dup@test.dev" });
-    const r = await api().post("/api/v1/auth/signup").send({
+    const r = await api().post("/api/v1/auth/register/basic").send({
       email: "dup@test.dev",
       password: "StrongPass1!",
       full_name: "Dup",

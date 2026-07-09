@@ -85,7 +85,12 @@ export async function searchPlayers(q: {
   const limit = Math.min(q.limit, 50);
   const hasFTS = Boolean(q.q?.trim());
 
-  const conditions: Prisma.Sql[] = [Prisma.sql`u.role = 'athlete'`];
+  const conditions: Prisma.Sql[] = [
+    Prisma.sql`u.role = 'athlete'`,
+    // Tighter default visibility for minors: exclude accounts still awaiting
+    // guardian consent from recruiter-facing player search.
+    Prisma.sql`NOT (u.is_minor AND u.guardian_consent_status = 'pending')`
+  ];
 
   if (hasFTS) {
     conditions.push(

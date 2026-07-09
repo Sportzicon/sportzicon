@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { api, humanizeError } from "../../../api/client";
 import { COUNTRIES, COUNTRY_PHONE, statesForCountry } from "../../../data/geo";
 import { SPORTS, rolesForSport, sportRequiresPosition } from "../../../data/sportProfile";
+import { isMinorAge } from "../../../utils/age";
 import { Eye, EyeOff } from "lucide-react";
 
 const ROLES = [
@@ -25,7 +26,7 @@ type Draft = {
   role: string;
   user_id: string;
   full_name: string; email: string; phone: string; password: string;
-  country: string; state: string; city: string; dob: string;
+  country: string; state: string; city: string; dob: string; guardian_email: string;
   primary_sport: string; play_role: string; level: string; looking: boolean;
   org_name: string; org_type: string; org_sport: string;
 };
@@ -33,7 +34,7 @@ type Draft = {
 const DEFAULT: Draft = {
   step: 0, role: "athlete", user_id: "",
   full_name: "", email: "", phone: "", password: "",
-  country: "", state: "", city: "", dob: "",
+  country: "", state: "", city: "", dob: "", guardian_email: "",
   primary_sport: "Cricket", play_role: "", level: "", looking: true,
   org_name: "", org_type: "", org_sport: "Cricket"
 };
@@ -160,6 +161,7 @@ export default function Signup() {
   }, []);
 
   const isAthlete = d.role === "athlete";
+  const isMinor = isMinorAge(d.dob);
 
   const STEPS = isAthlete
     ? ["Role", "Account", "Sport profile", "Verify email"]
@@ -190,6 +192,9 @@ export default function Signup() {
     if (!d.full_name || !d.email || !d.phone || !d.password || !d.country || !d.state || !d.city) {
       setErr("Please fill all required fields."); return;
     }
+    if (isMinor && !d.guardian_email) {
+      setErr("Please enter a parent or guardian's email."); return;
+    }
     const phoneDigits = d.phone.replace(/\D/g, "");
     if (phoneDigits.length < 10) { setErr("Phone number must be at least 10 digits."); return; }
     const pwdErr = validatePassword(d.password);
@@ -204,7 +209,8 @@ export default function Signup() {
         email: d.email, password: d.password,
         full_name: d.full_name, phone: d.phone, role: d.role,
         country: d.country || undefined, state: d.state || undefined,
-        city: d.city || undefined, dob: d.dob || undefined
+        city: d.city || undefined, dob: d.dob || undefined,
+        guardian_email: isMinor ? d.guardian_email : undefined
       });
       if (res.data.resumed) {
         // Incomplete signup detected — don't overwrite saved data, let user choose to resume
@@ -420,6 +426,19 @@ export default function Signup() {
                       onChange={(e) => patch({ dob: e.target.value })} />
                   </Field>
                 )}
+                {isMinor && (
+                  <div className="sm:col-span-2">
+                    <div className="panel p-4 mb-4" style={{ borderStyle: "dashed", background: "#FEE9E0" }}>
+                      <p className="text-[12.5px] text-ink leading-relaxed">
+                        <strong>You're under 18.</strong> We need a parent or guardian's email. We'll send them a confirmation link — clubs, scouts, and organizers can't message you until they approve.
+                      </p>
+                    </div>
+                    <Field label="Guardian's email" req hint="They'll get a one-time confirmation link.">
+                      <input className="input" type="email" inputMode="email"
+                        value={d.guardian_email} onChange={(e) => patch({ guardian_email: e.target.value })} />
+                    </Field>
+                  </div>
+                )}
               </div>
               {resumedUserId && (
                 <div className="mt-4 rounded bg-amber-50 border border-amber-200 p-3 text-sm text-amber-900">
@@ -570,6 +589,11 @@ export default function Signup() {
                 <p className="text-sm text-ink-sub mt-2 leading-relaxed max-w-xs mx-auto">
                   Don't see it? Check your <strong className="text-ink">spam or junk folder</strong>.
                 </p>
+                {isMinor && d.guardian_email && (
+                  <p className="text-sm text-ink-sub mt-2 leading-relaxed max-w-xs mx-auto">
+                    We also emailed <strong className="text-ink">{d.guardian_email}</strong> — messaging from clubs, scouts, and organizers stays off until they confirm.
+                  </p>
+                )}
                 <div className="flex gap-3 justify-center mt-5">
                   <button className="btn-primary" onClick={() => navigate("/login")}>I've verified — sign in →</button>
                 </div>

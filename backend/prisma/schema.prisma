@@ -38,6 +38,14 @@ enum VerificationStatus {
   @@schema("public")
 }
 
+enum GuardianConsentStatus {
+  not_applicable
+  pending
+  approved
+
+  @@schema("public")
+}
+
 enum OpportunityType {
   trial
   recruitment
@@ -91,6 +99,11 @@ model User {
   verification_status VerificationStatus @default(unverified)
   verification_badges String[]           @default([])
 
+  is_minor                 Boolean               @default(false)
+  guardian_email            String?
+  guardian_consent_status   GuardianConsentStatus @default(not_applicable)
+  guardian_consent_at       DateTime?
+
   athlete_data Json?
   coach_data   Json?
 
@@ -118,6 +131,8 @@ model User {
   content_likes       ContentLike[]
   comment_likes       CommentLike[]
   documents           UserDocument[]
+  document_access_sent     DocumentAccessRequest[] @relation("DocAccessRequester")
+  document_access_received DocumentAccessRequest[] @relation("DocAccessAthlete")
   email_logs          EmailLog[]
   tournaments         AthleteTournament[]
   scoring_tournaments Tournament[]
@@ -125,6 +140,7 @@ model User {
   @@index([full_name_lower])
   @@index([status, created_at(sort: Desc)])
   @@index([role, status])
+  @@index([role, guardian_consent_status])
   @@schema("public")
 }
 
@@ -140,6 +156,37 @@ model UserDocument {
   user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   @@index([user_id])
+  @@schema("public")
+}
+
+enum DocAccessStatus {
+  pending
+  approved
+  rejected
+  revoked
+
+  @@schema("public")
+}
+
+// Grants a recruiter (club/scout/organizer) access to ALL of an athlete's
+// UserDocument rows — not per-document. One row per (requester, athlete)
+// pair; re-requesting after rejected/revoked reuses the row via the unique
+// constraint below rather than creating duplicates.
+model DocumentAccessRequest {
+  id           String          @id @default(uuid()) @db.Uuid
+  requester_id String          @db.Uuid
+  athlete_id   String          @db.Uuid
+  status       DocAccessStatus @default(pending)
+  reason       String?         @db.Text
+  requested_at DateTime        @default(now())
+  decided_at   DateTime?
+  decided_by   String?         @db.Uuid
+
+  requester User @relation("DocAccessRequester", fields: [requester_id], references: [id], onDelete: Cascade)
+  athlete   User @relation("DocAccessAthlete", fields: [athlete_id], references: [id], onDelete: Cascade)
+
+  @@unique([requester_id, athlete_id])
+  @@index([athlete_id, status])
   @@schema("public")
 }
 
@@ -367,6 +414,7 @@ model Content {
   tags          String[] @default([])
   like_count    Int      @default(0)
   comment_count Int      @default(0)
+  hidden        Boolean  @default(false)
   created_at    DateTime @default(now())
   updated_at    DateTime @updatedAt
 
@@ -397,7 +445,6 @@ model PostDetail {
 model BlogDetail {
   content_id      String    @id @db.Uuid
   title           String
-  slug            String    @unique
   cover_image_url String?
   excerpt         String    @db.Text
   body_markdown   String    @db.Text
@@ -407,7 +454,6 @@ model BlogDetail {
   content Content @relation(fields: [content_id], references: [id], onDelete: Cascade)
 
   @@index([status, published_at(sort: Desc)])
-  @@index([slug])
   @@schema("public")
 }
 
@@ -577,6 +623,7 @@ model Verification {
 enum EmailType {
   email_verification
   password_reset
+  guardian_consent
   notification
   other
 
@@ -616,6 +663,18 @@ model EmailVerification {
   token      String   @unique
   expires_at DateTime
   created_at DateTime @default(now())
+
+  @@index([user_id])
+  @@schema("public")
+}
+
+model GuardianConsent {
+  id             String   @id @default(uuid()) @db.Uuid
+  user_id        String   @db.Uuid
+  guardian_email String
+  token          String   @unique
+  expires_at     DateTime
+  created_at     DateTime @default(now())
 
   @@index([user_id])
   @@schema("public")

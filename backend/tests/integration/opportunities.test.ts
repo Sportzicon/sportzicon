@@ -9,7 +9,7 @@ async function setupClubAndOrg() {
     .send({
       org_name: "Test FC",
       org_type: "club",
-      sport_categories: ["Football"],
+      sport_categories: ["football"],
       country: "India",
       state: "KA",
       city: "Bengaluru"
@@ -40,7 +40,7 @@ describe("opportunities + applications", () => {
         org_id: org.id,
         title: "Trial Day",
         type: "trial",
-        sport: "Football",
+        sport: "football",
         description: "Open trial for striker positions.",
         age_min: 16,
         age_max: 25,
@@ -87,7 +87,7 @@ describe("opportunities + applications", () => {
       .patch(`/api/v1/applications/${appId}/status`)
       .set(club.auth)
       .send({ status: "shortlisted" });
-    expect(bad.status).toBe(400);
+    expect(bad.status).toBe(422);
 
     // Selected -> opportunity should become "filled" since vacancies=1
     await api()
@@ -106,7 +106,7 @@ describe("opportunities + applications", () => {
       org_id: "00000000-0000-0000-0000-000000000000",
       title: "Hax",
       type: "trial",
-      sport: "Football",
+      sport: "football",
       description: "Should fail",
       age_min: 18,
       age_max: 25,

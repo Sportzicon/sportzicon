@@ -1,4 +1,4 @@
-import type { OpportunityFilters, BlogFilters } from "../models";
+import type { OpportunityFilters, BlogFilters, OrgTournamentFilters } from "../models";
 
 /**
  * Single source of truth for all React Query cache keys.
@@ -50,6 +50,8 @@ export const queryKeys = {
   followStatus:    (id: string) => ["follow-status", id] as const,
   followers:       (id: string) => ["followers", id] as const,
   following:       (id: string) => ["following", id] as const,
+  docAccessForAthlete: (athleteId: string, status?: string) => ["doc-access", athleteId, status ?? "all"] as const,
+  docAccessMyStatus:   (athleteId: string) => ["doc-access", "my-status", athleteId] as const,
   emailLogs:       (id: string) => ["email-logs", id] as const,
   cricketStatsByUser: (id: string) => ["cricket-stats-by-user", id] as const,
 
@@ -69,9 +71,10 @@ export const queryKeys = {
   adminOrganizations: (filters?: Record<string, unknown>) => ["admin", "organizations", filters ?? {}] as const,
   adminApplications:  (filters?: Record<string, unknown>) => ["admin", "applications", filters ?? {}] as const,
 
-  // Tournaments
-  tournaments:    (filters?: Record<string, unknown>) => ["tournaments", filters ?? {}] as const,
-  tournament:     (id: string) => ["tournament", id] as const,
+  // Tournaments (OrgTournament — real events, distinct from Opportunity type=tournament)
+  orgTournamentsInfinite: (filters?: OrgTournamentFilters) => ["org-tournaments", "infinite", filters ?? {}] as const,
+  orgTournamentsForOrg:   (orgId: string) => ["org-tournaments", "org", orgId] as const,
+  orgTournament:          (id: string) => ["org-tournament", id] as const,
 
   // Org sub-resources
   orgOpportunities: (orgId: string) => ["org-opps", orgId] as const,

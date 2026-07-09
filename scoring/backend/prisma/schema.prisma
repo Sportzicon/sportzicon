@@ -38,6 +38,14 @@ enum VerificationStatus {
   @@schema("public")
 }
 
+enum GuardianConsentStatus {
+  not_applicable
+  pending
+  approved
+
+  @@schema("public")
+}
+
 enum OpportunityType {
   trial
   recruitment
@@ -91,6 +99,11 @@ model User {
   verification_status VerificationStatus @default(unverified)
   verification_badges String[]           @default([])
 
+  is_minor                 Boolean               @default(false)
+  guardian_email            String?
+  guardian_consent_status   GuardianConsentStatus @default(not_applicable)
+  guardian_consent_at       DateTime?
+
   athlete_data Json?
   coach_data   Json?
 
@@ -125,6 +138,7 @@ model User {
   @@index([full_name_lower])
   @@index([status, created_at(sort: Desc)])
   @@index([role, status])
+  @@index([role, guardian_consent_status])
   @@schema("public")
 }
 
@@ -367,6 +381,7 @@ model Content {
   tags          String[] @default([])
   like_count    Int      @default(0)
   comment_count Int      @default(0)
+  hidden        Boolean  @default(false)
   created_at    DateTime @default(now())
   updated_at    DateTime @updatedAt
 
@@ -397,7 +412,6 @@ model PostDetail {
 model BlogDetail {
   content_id      String    @id @db.Uuid
   title           String
-  slug            String    @unique
   cover_image_url String?
   excerpt         String    @db.Text
   body_markdown   String    @db.Text
@@ -407,7 +421,6 @@ model BlogDetail {
   content Content @relation(fields: [content_id], references: [id], onDelete: Cascade)
 
   @@index([status, published_at(sort: Desc)])
-  @@index([slug])
   @@schema("public")
 }
 
@@ -577,6 +590,7 @@ model Verification {
 enum EmailType {
   email_verification
   password_reset
+  guardian_consent
   notification
   other
 
@@ -616,6 +630,18 @@ model EmailVerification {
   token      String   @unique
   expires_at DateTime
   created_at DateTime @default(now())
+
+  @@index([user_id])
+  @@schema("public")
+}
+
+model GuardianConsent {
+  id             String   @id @default(uuid()) @db.Uuid
+  user_id        String   @db.Uuid
+  guardian_email String
+  token          String   @unique
+  expires_at     DateTime
+  created_at     DateTime @default(now())
 
   @@index([user_id])
   @@schema("public")

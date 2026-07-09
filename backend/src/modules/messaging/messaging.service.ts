@@ -3,6 +3,8 @@ import { BadRequest, Forbidden, NotFound } from "../../utils/errors";
 import { eventBus } from "../../lib/EventBus";
 import { MESSAGE_SENT, type MessageSentEvent } from "../../events/types";
 import { emitNewMessage } from "../../lib/socket";
+import { ROLES } from "../../utils/roles";
+import type { Role } from "../../types/domain";
 
 async function assertParticipant(userId: string, conversationId: string) {
   const conv = await prisma.conversation.findUnique({
@@ -14,40 +16,57 @@ async function assertParticipant(userId: string, conversationId: string) {
   return conv;
 }
 
-export async function createConversation(userAId: string, userBId: string) {
-  if (userAId === userBId) throw BadRequest("Cannot message yourself");
+// Shared contact gate for both createConversation and sendMessage. Blocks
+// club/scout/organizer senders from reaching a pending-consent minor;
+// admin always bypasses (Master Rule 1). Athlete-to-athlete is untouched.
+async function assertCanContact(actor: { id: string; role: Role }, recipientId: string) {
+  const recipient = await prisma.user.findUnique({
+    where: { id: recipientId },
+    select: { id: true, status: true, is_minor: true, guardian_consent_status: true }
+  });
+  if (!recipient) throw NotFound("Recipient not found");
+  if (recipient.status === "suspended") throw Forbidden("Recipient cannot receive messages");
 
-  const [userA, userB] = await Promise.all([
-    prisma.user.findUnique({ where: { id: userAId }, select: { id: true, full_name: true } }),
-    prisma.user.findUnique({ where: { id: userBId }, select: { id: true, status: true } })
+  const isRestrictedAdultRole =
+    (ROLES.RECRUITERS as readonly string[]).includes(actor.role) && actor.role !== "admin";
+  if (isRestrictedAdultRole && recipient.is_minor && recipient.guardian_consent_status !== "approved") {
+    throw Forbidden("This athlete is under 18. Messaging opens once their guardian approves contact.");
+  }
+
+  return recipient;
+}
+
+export async function createConversation(actor: { id: string; role: Role }, recipientId: string) {
+  if (actor.id === recipientId) throw BadRequest("Cannot message yourself");
+
+  const [sender] = await Promise.all([
+    prisma.user.findUnique({ where: { id: actor.id }, select: { id: true } }),
+    assertCanContact(actor, recipientId)
   ]);
-  if (!userA) throw NotFound("User not found");
-  if (!userB) throw NotFound("Recipient not found");
-  if (userB.status === "suspended") throw Forbidden("Recipient cannot receive messages");
+  if (!sender) throw NotFound("User not found");
 
   const existing = await prisma.conversation.findFirst({
-    where: { participant_ids: { hasEvery: [userAId, userBId] } },
+    where: { participant_ids: { hasEvery: [actor.id, recipientId] } },
     select: { id: true }
   });
   if (existing) return { id: existing.id, created: false };
 
   const conv = await prisma.conversation.create({
-    data: { participant_ids: [userAId, userBId] },
+    data: { participant_ids: [actor.id, recipientId] },
     select: { id: true }
   });
   return { id: conv.id, created: true };
 }
 
-export async function sendMessage(senderId: string, recipientId: string, body: string) {
-  if (senderId === recipientId) throw BadRequest("Cannot message yourself");
+export async function sendMessage(actor: { id: string; role: Role }, recipientId: string, body: string) {
+  if (actor.id === recipientId) throw BadRequest("Cannot message yourself");
+  const senderId = actor.id;
 
-  const [sender, recipient] = await Promise.all([
+  const [sender] = await Promise.all([
     prisma.user.findUnique({ where: { id: senderId }, select: { id: true, full_name: true } }),
-    prisma.user.findUnique({ where: { id: recipientId }, select: { id: true, status: true } })
+    assertCanContact(actor, recipientId)
   ]);
-  if (!sender)    throw NotFound("Sender not found");
-  if (!recipient) throw NotFound("Recipient not found");
-  if (recipient.status === "suspended") throw Forbidden("Recipient cannot receive messages");
+  if (!sender) throw NotFound("Sender not found");
 
   let conversation = await prisma.conversation.findFirst({
     where: { participant_ids: { hasEvery: [senderId, recipientId] } },

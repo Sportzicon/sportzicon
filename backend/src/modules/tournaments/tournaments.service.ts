@@ -45,6 +45,23 @@ export async function listOrgTournaments(orgId: string) {
   });
 }
 
+// Cross-org feed for the Tournaments tab's Live/Upcoming groupings —
+// unlike listOrgTournaments above, this isn't scoped to a single org.
+export async function listAllOrgTournaments(params: { status?: string; sport?: string; cursor?: string; limit: number }) {
+  const { status, sport, cursor, limit } = params;
+  const items = await prisma.orgTournament.findMany({
+    where: { ...(status && { status }), ...(sport && { sport }) },
+    orderBy: { created_at: "desc" },
+    take: limit + 1,
+    ...(cursor && { cursor: { id: cursor }, skip: 1 }),
+    include: { organization: { select: { org_name: true, owner_user_id: true } } }
+  });
+
+  const hasMore = items.length > limit;
+  const data = hasMore ? items.slice(0, limit) : items;
+  return { data, nextCursor: hasMore ? data[data.length - 1].id : null };
+}
+
 export async function getOrgTournament(tournamentId: string) {
   const tournament = await prisma.orgTournament.findUnique({
     where: { id: tournamentId },

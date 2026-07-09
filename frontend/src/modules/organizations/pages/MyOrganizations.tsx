@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../../api/client";
 import { useAuthStore } from "../../../store/auth";
 import { PageHeader, Spinner, EmptyState, Kicker } from "../../../components/UI";
-import { Trash2, Pencil, MoreVertical, Plus, Briefcase } from "lucide-react";
+import { Trash2, Pencil, MoreVertical, Plus, Briefcase, Trophy } from "lucide-react";
 import { useState, useEffect } from "react";
 import { queryKeys } from "../../../hooks/queryKeys";
 
@@ -145,6 +145,12 @@ export default function MyOrganizations() {
                     className="flex items-center gap-1.5 font-mononum text-[10px] uppercase tracking-[0.08em] text-brand-500 hover:underline min-h-[44px]"
                   >
                     <Briefcase className="h-3.5 w-3.5" /> Post opportunity
+                  </Link>
+                  <Link
+                    to={`/tournaments/new?org_id=${o.id}`}
+                    className="flex items-center gap-1.5 font-mononum text-[10px] uppercase tracking-[0.08em] text-brand-500 hover:underline min-h-[44px]"
+                  >
+                    <Trophy className="h-3.5 w-3.5" /> New tournament
                   </Link>
                   <Link
                     to={`/organizations/${o.id}`}

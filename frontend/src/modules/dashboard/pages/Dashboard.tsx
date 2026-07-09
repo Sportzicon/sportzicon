@@ -182,12 +182,12 @@ function AthleteDashboard() {
         </div>
       </div>
 
-      {/* Find trials CTA */}
+      {/* Find opportunities CTA */}
       <Link
         to="/opportunities"
         className="btn-primary block w-full text-center min-h-[44px] flex items-center justify-center text-sm"
       >
-        Find Trials →
+        Find Opportunities →
       </Link>
 
       <div className="grid gap-5 lg:grid-cols-[1fr_280px]">

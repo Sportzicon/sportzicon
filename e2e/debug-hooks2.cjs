@@ -1,0 +1,15 @@
+const { chromium } = require("playwright");
+(async () => {
+  const browser = await chromium.launch();
+  const page = await browser.newPage({ viewport: { width: 375, height: 667 } });
+  page.on("console", (m) => console.log("CONSOLE", m.type(), m.text()));
+  page.on("pageerror", (e) => console.log("PAGEERROR", e.message));
+  await page.goto("http://localhost:5173/login");
+  await page.fill('input[type="email"]', "scout@demo.sportivox");
+  await page.fill('input[type="password"]', "Demo1234!");
+  await page.click("button.btn-primary");
+  await page.waitForURL((u) => !u.pathname.includes("/login"), { timeout: 15000 });
+  await page.goto("http://localhost:5173/profile/b5151ce9-909e-446b-95fc-3a0596eb18f8");
+  await page.waitForTimeout(3000);
+  await browser.close();
+})();

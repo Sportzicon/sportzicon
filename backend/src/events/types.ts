@@ -72,3 +72,34 @@ export interface MessageSentEvent {
   conversationId: string;
   bodyPreview: string;
 }
+
+// ── Guardian consent events ──────────────────────────────────────────────────
+
+export const GUARDIAN_CONSENT_APPROVED = "guardianConsent.approved";
+
+export interface GuardianConsentApprovedEvent {
+  userId: string;
+  userName: string;
+}
+
+// ── Document access request events ──────────────────────────────────────────
+
+export const DOC_ACCESS_REQUESTED = "documentAccess.requested";
+
+export interface DocumentAccessRequestedEvent {
+  requestId: string;
+  requesterId: string;
+  requesterName: string;
+  requesterRole: string;
+  athleteId: string;
+}
+
+export const DOC_ACCESS_DECIDED = "documentAccess.decided";
+
+export interface DocumentAccessDecidedEvent {
+  requestId: string;
+  requesterId: string;
+  athleteId: string;
+  status: "approved" | "rejected" | "revoked";
+  actorId: string;
+}

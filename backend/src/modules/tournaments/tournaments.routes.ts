@@ -5,12 +5,29 @@ import { requireAuth, requireRole } from "../../middleware/auth";
 import { validate } from "../../middleware/validate";
 import { ROLES } from "../../utils/roles";
 import * as svc from "./tournaments.service";
-import { createOrgTournamentSchema, updateOrgTournamentSchema, createOrgTeamSchema } from "./tournaments.schemas";
+import {
+  createOrgTournamentSchema,
+  updateOrgTournamentSchema,
+  createOrgTeamSchema,
+  listOrgTournamentsQuerySchema
+} from "./tournaments.schemas";
 
 const router = Router();
 const idParams = z.object({ id: z.string().min(8) });
 const orgIdParams = z.object({ orgId: z.string().min(8) });
 const teamParams = z.object({ id: z.string().min(8), teamId: z.string().min(8) });
+
+// Global cross-org feed — must be registered before "/org-tournaments/:id"
+// so Express doesn't try to match "org-tournaments" itself as an :id.
+router.get(
+  "/org-tournaments",
+  requireAuth,
+  validate(listOrgTournamentsQuerySchema, "query"),
+  asyncHandler(async (req, res) => {
+    const r = await svc.listAllOrgTournaments(req.query as any);
+    res.json(r);
+  })
+);
 
 // Nested under the parent organization — matches Opportunity/Organization's own nesting style.
 router.post(
