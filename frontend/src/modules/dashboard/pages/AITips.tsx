@@ -1,6 +1,7 @@
 import { useMutation } from "@tanstack/react-query";
 import { api, getApiError } from "../../../api/client";
 import { PageHeader, Spinner, Kicker } from "../../../components/UI";
+import { BackButton } from "../../../components/BackButton";
 
 export default function AITips() {
   const m = useMutation({
@@ -9,6 +10,7 @@ export default function AITips() {
 
   return (
     <div className="max-w-2xl space-y-5">
+      <BackButton to="/dashboard" label="Dashboard" />
       <PageHeader
         title="AI Performance Tips"
         subtitle="◆ AI coaching"

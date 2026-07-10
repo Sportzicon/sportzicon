@@ -52,7 +52,14 @@ export async function rotateRefreshToken(token: string): Promise<{ userId: strin
   if (claims.type !== "refresh") throw new Error("Session expired, please log in again");
 
   const record = await prisma.refreshToken.findUnique({ where: { token } });
-  if (!record || record.revoked) throw new Error("Session expired, please log in again");
+  if (!record) throw new Error("Session expired, please log in again");
+  if (record.revoked) {
+    // Already rotated — likely a concurrent request (multiple tabs, or
+    // several 401s firing at once) replaying the same now-stale token.
+    // Converge on the winning request's new token instead of forcing a logout.
+    if (record.replaced_by_token) return { userId: claims.sub, newToken: record.replaced_by_token };
+    throw new Error("Session expired, please log in again");
+  }
 
   // Generate new token synchronously before the transaction
   const jti = crypto.randomUUID();
@@ -63,12 +70,24 @@ export async function rotateRefreshToken(token: string): Promise<{ userId: strin
   );
   const expiresAt = new Date(Date.now() + parseTtlMs(env.JWT_REFRESH_TTL));
 
-  await prisma.$transaction([
-    prisma.refreshToken.delete({ where: { token } }),
-    prisma.refreshToken.create({
-      data: { token: newJwt, user_id: claims.sub, expires_at: expiresAt }
-    })
-  ]);
+  // Atomic compare-and-swap: only the first of any concurrent callers can
+  // flip revoked false -> true, so at most one wins the race.
+  const { count } = await prisma.refreshToken.updateMany({
+    where: { token, revoked: false },
+    data: { revoked: true, replaced_by_token: newJwt }
+  });
+
+  if (count === 0) {
+    // Lost the race between our findUnique and this update — someone else
+    // rotated it first. Fetch their replacement and reuse it.
+    const latest = await prisma.refreshToken.findUnique({ where: { token } });
+    if (latest?.replaced_by_token) return { userId: claims.sub, newToken: latest.replaced_by_token };
+    throw new Error("Session expired, please log in again");
+  }
+
+  await prisma.refreshToken.create({
+    data: { token: newJwt, user_id: claims.sub, expires_at: expiresAt }
+  });
 
   return { userId: claims.sub, newToken: newJwt };
 }

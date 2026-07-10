@@ -4,6 +4,7 @@ import { api } from "../../../api/client";
 import { humanizeError } from "../../../api/client";
 import { queryKeys } from "../../../hooks/queryKeys";
 import { PageHeader, Spinner, Badge, Pagination } from "../../../components/UI";
+import { BackButton } from "../../../components/BackButton";
 import { ChevronDown, ChevronRight } from "lucide-react";
 
 const PAGE_SIZE = 20;
@@ -62,6 +63,7 @@ export default function AdminApplications() {
 
   return (
     <div className="space-y-4">
+      <BackButton to="/admin" label="Admin" className="mb-1" />
       <PageHeader title="Applications" subtitle="Admin view of all applications — override status when needed" />
 
       <div className="card card-body flex flex-wrap gap-3">

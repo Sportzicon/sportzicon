@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { api, humanizeError } from "../../../api/client";
 import { PageHeader, Spinner, Badge } from "../../../components/UI";
+import { BackButton } from "../../../components/BackButton";
 import { queryKeys } from "../../../hooks/queryKeys";
 import { ALL_ROLES } from "../../../utils/roles";
 import { Trash2, Pencil, Plus, Search, Ban, UserCheck, ShieldCheck } from "lucide-react";
@@ -114,6 +115,7 @@ export default function AdminUsers() {
 
   return (
     <div className="space-y-4">
+      <BackButton to="/admin" label="Admin" className="mb-1" />
       <PageHeader title="Users" subtitle="Manage accounts, roles and moderation" />
 
       {actionErr && (

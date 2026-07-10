@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, humanizeError } from "../../../api/client";
 import { PageHeader, Spinner } from "../../../components/UI";
+import { BackButton } from "../../../components/BackButton";
 import { queryKeys } from "../../../hooks/queryKeys";
 import { CheckCircle, XCircle, AlertOctagon } from "lucide-react";
 
@@ -50,6 +51,7 @@ export default function AdminReports() {
 
   return (
     <div className="space-y-4">
+      <BackButton to="/admin" label="Admin" className="mb-1" />
       <PageHeader title="Reports" subtitle="Abuse and dispute reports" />
 
       {actionErr && (

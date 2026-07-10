@@ -90,6 +90,11 @@ export function PostComposer({
   const editor = useEditor({
     extensions: [StarterKit, Link, Underline],
     content: initialContentJson ?? EMPTY_DOC,
+    editorProps: {
+      attributes: {
+        class: "prose prose-sm max-w-none px-3 py-2.5 min-h-[200px] focus:outline-none",
+      },
+    },
   });
 
   function addFiles(files: FileList | null, kind: "image" | "video") {
@@ -243,7 +248,7 @@ export function PostComposer({
             <Redo2 className="h-4 w-4" />
           </ToolbarButton>
         </div>
-        <EditorContent editor={editor} className="prose prose-sm max-w-none px-3 py-2.5 min-h-[200px]" />
+        <EditorContent editor={editor} className="cursor-text" onClick={() => editor.chain().focus().run()} />
       </div>
 
       {slots.length > 0 && (

@@ -4,6 +4,7 @@ import { humanizeError } from "../../../api/client";
 import { useAuthStore } from "../../../store/auth";
 import { isAdmin } from "../../../utils/roles";
 import { PageHeader, Spinner, SectionHead } from "../../../components/UI";
+import { BackButton } from "../../../components/BackButton";
 import { SPORTS_LIST } from "../../../data/sportPositions";
 import { useOrgTournamentForm, useOrgTournament } from "../hooks/useOrgTournaments";
 import { Trash2 } from "lucide-react";
@@ -92,6 +93,7 @@ export default function NewTournament() {
 
   return (
     <form onSubmit={submit} noValidate className="space-y-6 max-w-2xl">
+      <BackButton to="/tournaments" label="Tournaments" />
       <PageHeader
         title={isEdit ? "Edit tournament" : "New tournament"}
         subtitle="Live and upcoming events"

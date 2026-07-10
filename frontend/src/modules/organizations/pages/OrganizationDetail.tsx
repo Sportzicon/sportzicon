@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "../../../api/client";
 import { useAuthStore } from "../../../store/auth";
 import { Spinner, VerifiedBadge, SectionHead, Kicker, StatusPill, EmptyState } from "../../../components/UI";
+import { BackButton } from "../../../components/BackButton";
 import { Globe, Mail, Phone, MapPin, Calendar, Pencil, Briefcase, ChevronDown, ChevronUp } from "lucide-react";
 import { queryKeys } from "../../../hooks/queryKeys";
 
@@ -50,6 +51,7 @@ export default function OrganizationDetail() {
 
   return (
     <div className="space-y-4 max-w-4xl">
+      <BackButton label="Organizations" />
       {/* Cover + header */}
       <div className="card overflow-hidden">
         <div className="relative h-36 bg-ink">

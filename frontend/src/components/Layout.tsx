@@ -225,7 +225,7 @@ function getMobileNavItems(user: { id: string; role: string }) {
 
   if (user.role === "admin") {
     return [
-      { to: "/admin",         icon: <Home className="h-5 w-5" />,          label: "Home" },
+      ...base,
       { to: "/admin/users",   icon: <Users className="h-5 w-5" />,         label: "Users" },
       { to: "/admin/reports", icon: <Flag className="h-5 w-5" />,          label: "Reports" },
       { to: "/messages",      icon: <MessageCircle className="h-5 w-5" />, label: "Messages" },
@@ -289,10 +289,8 @@ export function Layout() {
 
   const pendingVerifCount = useQuery({
     queryKey: queryKeys.adminAnalytics(),
-    queryFn: async () => {
-      const r = await api.get("/admin/analytics");
-      return (r.data.pending_verifications as number) ?? 0;
-    },
+    queryFn: async () => (await api.get("/admin/analytics")).data,
+    select: (data) => (data.pending_verifications as number) ?? 0,
     enabled: isAdmin(user?.role ?? ""),
     staleTime: 60_000,
     refetchInterval: 120_000

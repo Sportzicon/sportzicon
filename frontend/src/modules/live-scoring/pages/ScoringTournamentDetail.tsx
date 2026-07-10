@@ -9,7 +9,7 @@ import { hasRole } from "../../../utils/roles";
 import {
   Trophy, Users, Calendar, MapPin, Radio, Edit2, ChevronRight,
   Plus, ChevronDown, ChevronUp, Trash2, User, Search, X,
-  Play, CheckCircle, Clock, XCircle, AlertTriangle, Link2, ExternalLink, FileText
+  Play, CheckCircle, Clock, XCircle, AlertTriangle, Link2, ExternalLink, FileText, ArrowLeft
 } from "lucide-react";
 
 const ov = (b: number) => `${Math.floor(b / 6)}.${b % 6}`;
@@ -975,6 +975,13 @@ function ScoringTournamentDetailInner() {
 
   return (
     <div className="space-y-5 max-w-4xl">
+
+      <Link
+        to="/scoring/tournaments"
+        className="inline-flex items-center gap-1.5 lab text-ink-sub hover:text-ink transition-colors text-sm"
+      >
+        <ArrowLeft className="w-4 h-4" /> Back to tournaments
+      </Link>
 
       {/* Header card */}
       <div className="card overflow-hidden">

@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, getApiError, humanizeError } from "../../../api/client";
 import { PageHeader, Spinner, SectionHead } from "../../../components/UI";
+import { BackButton } from "../../../components/BackButton";
 import { COUNTRIES, statesForCountry } from "../../../data/geo";
 import { SPORTS_LIST } from "../../../data/sportPositions";
 import { Camera, Upload, X, FileText } from "lucide-react";
@@ -240,6 +241,7 @@ export default function NewOrganization() {
 
   return (
     <form onSubmit={submit} noValidate className="space-y-4 max-w-3xl pb-24 sm:pb-6">
+      <BackButton to={isEdit ? `/organizations/${id}` : "/my-organizations"} label="Organizations" />
       <PageHeader
         title={isEdit ? "Edit organization" : "Create an organization"}
         subtitle={isEdit ? `Editing ${orgQ.data?.org_name ?? "…"}` : "Build your presence"}

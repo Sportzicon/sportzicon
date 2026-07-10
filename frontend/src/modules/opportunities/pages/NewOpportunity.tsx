@@ -5,6 +5,7 @@ import { opportunityService, organizationService } from "../../../services";
 import { humanizeError } from "../../../api/client";
 import { useAuthStore } from "../../../store/auth";
 import { PageHeader, Spinner, SectionHead } from "../../../components/UI";
+import { BackButton } from "../../../components/BackButton";
 import { queryKeys } from "../../../hooks/queryKeys";
 import { SPORTS_LIST } from "../../../data/sportPositions";
 import type { CreateOpportunityRequest } from "../../../models";
@@ -151,6 +152,7 @@ export default function NewOpportunity() {
 
   return (
     <form onSubmit={submit} noValidate className="space-y-6 max-w-3xl pb-28 lg:pb-0">
+      <BackButton to={isEdit ? `/opportunities/${id}` : "/opportunities"} label="Opportunities" />
       <div className="hidden lg:block">
         <PageHeader
           title={isEdit ? "Edit opportunity" : "Post an opportunity"}

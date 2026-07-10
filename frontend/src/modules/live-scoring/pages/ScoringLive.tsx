@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { scoringApi } from "../../../api/scoringClient";
 import { queryKeys } from "../../../hooks/queryKeys";
 import { useAuthStore } from "../../../store/auth";
-import { CheckCircle, AlertCircle, Undo2, BarChart3, Radio, ArrowLeftRight, Trophy, Plus, X, HeartPulse, RotateCcw } from "lucide-react";
+import { CheckCircle, AlertCircle, Undo2, BarChart3, Radio, ArrowLeftRight, Trophy, Plus, X, HeartPulse, RotateCcw, ArrowLeft } from "lucide-react";
 import {
   SHOT_TYPES, BALL_LINES, BALL_LENGTHS, BOWLER_TYPE_SHORT,
   FIELDING_POSITIONS, DISMISSAL_ZONES, BALL_TRAJECTORIES, WICKET_TYPES,
@@ -452,6 +452,10 @@ function ScoringLiveInner() {
 
       {/* ── SCORE STRIP ────────────────────────────────────────────────────── */}
       <div className="bg-ink text-paper shrink-0 flex items-center gap-3 px-4 py-2 border-b border-paper/10">
+        <Link to={`/scoring/matches/${matchId}`}
+          className="p-2 -ml-2 rounded hover:bg-paper/10 text-paper/50 hover:text-paper transition shrink-0" title="Back to match">
+          <ArrowLeft className="w-4 h-4" />
+        </Link>
         {/* Score block */}
         <div className="flex-1 min-w-0">
           <p className="lab text-paper/40 text-[10px] truncate">

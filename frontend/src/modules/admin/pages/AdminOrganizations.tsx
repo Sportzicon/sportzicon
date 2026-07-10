@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { api, humanizeError } from "../../../api/client";
 import { queryKeys } from "../../../hooks/queryKeys";
 import { PageHeader, Spinner, Badge, Pagination } from "../../../components/UI";
+import { BackButton } from "../../../components/BackButton";
 import { Pencil, Plus } from "lucide-react";
 
 const PAGE_SIZE = 15;
@@ -96,6 +97,7 @@ export default function AdminOrganizations() {
 
   return (
     <div className="space-y-4">
+      <BackButton to="/admin" label="Admin" className="mb-1" />
       <PageHeader title="Organizations" subtitle="View and edit all organizations" />
 
       <div className="card card-body flex flex-wrap gap-3 items-center">

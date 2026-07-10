@@ -693,12 +693,16 @@ model PasswordReset {
 }
 
 model RefreshToken {
-  id         String   @id @default(uuid()) @db.Uuid
-  user_id    String   @db.Uuid
-  token      String   @unique
-  expires_at DateTime
-  revoked    Boolean  @default(false)
-  created_at DateTime @default(now())
+  id                String   @id @default(uuid()) @db.Uuid
+  user_id           String   @db.Uuid
+  token             String   @unique
+  expires_at        DateTime
+  revoked           Boolean  @default(false)
+  // Set when this token is rotated out, pointing at the token that replaced
+  // it. Lets a concurrent duplicate rotation of the same (now-revoked) token
+  // converge on the winner's new token instead of failing the whole session.
+  replaced_by_token String?
+  created_at        DateTime @default(now())
 
   @@index([user_id])
   @@schema("public")

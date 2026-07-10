@@ -25,11 +25,34 @@ const ORG_TYPES = [
   { value: "both",    label: "Both" },
 ];
 
+function Toggle({ on, onChange, label }: { on: boolean; onChange: (v: boolean) => void; label: string }) {
+  return (
+    <button
+      type="button"
+      className="flex items-center justify-between w-full cursor-pointer py-1 min-h-[38px]"
+      onClick={() => onChange(!on)}
+    >
+      <span className="text-sm text-ink">{label}</span>
+      <span
+        className="relative inline-block w-9 h-5 rounded-full flex-shrink-0 transition-colors"
+        style={{ background: on ? "#FA4D14" : "rgba(20,17,13,0.15)" }}
+      >
+        <span
+          className="absolute top-[3px] w-[14px] h-[14px] rounded-full bg-white transition-all"
+          style={{ left: on ? 18 : 3 }}
+        />
+      </span>
+    </button>
+  );
+}
+
 function OrgFilterContent({
-  sport, setSport, orgType, setOrgType, onReset,
+  sport, setSport, orgType, setOrgType, city, setCity, verifiedOnly, setVerifiedOnly, onReset,
 }: {
   sport: string; setSport: (v: string) => void;
   orgType: string; setOrgType: (v: string) => void;
+  city: string; setCity: (v: string) => void;
+  verifiedOnly: boolean; setVerifiedOnly: (v: boolean) => void;
   onReset: () => void;
 }) {
   return (
@@ -62,6 +85,20 @@ function OrgFilterContent({
         </select>
       </div>
 
+      <div className="pb-2 mb-2 border-b border-hairsoft">
+        <div className="lab mb-1">City</div>
+        <input
+          className="input w-full text-sm min-h-[38px]"
+          placeholder="e.g. Mumbai"
+          value={city}
+          onChange={(e) => setCity(e.target.value)}
+        />
+      </div>
+
+      <div className="pb-2 mb-2 border-b border-hairsoft">
+        <Toggle on={verifiedOnly} onChange={setVerifiedOnly} label="Verified only" />
+      </div>
+
       <button onClick={onReset} className="mt-2 w-full btn-ghost min-h-[38px] text-sm">
         Clear filters
       </button>
@@ -73,15 +110,19 @@ export default function Organizations() {
   const [q, setQ] = useState("");
   const [sport, setSport] = useState("");
   const [orgType, setOrgType] = useState("");
+  const [city, setCity] = useState("");
+  const [verifiedOnly, setVerifiedOnly] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   const filters = {
     q: q || undefined,
     sport: sport || undefined,
     org_type: orgType || undefined,
+    city: city || undefined,
+    verified: verifiedOnly || undefined,
   };
 
-  const activeCount = [sport, orgType].filter(Boolean).length;
+  const activeCount = [sport, orgType, city, verifiedOnly && "v"].filter(Boolean).length;
 
   const res = useQuery({
     queryKey: queryKeys.organizations(filters),
@@ -97,6 +138,8 @@ export default function Organizations() {
   const reset = useCallback(() => {
     setSport("");
     setOrgType("");
+    setCity("");
+    setVerifiedOnly(false);
   }, []);
 
   return (
@@ -164,6 +207,8 @@ export default function Organizations() {
             <OrgFilterContent
               sport={sport} setSport={setSport}
               orgType={orgType} setOrgType={setOrgType}
+              city={city} setCity={setCity}
+              verifiedOnly={verifiedOnly} setVerifiedOnly={setVerifiedOnly}
               onReset={() => { setQ(""); reset(); }}
             />
           </div>
@@ -252,6 +297,8 @@ export default function Organizations() {
           <OrgFilterContent
             sport={sport} setSport={setSport}
             orgType={orgType} setOrgType={setOrgType}
+            city={city} setCity={setCity}
+            verifiedOnly={verifiedOnly} setVerifiedOnly={setVerifiedOnly}
             onReset={() => { reset(); setDrawerOpen(false); }}
           />
         </MobileDrawer>

@@ -131,6 +131,8 @@ model User {
   content_likes       ContentLike[]
   comment_likes       CommentLike[]
   documents           UserDocument[]
+  document_access_sent     DocumentAccessRequest[] @relation("DocAccessRequester")
+  document_access_received DocumentAccessRequest[] @relation("DocAccessAthlete")
   email_logs          EmailLog[]
   tournaments         AthleteTournament[]
   scoring_tournaments Tournament[]
@@ -154,6 +156,37 @@ model UserDocument {
   user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   @@index([user_id])
+  @@schema("public")
+}
+
+enum DocAccessStatus {
+  pending
+  approved
+  rejected
+  revoked
+
+  @@schema("public")
+}
+
+// Grants a recruiter (club/scout/organizer) access to ALL of an athlete's
+// UserDocument rows — not per-document. One row per (requester, athlete)
+// pair; re-requesting after rejected/revoked reuses the row via the unique
+// constraint below rather than creating duplicates.
+model DocumentAccessRequest {
+  id           String          @id @default(uuid()) @db.Uuid
+  requester_id String          @db.Uuid
+  athlete_id   String          @db.Uuid
+  status       DocAccessStatus @default(pending)
+  reason       String?         @db.Text
+  requested_at DateTime        @default(now())
+  decided_at   DateTime?
+  decided_by   String?         @db.Uuid
+
+  requester User @relation("DocAccessRequester", fields: [requester_id], references: [id], onDelete: Cascade)
+  athlete   User @relation("DocAccessAthlete", fields: [athlete_id], references: [id], onDelete: Cascade)
+
+  @@unique([requester_id, athlete_id])
+  @@index([athlete_id, status])
   @@schema("public")
 }
 
@@ -660,12 +693,16 @@ model PasswordReset {
 }
 
 model RefreshToken {
-  id         String   @id @default(uuid()) @db.Uuid
-  user_id    String   @db.Uuid
-  token      String   @unique
-  expires_at DateTime
-  revoked    Boolean  @default(false)
-  created_at DateTime @default(now())
+  id                String   @id @default(uuid()) @db.Uuid
+  user_id           String   @db.Uuid
+  token             String   @unique
+  expires_at        DateTime
+  revoked           Boolean  @default(false)
+  // Set when this token is rotated out, pointing at the token that replaced
+  // it. Lets a concurrent duplicate rotation of the same (now-revoked) token
+  // converge on the winner's new token instead of failing the whole session.
+  replaced_by_token String?
+  created_at        DateTime @default(now())
 
   @@index([user_id])
   @@schema("public")

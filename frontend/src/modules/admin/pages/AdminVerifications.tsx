@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, humanizeError } from "../../../api/client";
 import { PageHeader, Spinner } from "../../../components/UI";
+import { BackButton } from "../../../components/BackButton";
 import { FileText, ExternalLink, Check, X, ChevronRight } from "lucide-react";
 import { queryKeys } from "../../../hooks/queryKeys";
 
@@ -161,6 +162,7 @@ export default function AdminVerifications() {
 
   return (
     <div className="space-y-4">
+      <BackButton to="/admin" label="Admin" className="mb-1" />
       <PageHeader
         title="Pending verifications"
         subtitle={`${items.length} item${items.length !== 1 ? "s" : ""} to review`}

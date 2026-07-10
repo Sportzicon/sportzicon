@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { scoringApi } from "../../../api/scoringClient";
 import { queryKeys } from "../../../hooks/queryKeys";
 import { PageHeader } from "../../../components/UI";
+import { BackButton } from "../../../components/BackButton";
 import {
   Activity, Clock, CheckCircle, Trophy, MapPin, ChevronRight,
   ExternalLink, RefreshCw, XCircle, Calendar
@@ -151,6 +152,7 @@ export default function AdminScoring() {
 
   return (
     <div className="space-y-6">
+      <BackButton to="/admin" label="Admin" className="mb-1" />
       <PageHeader
         title="Live Scoring"
         subtitle="All matches across all tournaments — live, upcoming, and completed."

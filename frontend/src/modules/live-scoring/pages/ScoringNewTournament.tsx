@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
-import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { scoringApi } from "../../../api/scoringClient";
 import { api } from "../../../api/client";
 import { queryKeys } from "../../../hooks/queryKeys";
 import { PageHeader } from "../../../components/UI";
-import { Link2, Trophy } from "lucide-react";
+import { Link2, Trophy, ArrowLeft } from "lucide-react";
 
 const SPORTS = ["cricket", "football", "basketball", "volleyball", "hockey", "kabaddi"];
 const FORMATS: Record<string, string[]> = {
@@ -115,6 +115,12 @@ function ScoringNewTournamentInner() {
 
   return (
     <div className="space-y-5 max-w-2xl">
+      <Link
+        to={isEdit ? `/scoring/tournaments/${id}` : "/scoring/tournaments"}
+        className="inline-flex items-center gap-1.5 lab text-ink-sub hover:text-ink transition-colors text-sm"
+      >
+        <ArrowLeft className="w-4 h-4" /> {isEdit ? "Back to tournament" : "Back to tournaments"}
+      </Link>
       <PageHeader
         title={isEdit ? "Edit Tournament" : "Set Up Scoring"}
         subtitle={sourceOpportunity ? `Setting up scoring for: ${sourceOpportunity.title}` : "Cricket & multi-sport scoring"}

@@ -4,6 +4,7 @@ import { useApplicants } from "../../../hooks";
 import { useAuthStore } from "../../../store/auth";
 import { hasRole } from "../../../utils/roles";
 import { PageHeader, Spinner, EmptyState, StatusPill, Avatar } from "../../../components/UI";
+import { BackButton } from "../../../components/BackButton";
 import { MapPin, Calendar, Users } from "lucide-react";
 import { humanizeError } from "../../../api/client";
 import type { Application } from "../../../models";
@@ -294,6 +295,7 @@ export default function Applicants() {
 
   return (
     <div className="space-y-5">
+      <BackButton to={`/opportunities/${id}`} label="Opportunity" className="mb-1" />
       <PageHeader
         title={opp ? opp.title : "Applicant review"}
         subtitle="Post → Review → Select"

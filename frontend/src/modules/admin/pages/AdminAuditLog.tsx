@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../../../api/client";
 import { PageHeader, Spinner } from "../../../components/UI";
+import { BackButton } from "../../../components/BackButton";
 import { queryKeys } from "../../../hooks/queryKeys";
 import { Download } from "lucide-react";
 
@@ -66,6 +67,7 @@ export default function AdminAuditLog() {
 
   return (
     <div className="space-y-4">
+      <BackButton to="/admin" label="Admin" className="mb-1" />
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <PageHeader title="Audit log" subtitle="Every admin action is recorded here." />
         <button

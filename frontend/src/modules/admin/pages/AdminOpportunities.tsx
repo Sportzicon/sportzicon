@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { api, humanizeError } from "../../../api/client";
 import { queryKeys } from "../../../hooks/queryKeys";
 import { PageHeader, Spinner, Badge, Pagination } from "../../../components/UI";
+import { BackButton } from "../../../components/BackButton";
 import { Pencil, Trash2, X, Check, Plus } from "lucide-react";
 
 const PAGE_SIZE = 15;
@@ -141,6 +142,7 @@ export default function AdminOpportunities() {
 
   return (
     <div className="space-y-4">
+      <BackButton to="/admin" label="Admin" className="mb-1" />
       <PageHeader title="Opportunities" subtitle="Manage all tournaments, trials and recruitments" />
 
       <div className="card card-body flex flex-wrap gap-3 items-center">
