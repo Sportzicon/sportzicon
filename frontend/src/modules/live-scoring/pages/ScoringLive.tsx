@@ -184,6 +184,9 @@ function ScoringLiveInner() {
   const [resultForm, setResultForm] = useState({ winner_team_id:"", result_summary:"" });
   const [showOpenerSelect, setShowOpenerSelect] = useState(false);
   const [openerForm, setOpenerForm] = useState({ striker_id:"", non_striker_id:"", bowler_id:"" });
+  const [showXiSelect, setShowXiSelect] = useState(false);
+  const [xiSel1, setXiSel1] = useState<Set<string>>(new Set());
+  const [xiSel2, setXiSel2] = useState<Set<string>>(new Set());
 
   const { data: match, isLoading } = useQuery({
     queryKey: queryKeys.scoringMatchLive(matchId ?? ""),
@@ -338,6 +341,21 @@ function ScoringLiveInner() {
     mutationFn: () => scoringApi.post(`/innings/${activeInningsId}/balls/undo`),
     onSuccess: () => { invalidate(); fb("success", "Last ball undone"); },
     onError: (err: any) => fb("error", err.response?.data?.error?.message || "Undo failed")
+  });
+
+  const saveXiMutation = useMutation({
+    mutationFn: () => scoringApi.post(`/matches/${matchId}/xi`, {
+      team1_player_ids: [...xiSel1],
+      team2_player_ids: [...xiSel2]
+    }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.scoringXiLive(matchId ?? "") });
+      qc.invalidateQueries({ queryKey: queryKeys.scoringXi(matchId ?? "") });
+      qc.invalidateQueries({ queryKey: queryKeys.scoringMatchLive(matchId ?? "") });
+      setShowXiSelect(false);
+      fb("success", "Playing XI saved");
+    },
+    onError: (err: any) => fb("error", err.response?.data?.error?.message || "Failed to save Playing XI")
   });
 
   const createInningsMutation = useMutation({
@@ -975,19 +993,28 @@ function ScoringLiveInner() {
                       }
                       setNiForm(f => ({ ...f, innings_number: String((match.innings?.length ?? 0) + 1), batting_team_id: defaultBattingId, bowling_team_id: defaultBowlingId, target:"" }));
                       setShowNewInnings(true);
-                    }} className="btn-primary" disabled={!match?.team1_playing_level || !match?.team2_playing_level}>Start Next Innings</button>
+                    }} className="btn-primary" disabled={!xiLocked}>Start Next Innings</button>
                   </>
                 ) : (
                   <>
                     <p className="font-semibold text-ink mb-4">No innings started</p>
-                    {(!match?.team1_playing_level || !match?.team2_playing_level) && (
+                    {!xiLocked && (
                       <div className="mb-3 p-3 rounded-lg bg-amber-50 border border-amber-200 text-left">
-                        <p className="text-xs font-semibold text-amber-800 mb-0.5">Playing level required</p>
-                        <p className="text-xs text-amber-700">Set the playing level for both teams in match settings before starting.</p>
+                        <p className="text-xs font-semibold text-amber-800 mb-0.5">Playing XI required</p>
+                        <p className="text-xs text-amber-700 mb-2">Select the Playing XI for both teams before starting the innings.</p>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setXiSel1(new Set());
+                            setXiSel2(new Set());
+                            setShowXiSelect(true);
+                          }}
+                          className="btn-secondary text-xs min-h-0 px-3 py-1.5"
+                        >Select Playing XI</button>
                       </div>
                     )}
                     <button
-                      disabled={!match?.team1_playing_level || !match?.team2_playing_level}
+                      disabled={!xiLocked}
                       onClick={() => {
                         let defaultBattingId = "";
                         let defaultBowlingId = "";
@@ -1054,6 +1081,66 @@ function ScoringLiveInner() {
                 {createInningsMutation.isPending ? "Starting…" : "Start Innings"}
               </button>
               <button onClick={() => setShowNewInnings(false)} className="btn-secondary">Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── PLAYING XI SELECTION MODAL ────────────────────────────────────── */}
+      {showXiSelect && (
+        <div className="absolute inset-0 bg-ink/60 flex items-center justify-center z-40 p-4">
+          <div className="bg-paper rounded-xl p-5 w-full max-w-lg shadow-2xl space-y-4 max-h-[85vh] overflow-y-auto">
+            <div className="flex items-center justify-between">
+              <p className="font-semibold text-ink">Select Playing XI</p>
+              <button onClick={() => setShowXiSelect(false)} className="text-ink-faint hover:text-ink p-1"><X className="w-4 h-4" /></button>
+            </div>
+            <div className="grid sm:grid-cols-2 gap-4">
+              {[
+                { team: xiData?.team1, sel: xiSel1, setSel: setXiSel1 },
+                { team: xiData?.team2, sel: xiSel2, setSel: setXiSel2 }
+              ].map(({ team, sel, setSel }, idx) => (
+                <div key={idx} className="border border-hair rounded-lg overflow-hidden">
+                  <div className="flex items-center justify-between px-3 py-2 bg-fill border-b border-hair">
+                    <p className="font-semibold text-sm text-ink">{team?.name}</p>
+                    <p className={`lab ${sel.size === 11 ? "text-green-700" : "text-brand-500"}`}>{sel.size}/11</p>
+                  </div>
+                  <div className="divide-y divide-hairsoft max-h-64 overflow-y-auto">
+                    {(team?.players ?? []).map((p: any) => {
+                      const checked = sel.has(p.id);
+                      return (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => {
+                            const next = new Set(sel);
+                            if (next.has(p.id)) next.delete(p.id); else next.add(p.id);
+                            setSel(next);
+                          }}
+                          className={`w-full flex items-center gap-2 px-3 py-2 text-left text-sm transition-colors ${
+                            checked ? "bg-ink text-paper" : "hover:bg-fill"
+                          }`}
+                        >
+                          <span className="flex-1 truncate">
+                            {p.name}
+                            {p.is_captain && <span className={checked ? "text-paper/70" : "text-brand-500"}> (c)</span>}
+                          </span>
+                          {checked && <CheckCircle className="w-4 h-4 shrink-0" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <button
+                disabled={xiSel1.size !== 11 || xiSel2.size !== 11 || saveXiMutation.isPending}
+                onClick={() => saveXiMutation.mutate()}
+                className="btn-primary flex-1"
+              >
+                {saveXiMutation.isPending ? "Saving…" : "Confirm Playing XI"}
+              </button>
+              <button onClick={() => setShowXiSelect(false)} className="btn-secondary">Cancel</button>
             </div>
           </div>
         </div>

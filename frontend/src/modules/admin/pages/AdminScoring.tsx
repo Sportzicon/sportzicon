@@ -100,14 +100,12 @@ function MatchRow({ match }: { match: any }) {
         >
           Scorecard <ChevronRight className="w-3 h-3" />
         </Link>
-        <a
-          href={`http://localhost:5174/matches/${match.id}`}
-          target="_blank"
-          rel="noopener noreferrer"
+        <Link
+          to={`/scoring/matches/${match.id}`}
           className="btn-secondary text-xs px-2.5 py-1.5 min-h-0 gap-1 text-brand-600 border-brand-300"
         >
           Manage <ExternalLink className="w-3 h-3" />
-        </a>
+        </Link>
       </div>
     </div>
   );
@@ -167,15 +165,10 @@ export default function AdminScoring() {
               <RefreshCw className={`w-4 h-4 ${isFetching ? "animate-spin" : ""}`} />
               Refresh
             </button>
-            <a
-              href="http://localhost:5174"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn-primary gap-1.5"
-            >
+            <Link to="/scoring" className="btn-primary gap-1.5">
               <ExternalLink className="w-4 h-4" />
               Open Scoring Console
-            </a>
+            </Link>
           </div>
         }
       />
@@ -230,9 +223,9 @@ export default function AdminScoring() {
           <Activity className="w-10 h-10 text-ink-faint mx-auto mb-3" />
           <p className="font-semibold text-ink">No matches found</p>
           <p className="lab text-ink-faint mt-2">
-            <a href="http://localhost:5174" target="_blank" rel="noopener noreferrer" className="text-brand-500 hover:underline">
+            <Link to="/scoring" className="text-brand-500 hover:underline">
               Open the Scoring Console
-            </a>
+            </Link>
             {" "}to create tournaments and matches.
           </p>
         </div>

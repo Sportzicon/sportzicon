@@ -7,6 +7,13 @@ export default defineConfig({
     port: 5173,
     host: true,
     middlewareMode: false,
+    // Docker Desktop on Windows doesn't propagate host-side file change
+    // events through the bind mount, so chokidar's native watcher misses
+    // edits — poll instead so dev HMR actually reflects saved changes.
+    watch: {
+      usePolling: true,
+      interval: 300
+    },
     headers: {
       "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
       "Pragma": "no-cache",

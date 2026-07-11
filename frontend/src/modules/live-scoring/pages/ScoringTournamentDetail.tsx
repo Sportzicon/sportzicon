@@ -16,15 +16,6 @@ const ov = (b: number) => `${Math.floor(b / 6)}.${b % 6}`;
 
 const MATCH_TYPES = ["league", "tournament", "friendly", "trial", "academy", "knockout"];
 
-const PLAYING_LEVELS = [
-  { value: "amateur",       label: "Amateur / Recreation" },
-  { value: "club",          label: "Club Level" },
-  { value: "district",      label: "District Level" },
-  { value: "state",         label: "State Level" },
-  { value: "national",      label: "National Level" },
-  { value: "international", label: "International" },
-];
-
 // ── Status pill ───────────────────────────────────────────────────────────────
 function StatusPill({ status }: { status: string }) {
   const map: Record<string, string> = {
@@ -192,8 +183,8 @@ function AddPlayerForm({ tournamentId, teamId, onDone }: any) {
   const { data: cricketUsers = [], isLoading: loadingUsers } = useQuery({
     queryKey: queryKeys.cricketAthletes(),
     queryFn: () =>
-      api.get("/search/players?sport=cricket&limit=500")
-        .then(r => r.data.items ?? []),
+      api.get("/search/players?sport=cricket&limit=50")
+        .then(r => r.data.data ?? []),
     staleTime: 60_000
   });
 
@@ -464,8 +455,6 @@ function ScheduleMatchForm({ tournament, onDone }: { tournament: any; onDone: ()
     format: tournament.format ?? "T20",
     match_type: tournament.match_type ?? "league",
     scheduled_at: "",
-    team1_playing_level: "",
-    team2_playing_level: "",
     team1_players: [] as string[], team2_players: [] as string[]
   });
 
@@ -493,22 +482,20 @@ function ScheduleMatchForm({ tournament, onDone }: { tournament: any; onDone: ()
         scheduled_at: f.scheduled_at ? new Date(f.scheduled_at).toISOString() : undefined
       });
       const matchId = data.match?.id || data.id;
-      // Set toss + playing levels
+      // Set toss
       if (matchId) {
         await scoringApi.put(`/matches/${matchId}`, {
           ...(f.toss_winner_id ? { toss_winner_id: f.toss_winner_id, toss_decision: f.toss_decision } : {}),
           match_type: f.match_type || undefined,
-          team1_playing_level: f.team1_playing_level || undefined,
-          team2_playing_level: f.team2_playing_level || undefined,
           status: "upcoming"
         });
       }
-      // Set playing XI if players selected
-      if (matchId && (f.team1_players.length > 0 || f.team2_players.length > 0)) {
+      // Set playing XI (required — exactly 11 per team, enforced by the Schedule Match button)
+      if (matchId) {
         await scoringApi.post(`/matches/${matchId}/xi`, {
           team1_player_ids: f.team1_players,
           team2_player_ids: f.team2_players
-        }).catch(() => {}); // XI is optional during match creation
+        });
       }
       return matchId;
     },
@@ -601,8 +588,9 @@ function ScheduleMatchForm({ tournament, onDone }: { tournament: any; onDone: ()
 
       {/* Player selection with auto-population */}
       {f.team1_id && f.team2_id && (
-        <div className="border-t border-hairsoft pt-4">
-          <p className="lab text-ink-sub mb-3">Select Playing XI (auto-populated from team roster)</p>
+        <div className="panel p-4 space-y-3 bg-amber-50 border border-amber-200 rounded-lg">
+          <p className="lab text-amber-800 font-semibold">Select Playing XI <span className="text-red-500">*</span></p>
+          <p className="text-xs text-amber-700">Required before scheduling. Select exactly 11 players per team (auto-populated from team roster).</p>
           <div className="grid sm:grid-cols-2 gap-4">
             {[
               { teamNum: 1 as const, teamId: f.team1_id, team: t1 },
@@ -631,7 +619,7 @@ function ScheduleMatchForm({ tournament, onDone }: { tournament: any; onDone: ()
                   </div>
                   <div className="space-y-1 max-h-48 overflow-y-auto bg-fill rounded p-2 border border-hairsoft">
                     {players.length === 0 ? (
-                      <p className="text-xs text-ink-faint py-2">No players in team</p>
+                      <p className="text-xs text-ink-faint py-2">No players in team — add players to this team's roster first</p>
                     ) : (
                       players.map((p: any) => (
                         <label key={p.id} className="flex items-center gap-2 p-1.5 rounded hover:bg-panel cursor-pointer group transition">
@@ -661,30 +649,6 @@ function ScheduleMatchForm({ tournament, onDone }: { tournament: any; onDone: ()
                 </div>
               );
             })}
-          </div>
-        </div>
-      )}
-
-      {/* Playing Level */}
-      {f.team1_id && f.team2_id && (
-        <div className="panel p-4 space-y-3 bg-amber-50 border border-amber-200 rounded-lg">
-          <p className="lab text-amber-800 font-semibold">Playing Level <span className="text-red-500">*</span></p>
-          <p className="text-xs text-amber-700">Required before scoring can begin. Sets the competitive level for this match.</p>
-          <div className="grid sm:grid-cols-2 gap-3">
-            <div>
-              <label className="lab block mb-1">{t1?.name ?? "Team 1"} Level</label>
-              <select className="input w-full" value={f.team1_playing_level} onChange={e => s("team1_playing_level", e.target.value)} required>
-                <option value="">Select level…</option>
-                {PLAYING_LEVELS.map(l => <option key={l.value} value={l.value}>{l.label}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="lab block mb-1">{t2?.name ?? "Team 2"} Level</label>
-              <select className="input w-full" value={f.team2_playing_level} onChange={e => s("team2_playing_level", e.target.value)} required>
-                <option value="">Select level…</option>
-                {PLAYING_LEVELS.map(l => <option key={l.value} value={l.value}>{l.label}</option>)}
-              </select>
-            </div>
           </div>
         </div>
       )}
@@ -763,7 +727,7 @@ function ScheduleMatchForm({ tournament, onDone }: { tournament: any; onDone: ()
 
       <div className="flex gap-3">
         <button
-          disabled={!f.team1_id || !f.team2_id || (f.team1_id && f.team2_id && (!f.team1_playing_level || !f.team2_playing_level)) || mut.isPending}
+          disabled={!f.team1_id || !f.team2_id || f.team1_players.length !== 11 || f.team2_players.length !== 11 || mut.isPending}
           onClick={() => mut.mutate()}
           className="btn-primary text-sm"
         >
@@ -771,6 +735,9 @@ function ScheduleMatchForm({ tournament, onDone }: { tournament: any; onDone: ()
         </button>
         <button onClick={onDone} className="btn-secondary text-sm">Cancel</button>
       </div>
+      {f.team1_id && f.team2_id && (f.team1_players.length !== 11 || f.team2_players.length !== 11) && (
+        <p className="text-xs text-amber-700">Select exactly 11 players per team in Playing XI to schedule this match.</p>
+      )}
       {mut.isError && (
         <p className="text-xs text-red-600">{(mut.error as any)?.response?.data?.error?.message || "Failed to schedule match"}</p>
       )}
