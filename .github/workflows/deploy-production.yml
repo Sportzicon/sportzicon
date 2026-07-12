@@ -291,15 +291,18 @@ jobs:
         run: |
           # Scoring API was manually deployed before Terraform managed it.
           # Import it so Terraform updates rather than tries to re-create (409).
-          # || true — no-op if already in state or doesn't exist yet.
-          terraform import \
-            -var-file=terraform.tfvars.prod \
-            -var="database_url=${{ secrets.DATABASE_URL }}" \
-            -var="direct_url=${{ secrets.DIRECT_URL }}" \
-            -var="resend_api_key=${{ secrets.RESEND_API_KEY }}" \
-            'google_cloud_run_v2_service.scoring_api[0]' \
-            "projects/${{ secrets.GCP_PROJECT_ID }}/locations/asia-south1/services/sportivox-scoring-api-prod" \
-            2>&1 || true
+          # Check state directly instead of `|| true`, which masked every
+          # import failure (including real ones) and let prod scoring-api
+          # silently stop receiving deploys the same way staging did.
+          if ! terraform state show 'google_cloud_run_v2_service.scoring_api[0]' >/dev/null 2>&1; then
+            terraform import \
+              -var-file=terraform.tfvars.prod \
+              -var="database_url=${{ secrets.DATABASE_URL }}" \
+              -var="direct_url=${{ secrets.DIRECT_URL }}" \
+              -var="resend_api_key=${{ secrets.RESEND_API_KEY }}" \
+              'google_cloud_run_v2_service.scoring_api[0]' \
+              "projects/${{ secrets.GCP_PROJECT_ID }}/locations/asia-south1/services/sportivox-scoring-api-prod"
+          fi
 
       - name: Terraform Plan
         working-directory: infra/terraform

@@ -252,17 +252,19 @@ jobs:
         run: |
           # Scoring API was manually deployed before Terraform managed it.
           # Import it so Terraform updates rather than tries to re-create (409).
-          # Exit code 1 with "already managed"/"Resource already managed" means
-          # it's already in state — that's fine. Any other failure is real and
-          # will surface (and fail the job) on the Plan/Apply steps that follow.
-          terraform import \
-            -var-file=terraform.tfvars.staging \
-            -var="database_url=${{ secrets.DATABASE_URL }}" \
-            -var="direct_url=${{ secrets.DIRECT_URL }}" \
-            -var="resend_api_key=${{ secrets.RESEND_API_KEY }}" \
-            'google_cloud_run_v2_service.scoring_api[0]' \
-            "projects/${{ secrets.GCP_PROJECT_ID }}/locations/asia-south1/services/sportivox-scoring-api-staging" \
-            2>&1 | tee import-scoring.log || (grep -qi "already managed\|Resource already managed\|no resource found" import-scoring.log)
+          # Check state directly instead of grepping import output for known
+          # phrases — `cmd | tee file || grep ...` silently no-ops on any
+          # import failure whose message doesn't match, masking real errors
+          # (this previously let staging scoring-api silently stop deploying).
+          if ! terraform state show 'google_cloud_run_v2_service.scoring_api[0]' >/dev/null 2>&1; then
+            terraform import \
+              -var-file=terraform.tfvars.staging \
+              -var="database_url=${{ secrets.DATABASE_URL }}" \
+              -var="direct_url=${{ secrets.DIRECT_URL }}" \
+              -var="resend_api_key=${{ secrets.RESEND_API_KEY }}" \
+              'google_cloud_run_v2_service.scoring_api[0]' \
+              "projects/${{ secrets.GCP_PROJECT_ID }}/locations/asia-south1/services/sportivox-scoring-api-staging"
+          fi
 
       - name: Import existing DIRECT_URL secret into Terraform state
         working-directory: infra/terraform
@@ -270,14 +272,15 @@ jobs:
           # The sportivox-direct-url-staging secret was created outside this
           # Terraform workspace's state (different GCS prefix). Import it so
           # Terraform manages it without a 409 re-creation error.
-          terraform import \
-            -var-file=terraform.tfvars.staging \
-            -var="database_url=${{ secrets.DATABASE_URL }}" \
-            -var="direct_url=${{ secrets.DIRECT_URL }}" \
-            -var="resend_api_key=${{ secrets.RESEND_API_KEY }}" \
-            'google_secret_manager_secret.direct_url' \
-            "projects/${{ secrets.GCP_PROJECT_ID }}/secrets/sportivox-direct-url-staging" \
-            2>&1 | tee import-secret.log || (grep -qi "already managed\|Resource already managed\|no resource found" import-secret.log)
+          if ! terraform state show 'google_secret_manager_secret.direct_url' >/dev/null 2>&1; then
+            terraform import \
+              -var-file=terraform.tfvars.staging \
+              -var="database_url=${{ secrets.DATABASE_URL }}" \
+              -var="direct_url=${{ secrets.DIRECT_URL }}" \
+              -var="resend_api_key=${{ secrets.RESEND_API_KEY }}" \
+              'google_secret_manager_secret.direct_url' \
+              "projects/${{ secrets.GCP_PROJECT_ID }}/secrets/sportivox-direct-url-staging"
+          fi
 
       - name: Terraform Plan
         working-directory: infra/terraform

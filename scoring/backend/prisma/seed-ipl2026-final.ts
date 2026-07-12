@@ -43,6 +43,10 @@ async function main() {
   }
 
   // ── Idempotent: wipe previous run ───────────────────────────────────────────
+  // Matches first (cascades innings/ball events) — Team has no cascade from
+  // Match.team1/team2 or Innings.batting_team/bowling_team, so deleting the
+  // tournament directly hits a FK violation while those rows still exist.
+  await prisma.match.deleteMany({ where: { tournament: { name: "Indian Premier League 2026" } } });
   await prisma.tournament.deleteMany({ where: { name: "Indian Premier League 2026" } });
   console.log("  ✔ Cleared previous IPL 2026 seed data");
 
