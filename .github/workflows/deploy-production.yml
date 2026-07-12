@@ -281,9 +281,14 @@ jobs:
       - name: Update Terraform image variables
         working-directory: infra/terraform
         run: |
-          sed -i "s|api_image = .*|api_image = \"${{ env.AR_IMAGE }}/api:${{ needs.version.outputs.version }}\"|g" terraform.tfvars.prod.example
-          sed -i "s|web_image = .*|web_image = \"${{ env.AR_IMAGE }}/web:${{ needs.version.outputs.version }}\"|g" terraform.tfvars.prod.example
-          sed -i "s|scoring_api_image = .*|scoring_api_image = \"${{ env.AR_IMAGE }}/scoring-api:${{ needs.version.outputs.version }}\"|g" terraform.tfvars.prod.example
+          # ^var[[:space:]]*= tolerates column-alignment padding around `=`
+          # (this file hand-aligns all three vars) — a plain "var = .*"
+          # pattern silently no-ops on padded lines instead of erroring,
+          # which is how staging scoring-api stopped receiving new images
+          # despite green CI. Same padding is present here for all three.
+          sed -i "s|^api_image[[:space:]]*=.*|api_image = \"${{ env.AR_IMAGE }}/api:${{ needs.version.outputs.version }}\"|g" terraform.tfvars.prod.example
+          sed -i "s|^web_image[[:space:]]*=.*|web_image = \"${{ env.AR_IMAGE }}/web:${{ needs.version.outputs.version }}\"|g" terraform.tfvars.prod.example
+          sed -i "s|^scoring_api_image[[:space:]]*=.*|scoring_api_image = \"${{ env.AR_IMAGE }}/scoring-api:${{ needs.version.outputs.version }}\"|g" terraform.tfvars.prod.example
           cp terraform.tfvars.prod.example terraform.tfvars.prod
 
       - name: Import existing scoring Cloud Run service into Terraform state

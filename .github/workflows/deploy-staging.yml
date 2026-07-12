@@ -243,9 +243,15 @@ jobs:
       - name: Update Terraform image variables
         working-directory: infra/terraform
         run: |
-          sed -i "s|api_image = .*|api_image = \"${{ env.AR_IMAGE }}/api:main-${{ github.sha }}\"|g" terraform.tfvars.staging
-          sed -i "s|web_image = .*|web_image = \"${{ env.AR_IMAGE }}/web:main-${{ github.sha }}\"|g" terraform.tfvars.staging
-          sed -i "s|scoring_api_image = .*|scoring_api_image = \"${{ env.AR_IMAGE }}/scoring-api:main-${{ github.sha }}\"|g" terraform.tfvars.staging
+          # ^var[[:space:]]*= tolerates any column-alignment padding around
+          # the `=` — a plain "var = .*" pattern silently no-ops (sed finds
+          # no match, exits 0) on a hand-aligned line like
+          # "scoring_api_image          = ...", leaving the stale value in
+          # place with no error. That's how staging scoring-api silently
+          # stopped receiving new images despite green CI runs.
+          sed -i "s|^api_image[[:space:]]*=.*|api_image = \"${{ env.AR_IMAGE }}/api:main-${{ github.sha }}\"|g" terraform.tfvars.staging
+          sed -i "s|^web_image[[:space:]]*=.*|web_image = \"${{ env.AR_IMAGE }}/web:main-${{ github.sha }}\"|g" terraform.tfvars.staging
+          sed -i "s|^scoring_api_image[[:space:]]*=.*|scoring_api_image = \"${{ env.AR_IMAGE }}/scoring-api:main-${{ github.sha }}\"|g" terraform.tfvars.staging
 
       - name: Import existing scoring Cloud Run service into Terraform state
         working-directory: infra/terraform
