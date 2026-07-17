@@ -8,6 +8,7 @@ import { useAuthStore } from "../../../store/auth";
 import { Trash2, Pencil, MoreVertical, Heart, ChevronDown, ChevronUp, List } from "lucide-react";
 import { useState, useRef, useEffect, useMemo } from "react";
 import { isAdmin } from "../../../utils/roles";
+import { formatDate } from "../../../utils/date";
 
 interface TocItem {
   level: number;
@@ -78,9 +79,7 @@ export default function BlogDetail() {
   if (q.isError || !b) return <div className="panel p-8 text-center font-disp text-xl text-ink-70">Blog not found.</div>;
 
   const canEdit = user?.id === b.author_id || isAdmin(user?.role ?? "");
-  const publishedDate = new Date(b.published_at ?? b.created_at).toLocaleDateString("en-US", {
-    month: "long", day: "numeric", year: "numeric",
-  });
+  const publishedDate = formatDate(b.published_at ?? b.created_at);
   const wordCount = (b.body_markdown ?? "").replace(/[#*`>_\-\[\]!]/g, "").trim().split(/\s+/).length;
   const readTimeStr = `${Math.ceil(wordCount / 200)} min read`;
 

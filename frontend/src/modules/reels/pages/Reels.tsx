@@ -43,6 +43,8 @@ export default function Reels() {
       setForm({ title: "", video_url: "" });
       setFormErr(null);
       qc.invalidateQueries({ queryKey: queryKeys.reels() });
+      qc.invalidateQueries({ queryKey: queryKeys.feedInfinite() });
+      if (user) qc.invalidateQueries({ queryKey: queryKeys.authorContent(user.id) });
     },
     onError: (e) => setFormErr(humanizeError(e))
   });

@@ -21,6 +21,7 @@ import { useScorecardLinkPreview, useUpdateScorecardLinks } from "../hooks/useSc
 import { useDocuments } from "../hooks/useDocuments";
 import { ProfileFeedTab } from "../components/ProfileFeedTab";
 import { useMyAccessStatus, useRequestDocAccess } from "../../documentAccess/hooks/useDocumentAccess";
+import { formatDate, formatDateTime } from "../../../utils/date";
 
 // ── Cricbuzz-style cricket stats table ───────────────────────────────────────
 function CricketStatRow({ label, values }: { label: string; values: (string | number)[] }) {
@@ -937,7 +938,7 @@ export default function Profile() {
                           {emailLogsQ.data.items.map((log: any) => (
                             <tr key={log.id} className="border-b border-hairsoft last:border-0 hover:bg-fill/50 transition">
                               <td className="px-4 py-3 font-mononum text-[11px] text-ink-sub whitespace-nowrap">
-                                {new Date(log.created_at).toLocaleString()}
+                                {formatDateTime(log.created_at)}
                               </td>
                               <td className="px-4 py-3 text-ink max-w-[200px] truncate">{log.subject}</td>
                               <td className="px-4 py-3">
@@ -991,7 +992,7 @@ export default function Profile() {
                       </div>
                     </div>
                     <div className="mt-3 pt-3 border-t border-hairsoft flex items-center justify-between">
-                      <span className="lab">Deadline: {new Date(o.application_deadline).toLocaleDateString()}</span>
+                      <span className="lab">Deadline: {formatDate(o.application_deadline)}</span>
                       <span className="font-mononum text-[11px]"
                         style={{ color: Math.ceil((new Date(o.application_deadline).getTime() - Date.now()) / 86400_000) <= 5 ? "#FA4D14" : "#9A9286" }}>
                         {Math.ceil((new Date(o.application_deadline).getTime() - Date.now()) / 86400_000) < 0

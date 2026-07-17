@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useNotifications } from "../../../hooks";
 import { PageHeader, Spinner } from "../../../components/UI";
 import { BackButton } from "../../../components/BackButton";
+import { formatDate } from "../../../utils/date";
 import type { Notification } from "../../../models";
 
 function relativeTime(ts: number | string): string {
@@ -15,7 +16,7 @@ function relativeTime(ts: number | string): string {
   if (hrs < 24) return `${hrs}h ago`;
   const days = Math.floor(hrs / 24);
   if (days < 7) return `${days}d ago`;
-  return new Date(time).toLocaleDateString();
+  return formatDate(time);
 }
 
 function getDateGroup(ts: number | string): string {

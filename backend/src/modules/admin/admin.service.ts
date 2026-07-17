@@ -1,6 +1,7 @@
 import { prisma } from "../../config/prisma";
 import { BadRequest, Conflict, NotFound } from "../../utils/errors";
 import { omitSensitive } from "../../utils/user";
+import { cacheDel } from "../../config/redis";
 import { hashPassword } from "../auth/tokens";
 import { validateAthleteSportProfile } from "../users/sportProfile";
 import { dateOnly } from "../opportunities/opportunities.service";
@@ -66,6 +67,7 @@ export async function setUserStatus(actor: { id: string; role: Role }, userId: s
   const exists = await prisma.user.findUnique({ where: { id: userId }, select: { id: true } });
   if (!exists) throw NotFound("User not found");
   await prisma.user.update({ where: { id: userId }, data: { status: status as any } });
+  await cacheDel(`user:profile:${userId}`);
   await audit({ actor, action: `user.${status}`, target_type: "user", target_id: userId, details: { reason } });
   return { ok: true };
 }
@@ -88,6 +90,7 @@ export async function suspendUser(actor: { id: string; role: Role }, userId: str
     }),
     prisma.refreshToken.deleteMany({ where: { user_id: userId } })
   ]);
+  await cacheDel(`user:profile:${userId}`);
 
   await audit({
     actor,
@@ -112,6 +115,7 @@ export async function unsuspendUser(actor: { id: string; role: Role }, userId: s
       suspended_at: null
     }
   });
+  await cacheDel(`user:profile:${userId}`);
 
   await audit({ actor, action: "user.unsuspended", target_type: "user", target_id: userId });
   return { ok: true };
@@ -147,6 +151,7 @@ export async function activateUser(actor: { id: string; role: Role }, userId: st
     where: { id: userId },
     data: { email_verified: true, status: "active" as any }
   });
+  await cacheDel(`user:profile:${userId}`);
 
   await audit({ actor, action: "user.activated", target_type: "user", target_id: userId });
   return { ok: true };
@@ -162,6 +167,7 @@ export async function setUserBadges(actor: { id: string; role: Role }, userId: s
       verification_status: badges.length > 0 ? "approved" : "unverified"
     }
   });
+  await cacheDel(`user:profile:${userId}`);
   await audit({ actor, action: "user.badges", target_type: "user", target_id: userId, details: { badges } });
   return { ok: true };
 }
@@ -270,6 +276,7 @@ export async function deleteUser(actor: { id: string; role: Role }, userId: stri
   const exists = await prisma.user.findUnique({ where: { id: userId }, select: { id: true } });
   if (!exists) throw NotFound("User not found");
   await prisma.user.delete({ where: { id: userId } });
+  await cacheDel(`user:profile:${userId}`);
   await audit({ actor, action: "user.deleted", target_type: "user", target_id: userId });
   return { ok: true };
 }
@@ -311,6 +318,7 @@ export async function updateUserProfile(
   }
 
   const updated = await prisma.user.update({ where: { id: userId }, data });
+  await cacheDel(`user:profile:${userId}`);
   await audit({ actor, action: "user.profile_edited", target_type: "user", target_id: userId, details: { fields: Object.keys(data) } });
   return omitSensitive(updated, { includeGuardianEmail: true });
 }
@@ -324,6 +332,7 @@ export async function updateUserRole(
   if (!user) throw NotFound("User not found");
   if (userId === actor.id) throw BadRequest("Cannot change your own role");
   const updated = await prisma.user.update({ where: { id: userId }, data: { role: newRole as any } });
+  await cacheDel(`user:profile:${userId}`);
   await audit({ actor, action: "user.role_changed", target_type: "user", target_id: userId, details: { from: user.role, to: newRole } });
   return omitSensitive(updated, { includeGuardianEmail: true });
 }

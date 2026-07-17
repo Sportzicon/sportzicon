@@ -207,6 +207,16 @@ export async function listContent(q: ListContentInput, actor?: { id: string; rol
   const hasMore = rows.length > limit;
   const page = hasMore ? rows.slice(0, limit) : rows;
   const items = page.map(flattenContent);
+
+  if (items.length && actor) {
+    const likedRows = await prisma.contentLike.findMany({
+      where: { user_id: actor.id, content_id: { in: items.map((i) => i.id) } },
+      select: { content_id: true },
+    });
+    const likedIds = new Set(likedRows.map((r) => r.content_id));
+    for (const item of items) item.liked = likedIds.has(item.id);
+  }
+
   return { items, next_cursor: hasMore ? items[items.length - 1].id : null };
 }
 
@@ -234,6 +244,16 @@ export async function getFeedForUser(userId: string, limit = 20, cursor?: string
   const hasMore = rows.length > limit;
   const page = hasMore ? rows.slice(0, limit) : rows;
   const data = page.map(flattenContent);
+
+  if (data.length) {
+    const likedRows = await prisma.contentLike.findMany({
+      where: { user_id: userId, content_id: { in: data.map((d) => d.id) } },
+      select: { content_id: true },
+    });
+    const likedIds = new Set(likedRows.map((r) => r.content_id));
+    for (const item of data) item.liked = likedIds.has(item.id);
+  }
+
   return { data, nextCursor: hasMore ? data[data.length - 1].id : null };
 }
 

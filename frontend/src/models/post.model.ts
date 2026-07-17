@@ -27,6 +27,7 @@ export interface Post {
   tags?: string[];
   like_count: number;
   comment_count: number;
+  liked?: boolean;
   hidden?: boolean;
   created_at: string | number;
 }

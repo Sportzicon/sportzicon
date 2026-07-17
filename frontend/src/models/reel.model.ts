@@ -18,6 +18,7 @@ export interface Reel {
   sport?: string;
   like_count: number;
   comment_count: number;
+  liked?: boolean;
   hidden?: boolean;
   created_at: string | number;
 }

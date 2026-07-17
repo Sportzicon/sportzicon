@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo } from "react";
 import { useInfiniteQuery, useMutation, useQueryClient, type InfiniteData } from "@tanstack/react-query";
 import { postService } from "../../../services";
 import { queryKeys } from "../../../hooks/queryKeys";
@@ -7,7 +7,6 @@ import type { FeedPage } from "../services/post.service";
 
 export function useFeed() {
   const qc = useQueryClient();
-  const [likedPosts, setLikedPosts] = useState<Set<string>>(new Set());
 
   const feedQuery = useInfiniteQuery({
     queryKey: queryKeys.feedInfinite(),
@@ -17,6 +16,12 @@ export function useFeed() {
   });
 
   const items: ContentItem[] = feedQuery.data?.pages.flatMap((p) => p.data) ?? [];
+  // Server tells us who this viewer liked; derive the Set straight from it
+  // so refreshing the page doesn't lose the heart state.
+  const likedPosts = useMemo(
+    () => new Set(items.filter((i) => i.liked).map((i) => i.id)),
+    [items]
+  );
 
   const create = useMutation({
     mutationFn: (data: CreatePostRequest) => postService.create(data),
@@ -49,28 +54,21 @@ export function useFeed() {
             ...page,
             data: page.data.map((p) =>
               p.id === id
-                ? { ...p, like_count: Math.max(0, p.like_count + (isLiked ? -1 : 1)) }
+                ? {
+                    ...p,
+                    like_count: Math.max(0, p.like_count + (isLiked ? -1 : 1)),
+                    liked: !isLiked,
+                  }
                 : p
             ),
           })),
         };
       });
 
-      setLikedPosts((prev) => {
-        const next = new Set(prev);
-        next.has(id) ? next.delete(id) : next.add(id);
-        return next;
-      });
-
       return { prevData, wasLiked: isLiked };
     },
-    onError: (_err, id, ctx) => {
+    onError: (_err, _id, ctx) => {
       if (ctx?.prevData) qc.setQueryData(queryKeys.feedInfinite(), ctx.prevData);
-      setLikedPosts((prev) => {
-        const next = new Set(prev);
-        ctx?.wasLiked ? next.add(id) : next.delete(id);
-        return next;
-      });
     },
     onSettled: () => qc.invalidateQueries({ queryKey: queryKeys.feedInfinite() }),
   });

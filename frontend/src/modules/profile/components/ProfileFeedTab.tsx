@@ -12,6 +12,7 @@ import { MediaCarousel } from "../../feed/components/MediaCarousel";
 import { PostComposer } from "../../feed/components/PostComposer";
 import { postService, reelService } from "../../../services";
 import type { UpdateReelRequest } from "../../reels/services/reel.service";
+import { formatDate } from "../../../utils/date";
 
 // Unified, chronological "Feed" tab on the profile page — merges this user's
 // Posts, Blogs and Reels into one Instagram/LinkedIn-style activity stream.
@@ -28,7 +29,7 @@ function relativeTime(ms: number): string {
   if (hours < 24) return `${hours}h`;
   const days = Math.floor(hours / 24);
   if (days < 30) return `${days}d`;
-  return new Date(ms).toLocaleDateString();
+  return formatDate(ms);
 }
 
 function CountsRow({ likes, comments, at }: { likes: number; comments: number; at: number }) {

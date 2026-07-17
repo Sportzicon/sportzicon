@@ -4,6 +4,7 @@ import { useBlogs } from "../../../hooks";
 import { PageHeader, Spinner, EmptyState, Kicker, StatusPill, Avatar } from "../../../components/UI";
 import { MobileDrawer } from "../../../components/MobileDrawer";
 import { SlidersHorizontal, X, Search } from "lucide-react";
+import { formatDate } from "../../../utils/date";
 import type { Blog, BlogFilters } from "../../../models";
 
 const SPORTS = [
@@ -19,9 +20,7 @@ function readTime(markdown: string): string {
 }
 
 function BlogCard({ b, layout }: { b: Blog; layout: "grid" | "list" }) {
-  const date = new Date(b.published_at ?? b.created_at).toLocaleDateString("en-US", {
-    month: "short", day: "numeric", year: "numeric",
-  });
+  const date = formatDate(b.published_at ?? b.created_at);
 
   if (layout === "list") {
     // Desktop: image left, content right

@@ -2,18 +2,18 @@ import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import ReactMarkdown from "react-markdown";
 import { useFeed } from "../../../hooks";
 import { useAuthStore } from "../../../store/auth";
-import { PageHeader, Spinner, EmptyState, Avatar, Tabs, Badge, Placeholder } from "../../../components/UI";
+import { PageHeader, Spinner, EmptyState, Avatar, Tabs, Badge } from "../../../components/UI";
 import { CommentSection } from "../../comments/components/CommentSection";
 import { ErrorBoundary } from "../../../components/ErrorBoundary";
 import { CreateContentModal } from "../../../components/CreateContentModal";
-import { ReelViewer } from "../../reels/components/ReelViewer";
-import { Heart, Trash2, Pencil, MoreVertical, MessageCircle, RefreshCw, PenLine, Play, Share2 } from "lucide-react";
+import { Heart, Trash2, Pencil, MoreVertical, MessageCircle, RefreshCw, PenLine, Share2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { PostComposer } from "../components/PostComposer";
 import { PostContentView } from "../components/PostContentView";
 import { MediaCarousel } from "../components/MediaCarousel";
 import { toFeedItem } from "../../../models";
-import type { Post, Blog, Reel, FeedItem } from "../../../models";
+import type { Post, Blog, FeedItem } from "../../../models";
+import { formatDate } from "../../../utils/date";
 
 // Web Share API with clipboard fallback — same pattern as ReelViewer's handleShare.
 function useContentShare() {
@@ -95,46 +95,43 @@ function PostCard({
           <Avatar name={p.author_name ?? ""} src={p.author?.profile_photo_url} size={40} />
         </Link>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center justify-between gap-2">
-            <Link
-              to={`/profile/${p.author_id}`}
-              className="text-[13.5px] font-semibold text-ink hover:text-brand-500 truncate"
-            >
-              {isOwner ? "You" : p.author_name}
-            </Link>
-            <div className="flex items-center gap-2 flex-shrink-0">
-              <span className="lab">{new Date(p.created_at).toLocaleDateString()}</span>
-              {isOwner && (
-                <div className="relative" data-menu>
-                  <button
-                    onClick={() => setMenuOpen((v) => !v)}
-                    className="p-1 min-h-[44px] min-w-[44px] flex items-center justify-center rounded text-ink-faint hover:text-ink hover:bg-fill"
-                    aria-label="Post options"
-                  >
-                    <MoreVertical className="h-4 w-4" />
-                  </button>
-                  {menuOpen && (
-                    <div className="absolute right-0 mt-1 panel shadow-pop z-10 min-w-36">
-                      <button
-                        onClick={() => { onEdit(p.id); setMenuOpen(false); }}
-                        className="w-full text-left px-4 py-2.5 text-[12.5px] text-ink hover:bg-fill flex items-center gap-2 border-b border-hairsoft min-h-[44px]"
-                      >
-                        <Pencil className="h-3.5 w-3.5" /> Edit
-                      </button>
-                      <button
-                        onClick={() => { onDelete(p.id); setMenuOpen(false); }}
-                        className="w-full text-left px-4 py-2.5 text-[12.5px] text-red-600 hover:bg-red-50 flex items-center gap-2 min-h-[44px]"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" /> Delete
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
+          <Link
+            to={`/profile/${p.author_id}`}
+            className="text-[13.5px] font-semibold text-ink hover:text-brand-500 truncate"
+          >
+            {isOwner ? "You" : p.author_name}
+          </Link>
+          <div className="lab mt-0.5">
+            {formatDate(p.created_at)}{p.sport ? ` · ${p.sport}` : ""}
           </div>
-          {p.sport && <div className="lab mt-0.5">{p.sport}</div>}
         </div>
+        {isOwner && (
+          <div className="relative flex-shrink-0" data-menu>
+            <button
+              onClick={() => setMenuOpen((v) => !v)}
+              className="p-1 min-h-[44px] min-w-[44px] flex items-center justify-center rounded text-ink-faint hover:text-ink hover:bg-fill"
+              aria-label="Post options"
+            >
+              <MoreVertical className="h-4 w-4" />
+            </button>
+            {menuOpen && (
+              <div className="absolute right-0 mt-1 panel shadow-pop z-10 min-w-36">
+                <button
+                  onClick={() => { onEdit(p.id); setMenuOpen(false); }}
+                  className="w-full text-left px-4 py-2.5 text-[12.5px] text-ink hover:bg-fill flex items-center gap-2 border-b border-hairsoft min-h-[44px]"
+                >
+                  <Pencil className="h-3.5 w-3.5" /> Edit
+                </button>
+                <button
+                  onClick={() => { onDelete(p.id); setMenuOpen(false); }}
+                  className="w-full text-left px-4 py-2.5 text-[12.5px] text-red-600 hover:bg-red-50 flex items-center gap-2 min-h-[44px]"
+                >
+                  <Trash2 className="h-3.5 w-3.5" /> Delete
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Post content */}
@@ -205,7 +202,7 @@ function BlogCard({
             {currentUserId === b.author_id ? "You" : b.author_name}
           </Link>
           <div className="lab mt-0.5">
-            {new Date(b.created_at).toLocaleDateString()}{b.sport ? ` · ${b.sport}` : ""}
+            {formatDate(b.created_at)}{b.sport ? ` · ${b.sport}` : ""}
           </div>
         </div>
         <Badge color="amber">Article</Badge>
@@ -253,39 +250,6 @@ function BlogCard({
   );
 }
 
-function ReelCard({ r, onOpen }: { r: Reel; onOpen: () => void }) {
-  const { toast: shareToast, share } = useContentShare();
-
-  return (
-    <li className="panel p-4 sm:p-5 relative">
-      {shareToast && <ShareToast />}
-      <button onClick={onOpen} className="block w-full text-left">
-        <Badge color="emerald">Video</Badge>
-        <div className="mt-2.5 flex gap-3">
-          <div className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded bg-ink">
-            {r.thumbnail_url ? (
-              <img src={r.thumbnail_url} alt="" className="h-full w-full object-cover" />
-            ) : (
-              <Placeholder height={80} />
-            )}
-            <span className="absolute inset-0 flex items-center justify-center text-white/80">
-              <Play className="h-5 w-5" />
-            </span>
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-[13.5px] text-ink-70 line-clamp-3">{r.caption || r.title || "Video"}</p>
-          </div>
-        </div>
-      </button>
-      <div className="mt-3 pt-3 border-t border-hairsoft flex items-center gap-5 text-ink-sub">
-        <span className="font-mononum text-[11.5px] flex items-center gap-1.5"><Heart className="h-4 w-4" /> {r.like_count}</span>
-        <span className="font-mononum text-[11.5px] flex items-center gap-1.5"><MessageCircle className="h-4 w-4" /> {r.comment_count}</span>
-        <ShareButton onShare={() => share("/feed", r.title ?? "Check out this video on Sportivox", r.caption ?? r.description ?? "Shared from Sportivox")} />
-      </div>
-    </li>
-  );
-}
-
 // Pull-to-refresh indicator
 function PullIndicator({ distance, isRefreshing }: { distance: number; isRefreshing: boolean }) {
   if (distance === 0 && !isRefreshing) return null;
@@ -309,24 +273,20 @@ export default function Feed() {
   const [pullDistance, setPullDistance] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
-  const [viewerIndex, setViewerIndex] = useState<number | null>(null);
   const touchStartY = useRef(0);
   const feedRef = useRef<HTMLDivElement>(null);
 
-  const feedItems: FeedItem[] = useMemo(() => items.map(toFeedItem), [items]);
+  // Reels have their own dedicated /reels page — Feed only shows posts/articles.
+  const feedItems: Exclude<FeedItem, { kind: "reel" }>[] = useMemo(
+    () => items.map(toFeedItem).filter((f): f is Exclude<FeedItem, { kind: "reel" }> => f.kind !== "reel"),
+    [items]
+  );
 
   const filtered = tab === "Posts"
     ? feedItems.filter((f) => f.kind === "post")
     : tab === "Articles"
     ? feedItems.filter((f) => f.kind === "blog")
-    : tab === "Videos"
-    ? feedItems.filter((f) => f.kind === "reel")
     : feedItems;
-
-  const reelsInView = useMemo(
-    () => filtered.filter((f) => f.kind === "reel").map((f) => f.data as Reel),
-    [filtered]
-  );
 
   // Pull-to-refresh touch handlers
   const onTouchStart = (e: React.TouchEvent) => {
@@ -372,7 +332,7 @@ export default function Feed() {
       </button>
       <CreateContentModal open={createOpen} onClose={() => setCreateOpen(false)} />
 
-      <Tabs tabs={["All", "Posts", "Articles", "Videos"]} active={tab} onChange={setTab} sticky />
+      <Tabs tabs={["All", "Posts", "Articles"]} active={tab} onChange={setTab} sticky />
 
       <ErrorBoundary>
       {feedQuery.isLoading ? (
@@ -393,17 +353,6 @@ export default function Feed() {
                     currentUserId={user?.id}
                     isLiked={likedPosts.has(item.data.id)}
                     onToggleLike={(id) => toggleLike.mutate(id)}
-                  />
-                );
-              }
-
-              if (item.kind === "reel") {
-                const r = item.data;
-                return (
-                  <ReelCard
-                    key={`reel-${r.id}`}
-                    r={r}
-                    onOpen={() => setViewerIndex(reelsInView.findIndex((rr) => rr.id === r.id))}
                   />
                 );
               }
@@ -486,13 +435,6 @@ export default function Feed() {
       )}
       </ErrorBoundary>
 
-      {viewerIndex !== null && reelsInView.length > 0 && (
-        <ReelViewer
-          reels={reelsInView}
-          initialIndex={viewerIndex}
-          onClose={() => setViewerIndex(null)}
-        />
-      )}
     </div>
   );
 }

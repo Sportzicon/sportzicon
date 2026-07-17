@@ -57,6 +57,20 @@ function encodeCursor(id: string, ts: Date): string {
   return Buffer.from(JSON.stringify({ id, ts: ts.toISOString() })).toString("base64url");
 }
 
+// plainto_tsquery only matches whole lexemes — "vaib" would never match a
+// stored "vaibhav" lexeme. Build a prefix tsquery instead (":*" suffix per
+// word) so partial/in-progress search terms match, same pattern Postgres
+// docs recommend for autocomplete-style search.
+function toPrefixTsQuery(raw: string): string {
+  return raw
+    .trim()
+    .split(/\s+/)
+    .map((w) => w.replace(/[^a-zA-Z0-9]/g, ""))
+    .filter(Boolean)
+    .map((w) => `${w}:*`)
+    .join(" & ");
+}
+
 function decodeCursor(cursor: string): { id: string; ts: string } | null {
   try {
     return JSON.parse(Buffer.from(cursor, "base64url").toString("utf8"));
@@ -83,10 +97,12 @@ export async function searchPlayers(q: {
   verified?: boolean;
 }): Promise<PaginatedResult<PlayerCard>> {
   const limit = Math.min(q.limit, 50);
-  const hasFTS = Boolean(q.q?.trim());
+  const tsTerm = q.q?.trim() ? toPrefixTsQuery(q.q) : "";
+  const hasFTS = Boolean(tsTerm);
 
   const conditions: Prisma.Sql[] = [
     Prisma.sql`u.role = 'athlete'`,
+    Prisma.sql`u.is_suspended IS NOT TRUE`,
     // Tighter default visibility for minors: exclude accounts still awaiting
     // guardian consent from recruiter-facing player search.
     Prisma.sql`NOT (u.is_minor AND u.guardian_consent_status = 'pending')`
@@ -94,7 +110,7 @@ export async function searchPlayers(q: {
 
   if (hasFTS) {
     conditions.push(
-      Prisma.sql`u.search_vector @@ plainto_tsquery('english', ${q.q!.trim()})`
+      Prisma.sql`u.search_vector @@ to_tsquery('english', ${tsTerm})`
     );
   }
   if (q.sport) {
@@ -150,7 +166,7 @@ export async function searchPlayers(q: {
   const where = Prisma.join(conditions, " AND ");
 
   const orderBy = hasFTS
-    ? Prisma.sql`ts_rank(u.search_vector, plainto_tsquery('english', ${q.q!.trim()})) DESC, (u.verification_status = 'approved') DESC, u.updated_at DESC, u.id DESC`
+    ? Prisma.sql`ts_rank(u.search_vector, to_tsquery('english', ${tsTerm})) DESC, (u.verification_status = 'approved') DESC, u.updated_at DESC, u.id DESC`
     : Prisma.sql`(u.verification_status = 'approved') DESC, u.updated_at DESC, u.id DESC`;
 
   const [rows, countRows] = await Promise.all([
@@ -237,13 +253,14 @@ export async function searchClubs(q: {
   verified?: boolean;
 }): Promise<PaginatedResult<ClubRow>> {
   const limit = Math.min(q.limit, 50);
-  const hasFTS = Boolean(q.q?.trim());
+  const tsTerm = q.q?.trim() ? toPrefixTsQuery(q.q) : "";
+  const hasFTS = Boolean(tsTerm);
 
   const conditions: Prisma.Sql[] = [Prisma.sql`1=1`];
 
   if (hasFTS) {
     conditions.push(
-      Prisma.sql`o.search_vector @@ plainto_tsquery('english', ${q.q!.trim()})`
+      Prisma.sql`o.search_vector @@ to_tsquery('english', ${tsTerm})`
     );
   }
   if (q.sport) {
@@ -272,7 +289,7 @@ export async function searchClubs(q: {
   const where = Prisma.join(conditions, " AND ");
 
   const orderBy = hasFTS
-    ? Prisma.sql`ts_rank(o.search_vector, plainto_tsquery('english', ${q.q!.trim()})) DESC, (o.verification_status = 'approved') DESC, o.updated_at DESC, o.id DESC`
+    ? Prisma.sql`ts_rank(o.search_vector, to_tsquery('english', ${tsTerm})) DESC, (o.verification_status = 'approved') DESC, o.updated_at DESC, o.id DESC`
     : Prisma.sql`(o.verification_status = 'approved') DESC, o.updated_at DESC, o.id DESC`;
 
   const [rows, countRows] = await Promise.all([
@@ -317,14 +334,15 @@ export async function searchOpportunities(q: {
   status?: string;
 }): Promise<PaginatedResult<OppRowOut>> {
   const limit = Math.min(q.limit, 50);
-  const hasFTS = Boolean(q.q?.trim());
+  const tsTerm = q.q?.trim() ? toPrefixTsQuery(q.q) : "";
+  const hasFTS = Boolean(tsTerm);
   const status = q.status ?? "open";
 
   const conditions: Prisma.Sql[] = [Prisma.sql`opp.status::text = ${status}`];
 
   if (hasFTS) {
     conditions.push(
-      Prisma.sql`opp.search_vector @@ plainto_tsquery('english', ${q.q!.trim()})`
+      Prisma.sql`opp.search_vector @@ to_tsquery('english', ${tsTerm})`
     );
   }
   if (q.sport) {
@@ -359,7 +377,7 @@ export async function searchOpportunities(q: {
     q.sort === "deadline"
       ? Prisma.sql`opp.application_deadline ASC, opp.id ASC`
       : hasFTS
-        ? Prisma.sql`ts_rank(opp.search_vector, plainto_tsquery('english', ${q.q!.trim()})) DESC, opp.created_at DESC, opp.id DESC`
+        ? Prisma.sql`ts_rank(opp.search_vector, to_tsquery('english', ${tsTerm})) DESC, opp.created_at DESC, opp.id DESC`
         : Prisma.sql`opp.created_at DESC, opp.id DESC`;
 
   const [rows, countRows] = await Promise.all([

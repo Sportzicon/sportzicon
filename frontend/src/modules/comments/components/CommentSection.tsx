@@ -6,6 +6,7 @@ import { Avatar } from "../../../components/UI";
 import { MobileDrawer } from "../../../components/MobileDrawer";
 import { Trash2, Pencil, MessageCircle, Heart } from "lucide-react";
 import { isAdmin } from "../../../utils/roles";
+import { formatDate } from "../../../utils/date";
 import type { CommentDoc, CommentParentType } from "../../../models";
 
 interface CommentSectionProps {
@@ -44,7 +45,7 @@ function CommentItem({
         <div className="flex items-start justify-between gap-2">
           <div>
             <span className="text-[12.5px] font-semibold text-ink">{c.author_name}</span>
-            <span className="lab ml-2">{new Date(c.created_at).toLocaleDateString()}</span>
+            <span className="lab ml-2">{formatDate(c.created_at)}</span>
           </div>
           {canManage && (
             <div className="flex gap-1 flex-shrink-0">
