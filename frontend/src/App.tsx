@@ -1,7 +1,8 @@
-import { Route, Routes, useLocation, useNavigate } from "react-router-dom";
+import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { lazy, Suspense, useEffect } from "react";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { queryClient } from "./main";
+import { AI_TIPS_ENABLED } from "./config/features";
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -164,7 +165,7 @@ export default function App() {
         <Route path="/organizations/new" element={<ProtectedRoute roles={["club", "organizer", "admin"]}><NewOrganization /></ProtectedRoute>} />
         <Route path="/organizations/:id/edit" element={<ProtectedRoute roles={["club", "organizer", "admin"]}><NewOrganization /></ProtectedRoute>} />
         <Route path="/organizations/:id" element={<ProtectedRoute><OrganizationDetail /></ProtectedRoute>} />
-        <Route path="/ai-tips" element={<ProtectedRoute roles={["athlete"]}><AITips /></ProtectedRoute>} />
+        <Route path="/ai-tips" element={AI_TIPS_ENABLED ? <ProtectedRoute roles={["athlete"]}><AITips /></ProtectedRoute> : <Navigate to="/dashboard" replace />} />
 
         <Route path="/admin" element={<ProtectedRoute roles={["admin"]}><Admin /></ProtectedRoute>} />
         <Route path="/admin/users" element={<ProtectedRoute roles={["admin"]}><AdminUsers /></ProtectedRoute>} />

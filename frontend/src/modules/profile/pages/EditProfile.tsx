@@ -151,7 +151,13 @@ export default function EditProfile() {
         if (athPayload.weight_kg) athPayload.weight_kg = Number(athPayload.weight_kg);
         if (sport) athPayload.primary_sport = sport;
         if (position) athPayload.position = position;
-        athPayload.achievements = achievements;
+        // Commit any achievement typed but not yet added via +/Enter, so it isn't
+        // silently dropped when the user goes straight to Save.
+        const pending = newAchievement.trim();
+        const finalAchievements = pending && achievements.length < 20
+          ? [...achievements, pending]
+          : achievements;
+        athPayload.achievements = finalAchievements;
         athPayload.career_history = careerHistory
           .filter((h) => h.club.trim())
           .map((h) => ({
@@ -173,6 +179,8 @@ export default function EditProfile() {
         });
         const r2 = await api.put("/users/me/athlete", athPayload);
         updated = r2.data.user;
+        setAchievements(finalAchievements);
+        setNewAchievement("");
       }
 
       setUser(updated);

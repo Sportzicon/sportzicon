@@ -10,6 +10,7 @@ import { StatusPill, Spinner, EmptyState, Avatar } from "../../../components/UI"
 import { ErrorBoundary } from "../../../components/ErrorBoundary";
 import { ChevronDown, ChevronUp, Search, Briefcase } from "lucide-react";
 import type { Application, Opportunity, Post, User } from "../../../models";
+import { AI_TIPS_ENABLED } from "../../../config/features";
 
 // ── Shared helpers ──────────────────────────────────────────────────────────
 
@@ -128,9 +129,6 @@ function AthleteDashboard() {
     onSuccess: (updated) => setUser(updated),
   });
 
-  const activeApps = (myApps.data ?? []).filter((a: Application) =>
-    ["pending", "shortlisted", "selected"].includes(a.status)
-  );
   const recentApps = (myApps.data ?? []).slice(0, 3);
 
   return (
@@ -169,12 +167,9 @@ function AthleteDashboard() {
       {/* Quick stats — horizontal scroll on mobile */}
       <div>
         <SectionTitle>Your stats</SectionTitle>
-        <div className="flex gap-3 overflow-x-auto pb-1 -mx-3 px-3 sm:mx-0 sm:px-0 sm:grid sm:grid-cols-3">
+        <div className="flex gap-3 overflow-x-auto pb-1 -mx-3 px-3 sm:mx-0 sm:px-0 sm:grid sm:grid-cols-2">
           <div className="flex-shrink-0 w-36 sm:w-auto">
             <StatCard label="Followers" value={followerCount} />
-          </div>
-          <div className="flex-shrink-0 w-36 sm:w-auto">
-            <StatCard label="Active apps" value={activeApps.length} accent />
           </div>
           <div className="flex-shrink-0 w-36 sm:w-auto">
             <StatCard label="Following" value={followingCount} />
@@ -256,7 +251,7 @@ function AthleteDashboard() {
         </div>
 
         <aside className="space-y-5">
-          <AITipsPanel />
+          {AI_TIPS_ENABLED && <AITipsPanel />}
           <div className="panel p-4">
             <div className="text-[11px] font-mononum uppercase tracking-[0.06em] text-ink-faint mb-2">Profile</div>
             <Link to={`/profile/${user.id}`} className="flex items-center gap-3 min-h-[44px]">
