@@ -188,14 +188,14 @@ function AddPlayerForm({ tournamentId, teamId, onDone }: any) {
     staleTime: 60_000
   });
 
-  // Existing players already in this team (to exclude from dropdown)
+  // Players already assigned to ANY team in this tournament (to exclude from dropdown)
   const { data: teamData } = useQuery({
     queryKey: queryKeys.scoringTournament(tournamentId),
     enabled: false  // already in cache from parent
   });
   const existingUserIds = new Set<string>(
     ((teamData as any)?.teams ?? [])
-      .flatMap((t: any) => t.id === teamId ? (t.players ?? []) : [])
+      .flatMap((t: any) => t.players ?? [])
       .map((p: any) => p.sportivox_user_id)
       .filter(Boolean)
   );

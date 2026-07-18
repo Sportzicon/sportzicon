@@ -7,12 +7,7 @@ import { queryKeys } from "../../../hooks/queryKeys";
 import { PageHeader } from "../../../components/UI";
 import { Link2, Trophy, ArrowLeft } from "lucide-react";
 
-const SPORTS = ["cricket", "football", "basketball", "volleyball", "hockey", "kabaddi"];
-const FORMATS: Record<string, string[]> = {
-  cricket: ["T20", "ODI", "Test", "T10", "The Hundred", "Custom"],
-  football: ["11-a-side", "7-a-side", "5-a-side"],
-  default: ["League", "Knockout", "Round Robin", "Group + Knockout"]
-};
+const CRICKET_FORMATS = ["T20", "ODI", "Test", "T10", "The Hundred", "Custom"];
 const MATCH_TYPES = ["league", "tournament", "friendly", "trial", "academy", "knockout"];
 
 type FormState = {
@@ -58,7 +53,7 @@ function ScoringNewTournamentInner() {
     if (existing) {
       setForm({
         name: existing.name || "",
-        sport: existing.sport || "cricket",
+        sport: "cricket",
         format: existing.format || "T20",
         season: existing.season || "",
         match_type: existing.match_type || "tournament",
@@ -77,7 +72,6 @@ function ScoringNewTournamentInner() {
       setForm(f => ({
         ...f,
         name: sourceOpportunity.title || f.name,
-        sport: sourceOpportunity.sport || f.sport,
         description: sourceOpportunity.description || f.description,
         start_date: sourceOpportunity.start_date || f.start_date,
         end_date: sourceOpportunity.end_date || f.end_date,
@@ -110,8 +104,6 @@ function ScoringNewTournamentInner() {
     },
     onError: (err: any) => setError(err.response?.data?.error?.message || "Failed to save")
   });
-
-  const formatOptions = FORMATS[form.sport] || FORMATS.default;
 
   return (
     <div className="space-y-5 max-w-2xl">
@@ -150,6 +142,11 @@ function ScoringNewTournamentInner() {
       <form
         onSubmit={e => {
           e.preventDefault();
+          if (form.start_date && form.end_date && form.end_date < form.start_date) {
+            setError("End date must be on or after start date");
+            return;
+          }
+          setError("");
           mutation.mutate({ ...form, ...(opportunityId ? { opportunity_id: opportunityId } : {}) });
         }}
         className="card p-6 space-y-5"
@@ -167,15 +164,13 @@ function ScoringNewTournamentInner() {
         <div className="grid sm:grid-cols-2 gap-4">
           <div>
             <label className="lab block mb-1">Sport</label>
-            <select className="input w-full" value={form.sport} onChange={e => setForm(f => ({ ...f, sport: e.target.value, format: "" }))}>
-              {SPORTS.map(s => <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
-            </select>
+            <input className="input w-full" value="Cricket" disabled />
           </div>
           <div>
             <label className="lab block mb-1">Format</label>
             <select className="input w-full" value={form.format} onChange={e => setForm(f => ({ ...f, format: e.target.value }))}>
               <option value="">Select format</option>
-              {formatOptions.map(f => <option key={f} value={f}>{f}</option>)}
+              {CRICKET_FORMATS.map(f => <option key={f} value={f}>{f}</option>)}
             </select>
           </div>
           <div>
@@ -200,7 +195,7 @@ function ScoringNewTournamentInner() {
           </div>
           <div>
             <label className="lab block mb-1">End Date</label>
-            <input className="input w-full" type="date" value={form.end_date} onChange={e => setForm(f => ({ ...f, end_date: e.target.value }))} />
+            <input className="input w-full" type="date" value={form.end_date} min={form.start_date || undefined} onChange={e => setForm(f => ({ ...f, end_date: e.target.value }))} />
           </div>
         </div>
         <div>

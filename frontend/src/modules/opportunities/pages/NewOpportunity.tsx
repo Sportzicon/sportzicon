@@ -96,6 +96,7 @@ export default function NewOpportunity() {
     if (!form.description.trim() || form.description.trim().length < 20) errors.description = "Description must be at least 20 characters";
     if (form.type !== "coaching_job" && !form.start_date) errors.start_date = "Start date is required";
     if (form.type !== "coaching_job" && !form.end_date) errors.end_date = "End date is required";
+    if (form.type !== "coaching_job" && form.start_date && form.end_date && form.end_date < form.start_date) errors.end_date = "End date must be on or after start date";
     if (!form.application_deadline) errors.application_deadline = "Application deadline is required";
     if (form.application_deadline && form.application_deadline < today()) errors.application_deadline = "Deadline must be today or in the future";
     if (form.type !== "coaching_job" && form.application_deadline && form.end_date && form.application_deadline > form.end_date) errors.application_deadline = "Deadline must be on or before end date";

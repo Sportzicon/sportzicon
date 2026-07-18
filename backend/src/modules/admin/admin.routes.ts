@@ -309,6 +309,9 @@ router.post(
       vacancies: z.number().int().positive().optional(),
       contact_email: z.string().email().optional(),
       contact_phone: z.string().max(20).optional()
+    }).refine((v) => v.end_date >= v.start_date, {
+      message: "end_date must be on or after start_date",
+      path: ["end_date"]
     })
   ),
   asyncHandler(async (req, res) => {

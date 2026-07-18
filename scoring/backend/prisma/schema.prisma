@@ -234,7 +234,7 @@ model Organization {
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 
-  owner           User            @relation(fields: [owner_user_id], references: [id])
+  owner           User            @relation(fields: [owner_user_id], references: [id], onDelete: Cascade)
   opportunities   Opportunity[]
   documents       OrgDocument[]
   org_tournaments OrgTournament[]
@@ -361,8 +361,8 @@ model Opportunity {
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 
-  organization Organization  @relation(fields: [org_id], references: [id])
-  posted_by    User          @relation("PostedBy", fields: [posted_by_user_id], references: [id])
+  organization Organization  @relation(fields: [org_id], references: [id], onDelete: Cascade)
+  posted_by    User          @relation("PostedBy", fields: [posted_by_user_id], references: [id], onDelete: Cascade)
   applications Application[]
 
   @@index([status, sport, city])
@@ -383,8 +383,8 @@ model Application {
   applied_at        DateTime          @default(now())
   updated_at        DateTime          @updatedAt
 
-  opportunity Opportunity @relation(fields: [opportunity_id], references: [id])
-  applicant   User        @relation(fields: [applicant_user_id], references: [id])
+  opportunity Opportunity @relation(fields: [opportunity_id], references: [id], onDelete: Cascade)
+  applicant   User        @relation(fields: [applicant_user_id], references: [id], onDelete: Cascade)
 
   @@unique([opportunity_id, applicant_user_id])
   @@index([applicant_user_id])
@@ -398,8 +398,8 @@ model Follow {
   followee_id String   @db.Uuid
   created_at  DateTime @default(now())
 
-  follower User @relation("Follower", fields: [follower_id], references: [id])
-  followee User @relation("Followee", fields: [followee_id], references: [id])
+  follower User @relation("Follower", fields: [follower_id], references: [id], onDelete: Cascade)
+  followee User @relation("Followee", fields: [followee_id], references: [id], onDelete: Cascade)
 
   @@unique([follower_id, followee_id])
   @@index([followee_id])
@@ -418,7 +418,7 @@ model Content {
   created_at    DateTime @default(now())
   updated_at    DateTime @updatedAt
 
-  author     User          @relation(fields: [author_id], references: [id])
+  author     User          @relation(fields: [author_id], references: [id], onDelete: Cascade)
   postDetail PostDetail?
   blogDetail BlogDetail?
   reelDetail ReelDetail?
@@ -479,7 +479,7 @@ model Comment {
   created_at DateTime @default(now())
 
   content Content       @relation(fields: [content_id], references: [id], onDelete: Cascade)
-  author  User          @relation(fields: [author_id], references: [id])
+  author  User          @relation(fields: [author_id], references: [id], onDelete: Cascade)
   likes   CommentLike[]
 
   @@index([content_id, created_at(sort: Desc)])
@@ -537,8 +537,8 @@ model Message {
   flagged         Boolean   @default(false)
   created_at      DateTime  @default(now())
 
-  conversation Conversation @relation(fields: [conversation_id], references: [id])
-  sender       User         @relation("Sender", fields: [sender_id], references: [id])
+  conversation Conversation @relation(fields: [conversation_id], references: [id], onDelete: Cascade)
+  sender       User         @relation("Sender", fields: [sender_id], references: [id], onDelete: Cascade)
 
   @@index([conversation_id, created_at(sort: Desc)])
   @@schema("public")
@@ -555,8 +555,8 @@ model Notification {
   read       Boolean  @default(false)
   created_at DateTime @default(now())
 
-  user  User  @relation("NotificationRecipient", fields: [user_id], references: [id])
-  actor User? @relation("NotificationActor", fields: [actor_id], references: [id])
+  user  User  @relation("NotificationRecipient", fields: [user_id], references: [id], onDelete: Cascade)
+  actor User? @relation("NotificationActor", fields: [actor_id], references: [id], onDelete: SetNull)
 
   @@index([user_id, created_at(sort: Desc)])
   @@index([user_id, read])
@@ -565,7 +565,7 @@ model Notification {
 
 model AuditLog {
   id          String   @id @default(uuid()) @db.Uuid
-  actor_id    String   @db.Uuid
+  actor_id    String?  @db.Uuid
   actor_role  Role
   action      String
   target_type String?
@@ -574,7 +574,7 @@ model AuditLog {
   ip          String?
   created_at  DateTime @default(now())
 
-  actor User @relation(fields: [actor_id], references: [id])
+  actor User? @relation(fields: [actor_id], references: [id], onDelete: SetNull)
 
   @@index([actor_id])
   @@index([created_at(sort: Desc)])
@@ -593,7 +593,7 @@ model Report {
   notes       String?
   created_at  DateTime  @default(now())
 
-  reporter User @relation("Reporter", fields: [reporter_id], references: [id])
+  reporter User @relation("Reporter", fields: [reporter_id], references: [id], onDelete: Cascade)
 
   @@index([status, created_at(sort: Desc)])
   @@index([reporter_id])

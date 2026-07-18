@@ -82,6 +82,9 @@ export async function createTournament(actorId: string, actorRole: string, input
   if (!canManage(actorRole)) throw Forbidden("Only organizers can create tournaments");
   if (!input.name?.trim()) throw BadRequest("Tournament name is required");
   if (!input.sport) throw BadRequest("Sport is required");
+  if (input.start_date && input.end_date && input.end_date < input.start_date) {
+    throw BadRequest("end_date must be on or after start_date");
+  }
   return prisma.tournament.create({
     data: {
       name: input.name,
@@ -103,7 +106,12 @@ export async function createTournament(actorId: string, actorRole: string, input
 }
 
 export async function updateTournament(id: string, actorId: string, actorRole: string, patch: any) {
-  await assertManager(id, actorId, actorRole);
+  const t = await assertManager(id, actorId, actorRole);
+  const nextStart = patch.start_date !== undefined ? nullIfEmpty(patch.start_date) : t.start_date;
+  const nextEnd = patch.end_date !== undefined ? nullIfEmpty(patch.end_date) : t.end_date;
+  if (nextStart && nextEnd && nextEnd < nextStart) {
+    throw BadRequest("end_date must be on or after start_date");
+  }
   const stringFields = ["format", "season", "match_type", "description", "start_date", "end_date", "location", "logo_url", "banner_url", "opportunity_id"];
   const data: any = {};
   if (patch.name !== undefined) data.name = patch.name;

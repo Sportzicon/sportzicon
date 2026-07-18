@@ -421,6 +421,12 @@ export async function adminUpdateOpportunity(
     data.application_deadline = new Date(data.application_deadline as string);
   }
 
+  const nextStart = (data.start_date as string | undefined) ?? opp.start_date;
+  const nextEnd = (data.end_date as string | undefined) ?? opp.end_date;
+  if (nextStart && nextEnd && nextEnd < nextStart) {
+    throw BadRequest("end_date must be on or after start_date");
+  }
+
   const updated = await prisma.opportunity.update({ where: { id: oppId }, data });
   await audit({ actor, action: "opportunity.edited", target_type: "opportunity", target_id: oppId, details: { fields: Object.keys(data) } });
   return { ...updated, application_deadline: dateOnly(updated.application_deadline) };

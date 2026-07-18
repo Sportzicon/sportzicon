@@ -4,6 +4,7 @@ import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { opportunityService } from "../../../services";
 import { humanizeError } from "../../../api/client";
 import { useAuthStore } from "../../../store/auth";
+import { useSavedOpportunities } from "../../../store/savedOpportunities";
 import { hasRole, isAdmin } from "../../../utils/roles";
 import { useOpportunityApplication } from "../../applications/hooks/useApplications";
 import { Spinner, StatusPill, SectionHead, Kicker } from "../../../components/UI";
@@ -273,15 +274,6 @@ function ApplyModal({ opp, onClose, onSuccess }: { opp: Opportunity; onClose: ()
   );
 }
 
-// Mobile comments drawer placeholder
-function CommentsDrawer({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
-  return (
-    <MobileDrawer isOpen={isOpen} onClose={onClose} title="Comments">
-      <p className="text-sm text-ink-sub py-4">Comments coming soon.</p>
-    </MobileDrawer>
-  );
-}
-
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function OpportunityDetail() {
   const navigate = useNavigate();
@@ -289,10 +281,9 @@ export default function OpportunityDetail() {
   const user = useAuthStore((s) => s.user);
   const [applyOpen, setApplyOpen] = useState(false);
   const [justApplied, setJustApplied] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const { toggle: toggleSave, isSaved } = useSavedOpportunities();
   const [pendingDelete, setPendingDelete] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [commentsOpen, setCommentsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const qc = useQueryClient();
 
@@ -346,6 +337,12 @@ export default function OpportunityDetail() {
         Applied ✓{currentAppStatus ? ` — ${currentAppStatus}` : ""} · View tracker
       </Link>
     );
+    if (!user) return (
+      <Link to="/login" className={`btn-primary text-center flex items-center justify-center min-h-[44px] ${className}`}>
+        Sign in to apply
+      </Link>
+    );
+    if (!hasRole(user.role, "athlete") || isAdmin(user.role)) return null;
     if (deadline.closed) return (
       <button className={`btn-secondary flex items-center justify-center min-h-[44px] ${className}`} disabled>
         Applications closed
@@ -360,11 +357,6 @@ export default function OpportunityDetail() {
       <button className={`btn-accent flex items-center justify-center min-h-[44px] ${className}`} onClick={() => setApplyOpen(true)}>
         Apply now →
       </button>
-    );
-    if (!user) return (
-      <Link to="/login" className={`btn-primary text-center flex items-center justify-center min-h-[44px] ${className}`}>
-        Sign in to apply
-      </Link>
     );
     return null;
   }
@@ -526,10 +518,10 @@ export default function OpportunityDetail() {
             <ApplyButton className="w-full" />
             {user && !isPoster && (
               <button
-                onClick={() => setSaved((s) => !s)}
+                onClick={() => toggleSave(o)}
                 className="w-full font-mononum text-[10px] uppercase tracking-[0.08em] text-ink-sub hover:text-ink transition min-h-[44px]"
               >
-                {saved ? "★ Saved" : "☆ Save opportunity"}
+                {isSaved(o.id) ? "★ Saved" : "☆ Save opportunity"}
               </button>
             )}
           </div>
@@ -550,11 +542,11 @@ export default function OpportunityDetail() {
             <>
               {user && (
                 <button
-                  onClick={() => setSaved((s) => !s)}
+                  onClick={() => toggleSave(o)}
                   className="btn-ghost min-h-[44px] px-3 flex-shrink-0"
-                  title={saved ? "Unsave" : "Save"}
+                  title={isSaved(o.id) ? "Unsave" : "Save"}
                 >
-                  {saved ? "★" : "☆"}
+                  {isSaved(o.id) ? "★" : "☆"}
                 </button>
               )}
               <div className="flex-1">
@@ -572,8 +564,6 @@ export default function OpportunityDetail() {
           onSuccess={() => { setApplyOpen(false); setJustApplied(true); }}
         />
       )}
-
-      <CommentsDrawer isOpen={commentsOpen} onClose={() => setCommentsOpen(false)} />
     </div>
   );
 }

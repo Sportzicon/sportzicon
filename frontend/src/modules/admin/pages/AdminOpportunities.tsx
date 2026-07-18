@@ -256,7 +256,7 @@ export default function AdminOpportunities() {
                                 <input className="input" type="date" value={editForm.start_date} onChange={(e) => setF("start_date", e.target.value)} />
                               </Field>
                               <Field label="End date">
-                                <input className="input" type="date" value={editForm.end_date} onChange={(e) => setF("end_date", e.target.value)} />
+                                <input className="input" type="date" value={editForm.end_date} min={editForm.start_date || undefined} onChange={(e) => setF("end_date", e.target.value)} />
                               </Field>
                               <Field label="Gender eligibility">
                                 <select className="input" value={editForm.gender_eligibility} onChange={(e) => setF("gender_eligibility", e.target.value)}>
