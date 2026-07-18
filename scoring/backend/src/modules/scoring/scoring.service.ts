@@ -160,6 +160,13 @@ export async function createPlayer(tournamentId: string, teamId: string, actorId
   await assertManager(tournamentId, actorId, actorRole);
   const team = await prisma.team.findUnique({ where: { id: teamId } });
   if (!team || team.tournament_id !== tournamentId) throw NotFound("Team not found");
+  if (input.sportivox_user_id) {
+    const existing = await prisma.player.findFirst({
+      where: { sportivox_user_id: input.sportivox_user_id, team: { tournament_id: tournamentId } },
+      include: { team: { select: { name: true } } }
+    });
+    if (existing) throw BadRequest(`${existing.name} is already on team "${existing.team.name}" in this tournament`);
+  }
   return prisma.player.create({
     data: {
       team_id: teamId,
